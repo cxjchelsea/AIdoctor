@@ -1,0 +1,174 @@
+version: '3.8'
+
+services:
+  # 诊断服务
+  diagnosis-service:
+    build: ./diagnosis-service
+    container_name: diagnosis-service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DATABASE_URL=jdbc:mysql://mysql:3306/aidoctor
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - NACOS_SERVER=nacos:8848
+      - DIAGNOSIS_ENGINE_SERVICE_URL=http://diagnosis-engine-service:8086
+      - OCR_SERVICE_URL=http://ocr-service:8087
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - aidoctor-network
+    restart: unless-stopped
+
+  # 检查服务
+  examination-service:
+    build: ./examination-service
+    container_name: examination-service
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DATABASE_URL=jdbc:mysql://mysql:3306/aidoctor
+      - OCR_SERVICE_URL=http://ocr-service:8087
+    depends_on:
+      - mysql
+      - ocr-service
+    networks:
+      - aidoctor-network
+    restart: unless-stopped
+
+  # 诊断引擎服务
+  diagnosis-engine-service:
+    build: ./diagnosis-engine-service
+    container_name: diagnosis-engine-service
+    ports:
+      - "8086:8086"
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=password
+      - MILVUS_HOST=milvus
+      - MILVUS_PORT=19530
+    depends_on:
+      - neo4j
+    networks:
+      - aidoctor-network
+    restart: unless-stopped
+
+  # 检查建议服务（脑区D）
+  workup-planner-service:
+    build: ./workup-planner-service
+    container_name: workup-planner-service
+    ports:
+      - "8090:8090"
+    networks:
+      - aidoctor-network
+    restart: unless-stopped
+
+  # 治疗推理服务（脑区E）
+  treatment-engine-service:
+    build: ./treatment-engine-service
+    container_name: treatment-engine-service
+    ports:
+      - "8091:8091"
+    networks:
+      - aidoctor-network
+    restart: unless-stopped
+
+  # 风险评估服务（脑区F）
+  risk-assessment-service:
+    build: ./risk-assessment-service
+    container_name: risk-assessment-service
+    ports:
+      - "8092:8092"
+    networks:
+      - aidoctor-network
+    restart: unless-stopped
+
+  # OCR服务
+  ocr-service:
+    build: ./ocr-service
+    container_name: ocr-service
+    ports:
+      - "8087:8087"
+    networks:
+      - aidoctor-network
+    restart: unless-stopped
+
+  # MySQL数据库
+  mysql:
+    image: mysql:8.0
+    container_name: aidoctor-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=aidoctor
+      - MYSQL_USER=aidoctor
+      - MYSQL_PASSWORD=password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - aidoctor-network
+    restart: unless-stopped
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: aidoctor-redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - aidoctor-network
+    restart: unless-stopped
+
+  # Neo4j图数据库
+  neo4j:
+    image: neo4j:5
+    container_name: aidoctor-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_PLUGINS=["apoc"]
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    networks:
+      - aidoctor-network
+    restart: unless-stopped
+
+  # Nacos服务注册中心（可选）
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: aidoctor-nacos
+    environment:
+      - MODE=standalone
+      - SPRING_DATASOURCE_PLATFORM=mysql
+      - MYSQL_SERVICE_HOST=mysql
+      - MYSQL_SERVICE_DB_NAME=nacos
+      - MYSQL_SERVICE_PORT=3306
+    ports:
+      - "8848:8848"
+    depends_on:
+      - mysql
+    networks:
+      - aidoctor-network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:
+  neo4j_data:
+  neo4j_logs:
+
+networks:
+  aidoctor-network:
+    driver: bridge
+

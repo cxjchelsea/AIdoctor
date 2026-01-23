@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "api_url": "http://39.106.80.155:11434/api/generate",
+  "api_type": "ollama",
+  "api_key": null,
+  "model": "qwen2.5:14b",
+  "timeout": 30.0,
+  "max_workers": 5,
+  "description": "AI翻译配置 - 使用Ollama部署的qwen2.5:14b模型",
+  "instructions": "修改此文件来配置AI翻译：1. 设置 enabled 为 true 启用AI翻译 2. 修改 api_url 为您的Ollama服务器地址 3. 修改 model 为您的模型名称 4. max_workers 控制并发线程数（建议3-10，根据服务器性能调整，数值越大速度越快但占用资源更多）"
+}

@@ -1,0 +1,342 @@
+"""
+对话服务
+按照《dialog-service - 服务实现方案.md》实现
+"""
+from typing import Dict, Any, Optional
+import json
+import logging
+import httpx
+import redis
+from app.core.adaptive_questioning import AdaptiveQuestioningStrategy
+from app.core.nlu import NaturalLanguageUnderstanding
+from app.core.nlg import NaturalLanguageGenerator
+from app.identifiers.information_gap_identifier import InformationGapIdentifier
+from app.calculators.completeness_calculator import CompletenessCalculator
+from app.models.request import QuestionRequest, UserInputRequest, IdentifyGapsRequest
+from app.config.settings import settings
+from app.utils.exceptions import BusinessException
+
+logger = logging.getLogger(__name__)
+
+
+class DialogService:
+    """对话服务"""
+    
+    def __init__(self):
+        # Redis客户端
+        self.redis_client = redis.Redis(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            db=settings.REDIS_DB,
+            password=settings.REDIS_PASSWORD,
+            decode_responses=True
+        )
+        
+        # 核心组件
+        self.adaptive_questioning = AdaptiveQuestioningStrategy()
+        self.nlu = NaturalLanguageUnderstanding()
+        self.nlg = NaturalLanguageGenerator()
+        self.gap_identifier = InformationGapIdentifier()
+        self.completeness_calculator = CompletenessCalculator()
+        
+        # HTTP客户端（用于调用diagnosis-service获取CDP数据）
+        self.http_client = httpx.AsyncClient(timeout=30.0)
+        self.diagnosis_service_url = settings.DIAGNOSIS_SERVICE_URL
+    
+    async def generate_question(self, request: QuestionRequest) -> Dict[str, Any]:
+        """
+        生成追问问题
+        
+        Args:
+            request: 生成问题请求
+            
+        Returns:
+            问题响应
+        """
+        logger.info(f"生成追问问题: cdpId={request.cdpId}")
+        
+        try:
+            # 1. 获取CDP数据（从diagnosis-service）
+            cdp_data = await self._get_cdp_data(request.cdpId)
+            if not cdp_data:
+                raise BusinessException(1205, f"CDP不存在: {request.cdpId}")
+            
+            patient_state = cdp_data.get("patient_state", {})
+            ddx = cdp_data.get("ddx", [])
+            
+            # 2. 获取对话上下文
+            context = self._get_context(request.cdpId)
+            context.update(request.context or {})
+            context["patient_state"] = patient_state
+            context["ddx"] = ddx
+            
+            # 3. 识别信息缺口
+            information_gaps = self.gap_identifier.identify_gaps(patient_state, ddx)
+            
+            # 4. 计算信息完整度
+            completeness = self.completeness_calculator.calculate_completeness(patient_state)
+            
+            # 5. 生成追问策略
+            question_info = await self.adaptive_questioning.generate_question(
+                information_gaps=information_gaps,
+                context=context,
+                completeness=completeness
+            )
+            
+            if not question_info:
+                # 没有需要追问的信息
+                return {
+                    "question": None,
+                    "questionType": None,
+                    "missingInfo": [],
+                    "completeness": completeness,
+                    "informationGaps": {
+                        "required": information_gaps.get("required", []),
+                        "important": information_gaps.get("important", []),
+                        "optional": information_gaps.get("optional", [])
+                    }
+                }
+            
+            # 6. 生成自然语言问题
+            natural_question = await self.nlg.generate_question(question_info, context)
+            
+            # 7. 更新对话历史
+            self._update_conversation_history(request.cdpId, "assistant", natural_question)
+            
+            # 8. 构建响应
+            missing_info_items = [
+                {
+                    "field": gap.get("field", ""),
+                    "level": "required" if gap in information_gaps.get("required", []) else
+                            "important" if gap in information_gaps.get("important", []) else
+                            "optional",
+                    "description": gap.get("description", "")
+                }
+                for gap in question_info.get("missing_info", [])
+            ]
+            
+            return {
+                "question": natural_question,
+                "questionType": question_info.get("type"),
+                "missingInfo": missing_info_items,
+                "completeness": completeness,
+                "informationGaps": {
+                    "required": information_gaps.get("required", []),
+                    "important": information_gaps.get("important", []),
+                    "optional": information_gaps.get("optional", [])
+                }
+            }
+        except BusinessException:
+            raise
+        except Exception as e:
+            logger.error(f"生成追问问题失败: {str(e)}", exc_info=True)
+            raise BusinessException(1202, f"智能追问生成失败: {str(e)}")
+    
+    async def understand(self, request: UserInputRequest) -> Dict[str, Any]:
+        """
+        理解用户输入
+        
+        Args:
+            request: 用户输入请求
+            
+        Returns:
+            理解响应
+        """
+        logger.info(f"理解用户输入: cdpId={request.cdpId}")
+        
+        if not request.userInput or not request.userInput.strip():
+            raise BusinessException(1206, "用户输入为空")
+        
+        try:
+            # 1. 获取对话上下文
+            context = self._get_context(request.cdpId)
+            context.update(request.context or {})
+            
+            # 2. 更新对话历史（用户输入）
+            self._update_conversation_history(request.cdpId, "user", request.userInput)
+            
+            # 3. 自然语言理解
+            understood_info = await self.nlu.understand(
+                text=request.userInput,
+                context=context
+            )
+            
+            # 4. 提取关键信息
+            extracted_info = {
+                "symptom_duration": understood_info.get("symptom_duration"),
+                "symptom_severity": understood_info.get("symptom_severity"),
+                "symptom_location": understood_info.get("symptom_location"),
+                "symptom_trigger": understood_info.get("symptom_trigger"),
+                "symptom_frequency": understood_info.get("symptom_frequency"),
+                "symptom_relief": understood_info.get("symptom_relief"),
+                "accompanying_symptoms": understood_info.get("accompanying_symptoms", [])
+            }
+            
+            # 5. 更新上下文
+            self._update_context(request.cdpId, extracted_info)
+            
+            # 6. 更新CDP（通过diagnosis-service）
+            await self._update_cdp(request.cdpId, extracted_info)
+            
+            # 7. 构建响应
+            updated_fields = [key for key, value in extracted_info.items() if value is not None]
+            
+            return {
+                "extractedInfo": extracted_info,
+                "confidence": understood_info.get("confidence", 0.8),
+                "updatedFields": updated_fields
+            }
+        except BusinessException:
+            raise
+        except Exception as e:
+            logger.error(f"理解用户输入失败: {str(e)}", exc_info=True)
+            raise BusinessException(1203, f"自然语言理解失败: {str(e)}")
+    
+    async def identify_gaps(self, request: IdentifyGapsRequest) -> Dict[str, Any]:
+        """
+        识别信息缺口
+        
+        Args:
+            request: 识别信息缺口请求
+            
+        Returns:
+            信息缺口响应
+        """
+        logger.info(f"识别信息缺口: cdpId={request.cdpId}")
+        
+        try:
+            # 1. 获取CDP数据
+            cdp_data = await self._get_cdp_data(request.cdpId)
+            if not cdp_data:
+                raise BusinessException(1205, f"CDP不存在: {request.cdpId}")
+            
+            patient_state = cdp_data.get("patient_state", {})
+            ddx = cdp_data.get("ddx", [])
+            
+            # 2. 识别信息缺口
+            information_gaps = self.gap_identifier.identify_gaps(patient_state, ddx)
+            
+            # 3. 计算信息完整度
+            completeness = self.completeness_calculator.calculate_completeness(patient_state)
+            
+            return {
+                "informationGaps": {
+                    "required": information_gaps.get("required", []),
+                    "important": information_gaps.get("important", []),
+                    "optional": information_gaps.get("optional", [])
+                },
+                "completeness": completeness
+            }
+        except BusinessException:
+            raise
+        except Exception as e:
+            logger.error(f"识别信息缺口失败: {str(e)}", exc_info=True)
+            raise BusinessException(1201, f"信息缺口识别失败: {str(e)}")
+    
+    async def handle_websocket_message(self, cdp_id: str, message: str) -> Dict[str, Any]:
+        """处理WebSocket消息"""
+        try:
+            user_input = json.loads(message)
+        except json.JSONDecodeError:
+            user_input = {"text": message}
+        
+        # 理解用户输入
+        understanding = await self.understand(
+            UserInputRequest(
+                cdpId=cdp_id,
+                userInput=user_input.get("text", message),
+                context=None
+            )
+        )
+        
+        # 生成回复
+        question_request = QuestionRequest(
+            cdpId=cdp_id,
+            context=self._get_context(cdp_id)
+        )
+        question_response = await self.generate_question(question_request)
+        
+        return {
+            "type": "response",
+            "question": question_response.get("question"),
+            "completeness": question_response.get("completeness"),
+            "extractedInfo": understanding.get("extractedInfo")
+        }
+    
+    async def _get_cdp_data(self, cdp_id: str) -> Optional[Dict[str, Any]]:
+        """从diagnosis-service获取CDP数据"""
+        try:
+            url = f"{self.diagnosis_service_url}/api/v1/diagnosis/cdp/{cdp_id}"
+            response = await self.http_client.get(url)
+            response.raise_for_status()
+            result = response.json()
+            
+            if result.get("code") == 200:
+                return result.get("data", {})
+            return None
+        except Exception as e:
+            logger.warning(f"获取CDP数据失败: {str(e)}")
+            return None
+    
+    async def _update_cdp(self, cdp_id: str, extracted_info: Dict[str, Any]):
+        """更新CDP（通过diagnosis-service）"""
+        try:
+            url = f"{self.diagnosis_service_url}/api/v1/diagnosis/cdp/{cdp_id}/update"
+            payload = {
+                "patient_state": extracted_info
+            }
+            response = await self.http_client.post(url, json=payload)
+            response.raise_for_status()
+        except Exception as e:
+            logger.warning(f"更新CDP失败: {str(e)}")
+            # 不抛出异常，因为这不是关键路径
+    
+    def _get_context(self, cdp_id: str) -> Dict[str, Any]:
+        """获取对话上下文"""
+        context_key = f"dialog:context:{cdp_id}"
+        context_json = self.redis_client.get(context_key)
+        if context_json:
+            try:
+                return json.loads(context_json)
+            except json.JSONDecodeError:
+                return {}
+        return {}
+    
+    def _update_context(self, cdp_id: str, info: Dict[str, Any]):
+        """更新对话上下文"""
+        context_key = f"dialog:context:{cdp_id}"
+        context = self._get_context(cdp_id)
+        context.update(info)
+        self.redis_client.setex(
+            context_key,
+            settings.REDIS_CONTEXT_TTL,
+            json.dumps(context)
+        )
+    
+    def _update_conversation_history(self, cdp_id: str, role: str, content: str):
+        """更新对话历史"""
+        context = self._get_context(cdp_id)
+        if "conversationHistory" not in context:
+            context["conversationHistory"] = []
+        
+        context["conversationHistory"].append({
+            "role": role,
+            "content": content
+        })
+        
+        # 限制历史记录长度（最多保留20条）
+        if len(context["conversationHistory"]) > 20:
+            context["conversationHistory"] = context["conversationHistory"][-20:]
+        
+        self._update_context(cdp_id, context)
+    
+    async def cleanup_context(self, cdp_id: str):
+        """清理上下文"""
+        context_key = f"dialog:context:{cdp_id}"
+        self.redis_client.delete(context_key)
+    
+    async def __aenter__(self):
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.http_client.aclose()

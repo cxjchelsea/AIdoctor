@@ -1,0 +1,8 @@
+spring:
+  profiles:
+    # 本地调试使用: mysql (MySQL)
+    # 开发/生产环境使用: dev (Oracle)
+    active: mysql
+  application:
+    name: examination-service
+

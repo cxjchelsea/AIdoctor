@@ -1,0 +1,44 @@
+[
+  {
+    "text": "胸痛",
+    "type": "ambiguous",
+    "suggested_questions": [
+      "请描述一下疼痛的具体性质？是压迫感还是刺痛？",
+      "疼痛持续多长时间？",
+      "疼痛在什么情况下出现？"
+    ]
+  },
+  {
+    "text": "头痛",
+    "type": "ambiguous",
+    "suggested_questions": [
+      "请描述一下头痛的具体性质？是胀痛还是刺痛？",
+      "头痛持续多长时间？",
+      "头痛在什么情况下出现？"
+    ]
+  },
+  {
+    "text": "腹痛",
+    "type": "ambiguous",
+    "suggested_questions": [
+      "请描述一下腹痛的具体位置？",
+      "腹痛持续多长时间？",
+      "腹痛在什么情况下出现？"
+    ]
+  },
+  {
+    "text": "心脏病",
+    "type": "ambiguous",
+    "suggested_questions": [
+      "请具体说明是哪种心脏病？是冠心病、心律失常还是其他？"
+    ]
+  },
+  {
+    "text": "抗生素",
+    "type": "ambiguous",
+    "suggested_questions": [
+      "请具体说明是哪种抗生素？是头孢类、青霉素类还是其他？"
+    ]
+  }
+]
+

@@ -1,0 +1,87 @@
+server:
+  port: 8085
+
+spring:
+  # 本地调试使用MySQL
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/aidoctor?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+        use_sql_comments: true
+    open-in-view: false
+  
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
+    timeout: 5000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+
+  # Nacos配置（本地调试可以禁用）
+  cloud:
+    nacos:
+      discovery:
+        enabled: false  # 本地调试可以禁用Nacos
+        server-addr: 127.0.0.1:8848
+        namespace: dev
+        group: DEFAULT_GROUP
+  
+  # 修复Springfox与Spring Boot 2.7的兼容性问题
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# Feign配置
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 10000
+        loggerLevel: basic
+
+# OCR服务地址
+examination:
+  ocr:
+    service-url: http://localhost:8087
+
+# Knife4j配置
+knife4j:
+  enable: true
+  openapi:
+    title: 智能诊断系统API文档
+    description: 智能诊断系统的REST API接口文档
+    version: 1.0.0
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.aidoctor.examination: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+

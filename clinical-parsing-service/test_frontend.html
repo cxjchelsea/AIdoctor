@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>病例理解服务 - 前端测试页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 6px;
+        }
+        
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #40a9ff;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .quick-test-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .quick-test-btn {
+            background: #52c41a;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e8e8e8;
+        }
+        
+        .result h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .concept-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            border-left: 3px solid #1890ff;
+        }
+        
+        .concept-item strong {
+            color: #1890ff;
+        }
+        
+        .structured-data {
+            margin-top: 15px;
+        }
+        
+        .structured-data h4 {
+            color: #666;
+            margin: 15px 0 10px 0;
+            font-size: 14px;
+        }
+        
+        .data-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: #fafafa;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .ambiguous {
+            background: #fff7e6;
+            border-left-color: #faad14;
+            margin-top: 15px;
+        }
+        
+        .ambiguous h4 {
+            color: #faad14;
+        }
+        
+        .question-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #faad14;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #1890ff;
+        }
+        
+        .error {
+            background: #fff1f0;
+            border-left-color: #ff4d4f;
+            color: #ff4d4f;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        
+        .success-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #52c41a;
+            color: white;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        .info-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #1890ff;
+            color: white;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>病例理解服务 - 前端测试页面</h1>
+        <p class="subtitle">测试所有功能：概念识别、归一化、结构化提取、歧义判定</p>
+        
+        <div class="test-section">
+            <h2>1. 输入测试数据</h2>
+            
+            <div class="input-group">
+                <label>用户ID:</label>
+                <input type="text" id="userId" value="test_user_001" />
+            </div>
+            
+            <div class="input-group">
+                <label>会话ID:</label>
+                <input type="text" id="sessionId" value="test_session_001" />
+            </div>
+            
+            <div class="input-group">
+                <label>输入文本:</label>
+                <textarea id="inputText" placeholder="输入患者描述，例如：我最近胸口闷，走几步就喘，之前有高血压"></textarea>
+            </div>
+            
+            <div class="quick-test-buttons">
+                <button class="quick-test-btn" onclick="setQuickTest('symptom')">测试：症状识别</button>
+                <button class="quick-test-btn" onclick="setQuickTest('disease')">测试：疾病识别</button>
+                <button class="quick-test-btn" onclick="setQuickTest('medication')">测试：药物识别</button>
+                <button class="quick-test-btn" onclick="setQuickTest('examination')">测试：检查识别</button>
+                <button class="quick-test-btn" onclick="setQuickTest('allergy')">测试：过敏识别</button>
+                <button class="quick-test-btn" onclick="setQuickTest('ambiguous')">测试：歧义判定</button>
+                <button class="quick-test-btn" onclick="setQuickTest('mixed')">测试：混合识别</button>
+                <button class="quick-test-btn" onclick="setQuickTest('attributes')">测试：属性提取</button>
+            </div>
+            
+            <button onclick="testParse()" id="parseBtn">开始解析</button>
+            <button onclick="clearResult()">清空结果</button>
+        </div>
+        
+        <div id="result" style="display: none;"></div>
+    </div>
+    
+    <script>
+        const API_BASE_URL = 'http://localhost:8082/api/v1';
+        
+        const quickTests = {
+            symptom: {
+                text: '我最近胸口闷，走几步就喘',
+                description: '症状识别测试'
+            },
+            disease: {
+                text: '我之前有高血压，现在正在吃阿司匹林',
+                description: '疾病识别测试'
+            },
+            medication: {
+                text: '我正在吃阿司匹林和头孢',
+                description: '药物识别测试'
+            },
+            examination: {
+                text: '我做了血常规和心电图检查',
+                description: '检查识别测试'
+            },
+            allergy: {
+                text: '我对青霉素过敏，还有海鲜过敏',
+                description: '过敏识别测试'
+            },
+            ambiguous: {
+                text: '我最近胸痛',
+                description: '歧义判定测试'
+            },
+            mixed: {
+                text: '我最近胸口闷，之前有高血压，正在吃阿司匹林，对青霉素过敏',
+                description: '混合识别测试'
+            },
+            attributes: {
+                text: '我最近3天轻微头痛，活动后加重',
+                description: '属性提取测试'
+            }
+        };
+        
+        function setQuickTest(type) {
+            const test = quickTests[type];
+            if (test) {
+                document.getElementById('inputText').value = test.text;
+                console.log(`设置快速测试: ${test.description}`);
+            }
+        }
+        
+        async function testParse() {
+            const userId = document.getElementById('userId').value;
+            const sessionId = document.getElementById('sessionId').value;
+            const text = document.getElementById('inputText').value.trim();
+            
+            if (!text) {
+                alert('请输入测试文本');
+                return;
+            }
+            
+            const btn = document.getElementById('parseBtn');
+            btn.disabled = true;
+            btn.textContent = '解析中...';
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading">正在解析...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/parsing/parse`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        sessionId: sessionId,
+                        text: text
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.code === 200) {
+                    displayResult(data.data);
+                } else {
+                    displayError(data);
+                }
+            } catch (error) {
+                displayError({ message: `请求失败: ${error.message}` });
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '开始解析';
+            }
+        }
+        
+        function displayResult(data) {
+            const resultDiv = document.getElementById('result');
+            let html = '<div class="result">';
+            
+            // 概念列表
+            html += '<h3>识别结果 <span class="success-badge">成功</span></h3>';
+            html += `<div><strong>识别到 ${data.concepts.length} 个概念</strong></div>`;
+            
+            if (data.concepts.length > 0) {
+                html += '<div style="margin-top: 15px;">';
+                data.concepts.forEach((concept, index) => {
+                    html += `<div class="concept-item">`;
+                    html += `<strong>${concept.originalText}</strong> → ${concept.normalizedSymptom}`;
+                    html += ` <span class="info-badge">${concept.conceptType}</span>`;
+                    if (concept.cui) html += ` <span class="info-badge">CUI: ${concept.cui}</span>`;
+                    if (concept.icd) html += ` <span class="info-badge">ICD: ${concept.icd}</span>`;
+                    if (concept.atc) html += ` <span class="info-badge">ATC: ${concept.atc}</span>`;
+                    if (concept.loinc) html += ` <span class="info-badge">LOINC: ${concept.loinc}</span>`;
+                    html += ` <span style="color: #666; font-size: 12px;">置信度: ${(concept.confidence * 100).toFixed(0)}%</span>`;
+                    html += `</div>`;
+                });
+                html += '</div>';
+            }
+            
+            // 结构化数据
+            html += '<div class="structured-data">';
+            html += '<h3>结构化数据</h3>';
+            
+            // 症状
+            if (data.structuredData.symptoms && data.structuredData.symptoms.length > 0) {
+                html += '<h4>症状 (' + data.structuredData.symptoms.length + ')</h4>';
+                data.structuredData.symptoms.forEach(symptom => {
+                    html += '<div class="data-item">';
+                    html += `<strong>${symptom.name}</strong>`;
+                    if (symptom.duration) html += ` | 持续时间: ${symptom.duration}`;
+                    if (symptom.severity) html += ` | 严重度: ${symptom.severity}`;
+                    if (symptom.trigger) html += ` | 诱因: ${symptom.trigger}`;
+                    html += '</div>';
+                });
+            }
+            
+            // 既往史
+            if (data.structuredData.medicalHistory && data.structuredData.medicalHistory.length > 0) {
+                html += '<h4>既往史 (' + data.structuredData.medicalHistory.length + ')</h4>';
+                data.structuredData.medicalHistory.forEach(disease => {
+                    html += '<div class="data-item">';
+                    html += `<strong>${disease.disease}</strong>`;
+                    if (disease.icd) html += ` (ICD: ${disease.icd})`;
+                    html += ` | 状态: ${disease.status === 'ongoing' ? '当前疾病' : '既往史'}`;
+                    html += '</div>';
+                });
+            }
+            
+            // 药物
+            if (data.structuredData.medications && data.structuredData.medications.length > 0) {
+                html += '<h4>药物 (' + data.structuredData.medications.length + ')</h4>';
+                data.structuredData.medications.forEach(med => {
+                    html += '<div class="data-item">';
+                    html += `<strong>${med.name}</strong>`;
+                    if (med.atc) html += ` (ATC: ${med.atc})`;
+                    html += ` | 状态: ${med.status === 'current' ? '当前用药' : '既往用药'}`;
+                    html += '</div>';
+                });
+            }
+            
+            // 检查
+            if (data.structuredData.examinations && data.structuredData.examinations.length > 0) {
+                html += '<h4>检查 (' + data.structuredData.examinations.length + ')</h4>';
+                data.structuredData.examinations.forEach(exam => {
+                    html += '<div class="data-item">';
+                    html += `<strong>${exam.name}</strong>`;
+                    if (exam.loinc) html += ` (LOINC: ${exam.loinc})`;
+                    html += '</div>';
+                });
+            }
+            
+            // 过敏
+            if (data.structuredData.allergies && data.structuredData.allergies.length > 0) {
+                html += '<h4>过敏 (' + data.structuredData.allergies.length + ')</h4>';
+                data.structuredData.allergies.forEach(allergy => {
+                    html += '<div class="data-item">';
+                    html += `<strong>${allergy.allergen}</strong>`;
+                    if (allergy.reaction) html += ` | 反应: ${allergy.reaction}`;
+                    html += '</div>';
+                });
+            }
+            
+            html += '</div>';
+            
+            // 歧义表达
+            if (data.ambiguousExpressions && data.ambiguousExpressions.length > 0) {
+                html += '<div class="ambiguous">';
+                html += '<h4>⚠️ 检测到歧义表达 (' + data.ambiguousExpressions.length + ')</h4>';
+                data.ambiguousExpressions.forEach(amb => {
+                    html += '<div class="data-item">';
+                    html += `<strong>${amb.text}</strong>`;
+                    html += '<div style="margin-top: 10px;">';
+                    html += '<strong>建议追问：</strong>';
+                    amb.suggestedQuestions.forEach((q, index) => {
+                        html += `<div class="question-item">${index + 1}. ${q}</div>`;
+                    });
+                    html += '</div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            resultDiv.innerHTML = html;
+        }
+        
+        function displayError(error) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <div class="error">
+                    <strong>错误</strong><br>
+                    ${error.message || JSON.stringify(error)}
+                </div>
+            `;
+        }
+        
+        function clearResult() {
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('result').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
+

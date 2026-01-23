@@ -1,0 +1,267 @@
+# ============================================
+# Java / Maven
+# ============================================
+*.class
+*.log
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+target/
+out/
+.gradle/
+*.classpath
+*.project
+*.settings
+*.factorypath
+.mvn/
+mvnw
+mvnw.cmd
+*.iml
+bin/
+.settings/
+.metadata/
+
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+cython_debug/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.hypothesis/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.coveragerc
+.cache
+
+# ============================================
+# Node.js / Frontend
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+dist/
+dist-ssr/
+*.local
+.npm
+.eslintcache
+.stylelintcache
+.parcel-cache
+.next/
+.nuxt/
+.vuepress/dist/
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.nyc_output
+
+# ============================================
+# IDE
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+*.iml
+.project
+.classpath
+.settings/
+.metadata/
+bin/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ============================================
+# OS
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ============================================
+# Logs
+# ============================================
+logs/
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# ============================================
+# Database
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-shm
+*.db-wal
+
+# ============================================
+# Environment & Config (敏感信息)
+# ============================================
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+*.env
+application-local.yml
+application-dev.yml
+application-prod.yml
+application-*.yml
+!application.yml
+!application-mysql.yml
+secrets/
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+*.truststore
+config/local/
+config/dev/
+config/prod/
+
+# ============================================
+# Docker
+# ============================================
+docker-compose.override.yml
+.dockerignore
+
+# ============================================
+# Temporary files
+# ============================================
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.cache
+*.lock
+*.pid
+*.seed
+*.pid.lock
+
+# ============================================
+# Model files & Large data (可选，根据需要调整)
+# ============================================
+*.pkl
+*.h5
+*.ckpt
+*.pt
+*.pth
+*.model
+models/*.bin
+models/*.safetensors
+*.onnx
+*.pb
+*.tflite
+data/raw/
+data/processed/
+data/external/
+
+# ============================================
+# Jupyter Notebook
+# ============================================
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# ============================================
+# Coverage reports
+# ============================================
+coverage/
+.nyc_output/
+.coverage
+htmlcov/
+*.cover
+.coveragerc
+
+# ============================================
+# Documentation builds
+# ============================================
+docs/_build/
+site/
+_site/
+
+# ============================================
+# Package files
+# ============================================
+*.7z
+*.dmg
+*.gz
+*.iso
+*.rar
+*.tar
+*.zip
+
+# ============================================
+# Application specific
+# ============================================
+*.pid
+*.seed
+*.pid.lock
+.vercel
+.netlify

@@ -1,0 +1,14 @@
+基于以下知识图谱推理路径进行诊断：
+
+{{ paths }}
+
+{% if path_scores %}
+路径评分信息：
+{% for path in path_scores %}
+路径{{ loop.index }}: {{ path.description }}
+- 先验概率: {{ path.scores.prior }}
+- 似然评分: {{ path.scores.likelihood }}
+- 后验概率: {{ path.scores.posterior }}
+{% endfor %}
+{% endif %}
+

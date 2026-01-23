@@ -1,0 +1,2012 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HPO数据提取结果报告</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .metadata {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .metadata-item {
+            margin: 8px 0;
+        }
+        .term-card {
+            border: 1px solid #ddd;
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .term-id {
+            font-weight: bold;
+            color: #e74c3c;
+            font-size: 1.1em;
+        }
+        .term-label {
+            font-size: 1.2em;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+        .term-definition {
+            color: #555;
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        .synonyms {
+            margin: 10px 0;
+        }
+        .synonyms strong {
+            color: #27ae60;
+        }
+        .relationships {
+            margin: 10px 0;
+        }
+        .relationships strong {
+            color: #8e44ad;
+        }
+        .tag {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin: 2px;
+        }
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HPO（人类表型本体）数据提取结果报告</h1>
+        
+        <div class="metadata">
+            <h2>数据概览</h2>
+            <div class="metadata-item"><strong>HPO版本:</strong> 2026-01-08</div>
+            <div class="metadata-item"><strong>数据源:</strong> hp.owl</div>
+            <div class="metadata-item"><strong>提取日期:</strong> 2026-01-21</div>
+            <div class="metadata-item"><strong>术语总数:</strong> 10,654 个</div>
+            <div class="metadata-item"><strong>同义词总数:</strong> 27,063 个</div>
+        </div>
+        
+        <div class="note">
+            <strong>说明:</strong> 本报告展示了前 100 个HPO术语的详细信息。
+            完整数据请查看CSV文件或JSON文件。
+        </div>
+        
+        <h2>术语示例</h2>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000001</div>
+            <div class="term-label">All</div>
+            
+            <div class="term-definition"><strong>注释:</strong> Root of all terms in the Human Phenotype Ontology.</div>
+            
+            
+            
+            
+            <div class="relationships">
+                
+                <strong>子类:</strong> HP:0000005, HP:0000118, HP:0012823 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C0444868</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000002</div>
+            <div class="term-label">Abnormality of body height</div>
+            <div class="term-definition"><strong>定义:</strong> Deviation from the norm of height with respect to that which is expected according to age and gender norms.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Abnormality of body height</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0001507 
+                <strong>子类:</strong> HP:0000098, HP:0004322, HP:0012772 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025901</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000003</div>
+            <div class="term-label">Multicystic kidney dysplasia</div>
+            <div class="term-definition"><strong>定义:</strong> Multicystic dysplasia of the kidney is characterized by multiple cysts of varying size in the kidney and the absence of a normal pelvicaliceal system. The condition is associated with ureteral or ureteropelvic atresia, and the affected kidney is nonfunctional.</div>
+            <div class="term-definition"><strong>注释:</strong> Multicystic kidney dysplasia is the result of abnormal fetal renal development in which the affected kidney is replaced by multiple cysts and has little or no residual function. The vast majority of multicystic kidneys are unilateral. Multicystic kidney can be diagnosed on prenatal ultrasound.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Multicystic dysplastic kidney, Multicystic renal dysplasia, Multicystic kidneys</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000107 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:204962002, SNOMEDCT_US:82525005, UMLS:C3714581</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000005</div>
+            <div class="term-label">Mode of inheritance</div>
+            <div class="term-definition"><strong>定义:</strong> The pattern in which a particular genetic trait or disorder is passed from one generation to the next.</div>
+            <div class="term-definition"><strong>注释:</strong> While there is a close conceptual relationship between allelic requirement and inheritance, they serve different purposes; allelic requirement is necessary for variant annotation pipelines and to determine if a given variant in a specific context is relevant to the phenotype of the patient e.g. a heterozygous variant (in the absence of compound heterozygosity) is relevant for dominant but not for recessive disease; while inheritance is used for describing the mode of inheritance of a phenotype and is particularly applicable in the clinical setting for communicating recurrence risk, to guide family screening, and to guide reproductive advice.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Inheritance</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000001 
+                <strong>子类:</strong> HP:0001426, HP:0003745 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1708511</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000006</div>
+            <div class="term-label">Autosomal dominant inheritance</div>
+            <div class="term-definition"><strong>定义:</strong> A mode of inheritance that is observed for traits related to a gene encoded on one of the autosomes (i.e., the human chromosomes 1-22) in which a trait manifests in heterozygotes. In the context of medical genetics, an autosomal dominant disorder is caused when a single copy of the mutant allele is present. Males and females are affected equally, and can both transmit the disorder with a risk of 50% for each child of inheriting the mutant allele.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> monoallelic_autosomal, Autosomal dominant</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Autosomal dominant type, Autosomal dominant form</div>
+            
+            <div class="relationships">
+                
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:263681008, UMLS:C0443147</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000007</div>
+            <div class="term-label">Autosomal recessive inheritance</div>
+            <div class="term-definition"><strong>定义:</strong> A mode of inheritance that is observed for traits related to a gene encoded on one of the autosomes (i.e., the human chromosomes 1-22) in which a trait manifests in individuals with two pathogenic alleles, either homozygotes (two copies of the same mutant allele) or compound heterozygotes (whereby each copy of a gene has a distinct mutant allele).</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> biallelic_autosomal, Autosomal recessive</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Autosomal recessive predisposition, Autosomal recessive form</div>
+            
+            <div class="relationships">
+                
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:258211005, UMLS:C0441748, UMLS:C4020899</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000008</div>
+            <div class="term-label">Abnormal morphology of female internal genitalia</div>
+            <div class="term-definition"><strong>定义:</strong> An abnormality of the female internal genitalia.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Abnormality of female internal genitalia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0010460, HP:0000812 
+                <strong>子类:</strong> HP:0000130, HP:0000137, HP:0000142, HP:0011027 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025900</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000009</div>
+            <div class="term-label">Functional abnormality of the bladder</div>
+            <div class="term-definition"><strong>定义:</strong> Dysfunction of the urinary bladder.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Poor bladder function</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000014 
+                <strong>子类:</strong> HP:0000011, HP:0000012, HP:0000016, HP:0000017, HP:0000019 ... 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C3806583</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000010</div>
+            <div class="term-label">Recurrent urinary tract infections</div>
+            <div class="term-definition"><strong>定义:</strong> Repeated infections of the urinary tract.</div>
+            <div class="term-definition"><strong>注释:</strong> The urinary tract comprises the kidneys, ureters, a bladder, and a urethra.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Urinary tract infections, recurrent, Urinary tract infections, Repeated bladder infections, Frequent urinary tract infections, Recurrent UTIs, Repeated urinary tract infections</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0011277, HP:0002719 
+                <strong>子类:</strong> HP:0012786, HP:0012787 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:197927001, UMLS:C0262655</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000011</div>
+            <div class="term-label">Neurogenic bladder</div>
+            <div class="term-definition"><strong>定义:</strong> A type of bladder dysfunction caused by neurologic damage. Neurogenic bladder can be flaccid or spastic. Common manifestatios of neurogenic bladder are overflow incontinence, frequency, urgency, urge incontinence, and retention.</div>
+            <div class="term-definition"><strong>注释:</strong> Neurogenic bladder sphincter dysfunction (NBSD) can develop as a result of a lesion at any level in the nervous system, including the cerebral cortex, spinal cord, or peripheral nervous system. Neurologic conditions in children leading to neurogenic bladder dysfunction are predominantly congenital neural tube defects (including myelomeningocele, lipomeningocele, sacral agenesis, and occult lesions causing tethered cord). Acquired causes such as spinal cord tumors or trauma or sequelae of transverse myelitis are less frequent. Whereas from an etiologic standpoint neurogenic bladder dysfunction is a heterogeneous group, medical management will be similar irrespective of the underlying cause.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Lack of bladder control due to nervous system injury</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000009 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:397732007, SNOMEDCT_US:398064005, UMLS:C0005697</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000012</div>
+            <div class="term-label">Urinary urgency</div>
+            <div class="term-definition"><strong>定义:</strong> Urge incontinence is the strong, sudden need to urinate.</div>
+            <div class="term-definition"><strong>注释:</strong> Urinary urgency is the strong, sudden need to urinate and is usually due to bladder spasms or contractions. This symptom is suggestive of, but not necessarily conclusive for urodynamically demonstrable detrusor hyperactivity.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Urinary urgency, Urgent micturition, Overactive bladder</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Urgency frequency syndrome, Overactive bladder syndrome</div>
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000009 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:75088002, UMLS:C0085606, UMLS:C3544092</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000013</div>
+            <div class="term-label">Hypoplasia of the uterus</div>
+            <div class="term-definition"><strong>定义:</strong> Underdevelopment of the uterus.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Underdeveloped uterus, Hypoplastic uterus, Rudimentary uterus, Small uterus</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0008684 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:35850006, UMLS:C0266399</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000014</div>
+            <div class="term-label">Abnormality of the bladder</div>
+            <div class="term-definition"><strong>定义:</strong> An abnormality of the urinary bladder.</div>
+            
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0010936 
+                <strong>子类:</strong> HP:0000009 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C0149632</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000015</div>
+            <div class="term-label">Bladder diverticulum</div>
+            <div class="term-definition"><strong>定义:</strong> Diverticulum (sac or pouch) in the wall of the urinary bladder.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Bladder diverticula</div>
+            
+            
+            <div class="relationships">
+                
+                <strong>子类:</strong> HP:0008691, HP:0012619 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:197866008, UMLS:C0156273</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000016</div>
+            <div class="term-label">Urinary retention</div>
+            <div class="term-definition"><strong>定义:</strong> Inability to completely empty the urinary bladder during the process of urination.</div>
+            <div class="term-definition"><strong>注释:</strong> Urinary retention is the inability of the urinary bladder to empty. The cause may be neurologic or nonneurologic.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Increased post-void residual urine volume</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000009 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:130951007, SNOMEDCT_US:267064002, SNOMEDCT_US:449491000124101</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000017</div>
+            <div class="term-label">Nocturia</div>
+            <div class="term-definition"><strong>定义:</strong> Abnormally increased production of urine during the night leading to an unusually frequent need to urinate.</div>
+            <div class="term-definition"><strong>注释:</strong> Often occurring as a result of heart insufficiency.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Nycturia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000009 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:139394000, UMLS:C0028734</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000019</div>
+            <div class="term-label">Urinary hesitancy</div>
+            <div class="term-definition"><strong>定义:</strong> Difficulty in beginning the process of urination.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Difficulty with flow</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000009 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:5972002, UMLS:C0152032</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000020</div>
+            <div class="term-label">Urinary incontinence</div>
+            <div class="term-definition"><strong>定义:</strong> Loss of the ability to control the urinary bladder leading to involuntary urination.</div>
+            <div class="term-definition"><strong>注释:</strong> Urinary incontinence can be defined as the complaint of any involuntary leakage of urine.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Loss of bladder control, Bladder incontinence</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000009 
+                <strong>子类:</strong> HP:0010992 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:165232002, UMLS:C0042024</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000021</div>
+            <div class="term-label">Megacystis</div>
+            <div class="term-definition"><strong>定义:</strong> Dilatation of the bladder postnatally.</div>
+            
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0010955 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1855311</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000022</div>
+            <div class="term-label">Abnormal male internal genitalia morphology</div>
+            <div class="term-definition"><strong>定义:</strong> An abnormality of the male internal genitalia.</div>
+            <div class="term-definition"><strong>注释:</strong> The internal genital structures of the male including the testis, epididymis, vas deferens, seminal vesicle, ejaculatory duct, bulbourethral gland, and the prostate.</div>
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0010461, HP:0000812 
+                <strong>子类:</strong> HP:0008775, HP:0009714, HP:0012872 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025899</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000023</div>
+            <div class="term-label">Inguinal hernia</div>
+            <div class="term-definition"><strong>定义:</strong> Protrusion of the contents of the abdominal cavity through the inguinal canal.</div>
+            <div class="term-definition"><strong>注释:</strong> Inguinal hernia appears as a bulge in the groin.</div>
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0004299 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> MEDDRA:10022016, SNOMEDCT_US:396232000, UMLS:C0019294</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000024</div>
+            <div class="term-label">Prostatitis</div>
+            <div class="term-definition"><strong>定义:</strong> The presence of inflammation of the prostate.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Inflammation of the prostate</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0008775, HP:0012649 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:9713002, UMLS:C0033581</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000025</div>
+            <div class="term-label">Functional abnormality of male internal genitalia</div>
+            
+            
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012874 
+                <strong>子类:</strong> HP:0000026, HP:0008669 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025898</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000026</div>
+            <div class="term-label">Male hypogonadism</div>
+            <div class="term-definition"><strong>定义:</strong> Decreased functionality of the male gonad, i.e., of the testis, with reduced spermatogenesis or testosterone synthesis.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Decreased function of male gonad</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000135, HP:0000025 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:48723006, UMLS:C0151721</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000027</div>
+            <div class="term-label">Azoospermia</div>
+            <div class="term-definition"><strong>定义:</strong> Absence of any measurable level of sperm,whereby spermatozoa cannot be observed even after centrifugation of the semen pellet.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Absent sperm in semen</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0008669 
+                <strong>子类:</strong> HP:0011961, HP:0011962, HP:0011963 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:425558002, SNOMEDCT_US:48188009, UMLS:C0004509</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000028</div>
+            <div class="term-label">Cryptorchidism</div>
+            <div class="term-definition"><strong>定义:</strong> Testis in inguinal canal. That is, absence of one or both testes from the scrotum owing to failure of the testis or testes to descend through the inguinal canal to the scrotum.</div>
+            <div class="term-definition"><strong>注释:</strong> The gonad is mobile and can be retracted superiorly by the cremaster muscle reflex stimulated, for instance, by cold or touch. A retracted testis is not cryptorchidism. An abdominal testis cannot be distinguished by physical examination from an (Apparently) absent testis and requires radiological (or, rarely, surgical) procedures for assessment.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Undescended testis, Undescended testes, Cryptorchism</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000035 
+                <strong>子类:</strong> HP:0008689, HP:0012741 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> Fyler:4493, SNOMEDCT_US:204878001, UMLS:C0010417</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000029</div>
+            <div class="term-label">Testicular atrophy</div>
+            <div class="term-definition"><strong>定义:</strong> Wasting (atrophy) of the testicle (the male gonad) manifested by a decrease in size and potentially by a loss of fertility.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Testicular degeneration</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000035 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:17585008, UMLS:C0156312</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000030</div>
+            <div class="term-label">Testicular gonadoblastoma</div>
+            <div class="term-definition"><strong>定义:</strong> The presence of a gonadoblastoma of the testis.</div>
+            
+            
+            
+            <div class="synonyms"><strong>相关同义词:</strong> Gonadoblastoma, male</div>
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0010788, HP:0000150 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> NCIT:C3754, UMLS:C1515283</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000031</div>
+            <div class="term-label">Epididymitis</div>
+            <div class="term-definition"><strong>定义:</strong> The presence of inflammation of the epididymis.</div>
+            
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012649, HP:0009714 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:31070006, UMLS:C0014534</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000032</div>
+            <div class="term-label">Abnormal male external genitalia morphology</div>
+            <div class="term-definition"><strong>定义:</strong> Any structural abnormality of male external genitalia.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Abnormality of male external genitalia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0010461, HP:0000811 
+                <strong>子类:</strong> HP:0000033, HP:0000035, HP:0000036, HP:0000037, HP:0000045 ... 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025897</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000033</div>
+            <div class="term-label">Ambiguous genitalia, male</div>
+            <div class="term-definition"><strong>定义:</strong> Ambiguous genitalia in an individual with XY genetic gender.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Ambiguous genitalia in males</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000062, HP:0000032 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4021823</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000034</div>
+            <div class="term-label">Hydrocele testis</div>
+            <div class="term-definition"><strong>定义:</strong> Accumulation of clear fluid in the between the layers of membrane (tunica vaginalis) surrounding the testis.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Testicular hydrocele</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000035 
+                <strong>子类:</strong> HP:0100673 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:26614003, SNOMEDCT_US:386152007, SNOMEDCT_US:55434001</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000035</div>
+            <div class="term-label">Abnormal testis morphology</div>
+            <div class="term-definition"><strong>定义:</strong> An anomaly of the testicle (the male gonad).</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Anomaly of the testes, Abnormality of the testis</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000032 
+                <strong>子类:</strong> HP:0000028, HP:0000029, HP:0000034, HP:0008720, HP:0008733 ... 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:55631001, UMLS:C0266423</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000036</div>
+            <div class="term-label">Abnormal penis morphology</div>
+            <div class="term-definition"><strong>定义:</strong> Abnormality of the male external sex organ.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Abnormality of the penis</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000032 
+                <strong>子类:</strong> HP:0000040, HP:0008708, HP:0008736, HP:0100587, HP:0100599 ... 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025896</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000037</div>
+            <div class="term-label">Male pseudohermaphroditism</div>
+            <div class="term-definition"><strong>定义:</strong> Hermaphroditism refers to a discrepancy between the morphology of the gonads and that of the external genitalia. In male pseudohermaphroditism, the genotype is male (XY) and the external genitalia are imcompletely virilized, ambiguous, or complete female. If gonads are present, they are testes.</div>
+            
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000032 
+                <strong>子类:</strong> HP:0008656 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:111332007, UMLS:C0238395</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000039</div>
+            <div class="term-label">Epispadias</div>
+            <div class="term-definition"><strong>定义:</strong> Epispadias is a urogenital malformation characterized by the failure of the urethral tube to tubularize on the dorsal aspect. Unlike in hypospadias, where the meatus is on the ventral aspect, children with epispadias have a wide-open urethral plate on the dorsum. It is commonly seen as a component in the spectrum of bladder exstrophy-epispadias-complex. Isolated epispadias constitutes less than 10 percent of the total cases of epispadias.</div>
+            <div class="term-definition"><strong>注释:</strong> Epispadias may be present in a phenotypic male, female, or an individual with ambiguous genitalia. A meatus in a phenotypic male may be positioned either on the glans (glandular or balanic epispadias), the shaft (penile epispadias) or at the attachment of the penis to the abdominal wall (penopubic epispadias). Alternatively, the urethra may be an open groove along the dorsal shaft of the penis, with no readily recognized meatus. Epispadias is a frequent component of Bladder exstrophy, but should be coded separately.</div>
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0100627 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:406477003, UMLS:C0563449</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000040</div>
+            <div class="term-label">Long penis</div>
+            <div class="term-definition"><strong>定义:</strong> Penile length more than 2 SD above the mean for age.</div>
+            <div class="term-definition"><strong>注释:</strong> Penile length is the distance between the midline attachment of the gently stretched, flaccid penis above the pubic symphysis and tip of the glans.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Enlarged penis, Long penis</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000036 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:88673001, UMLS:C0269011</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000041</div>
+            <div class="term-label">Chordee</div>
+            <div class="term-definition"><strong>定义:</strong> A congenital anomaly of the penis characterized by ventral (i.e., downward), lateral, or ventrolateral curvature of the shaft and glans penis of more than 30 degrees.</div>
+            <div class="term-definition"><strong>注释:</strong> The degree of variation of penis curvature is a continuum, but traditionally 30 degrees is considered the threshold for surgical intervention on chordee. Bowing usually becomes more obvious in an erect penis, but is frequently also palpable when stretching a flaccid penis. Chordee can be congenital or acquired; if the former, it can be associated with Webbed Penis or Hypospadias, which should be coded separately.</div>
+            
+            
+            
+            
+            <div class="relationships">
+                
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:4287008, UMLS:C0221182</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000042</div>
+            <div class="term-label">Absent external genitalia</div>
+            <div class="term-definition"><strong>定义:</strong> Lack of external genitalia in a male or female individual.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Absent external genitalia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000811 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1848869</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000044</div>
+            <div class="term-label">Hypogonadotropic hypogonadism</div>
+            <div class="term-definition"><strong>定义:</strong> Hypogonadotropic hypogonadism is characterized by reduced function of the gonads (testes in males or ovaries in females) and results from the absence of the gonadal stimulating pituitary hormones: follicle stimulating hormone (FSH) and luteinizing hormone (LH).</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Hypogonadotrophic hypogonadism, Low gonadotropins (secondary hypogonadism)</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Isolated hypogonadotropic hypogonadism</div>
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000135 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:33927004, UMLS:C0271623, UMLS:C3489396</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000045</div>
+            <div class="term-label">Abnormal scrotum morphology</div>
+            <div class="term-definition"><strong>定义:</strong> Any structural abnormality of the scrotum, i.e., the sac that contains the testes, epididymis, and the lower part of the spermatic cord.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Abnormality of the scrotum</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000032 
+                <strong>子类:</strong> HP:0000046, HP:0000048, HP:0000049, HP:0003246, HP:0008707 ... 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025895</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000046</div>
+            <div class="term-label">Small scrotum</div>
+            <div class="term-definition"><strong>定义:</strong> Apparently small scrotum for age.</div>
+            <div class="term-definition"><strong>注释:</strong> A small scrotum is often accompanied by Cryptorchidism which should be coded separately. The size of the scrotum is dependent on the ambient temperature: a low temperature may cause the testes to retract, leading to the false impression of a small scrotum.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Smaller than typical growth of scrotum, Hypoplastic scrotum, Underdeveloped scrotum, Scrotal hypoplasia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000050, HP:0000045 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:204912007, UMLS:C0431659</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000047</div>
+            <div class="term-label">Hypospadias</div>
+            <div class="term-definition"><strong>定义:</strong> Abnormal position of urethral meatus on the ventral penile shaft (underside) characterized by displacement of the urethral meatus from the tip of the glans penis to the ventral surface of the penis, scrotum, or perineum.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Hypospadia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0100627 
+                <strong>子类:</strong> HP:0000051, HP:0000808, HP:0003244, HP:0012853 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> Fyler:4504, SNOMEDCT_US:204888000, UMLS:C1691215</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000048</div>
+            <div class="term-label">Bifid scrotum</div>
+            <div class="term-definition"><strong>定义:</strong> Midline indentation or cleft of the scrotum.</div>
+            <div class="term-definition"><strong>注释:</strong> A testis may or may not be present in each half of the scrotum.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Scrotal cleft, Cleft of scrotum</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000045 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:236780002, UMLS:C0341787</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000049</div>
+            <div class="term-label">Shawl scrotum</div>
+            <div class="term-definition"><strong>定义:</strong> Superior margin of the scrotum superior to the base of the penis.</div>
+            <div class="term-definition"><strong>注释:</strong> A congenital overriding scrotum may disappear with growth and development, especially during puberty. If the entire scrotum is located superior to the penis, the term Penoscrotal transposition is used instead.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Overriding scrotum, Scrotum surrounds penis</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000045 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1858539</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000050</div>
+            <div class="term-label">Hypoplastic male external genitalia</div>
+            <div class="term-definition"><strong>定义:</strong> Underdevelopment of part or all of the male external reproductive organs (which include the penis, the scrotum and the urethra).</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Underdeveloped male genitalia, Small male external genitalia, Hypoplastic male genitalia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000032, HP:0003241 
+                <strong>子类:</strong> HP:0000046, HP:0008734, HP:0008736 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1852534</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000051</div>
+            <div class="term-label">Perineal hypospadias</div>
+            <div class="term-definition"><strong>定义:</strong> Hypospadias with location of the urethral meatus in the perineal region.</div>
+            
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000047 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:204890004, UMLS:C0452148</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000052</div>
+            <div class="term-label">Urethral atresia, male</div>
+            <div class="term-definition"><strong>定义:</strong> Congenital anomaly characterized by closure or failure to develop an opening in the urethra in males.</div>
+            
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000068 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025894</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000053</div>
+            <div class="term-label">Macroorchidism</div>
+            <div class="term-definition"><strong>定义:</strong> The presence of abnormally large testes.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Large testis, Large testicles</div>
+            
+            
+            <div class="relationships">
+                
+                <strong>子类:</strong> HP:0002050, HP:0008640 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1263023</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000054</div>
+            <div class="term-label">Micropenis</div>
+            <div class="term-definition"><strong>定义:</strong> Abnormally small penis. At birth, the normal penis is about 3 cm (stretched length from pubic tubercle to tip of penis) with micropenis less than 2.0-2.5 cm.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Short penis, Small penis</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0008736 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:34911001, UMLS:C4551492</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000055</div>
+            <div class="term-label">Abnormal female external genitalia morphology</div>
+            <div class="term-definition"><strong>定义:</strong> Any structural abnormality of the female external genitalia.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Abnormality of female external genitalia, Abnormal female external genitalia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0010460, HP:0000811 
+                <strong>子类:</strong> HP:0000056, HP:0000058, HP:0000061, HP:0000067, HP:0010458 ... 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4021822</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000056</div>
+            <div class="term-label">Abnormal clitoris morphology</div>
+            <div class="term-definition"><strong>定义:</strong> Any structural abnormality of the clitoris.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Abnormality of the clit, Abnormality of the clitoris</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000055 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025893</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000058</div>
+            <div class="term-label">Abnormal labia morphology</div>
+            <div class="term-definition"><strong>定义:</strong> An anomaly of the labia, the externally visible portions of the vulva.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Abnormality of the labia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000055 
+                <strong>子类:</strong> HP:0000065, HP:0000066, HP:0012880, HP:0012881 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025892</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000059</div>
+            <div class="term-label">Hypoplastic labia majora</div>
+            <div class="term-definition"><strong>定义:</strong> Undergrowth of the outer labia.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Small labia majora, Hypoplasia of labia majora, Underdeveloped vaginal lips</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012881, HP:0000066 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:289469003, UMLS:C0566899</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000060</div>
+            <div class="term-label">Clitoral hypoplasia</div>
+            <div class="term-definition"><strong>定义:</strong> Developmental hypoplasia of the clitoris.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Underdeveloped clit, Small clitoris, Hypoplastic clitoris</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012815 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1844527</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000061</div>
+            <div class="term-label">Ambiguous genitalia, female</div>
+            <div class="term-definition"><strong>定义:</strong> Ambiguous genitalia in an individual with XX genetic gender.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Atypical appearance of female genitals</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Ambiguous genitalia due to virilization</div>
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000062, HP:0000055 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1859980, UMLS:C4025891</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000062</div>
+            <div class="term-label">Ambiguous genitalia</div>
+            <div class="term-definition"><strong>定义:</strong> A genital phenotype that is not clearly assignable to a single gender. Ambiguous genitalia can be evaluated using the Prader scale: Prader 0: Normal female external genitalia. Prader 1: Female external genitalia with clitoromegaly. Prader 2: Clitoromegaly with partial labial fusion forming a funnel-shaped urogenital sinus. Prader 3: Increased phallic enlargement. Complete labioscrotal fusion forming a urogenital sinus with a single opening. Prader 4: Complete scrotal fusion with urogenital opening at the base or on the shaft of the phallus. Prader 5: Normal male external genitalia. The diagnosis of ambiguous genitalia is made for Prader 1-4.</div>
+            <div class="term-definition"><strong>注释:</strong> Note that this term can include or combine variations in size and shape, with partial or complete absence of structures. It is preferable to describe the individual components, which are defined below. It is nonetheless a widely used bundled term and as such is retained here. The distinction of this finding from a marked degree of Hypospadias is an example of how this term can be problematic. Genetic gender is determined at fertilization, whereby the presence of a Y chromosome determines male gender. Normally, genetic gender determines gonadal gender which in turn determines phenotypic gender. Testicular development is an active process requiring expression of the primary testis determining gene SRY, which is located on the Y chromosome.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Ambiguous external genitalia at birth, Intersex genitalia, Ambiguous external genitalia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000811 
+                <strong>子类:</strong> HP:0000033, HP:0000061, HP:0003248, HP:0010459, HP:0012861 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:21321009, UMLS:C0266362</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000063</div>
+            <div class="term-label">Fused labia minora</div>
+            <div class="term-definition"><strong>定义:</strong> Fusion of the labia minora as a result of labial adhesions resulting in vaginal obstruction.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Fused inner lips</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012880 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1837532</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000064</div>
+            <div class="term-label">Hypoplastic labia minora</div>
+            
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Underdeveloped inner lips</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000066, HP:0012880 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1849295</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000065</div>
+            <div class="term-label">Labial hypertrophy</div>
+            
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Enlargement of the vaginal lips, Enlarged vaginal lips, Enlargement of the labia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000058 
+                <strong>子类:</strong> HP:0008683, HP:0008739 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:16924008, UMLS:C0404531</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000066</div>
+            <div class="term-label">Labial hypoplasia</div>
+            
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Hypoplastic labia, Underdeveloped labia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012815, HP:0000058 
+                <strong>子类:</strong> HP:0000059, HP:0000064 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1850325</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000067</div>
+            <div class="term-label">Urethral atresia, female</div>
+            <div class="term-definition"><strong>定义:</strong> Congenital anomaly characterized by closure or failure to develop an opening in the urethra in females.</div>
+            
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000068, HP:0000055 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025890</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000068</div>
+            <div class="term-label">Urethral atresia</div>
+            <div class="term-definition"><strong>定义:</strong> Congenital anomaly characterized by closure or failure to develop an opening in the urethra.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Absent urethral opening, Urethral opening absent</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000795 
+                <strong>子类:</strong> HP:0000052, HP:0000067 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1610065</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000069</div>
+            <div class="term-label">Abnormality of the ureter</div>
+            <div class="term-definition"><strong>定义:</strong> An abnormality of the ureter. The ureter is the duct by which urine passes from the kidney to the bladder.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Ureter issue, Abnormality of the ureters, Ureteral anomalies</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0010935 
+                <strong>子类:</strong> HP:0100516 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1840382</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000070</div>
+            <div class="term-label">Ureterocele</div>
+            <div class="term-definition"><strong>定义:</strong> A ureterocele is a congenital saccular dilatation of the distal segment of the ureter.</div>
+            
+            
+            
+            
+            
+            <div class="relationships">
+                
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:12818004, UMLS:C0041960</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000071</div>
+            <div class="term-label">Ureteral stenosis</div>
+            <div class="term-definition"><strong>定义:</strong> The presence of a stenotic, i.e., constricted ureter.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Ureteric stenosis, Narrowing of the ureter</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0006000 
+                <strong>子类:</strong> HP:0000074, HP:0008714 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:95574003, UMLS:C0521618</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000072</div>
+            <div class="term-label">Hydroureter</div>
+            <div class="term-definition"><strong>定义:</strong> The distention of the ureter with urine.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Swelling of ureter, Wide ureter, Ureteral dilatation, Dilated ureter, Megaureter</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Uroureter</div>
+            
+            <div class="relationships">
+                
+                <strong>子类:</strong> HP:0008676 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:69758005, SNOMEDCT_US:95576001, UMLS:C0521620</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000073</div>
+            <div class="term-label">Ureteral duplication</div>
+            <div class="term-definition"><strong>定义:</strong> A developmental anomaly characterized by the presence of two, instead of one, ureter connecting a kidney to the bladder.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Double ureter</div>
+            
+            
+            <div class="relationships">
+                
+                <strong>子类:</strong> HP:0008705, HP:0012571, HP:0012572 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:49496001, UMLS:C0221365</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000074</div>
+            <div class="term-label">Ureteropelvic junction obstruction</div>
+            <div class="term-definition"><strong>定义:</strong> Blockage of urine flow from the renal pelvis to the proximal ureter.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Ureteropelvic junction stenosis, Pelviureteric junction obstruction</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000071 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:95575002, UMLS:C0521619</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000075</div>
+            <div class="term-label">Renal duplication</div>
+            <div class="term-definition"><strong>定义:</strong> A congenital anomaly of the urinary tract, in which the kidney is duplicated and is drained via two separate renal pelves and ureters.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Duplex kidney, Duplicated kidney, Extra kidney</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Supernumerary kidney</div>
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012210, HP:0005217 
+                <strong>子类:</strong> HP:0005580, HP:0008738 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:30275001, UMLS:C0266298</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000076</div>
+            <div class="term-label">Vesicoureteral reflux</div>
+            <div class="term-definition"><strong>定义:</strong> Abnormal (retrograde) movement of urine from the bladder into ureters or kidneys related to inadequacy of the valvular mechanism at the ureterovesicular junction or other causes.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> VUR, Vesico-ureteral reflux, Ureteral reflux, Ureteric reflux, Vesicoureteric reflux</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000009 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> Fyler:4510, SNOMEDCT_US:197811007, UMLS:C0042580</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000077</div>
+            <div class="term-label">Abnormality of the kidney</div>
+            <div class="term-definition"><strong>定义:</strong> An abnormality of the kidney.</div>
+            <div class="term-definition"><strong>注释:</strong> The kidney is a paired organ whose primary function is the production of urine.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Renal anomalies, Abnormal kidney, Renal anomaly, Abnormality of the kidney</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0010935 
+                <strong>子类:</strong> HP:0009726, HP:0012210, HP:0012211 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:44513007, SNOMEDCT_US:90708001, UMLS:C0022658</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000078</div>
+            <div class="term-label">Abnormality of the genital system</div>
+            <div class="term-definition"><strong>定义:</strong> An abnormality of the genital system.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Genital anomalies, Genital abnormalities, Genital defects, Genital abnormality</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Abnormality of the reproductive system</div>
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000119 
+                <strong>子类:</strong> HP:0000080, HP:0010787, HP:0012243 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C0281966, UMLS:C0744356</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000079</div>
+            <div class="term-label">Abnormality of the urinary system</div>
+            <div class="term-definition"><strong>定义:</strong> An abnormality of the urinary system.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Urinary tract abnormality, Urinary tract anomalies, Urinary tract abnormalities</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000119 
+                <strong>子类:</strong> HP:0000809, HP:0010935, HP:0010936, HP:0011277 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4021821</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000080</div>
+            <div class="term-label">Abnormality of reproductive system physiology</div>
+            <div class="term-definition"><strong>定义:</strong> An abnormal functionality of the genital system.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Genital functional abnormality, Abnormality of reproductive system physiology</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000078 
+                <strong>子类:</strong> HP:0000135, HP:0000144, HP:0012874 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4020896, UMLS:C4021820</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000081</div>
+            <div class="term-label">Duplicated collecting system</div>
+            <div class="term-definition"><strong>定义:</strong> A duplication of the collecting system of the kidney, defined as a kidney with two (instead of, normally, one) pyelocaliceal systems. The pyelocaliceal system is comprised of the renal pelvis and calices. The duplicated renal collecting system can be associated with a single ureter or with double ureters. In the latter case, the two ureters empty separately into the bladder or fuse to form a single ureteral orifice.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Double collecting system, Duplicated renal collecting system, Double urinary collecting systems on intravenous pyelography, Duplex collecting system</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0004742 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1858565</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000083</div>
+            <div class="term-label">Renal insufficiency</div>
+            <div class="term-definition"><strong>定义:</strong> A reduction in the level of performance of the kidneys in areas of function comprising the concentration of urine, removal of wastes, the maintenance of electrolyte balance, homeostasis of blood pressure, and calcium metabolism.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Renal failure, Renal failure in adulthood</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012211 
+                <strong>子类:</strong> HP:0001919, HP:0004713, HP:0012622 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:236423003, SNOMEDCT_US:42399005, UMLS:C0035078</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000085</div>
+            <div class="term-label">Horseshoe kidney</div>
+            <div class="term-definition"><strong>定义:</strong> A connection of the right and left kidney by an isthmus of functioning renal parenchyma or fibrous tissue that crosses the midline.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Horseshoe kidney, Horseshoe kidneys</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0100542 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> Fyler:4507, SNOMEDCT_US:41729002, UMLS:C0221353</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000086</div>
+            <div class="term-label">Ectopic kidney</div>
+            <div class="term-definition"><strong>定义:</strong> A developmental defect in which a kidney is located in an abnormal anatomic position.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Displaced kidney, Abnormal kidney location, Renal ectopia, Ectopic kidneys</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0100542 
+                <strong>子类:</strong> HP:0000125, HP:0004736 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:16507009, UMLS:C0238207</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000089</div>
+            <div class="term-label">Renal hypoplasia</div>
+            <div class="term-definition"><strong>定义:</strong> Hypoplasia of the kidney.</div>
+            <div class="term-definition"><strong>注释:</strong> Oligomeganephronic renal hypoplasia differs from simple hypoplasia, in which the renal mass is reduced but the number of nephrons is normal.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Hypoplastic kidney, Underdeveloped kidneys, Small kidneys, Hypoplastic kidneys</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0008678 
+                <strong>子类:</strong> HP:0012583, HP:0012584 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:32659003, UMLS:C0266295</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000090</div>
+            <div class="term-label">Nephronophthisis</div>
+            <div class="term-definition"><strong>定义:</strong> Presence of cysts at the corticomedullary junction of the kidney in combination with tubulointerstitial fibrosis.</div>
+            <div class="term-definition"><strong>注释:</strong> Nephronophthisis is here regarded as a phenotypic feature. The disease of the same name results in progressive symmetrical destruction of the kidneys involving both the tubules and glomeruli.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> juvenile nephronophthisis</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0100957 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:204958008, UMLS:C0687120</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000091</div>
+            <div class="term-label">Abnormal renal tubule morphology</div>
+            <div class="term-definition"><strong>定义:</strong> An abnormality of the renal tubules.</div>
+            <div class="term-definition"><strong>注释:</strong> The renal tubules are reabsorptive canals that are involved in the secreting, collecting, and conducting of the urine.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Abnormality of the renal tubule, Morphologic abnormality of the renal tubules</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012575 
+                <strong>子类:</strong> HP:0001969, HP:0008660, HP:0008682 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4021826</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000092</div>
+            <div class="term-label">Renal tubular atrophy</div>
+            <div class="term-definition"><strong>定义:</strong> The presence of renal tubules with thick redundant basement membranes, or a reduction of greater than 50% in tubular diameter compared to surrounding non-atrophic tubules.</div>
+            <div class="term-definition"><strong>注释:</strong> Atrophic tubules must be distinguished from acute tubular injury as both can show extensive tubular epithelial changes. In acute tubular injury, tubules are often dilated and tubular basement membranes are smooth and maintain normal thickness, in contrast to the contracted tubules with thickened and wrinkled tubular basement membranes of tubular atrophy. Further, in acute tubular injury, tubules are usually back-to-back or mildly separated by interstitial edema, while in tubular atrophy tubules can be separated by interstitial fibrosis. Uniform thickening of tubular basement membranes without shrinkage and otherwise healthy epithelial cells can be seen in diabetic nephropathy. Duplication, or lamellation, thickening, and disruption of tubular basement membranes with tubular dilatation can be seen in medullary cystic kidney disease/nephronophthisis.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Tubular atrophy, Renal tubular cell atrophy</div>
+            
+            
+            <div class="relationships">
+                
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1858395</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000093</div>
+            <div class="term-label">Proteinuria</div>
+            <div class="term-definition"><strong>定义:</strong> Increased levels of protein in the urine.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> High urine protein levels, Protein in urine</div>
+            
+            
+            <div class="relationships">
+                
+                <strong>子类:</strong> HP:0003126, HP:0012593, HP:0012595, HP:0012596, HP:0012597 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:29738008, UMLS:C0033687</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000095</div>
+            <div class="term-label">Abnormal renal glomerulus morphology</div>
+            <div class="term-definition"><strong>定义:</strong> A structural anomaly of the glomerulus.</div>
+            <div class="term-definition"><strong>注释:</strong> Each human kidney contains approximately one million nephrons. The glomerulus is the most proximal component of the nephron. The glomerulus of the mammalian kidney is a highly developed vascular bed that acts as a filter, allowing a filtrate of small molecules, such as water, sugars, electrolytes and small proteins, to pass through a barrier that retains high molecular weight proteins and cells in the circulation.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Abnormality of renal glomerulus morphology, Morphologic abnormality of the renal glomerulus</div>
+            
+            
+            <div class="relationships">
+                
+                <strong>子类:</strong> HP:0000096, HP:0000099, HP:0000111, HP:0001966, HP:0100611 ... 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C4025889</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000096</div>
+            <div class="term-label">Glomerular sclerosis</div>
+            <div class="term-definition"><strong>定义:</strong> Accumulation of scar tissue within the glomerulus.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Glomerulosclerosis</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000095 
+                <strong>子类:</strong> HP:0000097, HP:0004737 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:197661001, SNOMEDCT_US:82646005, UMLS:C0178664</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000097</div>
+            <div class="term-label">Focal segmental glomerulosclerosis</div>
+            <div class="term-definition"><strong>定义:</strong> Segmental accumulation of scar tissue in individual (but not all) glomeruli.</div>
+            <div class="term-definition"><strong>注释:</strong> Glomerular changes can be focal (only in some glomeruli) or diffuse (in all or almost all the glomeruli), and segmental (only a part of the glomerulus) or global (the entire glomerulus). FSGS is characterized by focal and segmental occurrence of lesions with mesangial sclerosis, obliteration of glomerular capillaries with hyalinosis and intracapillary foam cells, formation of adhesions between the glomerular tuft and Bowman's capsule, and podocyte hypertrophy. FSGS is not a disease entity, but rather a pattern of injury with quite diverse clinical behavior, morphology, and possibly also pathogenesis.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Focal and segmental glomerular sclerosis, Focal and segmental glomerulosclerosis, focal glomerulosclerosis</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000096 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:236403004, SNOMEDCT_US:25821008, UMLS:C0017668</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000098</div>
+            <div class="term-label">Tall stature</div>
+            <div class="term-definition"><strong>定义:</strong> A height above that which is expected according to age and gender norms.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Increased linear growth, Increased body height, Accelerated linear growth, Tall stature</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000002 
+                <strong>子类:</strong> HP:0001519, HP:0001533, HP:0001548, HP:0003517, HP:0011407 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:248328003, UMLS:C0241240</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000099</div>
+            <div class="term-label">Glomerulonephritis</div>
+            <div class="term-definition"><strong>定义:</strong> Inflammation of the renal glomeruli.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Glomerular nephritis</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000123, HP:0000095 
+                <strong>子类:</strong> HP:0000793, HP:0008653, HP:0012578, HP:0012579 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:36171008, UMLS:C0017658</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000100</div>
+            <div class="term-label">Nephrotic syndrome</div>
+            <div class="term-definition"><strong>定义:</strong> Nephrotic syndrome is a collection of findings resulting from glomerular dysfunction with an increase in glomerular capillary wall permeability associated with pronounced proteinuria. Nephrotic syndrome refers to the constellation of clinical findings that result from severe renal loss of protein, with Proteinuria and hypoalbuminemia, edema, and hyperlipidemia.</div>
+            <div class="term-definition"><strong>注释:</strong> In adults, nephrotic syndrome is characterized by protein excretion of 3.5 g or more per day. In children, nephrotic syndrome is accompanied by protein excretion of more than 40 mg/m2/h and hypalbuminemia < 2.5 mg/dl.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Nephrosis</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012211 
+                <strong>子类:</strong> HP:0008677, HP:0008695, HP:0012588, HP:0012589 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:52254009, UMLS:C0027726</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000103</div>
+            <div class="term-label">Polyuria</div>
+            <div class="term-definition"><strong>定义:</strong> An increased rate of urine production.</div>
+            <div class="term-definition"><strong>注释:</strong> An excessive volume of urination for an adult is more than 2.5 liters of urine per day.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Increased urine output</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012590 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:28442001, SNOMEDCT_US:56574000, SNOMEDCT_US:718402002</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000104</div>
+            <div class="term-label">Renal agenesis</div>
+            <div class="term-definition"><strong>定义:</strong> Agenesis, that is, failure of the kidney to develop during embryogenesis and development.</div>
+            <div class="term-definition"><strong>注释:</strong> Renal agenesis can occur as a unilateral or bilateral trait.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Renal aplasia, Missing kidney, Absent kidney</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0008678 
+                <strong>子类:</strong> HP:0000122, HP:0010958 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> Fyler:4503, SNOMEDCT_US:204942005, UMLS:C0542519</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000105</div>
+            <div class="term-label">Enlarged kidney</div>
+            <div class="term-definition"><strong>定义:</strong> An abnormal increase in the size of the kidney.</div>
+            <div class="term-definition"><strong>注释:</strong> The main causes of large kidney are hydronephrosis, polycystic disease, renal cell carcinoma, nephroblastoma/Wilms tumor (in children), and solitary cysts. If possible, a specific term should be used instead of this one. There are several ways of diagnosing enlarged kidney including intravenous urography.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Renal enlargement, Nephromegaly, Large kidneys, Enlarged kidney</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Large kidney</div>
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012210 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:300444006, UMLS:C0542518</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000107</div>
+            <div class="term-label">Renal cyst</div>
+            <div class="term-definition"><strong>定义:</strong> A fluid filled sac in the kidney.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Kidney cyst</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Renal cysts, Cystic kidneys, Cystic kidney disease</div>
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012210 
+                <strong>子类:</strong> HP:0000003, HP:0000108, HP:0000113, HP:0000800, HP:0000803 ... 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C0022679, UMLS:C3887499</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000108</div>
+            <div class="term-label">Renal corticomedullary cysts</div>
+            <div class="term-definition"><strong>定义:</strong> The presence of multiple cysts at the border between the renal cortex and medulla.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Corticomedullary renal cysts</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Renal corticomedullary cystic disease</div>
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0100957, HP:0011035, HP:0000107 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1968619</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000110</div>
+            <div class="term-label">Renal dysplasia</div>
+            <div class="term-definition"><strong>定义:</strong> The presence of developmental dysplasia of the kidney.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Dysplastic kidneys, Renal adysplasia</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012210 
+                <strong>子类:</strong> HP:0008718, HP:0012582 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:204949001, UMLS:C1619700, UMLS:C3536714</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000111</div>
+            <div class="term-label">Renal juxtaglomerular cell hypertrophy/hyperplasia</div>
+            <div class="term-definition"><strong>定义:</strong> Increased number and size of the juxtaglomerular cells.</div>
+            
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000095 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1866496</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000112</div>
+            <div class="term-label">Nephropathy</div>
+            <div class="term-definition"><strong>定义:</strong> A nonspecific term referring to disease or damage of the kidneys.</div>
+            
+            
+            
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0012211 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> SNOMEDCT_US:90708001, UMLS:C0022658, UMLS:C1408258</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000113</div>
+            <div class="term-label">Polycystic kidney dysplasia</div>
+            <div class="term-definition"><strong>定义:</strong> The presence of multiple cysts in both kidneys.</div>
+            <div class="term-definition"><strong>注释:</strong> Polycystic kidney disease (PKD) is a leading cause of end-stage renal disease. Most commonly, PKD arises as an inherited trait. Tremendous enlargement of both kidneys is characteristic of the autosomal dominant form of PKD, with up to hundreds or thousands of renal cysts. This term does not refer to the disease entity but rather to the finding of numerous cysts in both kidneys.</div>
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Polycystic kidneys</div>
+            <div class="synonyms"><strong>相关同义词:</strong> Polycystic kidney disease</div>
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000107 
+                
+                <span class="tag">叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> Fyler:4508, SNOMEDCT_US:82525005, UMLS:C0022680</div>
+        </div>
+
+        <div class="term-card">
+            <div class="term-id">HPO编码: HP:0000114</div>
+            <div class="term-label">Proximal tubulopathy</div>
+            <div class="term-definition"><strong>定义:</strong> Dysfunction of the proximal tubule, which is the portion of the duct system of the nephron of the kidney which leads from Bowman's capsule to the loop of Henle.</div>
+            
+            
+            <div class="synonyms"><strong>精确同义词:</strong> Proximal tubular defect, Proximal tubule dysfunction, Proximal renal tubule defect, Selective proximal tubular damage, Proximal renal tubulopathy</div>
+            
+            
+            <div class="relationships">
+                <strong>父类:</strong> HP:0000124 
+                <strong>子类:</strong> HP:0005574, HP:0012573 
+                <span class="tag">非叶子节点</span>
+                
+            </div>
+            
+            <div><strong>外部引用:</strong> UMLS:C1839603</div>
+        </div>
+
+    </div>
+</body>
+</html>

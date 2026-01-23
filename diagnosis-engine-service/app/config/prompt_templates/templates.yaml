@@ -1,0 +1,24 @@
+# 提示词模板配置文件
+# 模板使用Jinja2语法，支持变量替换和条件判断
+
+templates:
+  diagnosis_reasoning:
+    version: "1.0"
+    description: "诊断推理提示词模板"
+    file: "diagnosis_reasoning.jinja2"
+  
+  path_injection:
+    version: "1.0"
+    description: "路径注入提示词模板"
+    file: "path_injection.jinja2"
+  
+  question_generation:
+    version: "1.0"
+    description: "问诊问题生成提示词模板"
+    file: "question_generation.jinja2"
+  
+  explanation_generation:
+    version: "1.0"
+    description: "解释生成提示词模板"
+    file: "explanation_generation.jinja2"
+
