@@ -157,6 +157,15 @@ public class CDP {
     private Map<String, Object> audit;
     
     /**
+     * 执行追踪摘要（JSON格式）
+     * 存储执行路径的摘要信息，用于快速查询和可视化
+     * 包含：执行步骤、调用的服务列表、执行时间线等
+     */
+    @Type(type = "json")
+    @Column(name = "execution_trace", columnDefinition = "json")
+    private Map<String, Object> executionTrace;
+    
+    /**
      * 创建时间
      */
     @CreationTimestamp

@@ -1,8 +1,10 @@
 package com.aidoctor.diagnosis.service.orchestration;
 
+import com.aidoctor.diagnosis.annotation.TraceExecution;
 import com.aidoctor.diagnosis.client.*;
 import com.aidoctor.diagnosis.entity.CDP;
 import com.aidoctor.diagnosis.service.cdp.CDPManager;
+import com.aidoctor.diagnosis.util.TraceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -55,8 +57,12 @@ public class DiagnosisWorkflowOrchestrator {
      * @param cdp CDP对象
      * @return 更新后的CDP
      */
+    @TraceExecution(service = "diagnosis-service", module = "orchestration")
     @Transactional
     public CDP executeDiagnosisWorkflow(CDP cdp) {
+        // 设置追踪上下文
+        TraceContext.setCdpId(cdp.getId());
+        
         log.info("开始执行5步AI循证诊断流程: cdpId={}", cdp.getId());
         
         try {
@@ -85,6 +91,9 @@ public class DiagnosisWorkflowOrchestrator {
             updates.put("cdpStatus", "error");
             cdp = cdpManager.updateCDP(cdp.getId(), updates);
             throw e;
+        } finally {
+            // 清理追踪上下文
+            TraceContext.clear();
         }
     }
     
@@ -125,6 +134,7 @@ public class DiagnosisWorkflowOrchestrator {
      * Step 1: 识别问题
      * 调用脑区A（病例理解）和脑区B（主动问诊）
      */
+    @TraceExecution(service = "diagnosis-service", module = "orchestration")
     @Transactional
     public CDP step1IdentifyProblem(CDP cdp) {
         log.info("Step 1: 识别问题 - cdpId={}", cdp.getId());

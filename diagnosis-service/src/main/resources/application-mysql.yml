@@ -101,6 +101,15 @@ knife4j:
     description: 智能诊断系统的REST API接口文档
     version: 1.0.0
 
+# 执行追踪配置
+execution:
+  trace:
+    enabled: true  # 是否启用追踪（管理端功能，生产环境可关闭）
+
+# 追踪服务地址
+trace:
+  service-url: http://localhost:8093  # execution-trace-service 运行在 8093 端口
+
 # 日志配置
 logging:
   level:

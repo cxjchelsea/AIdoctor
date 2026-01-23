@@ -196,6 +196,9 @@ public class CDPManager {
         if (updates.containsKey("cdpStatus")) {
             cdp.setCdpStatus((String) updates.get("cdpStatus"));
         }
+        if (updates.containsKey("executionTrace")) {
+            cdp.setExecutionTrace((Map<String, Object>) updates.get("executionTrace"));
+        }
     }
 }
 
