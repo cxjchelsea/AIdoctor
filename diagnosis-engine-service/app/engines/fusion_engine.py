@@ -1,7 +1,7 @@
 """
 结果融合引擎
 """
-from typing import Dict, List
+from typing import Dict, List, Optional
 import asyncio
 import logging
 from app.models.request import DiagnosisEngineRequest
@@ -10,6 +10,8 @@ from app.engines.kg_engine import KnowledgeGraphEngine
 from app.engines.statistical_engine import StatisticalModelEngine
 from app.engines.llm_engine import LLMEngine
 from app.engines.differential_engine import DifferentialEngine
+from app.utils.llm_client import LangChainLLMClient
+from app.utils.dependencies import get_llm_client
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +19,22 @@ logger = logging.getLogger(__name__)
 class FusionEngine:
     """结果融合引擎"""
     
-    def __init__(self):
+    def __init__(self, llm_client: Optional[LangChainLLMClient] = None):
+        """
+        初始化融合引擎
+        
+        Args:
+            llm_client: LLM客户端，如果为None则使用单例（性能优化）
+        """
         self.rule_engine = RuleEngine()
         self.kg_engine = KnowledgeGraphEngine()
         self.statistical_engine = StatisticalModelEngine()
-        self.llm_engine = LLMEngine()
+        
+        # 使用传入的客户端或获取单例（性能优化：避免重复创建）
+        if llm_client is None:
+            llm_client = get_llm_client()
+        self.llm_engine = LLMEngine(llm_client=llm_client)
+        
         self.differential_engine = DifferentialEngine()
     
     async def fuse(self, request: DiagnosisEngineRequest) -> Dict:

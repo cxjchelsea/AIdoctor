@@ -35,5 +35,15 @@ export const traceApi = {
       errorCount: 0
     }
   },
+
+  /**
+   * 获取所有有追踪记录的 CDP ID 列表
+   */
+  getAllCdpIds: async (): Promise<Array<{ cdpId: string; latestTimestamp?: number; traceCount: number }>> => {
+    const response = await traceApiClient.get<Array<{ cdpId: string; latestTimestamp?: number; traceCount: number }>>(
+      '/cdps'
+    )
+    return response.data || []
+  },
 }
 

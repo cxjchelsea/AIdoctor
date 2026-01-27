@@ -71,7 +71,10 @@ public class CDPManager {
     }
     
     /**
-     * 更新CDP（使用乐观锁）
+     * 更新CDP（使用悲观锁防止并发冲突）
+     * 
+     * 性能优化：使用SELECT FOR UPDATE确保同一时间只有一个线程能更新CDP
+     * 解决execution-trace-service并发更新导致的CDPNotFoundException问题
      * 
      * @param cdpId CDP ID
      * @param updates 更新内容
@@ -81,7 +84,9 @@ public class CDPManager {
     public CDP updateCDP(String cdpId, Map<String, Object> updates) {
         log.info("更新CDP: cdpId={}", cdpId);
         
-        CDP existingCDP = getCDPById(cdpId)
+        // 使用悲观锁获取CDP，防止并发更新冲突
+        // SELECT FOR UPDATE会锁定该行，其他事务必须等待
+        CDP existingCDP = cdpRepository.findByIdWithLock(cdpId)
             .orElseThrow(() -> new CDPNotFoundException("CDP not found: " + cdpId));
         
         // 保存当前版本（写时复制）

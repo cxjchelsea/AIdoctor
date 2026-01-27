@@ -14,17 +14,29 @@ class Neo4jClient:
         self,
         uri: str,
         user: str,
-        password: str
+        password: str,
+        max_connection_lifetime: int = 30 * 60,  # 30分钟
+        max_connection_pool_size: int = 50,      # 最大连接数
+        connection_acquisition_timeout: int = 2   # 获取连接超时（秒）
     ):
         """
-        初始化Neo4j客户端
+        初始化Neo4j客户端（性能优化：配置连接池）
         
         Args:
             uri: Neo4j连接URI
             user: 用户名
             password: 密码
+            max_connection_lifetime: 连接最大生存时间（秒）
+            max_connection_pool_size: 连接池最大连接数
+            connection_acquisition_timeout: 获取连接超时时间（秒）
         """
-        self.driver = GraphDatabase.driver(uri, auth=(user, password))
+        self.driver = GraphDatabase.driver(
+            uri,
+            auth=(user, password),
+            max_connection_lifetime=max_connection_lifetime,
+            max_connection_pool_size=max_connection_pool_size,
+            connection_acquisition_timeout=connection_acquisition_timeout
+        )
     
     def close(self):
         """关闭数据库连接"""

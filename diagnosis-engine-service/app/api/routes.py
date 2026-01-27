@@ -15,10 +15,52 @@ from app.config.settings import settings
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# 初始化服务实例
+# 初始化服务实例（性能优化：使用单例LLM客户端）
+from app.utils.dependencies import get_llm_client
+
+_llm_client = None
+_fusion_engine = None
+
+def get_fusion_engine():
+    """获取融合引擎单例（性能优化）"""
+    global _llm_client, _fusion_engine
+    if _fusion_engine is None:
+        _llm_client = get_llm_client()
+        _fusion_engine = FusionEngine(llm_client=_llm_client)
+    return _fusion_engine
+
 diagnosis_service = DiagnosisService()
-fusion_engine = FusionEngine()
+fusion_engine = get_fusion_engine()  # 使用单例
 classifier = ThreeLayerClassifier()
+
+# Neo4j客户端和推理引擎单例（性能优化：避免重复创建连接）
+_kg_client = None
+_kg_engine = None
+
+def get_kg_engine():
+    """
+    获取知识图谱推理引擎（单例模式）
+    性能优化：避免每次请求都创建新的Neo4j连接
+    """
+    global _kg_client, _kg_engine
+    
+    if _kg_engine is None:
+        try:
+            _kg_client = Neo4jClient(
+                uri=settings.NEO4J_URI,
+                user=settings.NEO4J_USER,
+                password=settings.NEO4J_PASSWORD,
+                max_connection_lifetime=settings.NEO4J_MAX_CONNECTION_LIFETIME,
+                max_connection_pool_size=settings.NEO4J_MAX_CONNECTION_POOL_SIZE,
+                connection_acquisition_timeout=settings.NEO4J_CONNECTION_TIMEOUT
+            )
+            _kg_engine = KGReasoningEngine(kg_client=_kg_client)
+            logger.info("知识图谱推理引擎初始化完成（单例模式）")
+        except Exception as e:
+            logger.warning(f"Neo4j连接失败，知识图谱功能将不可用: {str(e)}")
+            _kg_engine = None
+    
+    return _kg_engine
 
 
 @router.post("/engine/diagnose", response_model=Dict[str, Any])
@@ -147,13 +189,13 @@ async def retrieve_paths(request: DiagnosisEngineRequest) -> Dict[str, Any]:
         if not symptom_cuis:
             return {"paths": [], "error": "未提供症状信息"}
         
-        # 创建知识图谱推理引擎
-        kg_client = Neo4jClient(
-            uri=settings.NEO4J_URI,
-            user=settings.NEO4J_USER,
-            password=settings.NEO4J_PASSWORD
-        )
-        kg_engine = KGReasoningEngine(kg_client=kg_client)
+        # 使用单例引擎（性能优化：避免重复创建连接）
+        kg_engine = get_kg_engine()
+        if kg_engine is None:
+            return {
+                "paths": [],
+                "error": "知识图谱服务不可用，请检查Neo4j连接"
+            }
         
         # 检索路径
         evidence = {

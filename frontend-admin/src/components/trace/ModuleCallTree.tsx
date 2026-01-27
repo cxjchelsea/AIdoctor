@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { Tree, Card, Tag, Typography, Empty } from 'antd'
 import type { DataNode } from 'antd/es/tree'
 import type { ExecutionTrace } from '@/types/trace'
+import { filterSuccessfulTraces } from '@/utils/traceFilter'
 
 const { Text } = Typography
 
@@ -15,10 +16,13 @@ interface ModuleCallTreeProps {
  */
 const ModuleCallTree: React.FC<ModuleCallTreeProps> = ({ traces }) => {
   const treeData = useMemo(() => {
+    // 使用统一的过滤函数过滤掉失败的服务调用
+    const successfulTraces = filterSuccessfulTraces(traces)
+    
     // 按服务分组
     const serviceMap = new Map<string, Map<string, ExecutionTrace[]>>()
 
-    traces.forEach(trace => {
+    successfulTraces.forEach(trace => {
       if (trace.service) {
         if (!serviceMap.has(trace.service)) {
           serviceMap.set(trace.service, new Map())
@@ -34,9 +38,11 @@ const ModuleCallTree: React.FC<ModuleCallTreeProps> = ({ traces }) => {
     })
 
     // 构建树结构
-    const treeNodes: DataNode[] = []
+    const treeNodes: Array<{ node: DataNode; firstTimestamp: number }> = []
 
     serviceMap.forEach((moduleMap, serviceName) => {
+      let serviceFirstTimestamp = Infinity
+      
       const serviceNode: DataNode = {
         title: (
           <div>
@@ -51,41 +57,69 @@ const ModuleCallTree: React.FC<ModuleCallTreeProps> = ({ traces }) => {
       }
 
       moduleMap.forEach((moduleTraces, moduleName) => {
-        const totalDuration = moduleTraces.reduce((sum, t) => sum + (t.duration || 0), 0)
-        const errorCount = moduleTraces.filter(t => t.status === 'ERROR').length
+        // 合并 START/END 事件：按 service + module + method 分组，只显示一次
+        // 对于同一个方法的 START 和 END 事件，优先保留有 duration 的事件（END 事件）
+        const methodMap = new Map<string, ExecutionTrace>()
+        moduleTraces.forEach(trace => {
+          // 使用 service + module + method 作为 key，确保同一个方法只显示一次
+          const key = `${trace.service || 'unknown'}-${moduleName}-${trace.method || 'unknown'}`
+          
+          if (!methodMap.has(key)) {
+            methodMap.set(key, trace)
+          } else {
+            const existing = methodMap.get(key)!
+            // 优先保留有 duration 的事件（END 事件）
+            // 如果两个都有 duration，保留 duration 更大的（更完整的 END 事件）
+            // 如果两个都没有 duration，保留时间戳更早的（START 事件）
+            if (trace.duration) {
+              if (!existing.duration || trace.duration > existing.duration) {
+                methodMap.set(key, trace)
+              }
+            } else if (!existing.duration) {
+              // 两个都没有 duration，保留时间戳更早的
+              if (new Date(trace.timestamp).getTime() < new Date(existing.timestamp).getTime()) {
+                methodMap.set(key, trace)
+              }
+            }
+          }
+        })
+
+        // 合并后按时间戳排序，确保调用顺序正确
+        const mergedTraces = Array.from(methodMap.values())
+          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        
+        // 更新服务首次出现的时间戳
+        if (mergedTraces.length > 0) {
+          const moduleFirstTime = new Date(mergedTraces[0].timestamp).getTime()
+          if (moduleFirstTime < serviceFirstTimestamp) {
+            serviceFirstTimestamp = moduleFirstTime
+          }
+        }
+        
+        const totalDuration = mergedTraces.reduce((sum, t) => sum + (t.duration || 0), 0)
 
         const moduleNode: DataNode = {
           title: (
             <div>
               <Text strong>{moduleName}</Text>
               <Text type="secondary" style={{ fontSize: '12px', marginLeft: '8px' }}>
-                {moduleTraces.length} 次调用
+                {mergedTraces.length} 次调用
               </Text>
               {totalDuration > 0 && (
                 <Tag color="green" style={{ marginLeft: '8px' }}>
                   总耗时: {totalDuration}ms
                 </Tag>
               )}
-              {errorCount > 0 && (
-                <Tag color="red" style={{ marginLeft: '8px' }}>
-                  错误: {errorCount}
-                </Tag>
-              )}
             </div>
           ),
           key: `module-${serviceName}-${moduleName}`,
-          children: moduleTraces.map((trace, index) => ({
+          children: mergedTraces.map((trace, index) => ({
             title: (
               <div>
                 <Text>{trace.method || '未知方法'}</Text>
                 {trace.duration && (
                   <Tag color="default" style={{ marginLeft: '8px' }}>
                     {trace.duration}ms
-                  </Tag>
-                )}
-                {trace.status === 'ERROR' && (
-                  <Tag color="red" style={{ marginLeft: '8px' }}>
-                    错误
                   </Tag>
                 )}
                 <Text type="secondary" style={{ fontSize: '11px', marginLeft: '8px' }}>
@@ -101,10 +135,15 @@ const ModuleCallTree: React.FC<ModuleCallTreeProps> = ({ traces }) => {
         serviceNode.children!.push(moduleNode)
       })
 
-      treeNodes.push(serviceNode)
+      treeNodes.push({ node: serviceNode, firstTimestamp: serviceFirstTimestamp })
     })
 
-    return treeNodes
+    // 按服务首次出现的时间戳排序
+    const sortedTreeNodes = treeNodes
+      .sort((a, b) => a.firstTimestamp - b.firstTimestamp)
+      .map(item => item.node)
+
+    return sortedTreeNodes
   }, [traces])
 
   if (treeData.length === 0) {

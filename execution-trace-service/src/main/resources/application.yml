@@ -9,12 +9,12 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none # 禁用Hibernate自动建表，使用Flyway管理
-    show-sql: true
+    show-sql: false  # 关闭SQL日志输出（生产环境建议关闭，调试时可设为true）
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
-        format_sql: true
-        use_sql_comments: true
+        format_sql: false  # 关闭SQL格式化（配合show-sql: false）
+        use_sql_comments: false  # 关闭SQL注释（配合show-sql: false）
     open-in-view: false
 
   flyway:
@@ -44,6 +44,8 @@ logging:
     root: INFO
     com.aidoctor.trace: DEBUG
     org.flywaydb: DEBUG
+    org.hibernate.SQL: WARN  # Hibernate SQL日志级别设为WARN（关闭SQL输出）
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN  # Hibernate参数绑定日志级别设为WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 

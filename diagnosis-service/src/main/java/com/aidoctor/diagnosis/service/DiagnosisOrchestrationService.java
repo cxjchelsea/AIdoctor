@@ -9,6 +9,7 @@ import com.aidoctor.diagnosis.exception.CDPNotFoundException;
 import com.aidoctor.diagnosis.service.cdp.CDPManager;
 import com.aidoctor.diagnosis.service.orchestration.DiagnosisWorkflowOrchestrator;
 import com.aidoctor.diagnosis.service.wellness.WellnessScreeningOrchestrator;
+import com.aidoctor.diagnosis.util.TraceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -61,6 +62,9 @@ public class DiagnosisOrchestrationService {
         // 2. 创建CDP
         CDP cdp = cdpManager.createCDP(request.getUserId(), sessionId);
         log.info("CDP创建成功: cdpId={}", cdp.getId());
+        
+        // 设置追踪上下文（在调用健康判定服务前设置，以便追踪）
+        TraceContext.setCdpId(cdp.getId());
         
         // 3. 调用健康状态判定服务（容错处理：如果服务不可用，使用默认值）
         // 传入已创建的CDP ID，确保CDP ID一致性
@@ -131,23 +135,36 @@ public class DiagnosisOrchestrationService {
         cdp = cdpManager.updateCDP(cdp.getId(), updates);
         
         // 6. 根据工作态决定后续流程
+        // TraceContext 已在调用健康判定服务前设置
         DiagnosisResponse response;
-        if (needsClinicalMode) {
-            // 临床诊疗态：返回CDP ID，等待用户继续
-            response = DiagnosisResponse.builder()
-                .code(200)
-                .message("success")
-                .diagnosisId(cdp.getId())
-                .status("clinical_mode_collecting")
-                .cdpId(cdp.getId())
-                .workMode("clinical_mode")
-                .currentStep("step1_identify_problem")
-                .nextAction(buildNextAction("question", "请详细描述一下您的症状"))
-                .timestamp(System.currentTimeMillis())
-                .build();
-        } else {
-            // 健康管理态：执行健康筛查流程
-            try {
+        try {
+            if (needsClinicalMode) {
+                // 临床诊疗态：返回CDP ID，等待用户继续
+                // 提取健康状态判定相关信息
+                String assessmentReason = (String) assessmentResult.getOrDefault("assessmentReason", "建议进入临床诊疗态");
+                String riskLevel = (String) assessmentResult.getOrDefault("riskLevel", "L4");
+                @SuppressWarnings("unchecked")
+                List<String> redFlags = (List<String>) assessmentResult.getOrDefault("redFlags", new ArrayList<>());
+                @SuppressWarnings("unchecked")
+                Map<String, Object> entryAssessment = (Map<String, Object>) assessmentResult.get("entryAssessment");
+                
+                response = DiagnosisResponse.builder()
+                    .code(200)
+                    .message("success")
+                    .diagnosisId(cdp.getId())
+                    .status("clinical_mode_collecting")
+                    .cdpId(cdp.getId())
+                    .workMode("clinical_mode")
+                    .currentStep("step1_identify_problem")
+                    .nextAction(buildNextAction("question", "请详细描述一下您的症状"))
+                    .assessmentReason(assessmentReason)
+                    .riskLevel(riskLevel)
+                    .redFlags(redFlags)
+                    .entryAssessment(entryAssessment)
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+            } else {
+                // 健康管理态：执行健康筛查流程
                 cdp = wellnessScreeningOrchestrator.executeWellnessScreening(cdp);
                 
                 // 从wellnessPlan中提取完整度（A2步骤计算并存储的）
@@ -164,6 +181,14 @@ public class DiagnosisOrchestrationService {
                     }
                 }
                 
+                // 提取健康状态判定相关信息
+                String assessmentReason = (String) assessmentResult.getOrDefault("assessmentReason", "症状在正常范围，建议健康管理");
+                String riskLevel = (String) assessmentResult.getOrDefault("riskLevel", "L4");
+                @SuppressWarnings("unchecked")
+                List<String> redFlags = (List<String>) assessmentResult.getOrDefault("redFlags", new ArrayList<>());
+                @SuppressWarnings("unchecked")
+                Map<String, Object> entryAssessment = (Map<String, Object>) assessmentResult.get("entryAssessment");
+                
                 response = DiagnosisResponse.builder()
                     .code(200)
                     .message("success")
@@ -173,12 +198,19 @@ public class DiagnosisOrchestrationService {
                     .workMode("wellness_mode")
                     .completeness(completeness) // 设置完整度
                     .wellnessPlan(cdp.getWellnessPlan())
+                    .assessmentReason(assessmentReason)
+                    .riskLevel(riskLevel)
+                    .redFlags(redFlags)
+                    .entryAssessment(entryAssessment)
                     .timestamp(System.currentTimeMillis())
                     .build();
-            } catch (Exception e) {
-                log.error("健康筛查流程执行失败: cdpId={}", cdp.getId(), e);
-                throw new RuntimeException("健康筛查流程执行失败", e);
             }
+        } catch (Exception e) {
+            log.error("诊断流程执行失败: cdpId={}", cdp.getId(), e);
+            throw new RuntimeException("诊断流程执行失败", e);
+        } finally {
+            // 清理追踪上下文
+            TraceContext.clear();
         }
         
         return response;
@@ -205,13 +237,17 @@ public class DiagnosisOrchestrationService {
         }
         log.info("继续诊断流程: cdpId={}", cdpId);
         
-        // 1. 获取CDP
-        Optional<CDP> cdpOpt = cdpManager.getCDPById(cdpId);
-        if (!cdpOpt.isPresent()) {
-            throw new CDPNotFoundException(cdpId);
-        }
+        // 设置追踪上下文（在调用前设置，以便切面能够获取到 cdpId）
+        TraceContext.setCdpId(cdpId);
         
-        CDP cdp = cdpOpt.get();
+        try {
+            // 1. 获取CDP
+            Optional<CDP> cdpOpt = cdpManager.getCDPById(cdpId);
+            if (!cdpOpt.isPresent()) {
+                throw new CDPNotFoundException(cdpId);
+            }
+            
+            CDP cdp = cdpOpt.get();
         
         // 2. 检查CDP状态
         String status = cdp.getCdpStatus();
@@ -314,6 +350,10 @@ public class DiagnosisOrchestrationService {
                 .currentStep(currentStep)
                 .timestamp(System.currentTimeMillis())
                 .build();
+        }
+        } finally {
+            // 清理追踪上下文
+            TraceContext.clear();
         }
     }
     

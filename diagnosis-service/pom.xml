@@ -160,6 +160,10 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                    <!-- JVM内存配置（性能优化） -->
+                    <jvmArguments>
+                        -Xms512m -Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+                    </jvmArguments>
                 </configuration>
             </plugin>
         </plugins>

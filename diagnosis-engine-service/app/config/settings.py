@@ -20,12 +20,13 @@ class Settings(BaseModel):
     SERVICE_VERSION: str = "1.0.0"
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     
-    # Neo4j配置
+    # Neo4j配置（性能优化：连接池配置）
     NEO4J_URI: str = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     NEO4J_USER: str = os.getenv("NEO4J_USER", "neo4j")
     NEO4J_PASSWORD: str = os.getenv("NEO4J_PASSWORD", "password")
-    NEO4J_MAX_CONNECTIONS: int = int(os.getenv("NEO4J_MAX_CONNECTIONS", "20"))
-    NEO4J_CONNECTION_TIMEOUT: int = int(os.getenv("NEO4J_CONNECTION_TIMEOUT", "5"))
+    NEO4J_MAX_CONNECTION_POOL_SIZE: int = int(os.getenv("NEO4J_MAX_CONNECTION_POOL_SIZE", "50"))
+    NEO4J_CONNECTION_TIMEOUT: int = int(os.getenv("NEO4J_CONNECTION_TIMEOUT", "2"))
+    NEO4J_MAX_CONNECTION_LIFETIME: int = int(os.getenv("NEO4J_MAX_CONNECTION_LIFETIME", "1800"))  # 30分钟
     NEO4J_QUERY_TIMEOUT: int = int(os.getenv("NEO4J_QUERY_TIMEOUT", "10"))
     
     # LLM配置

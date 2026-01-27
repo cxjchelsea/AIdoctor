@@ -25,6 +25,7 @@ public class TraceServiceClient {
     ) {
         this.restTemplate = restTemplate;
         this.traceServiceUrl = traceServiceUrl;
+        log.info("TraceServiceClient 初始化成功: traceServiceUrl={}", traceServiceUrl);
     }
     
     /**
@@ -32,13 +33,17 @@ public class TraceServiceClient {
      */
     public void recordEvent(ExecutionTraceEvent event) {
         try {
+            log.info("发送追踪事件: cdpId={}, type={}, service={}", 
+                event.getCdpId(), event.getType(), event.getService());
             restTemplate.postForObject(
                 traceServiceUrl + "/api/v1/trace/events",
                 event,
                 Void.class
             );
+            log.info("追踪事件发送成功: cdpId={}, type={}", event.getCdpId(), event.getType());
         } catch (Exception e) {
-            log.error("发送追踪事件失败: cdpId={}", event.getCdpId(), e);
+            log.error("发送追踪事件失败: cdpId={}, type={}, url={}", 
+                event.getCdpId(), event.getType(), traceServiceUrl + "/api/v1/trace/events", e);
             // 不影响主业务流程
         }
     }

@@ -28,7 +28,10 @@ class KnowledgeGraphEngine:
                 kg_client = Neo4jClient(
                     uri=settings.NEO4J_URI,
                     user=settings.NEO4J_USER,
-                    password=settings.NEO4J_PASSWORD
+                    password=settings.NEO4J_PASSWORD,
+                    max_connection_lifetime=settings.NEO4J_MAX_CONNECTION_LIFETIME,
+                    max_connection_pool_size=settings.NEO4J_MAX_CONNECTION_POOL_SIZE,
+                    connection_acquisition_timeout=settings.NEO4J_CONNECTION_TIMEOUT
                 )
                 self.kg_reasoning_engine = KGReasoningEngine(kg_client=kg_client)
                 logger.info("知识图谱引擎初始化完成（使用Neo4j）")

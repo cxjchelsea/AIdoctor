@@ -10,6 +10,7 @@ import ReactFlow, {
 import 'reactflow/dist/base.css'
 import { Card, Tag, Typography } from 'antd'
 import type { ExecutionTrace } from '@/types/trace'
+import { filterSuccessfulTraces } from '@/utils/traceFilter'
 
 const { Text } = Typography
 
@@ -23,6 +24,9 @@ interface DataFlowGraphProps {
  */
 const DataFlowGraph: React.FC<DataFlowGraphProps> = ({ traces }) => {
   const { nodes, edges } = useMemo(() => {
+    // 先过滤掉失败的服务调用
+    const successfulTraces = filterSuccessfulTraces(traces)
+    
     const nodeMap = new Map<string, Node>()
     const edgeList: Edge[] = []
     let yPosition = 0
@@ -30,7 +34,7 @@ const DataFlowGraph: React.FC<DataFlowGraphProps> = ({ traces }) => {
     const ySpacing = 150
 
     // 按时间排序
-    const sortedTraces = [...traces].sort(
+    const sortedTraces = [...successfulTraces].sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     )
 
@@ -55,7 +59,8 @@ const DataFlowGraph: React.FC<DataFlowGraphProps> = ({ traces }) => {
       const startTrace = serviceTraces[0]
       const endTrace = serviceTraces[serviceTraces.length - 1]
       const duration = endTrace.duration || 0
-      const status = serviceTraces.some(t => t.status === 'ERROR') ? 'error' : 'success'
+      // 由于已经过滤掉失败的服务，所以这里应该都是成功的
+      const status = 'success'
 
       const node: Node = {
         id: nodeId,

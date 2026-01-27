@@ -33,6 +33,10 @@ public class DiagnosisResponse {
     private List<Map<String, Object>> workupPlan; // 检查计划
     private List<Map<String, Object>> managementPlan; // 治疗计划
     private Map<String, Object> triage; // 风险评估
+    private String assessmentReason; // 健康状态判定理由
+    private String riskLevel; // 风险等级
+    private List<String> redFlags; // 危险信号列表
+    private Map<String, Object> entryAssessment; // 入口判定结果（P0模块）
     private Long timestamp;
 }
 

@@ -319,8 +319,20 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
     try {
       await diagnosisApi.analyze(state.diagnosisId)
 
-      // 轮询检查结果
+      // 轮询检查结果（性能优化：增加间隔和最大次数限制）
+      const POLLING_INTERVAL = 5000 // 5秒间隔（从2秒改为5秒）
+      const MAX_POLLING_ATTEMPTS = 60 // 最多轮询60次（5分钟）
+      let pollingAttempts = 0
+      
       const checkResult = async () => {
+        if (pollingAttempts >= MAX_POLLING_ATTEMPTS) {
+          console.warn('轮询超时，停止检查')
+          set({ status: 'timeout' })
+          return
+        }
+        
+        pollingAttempts++
+        
         try {
           const resultResponse = await diagnosisApi.getResult(state.diagnosisId!)
           if (resultResponse.data.status === 'completed') {
@@ -339,15 +351,17 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
               messages: [...state.messages, resultMessage],
             }))
           } else {
-            // 继续轮询
-            setTimeout(checkResult, 2000)
+            // 继续轮询（使用优化后的间隔）
+            setTimeout(checkResult, POLLING_INTERVAL)
           }
         } catch (error) {
           console.error('获取结果失败:', error)
+          // 出错后也继续轮询，但增加间隔
+          setTimeout(checkResult, POLLING_INTERVAL * 2)
         }
       }
 
-      setTimeout(checkResult, 2000)
+      setTimeout(checkResult, POLLING_INTERVAL)
     } catch (error) {
       console.error('分析失败:', error)
       throw error
@@ -420,13 +434,14 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
       const assessmentResult: HealthStateAssessmentResult = {
         needsClinicalMode: data.workMode === 'clinical_mode',
         workMode: data.workMode || 'clinical_mode',
-        riskLevel: 'L4', // 默认值，实际应该从后端返回
-        assessmentReason: data.workMode === 'wellness_mode' 
+        riskLevel: data.riskLevel || 'L4', // 从后端返回
+        assessmentReason: data.assessmentReason || (data.workMode === 'wellness_mode' 
           ? '症状在正常范围，建议健康管理' 
-          : '建议进入临床诊疗态',
-        redFlags: [],
+          : '建议进入临床诊疗态'), // 从后端返回，如果没有则使用默认值
+        redFlags: data.redFlags || [], // 从后端返回
         cdpId: cdpId,
         wellnessPlan: data.wellnessPlan,
+        entryAssessment: data.entryAssessment, // 从后端返回入口判定结果
       }
 
       // 将健康状态判定结果（包含入口判定结果）保存为消息，用于展示

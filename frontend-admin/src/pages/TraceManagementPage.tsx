@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Layout,
   Card,
@@ -14,12 +14,14 @@ import {
   Row,
   Col,
   message,
+  Table,
 } from 'antd'
 import {
   SearchOutlined,
   ClearOutlined,
   PlayCircleOutlined,
   PauseCircleOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons'
 import DataFlowGraph from '@/components/trace/DataFlowGraph'
 import ServiceCallGraph from '@/components/trace/ServiceCallGraph'
@@ -27,7 +29,8 @@ import ExecutionTimeline from '@/components/trace/ExecutionTimeline'
 import ModuleCallTree from '@/components/trace/ModuleCallTree'
 import { useTraceWebSocket } from '@/hooks/useTraceWebSocket'
 import { traceApi } from '@/services/traceApi'
-import type { ExecutionTrace, TraceSummary } from '@/types/trace'
+import { calculateTraceStatistics } from '@/utils/traceStatistics'
+import type { ExecutionTrace } from '@/types/trace'
 
 const { Header, Content } = Layout
 const { Title, Text } = Typography
@@ -39,15 +42,33 @@ const TraceManagementPage: React.FC = () => {
   const [cdpId, setCdpId] = useState<string>('')
   const [inputCdpId, setInputCdpId] = useState<string>('')
   const [traces, setTraces] = useState<ExecutionTrace[]>([])
-  const [summary, setSummary] = useState<TraceSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [realtimeEnabled, setRealtimeEnabled] = useState(true)
+  const [cdpList, setCdpList] = useState<Array<{ cdpId: string; latestTimestamp?: number; traceCount: number }>>([])
+  const [loadingCdpList, setLoadingCdpList] = useState(false)
+
+  // 从traces计算统计数据
+  const statistics = useMemo(() => calculateTraceStatistics(traces), [traces])
 
   // WebSocket实时追踪
   const { events: realtimeEvents, isConnected, clearEvents } = useTraceWebSocket({
     cdpId,
     enabled: realtimeEnabled && !!cdpId,
   })
+
+  // 加载CDP ID列表
+  const loadCdpList = async () => {
+    setLoadingCdpList(true)
+    try {
+      const list = await traceApi.getAllCdpIds()
+      setCdpList(list)
+    } catch (error: any) {
+      console.error('加载CDP列表失败:', error)
+      message.error('加载CDP列表失败: ' + (error.message || '未知错误'))
+    } finally {
+      setLoadingCdpList(false)
+    }
+  }
 
   // 加载追踪数据
   const loadTraces = async (id: string) => {
@@ -58,12 +79,8 @@ const TraceManagementPage: React.FC = () => {
 
     setLoading(true)
     try {
-      const [tracesData, summaryData] = await Promise.all([
-        traceApi.getTracesByCdpId(id),
-        traceApi.getTraceSummary(id),
-      ])
+      const tracesData = await traceApi.getTracesByCdpId(id)
       setTraces(tracesData)
-      setSummary(summaryData)
       message.success('追踪数据加载成功')
     } catch (error: any) {
       console.error('加载追踪数据失败:', error)
@@ -72,6 +89,11 @@ const TraceManagementPage: React.FC = () => {
       setLoading(false)
     }
   }
+
+  // 组件挂载时加载CDP列表
+  useEffect(() => {
+    loadCdpList()
+  }, [])
 
   // 合并实时事件和历史数据
   useEffect(() => {
@@ -123,7 +145,6 @@ const TraceManagementPage: React.FC = () => {
     setCdpId('')
     setInputCdpId('')
     setTraces([])
-    setSummary(null)
     clearEvents()
   }
 
@@ -180,16 +201,16 @@ const TraceManagementPage: React.FC = () => {
                 <Tag color={isConnected ? 'success' : 'error'}>
                   {isConnected ? '已连接' : '未连接'}
                 </Tag>
-                {summary && (
+                {traces.length > 0 && (
                   <>
                     <Text>|</Text>
                     <Text>总追踪数: {traces.length}</Text>
                     <Text>|</Text>
-                    <Text>总耗时: {summary.totalDuration}ms</Text>
-                    {summary.errorCount > 0 && (
+                    <Text>总耗时: {statistics.totalDuration}ms</Text>
+                    {statistics.errorCount > 0 && (
                       <>
                         <Text>|</Text>
-                        <Text type="danger">错误数: {summary.errorCount}</Text>
+                        <Text type="danger">错误数: {statistics.errorCount}</Text>
                       </>
                     )}
                   </>
@@ -203,12 +224,84 @@ const TraceManagementPage: React.FC = () => {
         )}
 
         {!cdpId ? (
-          <Card>
-            <div style={{ textAlign: 'center', padding: '60px 0' }}>
-              <Text type="secondary" style={{ fontSize: '16px' }}>
-                请输入CDP ID开始查询执行追踪
-              </Text>
-            </div>
+          <Card
+            title={
+              <Space>
+                <Text strong>CDP ID 列表</Text>
+                <Button
+                  icon={<ReloadOutlined />}
+                  size="small"
+                  onClick={loadCdpList}
+                  loading={loadingCdpList}
+                >
+                  刷新
+                </Button>
+              </Space>
+            }
+          >
+            <Table
+              dataSource={cdpList}
+              loading={loadingCdpList}
+              rowKey="cdpId"
+              pagination={{
+                pageSize: 20,
+                showSizeChanger: true,
+                showTotal: (total) => `共 ${total} 条记录`,
+              }}
+              columns={[
+                {
+                  title: 'CDP ID',
+                  dataIndex: 'cdpId',
+                  key: 'cdpId',
+                  render: (text: string) => (
+                    <Button
+                      type="link"
+                      onClick={() => {
+                        setInputCdpId(text)
+                        setCdpId(text)
+                        loadTraces(text)
+                      }}
+                      style={{ padding: 0 }}
+                    >
+                      {text}
+                    </Button>
+                  ),
+                },
+                {
+                  title: '追踪记录数',
+                  dataIndex: 'traceCount',
+                  key: 'traceCount',
+                  width: 120,
+                  align: 'center',
+                },
+                {
+                  title: '最新时间',
+                  dataIndex: 'latestTimestamp',
+                  key: 'latestTimestamp',
+                  width: 180,
+                  render: (timestamp?: number) =>
+                    timestamp ? new Date(timestamp).toLocaleString() : '-',
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 100,
+                  render: (_: any, record: { cdpId: string }) => (
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => {
+                        setInputCdpId(record.cdpId)
+                        setCdpId(record.cdpId)
+                        loadTraces(record.cdpId)
+                      }}
+                    >
+                      查看
+                    </Button>
+                  ),
+                },
+              ]}
+            />
           </Card>
         ) : (
           <Spin spinning={loading && traces.length === 0}>
@@ -235,89 +328,93 @@ const TraceManagementPage: React.FC = () => {
                   label: '模块调用树',
                   children: <ModuleCallTree traces={traces} />,
                 },
-                ...(summary ? [{
+                {
                   key: 'statistics',
                   label: '统计信息',
                   children: (
-                  <Card>
-                    <Row gutter={16}>
-                      <Col span={6}>
-                        <Statistic
-                          title="总执行时间"
-                          value={summary.totalDuration}
-                          suffix="ms"
-                          valueStyle={{ color: '#1890ff' }}
-                        />
-                      </Col>
-                      <Col span={6}>
-                        <Statistic
-                          title="服务调用次数"
-                          value={Object.values(summary.serviceCalls).reduce((sum, count) => sum + count, 0)}
-                          suffix="次"
-                          valueStyle={{ color: '#52c41a' }}
-                        />
-                      </Col>
-                      <Col span={6}>
-                        <Statistic
-                          title="涉及服务数"
-                          value={Object.keys(summary.serviceCalls).length}
-                          suffix="个"
-                          valueStyle={{ color: '#722ed1' }}
-                        />
-                      </Col>
-                      <Col span={6}>
-                        <Statistic
-                          title="错误数量"
-                          value={summary.errorCount}
-                          suffix="个"
-                          valueStyle={{ color: summary.errorCount > 0 ? '#ff4d4f' : '#52c41a' }}
-                        />
-                      </Col>
-                    </Row>
-
-                    <div style={{ marginTop: 24 }}>
-                      <Title level={5}>执行步骤</Title>
-                      {summary.steps.length > 0 ? (
-                        <div>
-                          {summary.steps.map((step, index) => (
-                            <Card key={index} size="small" style={{ marginBottom: 8 }}>
-                              <Space>
-                                <Text strong>{step.step}</Text>
-                                <Text type="secondary">
-                                  {new Date(step.startTime).toLocaleString()}
-                                </Text>
-                                <Text>涉及服务:</Text>
-                                {step.services.map((service, i) => (
-                                  <Tag key={i}>{service}</Tag>
-                                ))}
-                              </Space>
-                            </Card>
-                          ))}
-                        </div>
-                      ) : (
-                        <Text type="secondary">暂无步骤信息</Text>
-                      )}
-                    </div>
-
-                    <div style={{ marginTop: 24 }}>
-                      <Title level={5}>服务调用统计</Title>
+                    <Card>
                       <Row gutter={16}>
-                        {Object.entries(summary.serviceCalls).map(([service, count]) => (
-                          <Col span={6} key={service}>
-                            <Card size="small">
-                              <Statistic
-                                title={service}
-                                value={count}
-                                suffix="次"
-                              />
-                            </Card>
-                          </Col>
-                        ))}
+                        <Col span={6}>
+                          <Statistic
+                            title="总执行时间"
+                            value={statistics.totalDuration}
+                            suffix="ms"
+                            valueStyle={{ color: '#1890ff' }}
+                          />
+                        </Col>
+                        <Col span={6}>
+                          <Statistic
+                            title="服务调用次数"
+                            value={statistics.totalServiceCalls}
+                            suffix="次"
+                            valueStyle={{ color: '#52c41a' }}
+                          />
+                        </Col>
+                        <Col span={6}>
+                          <Statistic
+                            title="涉及服务数"
+                            value={statistics.serviceCount}
+                            suffix="个"
+                            valueStyle={{ color: '#722ed1' }}
+                          />
+                        </Col>
+                        <Col span={6}>
+                          <Statistic
+                            title="错误数量"
+                            value={statistics.errorCount}
+                            suffix="个"
+                            valueStyle={{ color: statistics.errorCount > 0 ? '#ff4d4f' : '#52c41a' }}
+                          />
+                        </Col>
                       </Row>
-                    </div>
-                  </Card>
-                  )
-                }] : [])
+
+                      <div style={{ marginTop: 24 }}>
+                        <Title level={5}>执行步骤</Title>
+                        {statistics.steps.length > 0 ? (
+                          <div>
+                            {statistics.steps.map((step, index) => (
+                              <Card key={index} size="small" style={{ marginBottom: 8 }}>
+                                <Space>
+                                  <Text strong>{step.step}</Text>
+                                  <Text type="secondary">
+                                    {new Date(step.startTime).toLocaleString()}
+                                  </Text>
+                                  <Text>涉及服务:</Text>
+                                  {step.services.map((service, i) => (
+                                    <Tag key={i}>{service}</Tag>
+                                  ))}
+                                </Space>
+                              </Card>
+                            ))}
+                          </div>
+                        ) : (
+                          <Text type="secondary">暂无步骤信息</Text>
+                        )}
+                      </div>
+
+                      <div style={{ marginTop: 24 }}>
+                        <Title level={5}>服务调用统计</Title>
+                        {Object.keys(statistics.serviceCalls).length > 0 ? (
+                          <Row gutter={16}>
+                            {Object.entries(statistics.serviceCalls).map(([service, count]) => (
+                              <Col span={6} key={service}>
+                                <Card size="small">
+                                  <Statistic
+                                    title={service}
+                                    value={count}
+                                    suffix="次"
+                                  />
+                                </Card>
+                              </Col>
+                            ))}
+                          </Row>
+                        ) : (
+                          <Text type="secondary">暂无服务调用统计</Text>
+                        )}
+                      </div>
+                    </Card>
+                  ),
+                },
               ]}
             />
           </Spin>

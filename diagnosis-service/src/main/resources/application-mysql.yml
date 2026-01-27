@@ -14,19 +14,23 @@ spring:
     username: root
     password: root
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
-      connection-timeout: 30000
+      # 连接池配置（性能优化）
+      minimum-idle: 5           # 最小空闲连接数
+      maximum-pool-size: 20      # 最大连接数（从10增加到20）
+      connection-timeout: 30000   # 连接超时（毫秒）
+      idle-timeout: 600000       # 空闲连接超时（10分钟）
+      max-lifetime: 1800000      # 连接最大生存时间（30分钟）
+      leak-detection-threshold: 60000 # 连接泄漏检测阈值
   
   jpa:
     hibernate:
       ddl-auto: none  # 禁用Hibernate自动建表，使用Flyway管理
-    show-sql: true
+    show-sql: false  # 关闭SQL日志输出（生产环境建议关闭，调试时可设为true）
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
-        format_sql: true
-        use_sql_comments: true
+        format_sql: false  # 关闭SQL格式化（配合show-sql: false）
+        use_sql_comments: false  # 关闭SQL注释（配合show-sql: false）
     open-in-view: false
   
   # Flyway数据库迁移配置（MySQL版本）
@@ -48,9 +52,11 @@ spring:
     timeout: 5000ms
     lettuce:
       pool:
-        max-active: 8
-        max-idle: 8
-        min-idle: 0
+        # Redis连接池配置（性能优化）
+        max-active: 20    # 最大连接数（从8增加到20）
+        max-idle: 10      # 最大空闲连接数
+        min-idle: 5       # 最小空闲连接数
+        max-wait: 2000    # 最大等待时间（毫秒）
 
   # Nacos配置（本地调试可以禁用）
   cloud:
@@ -117,6 +123,8 @@ logging:
     com.aidoctor.diagnosis: DEBUG
     org.flywaydb: DEBUG  # Flyway详细日志
     org.flywaydb.core.internal: DEBUG  # Flyway核心日志
+    org.hibernate.SQL: WARN  # Hibernate SQL日志级别设为WARN（关闭SQL输出）
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN  # Hibernate参数绑定日志级别设为WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 

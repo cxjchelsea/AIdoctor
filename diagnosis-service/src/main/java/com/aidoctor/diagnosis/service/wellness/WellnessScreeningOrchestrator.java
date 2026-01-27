@@ -1,8 +1,10 @@
 package com.aidoctor.diagnosis.service.wellness;
 
+import com.aidoctor.diagnosis.annotation.TraceExecution;
 import com.aidoctor.diagnosis.client.HealthStateAssessmentClient;
 import com.aidoctor.diagnosis.entity.CDP;
 import com.aidoctor.diagnosis.service.cdp.CDPManager;
+import com.aidoctor.diagnosis.util.TraceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,8 +38,12 @@ public class WellnessScreeningOrchestrator {
      * @param cdp CDP对象
      * @return 更新后的CDP
      */
+    @TraceExecution(service = "diagnosis-service", module = "wellness-screening")
     @Transactional
     public CDP executeWellnessScreening(CDP cdp) {
+        // 设置追踪上下文
+        TraceContext.setCdpId(cdp.getId());
+        
         log.info("开始执行健康筛查流程: cdpId={}", cdp.getId());
         
         try {
@@ -67,6 +73,9 @@ public class WellnessScreeningOrchestrator {
         } catch (Exception e) {
             log.error("健康筛查流程执行失败: cdpId={}", cdp.getId(), e);
             throw e;
+        } finally {
+            // 清理追踪上下文
+            TraceContext.clear();
         }
     }
     

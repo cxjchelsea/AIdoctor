@@ -38,7 +38,7 @@ public class CDPController {
         
         if (cdpId == null || executionTrace == null) {
             return ResponseEntity.badRequest()
-                .body(ApiResponse.error("cdpId和executionTrace不能为空"));
+                .body(ApiResponse.error(400, "cdpId和executionTrace不能为空"));
         }
         
         try {
@@ -52,7 +52,7 @@ public class CDPController {
         } catch (Exception e) {
             log.error("更新CDP追踪摘要失败: cdpId={}", cdpId, e);
             return ResponseEntity.internalServerError()
-                .body(ApiResponse.error("更新失败: " + e.getMessage()));
+                .body(ApiResponse.error(500, "更新失败: " + e.getMessage()));
         }
     }
 }

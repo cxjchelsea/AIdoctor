@@ -10,6 +10,7 @@ import ReactFlow, {
 import 'reactflow/dist/base.css'
 import { Card, Tag, Typography, Statistic, Row, Col } from 'antd'
 import type { ExecutionTrace } from '@/types/trace'
+import { filterSuccessfulTraces } from '@/utils/traceFilter'
 
 const { Text } = Typography
 
@@ -23,12 +24,15 @@ interface ServiceCallGraphProps {
  */
 const ServiceCallGraph: React.FC<ServiceCallGraphProps> = ({ traces }) => {
   const { nodes, edges, statistics } = useMemo(() => {
+    // 先过滤掉失败的服务调用
+    const successfulTraces = filterSuccessfulTraces(traces)
+    
     const nodeMap = new Map<string, Node>()
     const edgeMap = new Map<string, Edge>()
     const serviceStats = new Map<string, { count: number; totalDuration: number; errorCount: number }>()
 
     // 统计服务调用
-    traces.forEach(trace => {
+    successfulTraces.forEach(trace => {
       if (trace.service) {
         if (!serviceStats.has(trace.service)) {
           serviceStats.set(trace.service, { count: 0, totalDuration: 0, errorCount: 0 })
@@ -38,9 +42,7 @@ const ServiceCallGraph: React.FC<ServiceCallGraphProps> = ({ traces }) => {
         if (trace.duration) {
           stats.totalDuration += trace.duration
         }
-        if (trace.status === 'ERROR') {
-          stats.errorCount++
-        }
+        // 由于已经过滤掉失败的服务，这里不需要检查 ERROR 状态
       }
     })
 
@@ -53,7 +55,8 @@ const ServiceCallGraph: React.FC<ServiceCallGraphProps> = ({ traces }) => {
     serviceStats.forEach((stats, serviceName) => {
       const nodeId = `service-${serviceName}`
       const avgDuration = stats.count > 0 ? Math.round(stats.totalDuration / stats.count) : 0
-      const errorRate = stats.count > 0 ? (stats.errorCount / stats.count) * 100 : 0
+      // 由于已经过滤掉失败的服务，errorRate 应该始终为 0
+      const errorRate = 0
 
       const node: Node = {
         id: nodeId,
@@ -76,11 +79,6 @@ const ServiceCallGraph: React.FC<ServiceCallGraphProps> = ({ traces }) => {
                   平均耗时: {avgDuration}ms
                 </div>
               )}
-              {errorRate > 0 && (
-                <Tag color="red" style={{ marginTop: '4px' }}>
-                  错误率: {errorRate.toFixed(1)}%
-                </Tag>
-              )}
             </div>
           ),
         },
@@ -97,7 +95,7 @@ const ServiceCallGraph: React.FC<ServiceCallGraphProps> = ({ traces }) => {
     })
 
     // 创建调用关系边（基于时间顺序）
-    const sortedTraces = [...traces].sort(
+    const sortedTraces = [...successfulTraces].sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     )
 
@@ -158,11 +156,6 @@ const ServiceCallGraph: React.FC<ServiceCallGraphProps> = ({ traces }) => {
               />
               <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
                 平均耗时: {stat.avgDuration}ms
-                {stat.errorCount > 0 && (
-                  <span style={{ color: '#ff4d4f', marginLeft: '8px' }}>
-                    错误: {stat.errorCount}
-                  </span>
-                )}
               </div>
             </Col>
           ))}

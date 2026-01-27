@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 执行追踪控制器
@@ -47,6 +48,15 @@ public class ExecutionTraceController {
     public ResponseEntity<TraceSummary> getTraceSummary(@PathVariable String cdpId) {
         TraceSummary summary = traceService.getTraceSummary(cdpId);
         return ResponseEntity.ok(summary);
+    }
+
+    /**
+     * 获取所有有追踪记录的 CDP ID 列表
+     */
+    @GetMapping("/cdps")
+    public ResponseEntity<List<Map<String, Object>>> getAllCdpIds() {
+        List<Map<String, Object>> cdpList = traceService.getAllCdpIds();
+        return ResponseEntity.ok(cdpList);
     }
 }
 

@@ -1,5 +1,7 @@
 package com.aidoctor.trace.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +17,22 @@ import lombok.NoArgsConstructor;
 public class ExecutionTraceEvent {
     private String cdpId;
     private String traceId;
+    
+    /**
+     * 事件类型（内部使用）
+     */
     private String eventType; // e.g., SERVICE_CALL_START, SERVICE_CALL_END, STEP_START, STEP_END, FEIGN_CALL_START, FEIGN_CALL_END
+    
+    /**
+     * 事件类型（兼容 diagnosis-service 的 type 字段）
+     * 当接收到 type 字段时，自动设置到 eventType
+     */
+    @JsonSetter("type")
+    public void setType(String type) {
+        if (this.eventType == null || this.eventType.isEmpty()) {
+            this.eventType = type;
+        }
+    }
     private String service;
     private String module;
     private String method;

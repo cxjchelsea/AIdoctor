@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Timeline, Card, Tag, Typography, Space, Tooltip } from 'antd'
 import type { ExecutionTrace } from '@/types/trace'
+import { filterSuccessfulTraces } from '@/utils/traceFilter'
 
 const { Text } = Typography
 
@@ -13,10 +14,13 @@ interface ExecutionTimelineProps {
  * 展示执行的时间顺序
  */
 const ExecutionTimeline: React.FC<ExecutionTimelineProps> = ({ traces }) => {
-  // 按时间排序
-  const sortedTraces = [...traces].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  )
+  // 先过滤掉失败的服务调用，然后按时间排序
+  const sortedTraces = useMemo(() => {
+    const successfulTraces = filterSuccessfulTraces(traces)
+    return [...successfulTraces].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
+  }, [traces])
 
   if (sortedTraces.length === 0) {
     return (
