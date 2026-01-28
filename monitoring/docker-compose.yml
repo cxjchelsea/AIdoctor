@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'  # 保留30天数据
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'  # 允许通过API重新加载配置
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml
+      # 挂载所有服务的日志目录（Windows需要调整路径）
+      # Windows: 使用绝对路径，如 E:/pycharmProject/AIdoctor/*/logs:/var/log/aidoctor/*/logs:ro
+      # Linux/Mac: 使用相对路径或绝对路径
+      - ../health-state-assessment-service/logs:/var/log/aidoctor/health-state-assessment-service/logs:ro
+      - ../clinical-parsing-service/logs:/var/log/aidoctor/clinical-parsing-service/logs:ro
+      - ../diagnosis-engine-service/logs:/var/log/aidoctor/diagnosis-engine-service/logs:ro
+      - ../ocr-service/logs:/var/log/aidoctor/ocr-service/logs:ro
+      - ../dialog-service/logs:/var/log/aidoctor/dialog-service/logs:ro
+      - ../explanation-service/logs:/var/log/aidoctor/explanation-service/logs:ro
+      - ../workup-planner-service/logs:/var/log/aidoctor/workup-planner-service/logs:ro
+      - ../treatment-engine-service/logs:/var/log/aidoctor/treatment-engine-service/logs:ro
+      - ../risk-assessment-service/logs:/var/log/aidoctor/risk-assessment-service/logs:ro
+      - ../diagnosis-service/logs:/var/log/aidoctor/diagnosis-service/logs:ro
+      - ../examination-service/logs:/var/log/aidoctor/examination-service/logs:ro
+      - ../execution-trace-service/logs:/var/log/aidoctor/execution-trace-service/logs:ro
+      - promtail-positions:/var/lib/promtail
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning  # 自动配置数据源和仪表板
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+  promtail-positions:
+    driver: local
+
+networks:
+  monitoring:
+    driver: bridge
+

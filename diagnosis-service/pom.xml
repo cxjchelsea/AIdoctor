@@ -65,6 +65,12 @@
             <groupId>com.oracle.database.jdbc</groupId>
             <artifactId>ojdbc8</artifactId>
         </dependency>
+        
+        <!-- Oracle Internationalization Support (for ZHS16GBK charset) -->
+        <dependency>
+            <groupId>com.oracle.database.nls</groupId>
+            <artifactId>orai18n</artifactId>
+        </dependency>
 
         <!-- MySQL JDBC Driver (用于本地调试) -->
         <dependency>
@@ -112,6 +118,12 @@
             <version>2.21.1</version>
         </dependency>
 
+        <!-- Jackson JSR310 Module for Java 8 Date/Time support -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
         <!-- Flyway Database Migration -->
         <!-- 使用7.15.0版本以支持MySQL 5.7（已验证存在的版本） -->
         <!-- 注意：Flyway 7.x 不需要单独的 flyway-mysql 依赖，flyway-core 已包含 MySQL 支持 -->
@@ -119,6 +131,18 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
             <version>7.15.0</version>
+        </dependency>
+
+        <!-- Micrometer Prometheus (性能监控) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Actuator (性能监控) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
         <!-- Test -->

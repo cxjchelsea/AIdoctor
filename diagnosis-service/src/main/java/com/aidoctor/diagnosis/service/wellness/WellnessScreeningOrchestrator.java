@@ -32,6 +32,9 @@ public class WellnessScreeningOrchestrator {
     @Autowired
     private HealthStateAssessmentClient healthStateAssessmentClient;
     
+    @Autowired(required = false)
+    private com.aidoctor.diagnosis.client.TraceServiceClient traceServiceClient;
+    
     /**
      * 执行健康筛查流程（A路径）
      * 
@@ -62,9 +65,13 @@ public class WellnessScreeningOrchestrator {
             // A5: 设置随访
             cdp = a5FollowUpSetup(cdp);
             
-            // 更新状态为完成
+            // 生成执行追踪摘要
+            Map<String, Object> executionTrace = buildExecutionTraceSummary(cdp);
+            
+            // 更新状态为完成，并保存执行追踪摘要
             Map<String, Object> updates = new HashMap<>();
             updates.put("cdpStatus", "completed");
+            updates.put("executionTrace", executionTrace);
             cdp = cdpManager.updateCDP(cdp.getId(), updates);
             
             log.info("健康筛查流程执行完成: cdpId={}", cdp.getId());
@@ -390,6 +397,39 @@ public class WellnessScreeningOrchestrator {
         }
         
         return new HashMap<>();
+    }
+    
+    /**
+     * 构建执行追踪摘要
+     * 从追踪服务获取摘要信息，如果追踪服务不可用，则返回基本摘要
+     */
+    private Map<String, Object> buildExecutionTraceSummary(CDP cdp) {
+        Map<String, Object> summary = new HashMap<>();
+        
+        // 如果追踪服务可用，尝试获取详细摘要
+        if (traceServiceClient != null) {
+            try {
+                Map<String, Object> traceSummary = traceServiceClient.getTraceSummary(cdp.getId());
+                if (traceSummary != null && !traceSummary.isEmpty()) {
+                    summary.putAll(traceSummary);
+                    log.debug("从追踪服务获取摘要成功: cdpId={}", cdp.getId());
+                    return summary;
+                }
+            } catch (Exception e) {
+                log.warn("从追踪服务获取摘要失败，使用基本摘要: cdpId={}", cdp.getId(), e);
+            }
+        }
+        
+        // 如果追踪服务不可用或获取失败，构建基本摘要
+        summary.put("cdpId", cdp.getId());
+        summary.put("cdpStatus", cdp.getCdpStatus());
+        summary.put("version", cdp.getVersion());
+        summary.put("workMode", "wellness_mode");
+        summary.put("steps", java.util.Arrays.asList("A1", "A2", "A3", "A4", "A5"));
+        summary.put("completed", true);
+        
+        log.debug("构建基本追踪摘要: cdpId={}", cdp.getId());
+        return summary;
     }
 }
 

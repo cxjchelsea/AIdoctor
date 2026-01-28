@@ -43,5 +43,22 @@ public interface CDPRepository extends JpaRepository<CDP, String> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM CDP c WHERE c.id = :cdpId")
     Optional<CDP> findByIdWithLock(@Param("cdpId") String cdpId);
+    
+    /**
+     * 查询所有CDP，按创建时间升序排列
+     * 用于数据库管理工具查看时保证顺序
+     */
+    List<CDP> findAllByOrderByCreatedAtAsc();
+    
+    /**
+     * 查询所有CDP，按创建时间降序排列
+     * 用于查看最新创建的CDP
+     */
+    List<CDP> findAllByOrderByCreatedAtDesc();
+    
+    /**
+     * 根据患者ID查询CDP列表，按创建时间降序排列
+     */
+    List<CDP> findByPatientIdOrderByCreatedAtDesc(String patientId);
 }
 

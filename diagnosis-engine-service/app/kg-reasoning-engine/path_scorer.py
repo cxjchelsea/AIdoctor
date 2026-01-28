@@ -4,9 +4,15 @@
 """
 
 from typing import List, Dict, Any
-from .prior_scorer import PriorScorer
-from .likelihood_scorer import LikelihoodScorer
-from .posterior_scorer import PosteriorScorer
+# 使用绝对导入，避免相对导入问题
+import sys
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+from prior_scorer import PriorScorer
+from likelihood_scorer import LikelihoodScorer
+from posterior_scorer import PosteriorScorer
 
 
 class PathScorer:

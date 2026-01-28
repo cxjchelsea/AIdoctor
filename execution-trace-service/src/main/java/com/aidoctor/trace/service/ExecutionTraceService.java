@@ -151,25 +151,78 @@ public class ExecutionTraceService {
 
     /**
      * 更新CDP的执行追踪摘要
+     * 如果CDP不存在，会重试几次（可能是事务还没提交）
      */
     @Async("traceExecutor")
     private void updateCDPTraceSummary(String cdpId) {
-        try {
-            List<ExecutionTrace> traces = traceRepository.findByCdpIdOrderByTimestampAsc(cdpId);
-            Map<String, Object> summary = buildTraceSummary(traces).toSummaryMap();
+        int maxRetries = 3;
+        int retryDelayMs = 300;
+        boolean success = false;
+        
+        for (int attempt = 0; attempt < maxRetries && !success; attempt++) {
+            try {
+                List<ExecutionTrace> traces = traceRepository.findByCdpIdOrderByTimestampAsc(cdpId);
+                Map<String, Object> summary = buildTraceSummary(traces).toSummaryMap();
 
-            // 调用diagnosis-service的API更新CDP
-            if (restTemplate != null) {
-                Map<String, Object> requestBody = new HashMap<>();
-                requestBody.put("cdpId", cdpId);
-                requestBody.put("executionTrace", summary);
-                restTemplate.postForEntity(cdpUpdateUrl, requestBody, Void.class);
-            } else {
-                log.warn("RestTemplate未注入，无法更新diagnosis-service的CDP追踪摘要。请确保diagnosis-service的URL配置正确。");
+                // 调用diagnosis-service的API更新CDP
+                if (restTemplate != null) {
+                    Map<String, Object> requestBody = new HashMap<>();
+                    requestBody.put("cdpId", cdpId);
+                    requestBody.put("executionTrace", summary);
+                    restTemplate.postForEntity(cdpUpdateUrl, requestBody, Void.class);
+                    success = true;
+                    if (attempt > 0) {
+                        log.info("CDP追踪摘要更新成功（重试{}次后）: cdpId={}", attempt, cdpId);
+                    }
+                } else {
+                    log.warn("RestTemplate未注入，无法更新diagnosis-service的CDP追踪摘要。请确保diagnosis-service的URL配置正确。");
+                    return;
+                }
+
+            } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+                // CDP不存在，可能是事务还没提交，重试
+                if (attempt < maxRetries - 1) {
+                    log.debug("CDP未找到，等待事务提交后重试: cdpId={}, attempt={}/{}", cdpId, attempt + 1, maxRetries);
+                    try {
+                        Thread.sleep(retryDelayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        log.warn("等待CDP时被中断: cdpId={}", cdpId);
+                        return;
+                    }
+                } else {
+                    // 最后一次重试也失败，可能是CDP真的不存在（已被删除）
+                    log.warn("更新CDP追踪摘要失败: CDP不存在（已重试{}次）: cdpId={}", maxRetries, cdpId);
+                }
+            } catch (org.springframework.web.client.HttpServerErrorException e) {
+                // 检查错误消息中是否包含"CDP不存在"或"CDP not found"
+                String errorBody = e.getResponseBodyAsString();
+                if (errorBody != null && (errorBody.contains("CDP不存在") || errorBody.contains("CDP not found"))) {
+                    // CDP不存在，可能是事务还没提交，重试
+                    if (attempt < maxRetries - 1) {
+                        log.debug("CDP未找到，等待事务提交后重试: cdpId={}, attempt={}/{}", cdpId, attempt + 1, maxRetries);
+                        try {
+                            Thread.sleep(retryDelayMs);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            log.warn("等待CDP时被中断: cdpId={}", cdpId);
+                            return;
+                        }
+                    } else {
+                        // 最后一次重试也失败，可能是CDP真的不存在（已被删除）
+                        log.warn("更新CDP追踪摘要失败: CDP不存在（已重试{}次）: cdpId={}", maxRetries, cdpId);
+                    }
+                } else {
+                    // 其他服务器错误，记录错误日志，不重试
+                    log.error("更新CDP追踪摘要失败: diagnosis-service返回服务器错误: cdpId={}, status={}, message={}", 
+                        cdpId, e.getStatusCode(), errorBody, e);
+                    return;
+                }
+            } catch (Exception e) {
+                // 其他异常，不重试
+                log.error("更新CDP追踪摘要失败: cdpId={}", cdpId, e);
+                return;
             }
-
-        } catch (Exception e) {
-            log.error("更新CDP追踪摘要失败: cdpId={}", cdpId, e);
         }
     }
 

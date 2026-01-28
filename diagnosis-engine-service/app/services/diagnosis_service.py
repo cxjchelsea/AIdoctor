@@ -95,7 +95,7 @@ class DiagnosisService:
             }
             
             logger.info(f"诊断分析完成，候选疾病数: {len(possibilities)}")
-        return result
+            return result
             
         except Exception as e:
             logger.error(f"诊断分析失败: {str(e)}", exc_info=True)

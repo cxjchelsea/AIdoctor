@@ -43,10 +43,18 @@ public class CDPVersionService {
         Integer maxVersion = cdpVersionRepository.findMaxVersionByCdpId(cdp.getId())
                 .orElse(0);
         
+        // 序列化CDP对象
+        String cdpDataJson = jsonUtil.toJson(cdp);
+        if (cdpDataJson == null || cdpDataJson.trim().isEmpty()) {
+            org.slf4j.LoggerFactory.getLogger(CDPVersionService.class)
+                .warn("CDP序列化失败，版本数据可能为空: cdpId={}, version={}", 
+                    cdp.getId(), maxVersion + 1);
+        }
+        
         CDPVersion version = new CDPVersion();
         version.setCdpId(cdp.getId());
         version.setVersionNumber(maxVersion + 1);
-        version.setCdpDataJson(jsonUtil.toJson(cdp));
+        version.setCdpDataJson(cdpDataJson);
         version.setCreateTime(LocalDateTime.now());
         return cdpVersionRepository.save(version);
     }

@@ -1,16 +1,11 @@
--- ============================================
--- 诊断服务数据库初始化脚本 (Oracle版本)
--- 用于开发/生产环境
--- ============================================
-
--- CDP（Clinical Decision Package）表 - 临床决策包
-CREATE TABLE cdp (
+CREATE TABLE cdp
+(
     id VARCHAR2(64) NOT NULL,
     patient_id VARCHAR2(64) NOT NULL,
     session_id VARCHAR2(64) NOT NULL,
-    version NUMBER(10) NOT NULL DEFAULT 1,
+    version_no NUMBER(10) NOT NULL,
     cdp_status VARCHAR2(64),
-    
+
     -- JSON字段（使用JSON类型，Oracle 12c+）
     health_state_assessment CLOB,
     wellness_plan CLOB,
@@ -21,19 +16,20 @@ CREATE TABLE cdp (
     management_plan CLOB,
     triage CLOB,
     uncertainty CLOB,
-    audit CLOB,
-    
+    audit_info CLOB,
+
     -- 时间戳
-    created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
+    created_at TIMESTAMP(6) NOT NULL,
+    updated_at TIMESTAMP(6) NOT NULL,
+
     CONSTRAINT pk_cdp PRIMARY KEY (id)
 );
+
 
 -- 创建索引
 CREATE INDEX idx_cdp_patient_id ON cdp(patient_id);
 CREATE INDEX idx_cdp_session_id ON cdp(session_id);
-CREATE INDEX idx_cdp_version ON cdp(version);
+CREATE INDEX idx_cdp_version ON cdp(version_no);
 CREATE INDEX idx_cdp_created_at ON cdp(created_at);
 
 -- 添加表注释
@@ -41,7 +37,7 @@ COMMENT ON TABLE cdp IS '临床决策包表';
 COMMENT ON COLUMN cdp.id IS 'CDP ID';
 COMMENT ON COLUMN cdp.patient_id IS '患者ID';
 COMMENT ON COLUMN cdp.session_id IS '会话ID';
-COMMENT ON COLUMN cdp.version IS '版本号';
+COMMENT ON COLUMN cdp.version_no IS '版本号';
 COMMENT ON COLUMN cdp.cdp_status IS 'CDP状态';
 COMMENT ON COLUMN cdp.health_state_assessment IS '健康状态判定结果（JSON）';
 COMMENT ON COLUMN cdp.wellness_plan IS '健康管理计划（JSON）';
@@ -52,7 +48,7 @@ COMMENT ON COLUMN cdp.workup_plan IS '检查计划（JSON）';
 COMMENT ON COLUMN cdp.management_plan IS '治疗计划（JSON）';
 COMMENT ON COLUMN cdp.triage IS '风险评估（JSON）';
 COMMENT ON COLUMN cdp.uncertainty IS '不确定性信息（JSON）';
-COMMENT ON COLUMN cdp.audit IS '审计信息（JSON）';
+COMMENT ON COLUMN cdp.audit_info IS '审计信息（JSON）';
 
 -- CDP版本历史表
 CREATE TABLE cdp_version (
@@ -81,7 +77,7 @@ CREATE TABLE diagnosis_record (
     work_mode VARCHAR2(32),
     diagnosis_type VARCHAR2(32) NOT NULL,
     status VARCHAR2(32) NOT NULL,
-    
+
     -- 症状信息
     chief_complaint CLOB,
     symptom_duration VARCHAR2(64),
@@ -90,24 +86,24 @@ CREATE TABLE diagnosis_record (
     symptom_location CLOB,
     accompanying_symptoms CLOB,
     symptom_features CLOB,
-    
+
     -- 体征数据
     vital_signs CLOB,
     physical_exam CLOB,
-    
+
     -- 检查结果
     examination_results CLOB,
-    
+
     -- 诊断结果
     diagnosis_result CLOB,
-    
+
     -- 对话记录
     dialogue_history CLOB,
     questioning_count NUMBER(10) DEFAULT 0,
-    
+
     -- 元数据
-    created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP(6) NOT NULL,
+    updated_at TIMESTAMP(6) NOT NULL,
     completed_at TIMESTAMP(6)
 );
 
@@ -125,25 +121,25 @@ CREATE TABLE examination_record (
     user_id VARCHAR2(64) NOT NULL,
     family_id VARCHAR2(64),
     examination_type VARCHAR2(32) NOT NULL,
-    
+
     -- 检查方案
     plan_id NUMBER(19),
     plan_name VARCHAR2(255),
     plan_items CLOB,
-    
+
     -- 报告信息
     report_type VARCHAR2(32),
     report_file_path VARCHAR2(512),
     report_ocr_result CLOB,
     report_structured_data CLOB,
-    
+
     -- 解读结果
     interpretation_result CLOB,
-    
+
     -- 元数据
     examination_date DATE,
-    created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP(6) NOT NULL,
+    updated_at TIMESTAMP(6) NOT NULL
 );
 
 CREATE INDEX idx_exam_user_id ON examination_record(user_id);
@@ -159,14 +155,14 @@ CREATE TABLE examination_plan (
     user_id VARCHAR2(64) NOT NULL,
     plan_name VARCHAR2(255) NOT NULL,
     plan_type VARCHAR2(32) NOT NULL,
-    
+
     -- 方案内容
     plan_items CLOB,
     target_conditions CLOB,
-    
+
     -- 元数据
-    created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP(6) NOT NULL,
+    updated_at TIMESTAMP(6) NOT NULL
 );
 
 CREATE INDEX idx_plan_user_id ON examination_plan(user_id);
@@ -210,35 +206,5 @@ CREATE TABLE wellness_screening_record (
 
 COMMENT ON TABLE wellness_screening_record IS '健康筛查记录表';
 
--- 创建触发器：自动更新updated_at字段（Oracle）
-CREATE OR REPLACE TRIGGER trg_cdp_updated_at
-    BEFORE UPDATE ON cdp
-    FOR EACH ROW
-BEGIN
-    :NEW.updated_at := CURRENT_TIMESTAMP;
-END;
-/
-
-CREATE OR REPLACE TRIGGER trg_diagnosis_record_updated_at
-    BEFORE UPDATE ON diagnosis_record
-    FOR EACH ROW
-BEGIN
-    :NEW.updated_at := CURRENT_TIMESTAMP;
-END;
-/
-
-CREATE OR REPLACE TRIGGER trg_examination_record_updated_at
-    BEFORE UPDATE ON examination_record
-    FOR EACH ROW
-BEGIN
-    :NEW.updated_at := CURRENT_TIMESTAMP;
-END;
-/
-
-CREATE OR REPLACE TRIGGER trg_examination_plan_updated_at
-    BEFORE UPDATE ON examination_plan
-    FOR EACH ROW
-BEGIN
-    :NEW.updated_at := CURRENT_TIMESTAMP;
-END;
-/
+-- 注意：时间戳字段（created_at, updated_at）由 Hibernate 的 @CreationTimestamp 和 @UpdateTimestamp 注解自动管理
+-- 不需要创建数据库触发器，这样可以避免权限问题，并且时间戳管理统一在应用层处理

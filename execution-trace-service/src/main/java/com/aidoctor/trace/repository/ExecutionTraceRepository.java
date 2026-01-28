@@ -32,7 +32,7 @@ public interface ExecutionTraceRepository extends JpaRepository<ExecutionTrace, 
     @Query(value = "SELECT e.cdp_id FROM execution_trace e " +
             "WHERE e.cdp_id IS NOT NULL " +
             "GROUP BY e.cdp_id " +
-            "ORDER BY MAX(e.timestamp) DESC", nativeQuery = true)
+            "ORDER BY MAX(e.event_timestamp) DESC", nativeQuery = true)
     List<String> findAllDistinctCdpIds();
     
     /**
@@ -40,6 +40,23 @@ public interface ExecutionTraceRepository extends JpaRepository<ExecutionTrace, 
      */
     @Query("SELECT MAX(e.timestamp) FROM ExecutionTrace e WHERE e.cdpId = ?1")
     LocalDateTime findLatestTimestampByCdpId(String cdpId);
+    
+    /**
+     * 查询所有追踪记录，按ID升序排列
+     * 用于数据库管理工具查看时保证顺序
+     */
+    List<ExecutionTrace> findAllByOrderByIdAsc();
+    
+    /**
+     * 查询所有追踪记录，按ID降序排列
+     * 用于查看最新插入的记录
+     */
+    List<ExecutionTrace> findAllByOrderByIdDesc();
+    
+    /**
+     * 根据CDP ID查找所有追踪记录，按ID升序排列
+     */
+    List<ExecutionTrace> findByCdpIdOrderByIdAsc(String cdpId);
 }
 
 

@@ -9,9 +9,16 @@ import asyncio
 from typing import Optional, Dict, Any
 
 try:
-    from langchain.llms.base import BaseLLM
-    from langchain.chat_models import ChatOpenAI
-    from langchain.llms import Ollama
+    # 使用新的导入方式（LangChain 0.2.0+）
+    try:
+        from langchain_core.language_models.llms import BaseLLM
+        from langchain_openai import ChatOpenAI
+        from langchain_community.llms import Ollama
+    except ImportError:
+        # 回退到旧版本导入方式
+        from langchain.llms.base import BaseLLM
+        from langchain.chat_models import ChatOpenAI
+        from langchain.llms import Ollama
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
@@ -19,7 +26,7 @@ except ImportError:
 
 import httpx
 from .config import LLMConfig, LLMBackend
-from .exceptions import LLMException, LLMTimeoutException, LLMAPIException
+from .exceptions import LLMException, LLMTimeoutException, LLMAPIException, LLMConfigException
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +49,18 @@ class LangChainLLMClient:
         
         self.config = config or self._load_config_from_env()
         self.llm = self._create_llm()
-        logger.info(f"LLM客户端初始化完成: backend={self.config.backend}, model={self.config.model}")
+        
+        # 记录详细的配置信息
+        config_info = f"LLM客户端初始化完成: backend={self.config.backend}"
+        if self.config.backend == LLMBackend.OLLAMA:
+            config_info += f", ollama_model={self.config.ollama_model}, ollama_base_url={self.config.ollama_base_url}"
+        elif self.config.backend == LLMBackend.OPENAI:
+            config_info += f", model={self.config.model}, base_url={self.config.openai_base_url or 'default'}"
+        elif self.config.backend == LLMBackend.CHATGLM:
+            config_info += f", model={self.config.model}, chatglm_url={self.config.chatglm_api_url}"
+        elif self.config.backend == LLMBackend.CUSTOM:
+            config_info += f", model={self.config.model}, custom_url={self.config.custom_api_url}"
+        logger.info(config_info)
     
     def _load_config_from_env(self) -> LLMConfig:
         """从环境变量加载配置"""
@@ -88,18 +106,43 @@ class LangChainLLMClient:
         if not self.config.openai_api_key:
             raise LLMConfigException("OPENAI_API_KEY is required for OpenAI backend")
         
-        return ChatOpenAI(
-            model_name=self.config.model,
-            temperature=self.config.temperature,
-            max_tokens=self.config.max_tokens,
-            openai_api_key=self.config.openai_api_key,
-            openai_api_base=self.config.openai_base_url,
-            timeout=self.config.timeout,
-            max_retries=self.config.max_retries,
-        )
+        # 兼容新旧版本的参数名称
+        kwargs = {
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
+            "timeout": self.config.timeout,
+            "max_retries": self.config.max_retries,
+        }
+        
+        # 新版本使用 model, api_key, base_url
+        # 旧版本使用 model_name, openai_api_key, openai_api_base
+        try:
+            # 尝试新版本参数
+            kwargs.update({
+                "model": self.config.model,
+                "api_key": self.config.openai_api_key,
+            })
+            if self.config.openai_base_url:
+                kwargs["base_url"] = self.config.openai_base_url
+            return ChatOpenAI(**kwargs)
+        except TypeError:
+            # 回退到旧版本参数
+            kwargs.update({
+                "model_name": self.config.model,
+                "openai_api_key": self.config.openai_api_key,
+            })
+            if self.config.openai_base_url:
+                kwargs["openai_api_base"] = self.config.openai_base_url
+            return ChatOpenAI(**kwargs)
     
     def _create_ollama_llm(self) -> Ollama:
         """创建Ollama LLM"""
+        logger.info(
+            f"创建Ollama LLM: model={self.config.ollama_model}, "
+            f"base_url={self.config.ollama_base_url}, "
+            f"temperature={self.config.temperature}, "
+            f"max_tokens={self.config.max_tokens}"
+        )
         return Ollama(
             model=self.config.ollama_model,
             base_url=self.config.ollama_base_url,
@@ -130,6 +173,20 @@ class LangChainLLMClient:
         
         # 使用LangChain的LLM
         try:
+            # 记录调用信息
+            if self.config.backend == LLMBackend.OLLAMA:
+                logger.info(
+                    f"调用Ollama LLM: model={self.config.ollama_model}, "
+                    f"base_url={self.config.ollama_base_url}, "
+                    f"prompt_length={len(prompt)}"
+                )
+            elif self.config.backend == LLMBackend.OPENAI:
+                logger.info(
+                    f"调用OpenAI LLM: model={self.config.model}, "
+                    f"base_url={self.config.openai_base_url}, "
+                    f"prompt_length={len(prompt)}"
+                )
+            
             # 异步调用LLM
             if hasattr(self.llm, 'apredict'):
                 result = await self.llm.apredict(prompt, **kwargs)
@@ -148,7 +205,14 @@ class LangChainLLMClient:
         except asyncio.TimeoutError:
             raise LLMTimeoutException(f"LLM调用超时: timeout={self.config.timeout}s")
         except Exception as e:
-            logger.error(f"LLM调用失败: {str(e)}", exc_info=True)
+            # 记录详细的错误信息
+            error_details = f"LLM调用失败: backend={self.config.backend}"
+            if self.config.backend == LLMBackend.OLLAMA:
+                error_details += f", model={self.config.ollama_model}, base_url={self.config.ollama_base_url}"
+            elif self.config.backend == LLMBackend.OPENAI:
+                error_details += f", model={self.config.model}, base_url={self.config.openai_base_url}"
+            error_details += f", error={str(e)}"
+            logger.error(error_details, exc_info=True)
             raise LLMAPIException(f"LLM调用失败: {str(e)}")
     
     async def _call_chatglm_api(self, prompt: str, **kwargs) -> str:

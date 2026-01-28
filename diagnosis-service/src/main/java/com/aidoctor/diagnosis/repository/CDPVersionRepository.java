@@ -30,5 +30,22 @@ public interface CDPVersionRepository extends JpaRepository<CDPVersion, Long> {
      */
     @Query("SELECT MAX(v.versionNumber) FROM CDPVersion v WHERE v.cdpId = :cdpId")
     Optional<Integer> findMaxVersionByCdpId(@Param("cdpId") String cdpId);
+    
+    /**
+     * 查询所有版本记录，按ID升序排列
+     * 用于数据库管理工具查看时保证顺序
+     */
+    List<CDPVersion> findAllByOrderByIdAsc();
+    
+    /**
+     * 查询所有版本记录，按ID降序排列
+     * 用于查看最新插入的记录
+     */
+    List<CDPVersion> findAllByOrderByIdDesc();
+    
+    /**
+     * 根据CDP ID查找所有版本，按ID升序排列
+     */
+    List<CDPVersion> findByCdpIdOrderByIdAsc(String cdpId);
 }
 

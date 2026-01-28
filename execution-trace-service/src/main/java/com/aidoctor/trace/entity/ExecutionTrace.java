@@ -1,13 +1,10 @@
 package com.aidoctor.trace.entity;
 
-import com.vladmihalcea.hibernate.type.json.JsonType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.Type;
-import org.hibernate.annotations.TypeDef;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -15,11 +12,10 @@ import java.time.LocalDateTime;
 /**
  * 执行追踪实体
  */
-@TypeDef(name = "json", typeClass = JsonType.class)
 @Entity
 @Table(name = "execution_trace", indexes = {
     @Index(name = "idx_cdp_id", columnList = "cdp_id"),
-    @Index(name = "idx_timestamp", columnList = "timestamp"),
+    @Index(name = "idx_event_timestamp", columnList = "event_timestamp"),
     @Index(name = "idx_service", columnList = "service")
 })
 @Data
@@ -60,18 +56,19 @@ public class ExecutionTrace {
     private Long duration;
 
     @CreationTimestamp
-    @Column(name = "timestamp", nullable = false, updatable = false)
+    @Column(name = "event_timestamp", nullable = false, updatable = false)
     private LocalDateTime timestamp;
 
-    @Type(type = "json")
-    @Column(name = "input_data", columnDefinition = "json")
+    @Lob
+    @Column(name = "input_data", columnDefinition = "CLOB")
     private String inputData;
 
-    @Type(type = "json")
-    @Column(name = "output_data", columnDefinition = "json")
+    @Lob
+    @Column(name = "output_data", columnDefinition = "CLOB")
     private String outputData;
 
-    @Column(name = "error_message", columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "error_message", columnDefinition = "CLOB")
     private String errorMessage;
 
     @Column(name = "request_url", length = 512)

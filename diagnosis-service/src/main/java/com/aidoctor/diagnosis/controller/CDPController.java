@@ -1,9 +1,11 @@
 package com.aidoctor.diagnosis.controller;
 
 import com.aidoctor.diagnosis.dto.response.ApiResponse;
+import com.aidoctor.diagnosis.exception.CDPNotFoundException;
 import com.aidoctor.diagnosis.service.cdp.CDPManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,10 +51,23 @@ public class CDPController {
             log.info("CDP追踪摘要更新成功: cdpId={}", cdpId);
             return ResponseEntity.ok(ApiResponse.success(null));
             
+        } catch (CDPNotFoundException e) {
+            // CDP不存在是正常情况（可能已被删除），返回404而不是500
+            log.warn("更新CDP追踪摘要失败: CDP不存在: cdpId={}", cdpId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(404, "CDP不存在: " + e.getMessage()));
         } catch (Exception e) {
+            // 检查异常消息中是否包含"CDP不存在"或"CDP not found"
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && (errorMessage.contains("CDP不存在") || errorMessage.contains("CDP not found"))) {
+                // CDP不存在是正常情况（可能已被删除或尚未创建），返回404而不是500
+                log.warn("更新CDP追踪摘要失败: CDP不存在: cdpId={}", cdpId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, "CDP不存在: " + errorMessage));
+            }
             log.error("更新CDP追踪摘要失败: cdpId={}", cdpId, e);
             return ResponseEntity.internalServerError()
-                .body(ApiResponse.error(500, "更新失败: " + e.getMessage()));
+                .body(ApiResponse.error(500, "更新失败: " + errorMessage));
         }
     }
 }

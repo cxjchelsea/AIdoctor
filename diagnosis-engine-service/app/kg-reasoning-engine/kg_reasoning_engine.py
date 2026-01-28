@@ -3,10 +3,16 @@
 """
 from typing import List, Dict, Any, Optional
 import logging
-from .kg_client import Neo4jClient
-from .path_retriever import PathRetriever
-from .path_scorer import PathScorer
-from .path_injector import PathInjector
+# 使用绝对导入，避免相对导入问题
+import sys
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+from kg_client import Neo4jClient
+from path_retriever import PathRetriever
+from path_scorer import PathScorer
+from path_injector import PathInjector
 
 logger = logging.getLogger(__name__)
 

@@ -1,3 +1,0 @@
-org.springframework.context.ApplicationListener=\
-com.aidoctor.trace.config.DatabaseInitializer
-

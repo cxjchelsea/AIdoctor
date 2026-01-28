@@ -75,7 +75,7 @@ async def diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     - 证据分析
     """
     try:
-    result = await diagnosis_service.diagnose(request)
+        result = await diagnosis_service.diagnose(request)
         return result
     except Exception as e:
         logger.error(f"诊断失败: {str(e)}", exc_info=True)
@@ -86,7 +86,7 @@ async def diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
 async def rule_based_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     """规则引擎诊断"""
     try:
-    result = await fusion_engine.rule_engine.diagnose(request)
+        result = await fusion_engine.rule_engine.diagnose(request)
         return result
     except Exception as e:
         logger.error(f"规则引擎诊断失败: {str(e)}", exc_info=True)
@@ -97,7 +97,7 @@ async def rule_based_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]
 async def kg_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     """知识图谱查询"""
     try:
-    result = await fusion_engine.kg_engine.diagnose(request)
+        result = await fusion_engine.kg_engine.diagnose(request)
         return result
     except Exception as e:
         logger.error(f"知识图谱查询失败: {str(e)}", exc_info=True)
@@ -108,7 +108,7 @@ async def kg_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
 async def statistical_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     """统计模型推理"""
     try:
-    result = await fusion_engine.statistical_engine.diagnose(request)
+        result = await fusion_engine.statistical_engine.diagnose(request)
         return result
     except Exception as e:
         logger.error(f"统计模型推理失败: {str(e)}", exc_info=True)
@@ -119,7 +119,7 @@ async def statistical_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any
 async def llm_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     """大模型推理"""
     try:
-    result = await fusion_engine.llm_engine.diagnose(request)
+        result = await fusion_engine.llm_engine.diagnose(request)
         return result
     except Exception as e:
         logger.error(f"大模型推理失败: {str(e)}", exc_info=True)
@@ -130,7 +130,7 @@ async def llm_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
 async def differential_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     """鉴别诊断"""
     try:
-    result = await fusion_engine.differential_engine.diagnose(request)
+        result = await fusion_engine.differential_engine.diagnose(request)
         return result
     except Exception as e:
         logger.error(f"鉴别诊断失败: {str(e)}", exc_info=True)
@@ -215,3 +215,127 @@ async def retrieve_paths(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"路径检索失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"路径检索失败: {str(e)}")
+
+
+@router.post("/engine/generate-ddx-candidates", response_model=Dict[str, Any])
+async def generate_ddx_candidates(request: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    生成鉴别诊断候选集
+    
+    基于患者状态生成鉴别诊断候选集，并进行三层分层分类
+    """
+    try:
+        # 从请求中提取患者状态信息
+        patient_state = request.get('patientState', {})
+        cdp_id = request.get('cdpId', '')
+        
+        # 构建诊断请求
+        diagnosis_request = DiagnosisEngineRequest(
+            symptom_info=patient_state.get('symptomInfo', {}),
+            vital_signs=patient_state.get('vitalSigns', {}),
+            examination_results=patient_state.get('examinationResults', []),
+            health_profile=patient_state.get('healthProfile', {})
+        )
+        
+        # 执行融合诊断获取候选集
+        fusion_result = await fusion_engine.fuse(diagnosis_request)
+        possibilities = fusion_result.get('possibilities', {})
+        
+        # 执行三层分类
+        classification_result = classifier.classify(possibilities)
+        
+        # 构建DDx列表
+        ddx_list = []
+        
+        # 首要假设
+        primary = classification_result.get('primary_hypothesis')
+        if primary:
+            ddx_list.append({
+                'disease': primary.get('disease', ''),
+                'diseaseName': primary.get('diseaseName', ''),
+                'confidence': primary.get('confidence', 0.0),
+                'layer': 'primary_hypothesis',
+                'supportingEvidence': primary.get('supporting_evidence', []),
+                'contradictingEvidence': primary.get('contradicting_evidence', [])
+            })
+        
+        # 主要备选
+        alternatives = classification_result.get('main_alternatives', [])
+        for alt in alternatives:
+            ddx_list.append({
+                'disease': alt.get('disease', ''),
+                'diseaseName': alt.get('diseaseName', ''),
+                'confidence': alt.get('confidence', 0.0),
+                'layer': 'main_alternatives',
+                'supportingEvidence': alt.get('supporting_evidence', [])
+            })
+        
+        # 必须排除
+        must_exclude = classification_result.get('must_exclude')
+        if must_exclude:
+            ddx_list.append({
+                'disease': must_exclude.get('disease', ''),
+                'diseaseName': must_exclude.get('diseaseName', ''),
+                'confidence': must_exclude.get('confidence', 0.0),
+                'layer': 'must_exclude',
+                'reason': must_exclude.get('reason', '')
+            })
+        
+        return {
+            'ddx': ddx_list,
+            'classification': classification_result,
+            'sourcePossibilities': possibilities
+        }
+    except Exception as e:
+        logger.error(f"生成DDx候选集失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"生成DDx候选集失败: {str(e)}")
+
+
+@router.post("/engine/organize-reasoning-groups", response_model=Dict[str, Any])
+async def organize_reasoning_groups(request: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    组织推理子组
+    
+    将鉴别诊断候选集组织成推理子组，用于分流路径设计
+    """
+    try:
+        ddx = request.get('ddx', [])
+        cdp_id = request.get('cdpId', '')
+        
+        if not ddx:
+            return {
+                'reasoningGroups': [],
+                'message': 'DDx列表为空'
+            }
+        
+        # 按层级组织推理子组
+        reasoning_groups = {
+            'primary': [],
+            'alternatives': [],
+            'exclusions': []
+        }
+        
+        for item in ddx:
+            layer = item.get('layer', '')
+            if layer == 'primary_hypothesis':
+                reasoning_groups['primary'].append(item)
+            elif layer == 'main_alternatives':
+                reasoning_groups['alternatives'].append(item)
+            elif layer == 'must_exclude':
+                reasoning_groups['exclusions'].append(item)
+        
+        # 构建组织后的DDx（保持原有结构，添加推理子组信息）
+        organized_ddx = []
+        for item in ddx:
+            organized_item = item.copy()
+            organized_item['reasoningGroup'] = item.get('layer', 'unknown')
+            organized_ddx.append(organized_item)
+        
+        return {
+            'ddx': organized_ddx,
+            'reasoningGroups': reasoning_groups,
+            'message': '推理子组组织完成'
+        }
+    except Exception as e:
+        logger.error(f"组织推理子组失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"组织推理子组失败: {str(e)}")

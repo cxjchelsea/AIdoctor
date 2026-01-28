@@ -7,6 +7,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * 追踪服务客户端
  * 用于调用独立的追踪服务
@@ -46,6 +49,28 @@ public class TraceServiceClient {
                 event.getCdpId(), event.getType(), traceServiceUrl + "/api/v1/trace/events", e);
             // 不影响主业务流程
         }
+    }
+    
+    /**
+     * 获取CDP的追踪摘要
+     */
+    public Map<String, Object> getTraceSummary(String cdpId) {
+        try {
+            log.debug("获取追踪摘要: cdpId={}", cdpId);
+            Map<String, Object> summary = restTemplate.getForObject(
+                traceServiceUrl + "/api/v1/trace/cdp/" + cdpId + "/summary",
+                Map.class
+            );
+            if (summary != null) {
+                log.debug("追踪摘要获取成功: cdpId={}", cdpId);
+                return summary;
+            }
+        } catch (Exception e) {
+            log.warn("获取追踪摘要失败: cdpId={}, url={}", 
+                cdpId, traceServiceUrl + "/api/v1/trace/cdp/" + cdpId + "/summary", e);
+            // 不影响主业务流程，返回空摘要
+        }
+        return new HashMap<>();
     }
 }
 

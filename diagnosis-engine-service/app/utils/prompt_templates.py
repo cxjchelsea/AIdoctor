@@ -5,7 +5,13 @@ Prompt模板管理（从公共库导入）
 """
 
 from pathlib import Path
+from typing import Dict, Any, Optional
+import yaml
+import logging
+from jinja2 import Template
 from aidoctor_llm import PromptTemplateManager as BasePromptTemplateManager
+
+logger = logging.getLogger(__name__)
 
 # 扩展PromptTemplateManager以支持服务特定的模板目录
 class PromptTemplateManager(BasePromptTemplateManager):
@@ -46,8 +52,6 @@ class PromptTemplateManager(BasePromptTemplateManager):
             evidence=evidence,
             reasoning_path=reasoning_path
         )
-
-__all__ = ["PromptTemplateManager"]
     
     def _load_templates_config(self) -> Dict[str, Any]:
         """加载模板配置文件"""
@@ -273,3 +277,5 @@ __all__ = ["PromptTemplateManager"]
             reasoning_path=reasoning_path or ""
         )
 
+
+__all__ = ["PromptTemplateManager"]

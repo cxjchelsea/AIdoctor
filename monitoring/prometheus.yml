@@ -1,0 +1,150 @@
+global:
+  scrape_interval: 15s  # 每15秒拉取一次指标
+  evaluation_interval: 15s  # 每15秒评估一次告警规则
+  external_labels:
+    cluster: 'aidoctor'
+    environment: 'production'
+
+# 告警规则文件
+rule_files:
+  - '/etc/prometheus/alert_rules.yml'
+
+# 指标收集配置
+scrape_configs:
+  # 诊断引擎服务（Python FastAPI）
+  - job_name: 'diagnosis-engine-service'
+    static_configs:
+      - targets: ['host.docker.internal:8086']
+        labels:
+          service: 'diagnosis-engine'
+          environment: 'production'
+          language: 'python'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # 健康判定服务（Python FastAPI）
+  - job_name: 'health-state-assessment-service'
+    static_configs:
+      - targets: ['host.docker.internal:8081']
+        labels:
+          service: 'health-state-assessment'
+          environment: 'production'
+          language: 'python'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # 诊断服务（Java Spring Boot）
+  - job_name: 'diagnosis-service'
+    static_configs:
+      - targets: ['host.docker.internal:8084']
+        labels:
+          service: 'diagnosis'
+          environment: 'production'
+          language: 'java'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 15s
+
+  # 执行追踪服务（Java Spring Boot）
+  - job_name: 'execution-trace-service'
+    static_configs:
+      - targets: ['host.docker.internal:8093']
+        labels:
+          service: 'execution-trace'
+          environment: 'production'
+          language: 'java'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 15s
+
+  # 检查服务（Java Spring Boot）
+  - job_name: 'examination-service'
+    static_configs:
+      - targets: ['host.docker.internal:8085']
+        labels:
+          service: 'examination'
+          environment: 'production'
+          language: 'java'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 15s
+
+  # 病例理解服务（Python FastAPI）
+  - job_name: 'clinical-parsing-service'
+    static_configs:
+      - targets: ['host.docker.internal:8082']
+        labels:
+          service: 'clinical-parsing'
+          environment: 'production'
+          language: 'python'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # 对话服务（Python FastAPI）
+  - job_name: 'dialog-service'
+    static_configs:
+      - targets: ['host.docker.internal:8088']
+        labels:
+          service: 'dialog'
+          environment: 'production'
+          language: 'python'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # 解释生成服务（Python FastAPI）
+  - job_name: 'explanation-service'
+    static_configs:
+      - targets: ['host.docker.internal:8089']
+        labels:
+          service: 'explanation'
+          environment: 'production'
+          language: 'python'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # 检查建议服务（Python FastAPI）
+  - job_name: 'workup-planner-service'
+    static_configs:
+      - targets: ['host.docker.internal:8090']
+        labels:
+          service: 'workup-planner'
+          environment: 'production'
+          language: 'python'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # 治疗推理服务（Python FastAPI）
+  - job_name: 'treatment-engine-service'
+    static_configs:
+      - targets: ['host.docker.internal:8091']
+        labels:
+          service: 'treatment-engine'
+          environment: 'production'
+          language: 'python'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # 风险评估服务（Python FastAPI）
+  - job_name: 'risk-assessment-service'
+    static_configs:
+      - targets: ['host.docker.internal:8092']
+        labels:
+          service: 'risk-assessment'
+          environment: 'production'
+          language: 'python'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # OCR服务（Python FastAPI）
+  - job_name: 'ocr-service'
+    static_configs:
+      - targets: ['host.docker.internal:8087']
+        labels:
+          service: 'ocr'
+          environment: 'production'
+          language: 'python'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Prometheus自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+

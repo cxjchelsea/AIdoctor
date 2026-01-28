@@ -3,6 +3,7 @@ package com.aidoctor.diagnosis.service.cdp;
 import com.aidoctor.diagnosis.entity.CDP;
 import com.aidoctor.diagnosis.exception.CDPNotFoundException;
 import com.aidoctor.diagnosis.repository.CDPRepository;
+import com.aidoctor.diagnosis.util.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,14 +53,16 @@ public class CDPManager {
             .sessionId(sessionId)
             .version(1)
             .cdpStatus("initial")
-            .patientState(new HashMap<>())
-            .ddx(new ArrayList<>())
-            .evidenceGraph(new ArrayList<>())
-            .workupPlan(new ArrayList<>())
-            .managementPlan(new ArrayList<>())
-            .uncertainty(new HashMap<>())
-            .audit(new HashMap<>())
             .build();
+        
+        // 使用setter初始化JSON字段（setter会自动转换为JSON字符串）
+        cdp.setPatientState(new HashMap<>());
+        cdp.setDdx(new ArrayList<>());
+        cdp.setEvidenceGraph(new ArrayList<>());
+        cdp.setWorkupPlan(new ArrayList<>());
+        cdp.setManagementPlan(new ArrayList<>());
+        cdp.setUncertainty(new HashMap<>());
+        cdp.setAudit(new HashMap<>());
         
         CDP savedCDP = cdpRepository.save(cdp);
         
@@ -76,6 +79,8 @@ public class CDPManager {
      * 性能优化：使用SELECT FOR UPDATE确保同一时间只有一个线程能更新CDP
      * 解决execution-trace-service并发更新导致的CDPNotFoundException问题
      * 
+     * 注意：如果CDP刚创建，事务可能还没提交，需要重试
+     * 
      * @param cdpId CDP ID
      * @param updates 更新内容
      * @return 更新后的CDP
@@ -86,8 +91,34 @@ public class CDPManager {
         
         // 使用悲观锁获取CDP，防止并发更新冲突
         // SELECT FOR UPDATE会锁定该行，其他事务必须等待
-        CDP existingCDP = cdpRepository.findByIdWithLock(cdpId)
-            .orElseThrow(() -> new CDPNotFoundException("CDP not found: " + cdpId));
+        // 如果CDP刚创建，事务可能还没提交，需要重试
+        CDP existingCDP = null;
+        int maxRetries = 3;
+        int retryDelayMs = 200;
+        
+        for (int i = 0; i < maxRetries; i++) {
+            Optional<CDP> cdpOpt = cdpRepository.findByIdWithLock(cdpId);
+            if (cdpOpt.isPresent()) {
+                existingCDP = cdpOpt.get();
+                break;
+            }
+            
+            // 如果找不到且不是最后一次重试，等待后重试（可能是事务还没提交）
+            if (i < maxRetries - 1) {
+                log.debug("CDP未找到，等待事务提交后重试: cdpId={}, retry={}/{}", cdpId, i + 1, maxRetries);
+                try {
+                    Thread.sleep(retryDelayMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("等待CDP时被中断", e);
+                }
+            }
+        }
+        
+        // 如果重试后还是找不到，抛出异常
+        if (existingCDP == null) {
+            throw new CDPNotFoundException("CDP not found: " + cdpId);
+        }
         
         // 保存当前版本（写时复制）
         cdpVersionService.createVersion(existingCDP);
@@ -172,37 +203,67 @@ public class CDPManager {
     @SuppressWarnings("unchecked")
     private void applyUpdates(CDP cdp, Map<String, Object> updates) {
         if (updates.containsKey("healthStateAssessment")) {
-            cdp.setHealthStateAssessment((Map<String, Object>) updates.get("healthStateAssessment"));
+            Object value = updates.get("healthStateAssessment");
+            if (value instanceof Map) {
+                cdp.setHealthStateAssessment((Map<String, Object>) value);
+            }
         }
         if (updates.containsKey("wellnessPlan")) {
-            cdp.setWellnessPlan((Map<String, Object>) updates.get("wellnessPlan"));
+            Object value = updates.get("wellnessPlan");
+            if (value instanceof Map) {
+                cdp.setWellnessPlan((Map<String, Object>) value);
+            }
         }
         if (updates.containsKey("patientState")) {
-            cdp.setPatientState((Map<String, Object>) updates.get("patientState"));
+            Object value = updates.get("patientState");
+            if (value instanceof Map) {
+                cdp.setPatientState((Map<String, Object>) value);
+            }
         }
         if (updates.containsKey("ddx")) {
-            cdp.setDdx((List<Map<String, Object>>) updates.get("ddx"));
+            Object value = updates.get("ddx");
+            if (value instanceof List) {
+                cdp.setDdx((List<Map<String, Object>>) value);
+            }
         }
         if (updates.containsKey("evidenceGraph")) {
-            cdp.setEvidenceGraph((List<Map<String, Object>>) updates.get("evidenceGraph"));
+            Object value = updates.get("evidenceGraph");
+            if (value instanceof List) {
+                cdp.setEvidenceGraph((List<Map<String, Object>>) value);
+            }
         }
         if (updates.containsKey("workupPlan")) {
-            cdp.setWorkupPlan((List<Map<String, Object>>) updates.get("workupPlan"));
+            Object value = updates.get("workupPlan");
+            if (value instanceof List) {
+                cdp.setWorkupPlan((List<Map<String, Object>>) value);
+            }
         }
         if (updates.containsKey("managementPlan")) {
-            cdp.setManagementPlan((List<Map<String, Object>>) updates.get("managementPlan"));
+            Object value = updates.get("managementPlan");
+            if (value instanceof List) {
+                cdp.setManagementPlan((List<Map<String, Object>>) value);
+            }
         }
         if (updates.containsKey("triage")) {
-            cdp.setTriage((Map<String, Object>) updates.get("triage"));
+            Object value = updates.get("triage");
+            if (value instanceof Map) {
+                cdp.setTriage((Map<String, Object>) value);
+            }
         }
         if (updates.containsKey("uncertainty")) {
-            cdp.setUncertainty((Map<String, Object>) updates.get("uncertainty"));
+            Object value = updates.get("uncertainty");
+            if (value instanceof Map) {
+                cdp.setUncertainty((Map<String, Object>) value);
+            }
         }
         if (updates.containsKey("cdpStatus")) {
             cdp.setCdpStatus((String) updates.get("cdpStatus"));
         }
         if (updates.containsKey("executionTrace")) {
-            cdp.setExecutionTrace((Map<String, Object>) updates.get("executionTrace"));
+            Object value = updates.get("executionTrace");
+            if (value instanceof Map) {
+                cdp.setExecutionTrace((Map<String, Object>) value);
+            }
         }
     }
 }

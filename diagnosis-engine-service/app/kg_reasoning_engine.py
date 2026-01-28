@@ -4,10 +4,15 @@
 使用importlib动态导入
 """
 import importlib.util
+import sys
 from pathlib import Path
 
 # kg-reasoning-engine目录路径
 _kg_reasoning_engine_dir = Path(__file__).parent / "kg-reasoning-engine"
+
+# 将目录添加到sys.path，使绝对导入能够工作
+if str(_kg_reasoning_engine_dir) not in sys.path:
+    sys.path.insert(0, str(_kg_reasoning_engine_dir))
 
 def _load_module(module_name, file_name):
     """动态加载模块"""
@@ -17,15 +22,15 @@ def _load_module(module_name, file_name):
     spec.loader.exec_module(module)
     return module
 
-# 加载所有模块
+# 按依赖顺序加载模块（先加载基础模块，无依赖的模块）
 _kg_client_module = _load_module("kg_client", "kg_client.py")
-_path_retriever_module = _load_module("path_retriever", "path_retriever.py")
-_path_scorer_module = _load_module("path_scorer", "path_scorer.py")
-_path_injector_module = _load_module("path_injector", "path_injector.py")
-_kg_reasoning_engine_module = _load_module("kg_reasoning_engine", "kg_reasoning_engine.py")
 _prior_scorer_module = _load_module("prior_scorer", "prior_scorer.py")
 _likelihood_scorer_module = _load_module("likelihood_scorer", "likelihood_scorer.py")
 _posterior_scorer_module = _load_module("posterior_scorer", "posterior_scorer.py")
+_path_scorer_module = _load_module("path_scorer", "path_scorer.py")
+_path_retriever_module = _load_module("path_retriever", "path_retriever.py")
+_path_injector_module = _load_module("path_injector", "path_injector.py")
+_kg_reasoning_engine_module = _load_module("kg_reasoning_engine", "kg_reasoning_engine.py")
 
 # 导出类
 Neo4jClient = _kg_client_module.Neo4jClient
