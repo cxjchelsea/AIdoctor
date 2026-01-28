@@ -23,14 +23,28 @@ class DialogService:
     """对话服务"""
     
     def __init__(self):
-        # Redis客户端
-        self.redis_client = redis.Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            db=settings.REDIS_DB,
-            password=settings.REDIS_PASSWORD,
-            decode_responses=True
-        )
+        # Redis客户端（带降级处理）
+        self.redis_client = None
+        self.redis_available = False
+        self.memory_context = {}  # 内存存储作为后备
+        
+        try:
+            self.redis_client = redis.Redis(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                db=settings.REDIS_DB,
+                password=settings.REDIS_PASSWORD,
+                decode_responses=True,
+                socket_connect_timeout=2,  # 2秒连接超时
+                socket_timeout=2
+            )
+            # 测试连接
+            self.redis_client.ping()
+            self.redis_available = True
+            logger.info("Redis连接成功")
+        except Exception as e:
+            logger.warning(f"Redis连接失败，将使用内存存储: {str(e)}")
+            self.redis_available = False
         
         # 核心组件
         self.adaptive_questioning = AdaptiveQuestioningStrategy()
@@ -294,24 +308,42 @@ class DialogService:
     def _get_context(self, cdp_id: str) -> Dict[str, Any]:
         """获取对话上下文"""
         context_key = f"dialog:context:{cdp_id}"
-        context_json = self.redis_client.get(context_key)
-        if context_json:
+        
+        if self.redis_available and self.redis_client:
             try:
-                return json.loads(context_json)
-            except json.JSONDecodeError:
-                return {}
-        return {}
+                context_json = self.redis_client.get(context_key)
+                if context_json:
+                    try:
+                        return json.loads(context_json)
+                    except json.JSONDecodeError:
+                        return {}
+            except Exception as e:
+                logger.warning(f"从Redis获取上下文失败，使用内存存储: {str(e)}")
+                self.redis_available = False
+        
+        # 使用内存存储作为后备
+        return self.memory_context.get(context_key, {})
     
     def _update_context(self, cdp_id: str, info: Dict[str, Any]):
         """更新对话上下文"""
         context_key = f"dialog:context:{cdp_id}"
         context = self._get_context(cdp_id)
         context.update(info)
-        self.redis_client.setex(
-            context_key,
-            settings.REDIS_CONTEXT_TTL,
-            json.dumps(context)
-        )
+        
+        if self.redis_available and self.redis_client:
+            try:
+                self.redis_client.setex(
+                    context_key,
+                    settings.REDIS_CONTEXT_TTL,
+                    json.dumps(context)
+                )
+            except Exception as e:
+                logger.warning(f"更新Redis上下文失败，使用内存存储: {str(e)}")
+                self.redis_available = False
+                self.memory_context[context_key] = context
+        else:
+            # 使用内存存储
+            self.memory_context[context_key] = context
     
     def _update_conversation_history(self, cdp_id: str, role: str, content: str):
         """更新对话历史"""
@@ -330,10 +362,121 @@ class DialogService:
         
         self._update_context(cdp_id, context)
     
+    async def design_routing_path(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        设计分流路径
+        
+        Args:
+            request: 设计分流路径请求，包含cdpId、reasoningSubgroups、keyDifferences等
+            
+        Returns:
+            分流路径响应
+        """
+        logger.info(f"设计分流路径: cdpId={request.get('cdpId')}")
+        
+        try:
+            cdp_id = request.get("cdpId")
+            if not cdp_id:
+                raise BusinessException(1202, "cdpId不能为空")
+            
+            # 1. 获取CDP数据
+            cdp_data = await self._get_cdp_data(cdp_id)
+            if not cdp_data:
+                raise BusinessException(1205, f"CDP不存在: {cdp_id}")
+            
+            # 2. 获取推理子组和关键差异点
+            reasoning_subgroups = request.get("reasoningSubgroups", [])
+            key_differences = request.get("keyDifferences", [])
+            
+            # 3. 基于推理子组和关键差异点设计分流路径
+            # TODO: 实现完整的分流路径设计逻辑
+            routing_path = {
+                "paths": [],
+                "priority": "high"
+            }
+            
+            # 临时实现：返回基本结构
+            if reasoning_subgroups:
+                for subgroup in reasoning_subgroups[:3]:  # 取前3个
+                    routing_path["paths"].append({
+                        "pathId": f"path_{len(routing_path['paths']) + 1}",
+                        "subgroup": subgroup,
+                        "priority": "high"
+                    })
+            
+            return {
+                "routingPath": routing_path,
+                "status": "success"
+            }
+        except BusinessException:
+            raise
+        except Exception as e:
+            logger.error(f"设计分流路径失败: {str(e)}", exc_info=True)
+            raise BusinessException(1203, f"分流路径设计失败: {str(e)}")
+    
+    async def collect_key_evidence(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        采集关键证据
+        
+        Args:
+            request: 采集关键证据请求，包含cdpId、routingPath等
+            
+        Returns:
+            关键证据响应
+        """
+        logger.info(f"采集关键证据: cdpId={request.get('cdpId')}")
+        
+        try:
+            cdp_id = request.get("cdpId")
+            if not cdp_id:
+                raise BusinessException(1202, "cdpId不能为空")
+            
+            # 1. 获取CDP数据
+            cdp_data = await self._get_cdp_data(cdp_id)
+            if not cdp_data:
+                raise BusinessException(1205, f"CDP不存在: {cdp_id}")
+            
+            # 2. 获取分流路径
+            routing_path = request.get("routingPath", {})
+            paths = routing_path.get("paths", [])
+            
+            # 3. 基于分流路径采集关键证据
+            # TODO: 实现完整的关键证据采集逻辑
+            key_evidence = []
+            
+            # 临时实现：返回基本结构
+            for path in paths[:5]:  # 取前5个路径
+                key_evidence.append({
+                    "evidenceId": f"evidence_{len(key_evidence) + 1}",
+                    "pathId": path.get("pathId"),
+                    "evidenceType": "question",
+                    "priority": "high",
+                    "question": "请详细描述相关症状"
+                })
+            
+            return {
+                "keyEvidence": key_evidence,
+                "status": "success"
+            }
+        except BusinessException:
+            raise
+        except Exception as e:
+            logger.error(f"采集关键证据失败: {str(e)}", exc_info=True)
+            raise BusinessException(1204, f"关键证据采集失败: {str(e)}")
+    
     async def cleanup_context(self, cdp_id: str):
         """清理上下文"""
         context_key = f"dialog:context:{cdp_id}"
-        self.redis_client.delete(context_key)
+        
+        if self.redis_available and self.redis_client:
+            try:
+                self.redis_client.delete(context_key)
+            except Exception as e:
+                logger.warning(f"从Redis删除上下文失败: {str(e)}")
+        
+        # 同时清理内存存储
+        if context_key in self.memory_context:
+            del self.memory_context[context_key]
     
     async def __aenter__(self):
         return self

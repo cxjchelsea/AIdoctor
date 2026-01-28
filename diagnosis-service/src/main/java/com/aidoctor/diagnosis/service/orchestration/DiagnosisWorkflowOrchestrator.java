@@ -197,7 +197,7 @@ public class DiagnosisWorkflowOrchestrator {
                 // 调用生成问题接口
                 com.aidoctor.diagnosis.dto.dialog.QuestionRequest questionRequest = 
                     com.aidoctor.diagnosis.dto.dialog.QuestionRequest.builder()
-                        .diagnosisId(cdp.getId())
+                        .cdpId(cdp.getId())
                         .context((Map<String, Object>) updates.get("patientState"))
                         .build();
                 

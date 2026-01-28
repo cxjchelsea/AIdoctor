@@ -15,7 +15,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserInputRequest {
-    private String diagnosisId;
+    private String cdpId;  // 使用cdpId与对话服务保持一致
     private String userInput;
     private Map<String, Object> context;
 }

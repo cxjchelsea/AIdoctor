@@ -17,6 +17,8 @@ services:
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.enable-lifecycle'  # 允许通过API重新加载配置
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Windows/Mac/Linux 通用方案
     networks:
       - monitoring
     restart: unless-stopped
@@ -60,6 +62,25 @@ services:
       - monitoring
     depends_on:
       - loki
+    restart: unless-stopped
+
+  # Node Exporter - 系统资源监控
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - monitoring
     restart: unless-stopped
 
   grafana:

@@ -49,6 +49,28 @@ async def identify_gaps(request: IdentifyGapsRequest) -> IdentifyGapsResponse:
     return IdentifyGapsResponse(**result)
 
 
+@router.post("/design-routing-path")
+async def design_routing_path(request: dict):
+    """
+    设计分流路径接口
+    
+    基于推理子组和关键差异点设计分流路径
+    """
+    result = await dialog_service.design_routing_path(request)
+    return result
+
+
+@router.post("/collect-key-evidence")
+async def collect_key_evidence(request: dict):
+    """
+    采集关键证据接口
+    
+    基于分流路径采集关键证据
+    """
+    result = await dialog_service.collect_key_evidence(request)
+    return result
+
+
 @router.websocket("/ws/{cdp_id}")
 async def websocket_dialog(websocket: WebSocket, cdp_id: str):
     """
