@@ -9,6 +9,7 @@ import java.util.List;
 
 /**
  * 问题响应
+ * 对应 Python 端的 QuestionResponse
  */
 @Data
 @Builder
@@ -17,7 +18,8 @@ import java.util.List;
 public class QuestionResponse {
     private String question;
     private String questionType;
-    private List<String> missingInfo;
+    private List<MissingInfoItem> missingInfo;  // 修改为对象列表，匹配 Python 端格式
     private Double completeness;
+    private InformationGaps informationGaps;  // 新增字段，匹配 Python 端格式
 }
 

@@ -17,5 +17,6 @@ import java.util.Map;
 public class QuestionRequest {
     private String cdpId;  // 使用cdpId与对话服务保持一致
     private Map<String, Object> context;
+    private Map<String, Object> patientState;  // 可选：如果提供则直接使用，否则从CDP读取
 }
 

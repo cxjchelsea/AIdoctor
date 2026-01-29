@@ -23,6 +23,7 @@ class Symptom(BaseModel):
     duration: Optional[str] = None
     severity: Optional[str] = None
     trigger: Optional[str] = None
+    location: Optional[str] = None
 
 class Sign(BaseModel):
     """体征"""

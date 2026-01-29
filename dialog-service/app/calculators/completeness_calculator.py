@@ -5,7 +5,8 @@
 from typing import Dict, Any
 import logging
 
-logger = logging.getLogger(__name__)
+# 使用dialog-service的logger，确保日志能正确输出
+logger = logging.getLogger("dialog-service")
 
 
 class CompletenessCalculator:
@@ -43,8 +44,6 @@ class CompletenessCalculator:
         Returns:
             信息完整度（0-1）
         """
-        logger.info("计算信息完整度")
-        
         collected_weight = 0.0
         
         # 分析已收集信息
@@ -54,8 +53,33 @@ class CompletenessCalculator:
         health_profile = patient_state.get("health_profile", {})
         problem_list = patient_state.get("problem_list", {})
         
-        # 检查主诉
+        # 调试信息：输出到控制台（不写入日志文件）
+        print(f"[DEBUG] 计算完整度 - symptoms数量: {len(symptoms) if symptoms else 0}, problem_list存在: {bool(problem_list)}")
+        print(f"[DEBUG] patient_state的keys: {list(patient_state.keys())}")
+        if symptoms:
+            print(f"[DEBUG] 第一个症状: {symptoms[0] if len(symptoms) > 0 else None}")
+        else:
+            # 如果没有symptoms，打印patient_state的完整内容用于调试
+            print(f"[DEBUG] patient_state内容: {patient_state}")
+        
+        # 检查主诉（优先从problem_list读取，如果没有则从symptoms中提取）
+        chief_complaint_found = False
         if problem_list.get("chief_complaint"):
+            chief_complaint = problem_list["chief_complaint"]
+            # 如果problem_list中有主诉（无论是字符串还是对象），都认为已收集
+            if isinstance(chief_complaint, dict):
+                if chief_complaint.get("name"):
+                    chief_complaint_found = True
+            elif chief_complaint:
+                chief_complaint_found = True
+        
+        if not chief_complaint_found and symptoms and len(symptoms) > 0:
+            # 如果problem_list中没有主诉，从symptoms数组中提取第一个症状作为主诉
+            first_symptom = symptoms[0]
+            if isinstance(first_symptom, dict) and first_symptom.get("name"):
+                chief_complaint_found = True
+        
+        if chief_complaint_found:
             collected_weight += self.info_items.get("chief_complaint", 0)
         
         # 检查症状信息
@@ -92,7 +116,8 @@ class CompletenessCalculator:
         completeness = collected_weight / self.total_weight if self.total_weight > 0 else 0.0
         completeness = min(1.0, max(0.0, completeness))  # 限制在0-1之间
         
-        logger.debug(f"信息完整度: {collected_weight}/{self.total_weight} = {completeness:.2f}")
+        # 调试信息：输出到控制台（不写入日志文件）
+        print(f"[DEBUG] 信息完整度计算: collected_weight={collected_weight}, total_weight={self.total_weight}, completeness={completeness:.2f}")
         
         return completeness
 

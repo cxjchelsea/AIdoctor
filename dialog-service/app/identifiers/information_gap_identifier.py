@@ -5,7 +5,8 @@
 from typing import Dict, List, Any
 import logging
 
-logger = logging.getLogger(__name__)
+# 使用dialog-service的logger，确保日志能正确输出
+logger = logging.getLogger("dialog-service")
 
 
 class InformationGapIdentifier:
@@ -90,9 +91,7 @@ class InformationGapIdentifier:
         Returns:
             信息缺口分类字典
         """
-        logger.info("识别信息缺口")
-        
-        # 分析已收集信息
+        # 分析已收集信息（移除logger，使用print输出到控制台）
         collected_info = self._analyze_collected_info(patient_state)
         
         # 获取诊断所需信息清单（可根据ddx动态调整）
@@ -117,9 +116,19 @@ class InformationGapIdentifier:
         health_profile = patient_state.get("health_profile", {})
         problem_list = patient_state.get("problem_list", {})
         
-        # 检查主诉
+        # 检查主诉（优先从problem_list读取，如果没有则从symptoms中提取）
         if problem_list.get("chief_complaint"):
-            collected["chief_complaint"] = problem_list["chief_complaint"]
+            # 如果problem_list中有主诉，直接使用
+            chief_complaint = problem_list["chief_complaint"]
+            if isinstance(chief_complaint, dict):
+                collected["chief_complaint"] = chief_complaint.get("name") or chief_complaint
+            else:
+                collected["chief_complaint"] = chief_complaint
+        elif symptoms and len(symptoms) > 0:
+            # 如果problem_list中没有主诉，从symptoms数组中提取第一个症状作为主诉
+            first_symptom = symptoms[0]
+            if isinstance(first_symptom, dict) and first_symptom.get("name"):
+                collected["chief_complaint"] = first_symptom["name"]
         
         # 检查症状信息
         if symptoms:

@@ -37,6 +37,7 @@ public class DiagnosisResponse {
     private String riskLevel; // 风险等级
     private List<String> redFlags; // 危险信号列表
     private Map<String, Object> entryAssessment; // 入口判定结果（P0模块）
+    private Map<String, Object> patientState; // 患者状态摘要（用于前端显示已收集信息）
     private Long timestamp;
 }
 

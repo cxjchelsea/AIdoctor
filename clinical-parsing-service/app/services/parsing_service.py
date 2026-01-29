@@ -97,7 +97,8 @@ class ClinicalParsingService:
                         cui=s.get('cui') or None,
                         duration=s.get('duration') or None,
                         severity=s.get('severity') or None,
-                        trigger=s.get('trigger') or None
+                        trigger=s.get('trigger') or None,
+                        location=s.get('location') or None
                     )
                     for s in symptoms
                 ]
@@ -146,6 +147,20 @@ class ClinicalParsingService:
                     medications=structured_medications,
                     allergies=structured_allergies
                 )
+                
+                # 记录提取到的结构化信息
+                if structured_symptoms:
+                    for symptom in structured_symptoms:
+                        symptom_info = f"症状: {symptom.name}"
+                        if symptom.duration:
+                            symptom_info += f", 持续时间: {symptom.duration}"
+                        if symptom.location:
+                            symptom_info += f", 部位: {symptom.location}"
+                        if symptom.severity:
+                            symptom_info += f", 严重度: {symptom.severity}"
+                        if symptom.trigger:
+                            symptom_info += f", 诱因: {symptom.trigger}"
+                        logger.info(f"提取到结构化症状信息: {symptom_info}")
                 
             except Exception as e:
                 logger.error(f"结构化提取失败: {e}", exc_info=True)

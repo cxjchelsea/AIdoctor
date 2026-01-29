@@ -38,6 +38,7 @@ class StructuredExtractor:
                 'duration': self._extract_duration(text),
                 'severity': self._extract_severity(text),
                 'trigger': self._extract_trigger(text),
+                'location': self._extract_location(text),
             }
             symptoms.append(symptom)
         
@@ -154,10 +155,18 @@ class StructuredExtractor:
         return allergies
     
     def _extract_duration(self, text: str) -> Optional[str]:
-        """提取持续时间"""
+        """
+        提取持续时间
+        返回格式：如果是具体天数，返回"X天"；如果是相对时间，返回标准化时间
+        """
         time_expressions = self.text_processor.extract_time_expressions(text)
         if time_expressions:
-            return time_expressions[0][1]  # 返回标准化时间
+            expr, normalized, days = time_expressions[0]
+            # 如果有具体天数，返回天数
+            if days is not None:
+                return f"{days}天"
+            # 否则返回标准化时间
+            return normalized
         return None
     
     def _extract_severity(self, text: str) -> Optional[str]:
@@ -172,5 +181,12 @@ class StructuredExtractor:
         triggers = self.text_processor.extract_trigger_expressions(text)
         if triggers:
             return triggers[0]
+        return None
+    
+    def _extract_location(self, text: str) -> Optional[str]:
+        """提取部位"""
+        locations = self.text_processor.extract_location_expressions(text)
+        if locations:
+            return locations[0]  # 返回第一个匹配的部位
         return None
 

@@ -155,17 +155,23 @@ const DiagnosisInfoPanel: React.FC<DiagnosisInfoPanelProps> = ({
   // 5步AI循证诊断流程进度指示器（临床诊疗态时显示）
   const getDiagnosisStepStatus = (step: number): 'wait' | 'process' | 'finish' | 'error' => {
     if (status === 'idle' || !diagnosisId) return 'wait'
+    
+    const currentStep = getCurrentStep()
+    
     if (status === 'collecting' || status === 'questioning') {
-      if (step <= 3) return 'finish'
-      if (step === 4) return 'process'
+      // 信息收集中，当前在Step 1
+      if (step < currentStep) return 'finish'
+      if (step === currentStep) return 'process'
       return 'wait'
     }
     if (status === 'analyzing') {
-      if (step <= 4) return 'finish'
-      if (step === 5) return 'process'
+      // 分析中，当前在Step 5
+      if (step < currentStep) return 'finish'
+      if (step === currentStep) return 'process'
       return 'wait'
     }
     if (status === 'completed') {
+      // 已完成，所有步骤都是finish
       return 'finish'
     }
     return 'wait'
@@ -184,10 +190,21 @@ const DiagnosisInfoPanel: React.FC<DiagnosisInfoPanelProps> = ({
 
   const getCurrentStep = (): number => {
     if (status === 'idle' || !diagnosisId) return 0
-    if (status === 'collecting' || status === 'questioning') return 4
-    if (status === 'analyzing') return 5
-    if (status === 'completed') return 5
-    return 0
+    // 根据状态判断当前步骤
+    if (status === 'collecting' || status === 'questioning') {
+      // 信息收集中，应该是Step 1（识别问题）
+      return 1
+    }
+    if (status === 'analyzing') {
+      // 分析中，应该是Step 5（输出结论包）
+      return 5
+    }
+    if (status === 'completed') {
+      // 已完成，显示Step 5
+      return 5
+    }
+    // 默认返回Step 1
+    return 1
   }
 
   // 健康筛查流程进度指示器相关函数（健康管理态时显示）
@@ -398,7 +415,11 @@ const DiagnosisInfoPanel: React.FC<DiagnosisInfoPanelProps> = ({
             />
           </Steps>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            当前步骤：{getStepName(getCurrentStep()) || '未开始'}
+            当前步骤：{(() => {
+              const currentStep = getCurrentStep()
+              if (currentStep === 0) return '未开始'
+              return getStepName(currentStep) || '进行中'
+            })()}
           </Text>
           {cdpId && onViewCDP && (
             <div style={{ marginTop: 8 }}>

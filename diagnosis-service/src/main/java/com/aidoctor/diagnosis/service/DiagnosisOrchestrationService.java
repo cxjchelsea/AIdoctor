@@ -148,6 +148,18 @@ public class DiagnosisOrchestrationService {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> entryAssessment = (Map<String, Object>) assessmentResult.get("entryAssessment");
                 
+                // 提取patientState摘要
+                Map<String, Object> patientStateSummary = extractPatientStateSummary(cdp);
+                
+                // 计算初始completeness（如果patientState中有completeness则使用，否则默认为0）
+                Double initialCompleteness = 0.0;
+                if (cdp.getPatientState() != null) {
+                    Object completenessObj = cdp.getPatientState().get("completeness");
+                    if (completenessObj != null && completenessObj instanceof Number) {
+                        initialCompleteness = ((Number) completenessObj).doubleValue();
+                    }
+                }
+                
                 response = DiagnosisResponse.builder()
                     .code(200)
                     .message("success")
@@ -156,11 +168,13 @@ public class DiagnosisOrchestrationService {
                     .cdpId(cdp.getId())
                     .workMode("clinical_mode")
                     .currentStep("step1_identify_problem")
+                    .completeness(initialCompleteness)
                     .nextAction(buildNextAction("question", "请详细描述一下您的症状"))
                     .assessmentReason(assessmentReason)
                     .riskLevel(riskLevel)
                     .redFlags(redFlags)
                     .entryAssessment(entryAssessment)
+                    .patientState(patientStateSummary.isEmpty() ? null : patientStateSummary)
                     .timestamp(System.currentTimeMillis())
                     .build();
             } else {
@@ -303,6 +317,55 @@ public class DiagnosisOrchestrationService {
                 
                 log.debug("Step 1完成后的nextQuestion: {}", nextQuestion);
                 
+                // 从patientState中提取completeness和已收集信息
+                Double completeness = null;
+                Map<String, Object> patientStateSummary = new HashMap<>();
+                if (cdp.getPatientState() != null) {
+                    Map<String, Object> currentPatientState = cdp.getPatientState();
+                    
+                    // 提取completeness
+                    Object completenessObj = currentPatientState.get("completeness");
+                    if (completenessObj != null) {
+                        if (completenessObj instanceof Number) {
+                            completeness = ((Number) completenessObj).doubleValue();
+                        }
+                    }
+                    
+                    // 提取已收集信息摘要（用于前端显示）
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> symptoms = (List<Map<String, Object>>) currentPatientState.get("symptoms");
+                    if (symptoms != null && !symptoms.isEmpty()) {
+                        Map<String, Object> firstSymptom = symptoms.get(0);
+                        if (firstSymptom != null) {
+                            patientStateSummary.put("symptoms", symptoms);
+                            // 提取主诉
+                            Object symptomName = firstSymptom.get("name");
+                            if (symptomName != null) {
+                                patientStateSummary.put("chiefComplaint", symptomName.toString());
+                            }
+                            // 提取其他字段
+                            patientStateSummary.put("duration", firstSymptom.get("duration"));
+                            patientStateSummary.put("severity", firstSymptom.get("severity"));
+                            patientStateSummary.put("location", firstSymptom.get("location"));
+                            patientStateSummary.put("frequency", firstSymptom.get("frequency"));
+                        }
+                    }
+                    
+                    // 如果没有从symptoms中提取到主诉，尝试从其他字段获取
+                    if (!patientStateSummary.containsKey("chiefComplaint")) {
+                        Object userInput = currentPatientState.get("userInput");
+                        if (userInput != null) {
+                            patientStateSummary.put("chiefComplaint", userInput.toString());
+                        }
+                    }
+                    
+                    // 提取structuredData（如果存在）
+                    Object structuredData = currentPatientState.get("structuredData");
+                    if (structuredData != null) {
+                        patientStateSummary.put("structuredData", structuredData);
+                    }
+                }
+                
                 // 如果信息还不完整，返回问题等待用户继续输入
                 if (nextQuestion != null && !nextQuestion.isEmpty()) {
                     log.info("信息不完整，返回问题等待用户继续输入: nextQuestion={}", nextQuestion);
@@ -314,7 +377,9 @@ public class DiagnosisOrchestrationService {
                         .cdpId(cdp.getId())
                         .workMode("clinical_mode")
                         .currentStep("step1_identify_problem")
+                        .completeness(completeness)
                         .nextAction(buildNextAction("question", nextQuestion))
+                        .patientState(patientStateSummary.isEmpty() ? null : patientStateSummary)
                         .timestamp(System.currentTimeMillis())
                         .build();
                 } else {
@@ -328,10 +393,12 @@ public class DiagnosisOrchestrationService {
                         .status("completed")
                         .cdpId(cdp.getId())
                         .workMode("clinical_mode")
+                        .completeness(100.0) // 信息完整时设置为100%
                         .ddx(cdp.getDdx())
                         .workupPlan(cdp.getWorkupPlan())
                         .managementPlan(cdp.getManagementPlan())
                         .triage(cdp.getTriage())
+                        .patientState(patientStateSummary.isEmpty() ? null : patientStateSummary)
                         .timestamp(System.currentTimeMillis())
                         .build();
                 }
@@ -601,6 +668,55 @@ public class DiagnosisOrchestrationService {
             nextAction.put("message", message);
         }
         return nextAction;
+    }
+    
+    /**
+     * 从CDP中提取patientState摘要（用于前端显示已收集信息）
+     */
+    private Map<String, Object> extractPatientStateSummary(CDP cdp) {
+        Map<String, Object> summary = new HashMap<>();
+        
+        if (cdp.getPatientState() == null) {
+            return summary;
+        }
+        
+        Map<String, Object> patientState = cdp.getPatientState();
+        
+        // 提取症状信息
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> symptoms = (List<Map<String, Object>>) patientState.get("symptoms");
+        if (symptoms != null && !symptoms.isEmpty()) {
+            summary.put("symptoms", symptoms);
+            
+            // 从第一个症状中提取详细信息
+            Map<String, Object> firstSymptom = symptoms.get(0);
+            if (firstSymptom != null) {
+                Object symptomName = firstSymptom.get("name");
+                if (symptomName != null) {
+                    summary.put("chiefComplaint", symptomName.toString());
+                }
+                summary.put("duration", firstSymptom.get("duration"));
+                summary.put("severity", firstSymptom.get("severity"));
+                summary.put("location", firstSymptom.get("location"));
+                summary.put("frequency", firstSymptom.get("frequency"));
+            }
+        }
+        
+        // 如果没有从symptoms中提取到主诉，尝试从其他字段获取
+        if (!summary.containsKey("chiefComplaint")) {
+            Object userInput = patientState.get("userInput");
+            if (userInput != null) {
+                summary.put("chiefComplaint", userInput.toString());
+            }
+        }
+        
+        // 提取structuredData（如果存在）
+        Object structuredData = patientState.get("structuredData");
+        if (structuredData != null) {
+            summary.put("structuredData", structuredData);
+        }
+        
+        return summary;
     }
 }
 

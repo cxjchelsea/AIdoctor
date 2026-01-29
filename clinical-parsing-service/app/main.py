@@ -3,6 +3,8 @@
 """
 import time
 import logging
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
@@ -12,7 +14,8 @@ from app.config.settings import settings
 from app.utils.metrics import (
     http_requests_total,
     http_request_duration_seconds,
-    http_request_errors_total
+    http_request_errors_total,
+    update_process_metrics
 )
 
 # 配置日志（支持文件输出）
@@ -42,10 +45,41 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
+async def update_metrics_task():
+    """后台任务：定期更新系统资源指标"""
+    while True:
+        try:
+            update_process_metrics()
+            await asyncio.sleep(5)  # 每5秒更新一次
+        except Exception as e:
+            logger.error(f"更新系统资源指标失败: {str(e)}")
+            await asyncio.sleep(5)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    # 启动时：启动后台任务
+    task = asyncio.create_task(update_metrics_task())
+    logger.info("系统资源监控任务已启动")
+    logger.info(f"病例理解服务启动: {settings.app_name} v{settings.app_version}")
+    yield
+    # 关闭时：取消后台任务
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+    logger.info("系统资源监控任务已停止")
+    logger.info("病例理解服务关闭")
+
+
 app = FastAPI(
     title="病例理解服务",
     version=settings.app_version,
-    description="AI医生系统的病例理解服务（脑区A：病例理解与结构化）"
+    description="AI医生系统的病例理解服务（脑区A：病例理解与结构化）",
+    lifespan=lifespan
 )
 
 # 性能监控中间件（非阻塞）
@@ -125,13 +159,4 @@ async def metrics():
         media_type=CONTENT_TYPE_LATEST
     )
 
-@app.on_event("startup")
-async def startup_event():
-    """服务启动事件"""
-    logger.info(f"病例理解服务启动: {settings.app_name} v{settings.app_version}")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """服务关闭事件"""
-    logger.info("病例理解服务关闭")
 

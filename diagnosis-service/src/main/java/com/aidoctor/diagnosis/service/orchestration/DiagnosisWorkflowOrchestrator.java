@@ -185,6 +185,7 @@ public class DiagnosisWorkflowOrchestrator {
         
         // 调用dialog-service识别信息缺口并生成问题
         String nextQuestion = null;
+        Double completeness = null;
         try {
             // 先识别信息缺口
             Map<String, Object> dialogRequest = new HashMap<>();
@@ -192,13 +193,30 @@ public class DiagnosisWorkflowOrchestrator {
             dialogRequest.put("patientState", updates.get("patientState"));
             
             Object dialogResponse = dialogServiceClient.identifyGaps(dialogRequest);
+            
+            // 从响应中提取completeness
+            if (dialogResponse != null && dialogResponse instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> responseMap = (Map<String, Object>) dialogResponse;
+                Object completenessObj = responseMap.get("completeness");
+                if (completenessObj != null) {
+                    if (completenessObj instanceof Number) {
+                        completeness = ((Number) completenessObj).doubleValue();
+                        // completeness已经是0-1之间的值，转换为0-100
+                        completeness = completeness * 100;
+                        log.debug("从dialog-service获取完整度: {}", completeness);
+                    }
+                }
+            }
+            
             // 如果有信息缺口，生成问题
             if (dialogResponse != null) {
                 // 调用生成问题接口
                 com.aidoctor.diagnosis.dto.dialog.QuestionRequest questionRequest = 
                     com.aidoctor.diagnosis.dto.dialog.QuestionRequest.builder()
                         .cdpId(cdp.getId())
-                        .context((Map<String, Object>) updates.get("patientState"))
+                        .patientState((Map<String, Object>) updates.get("patientState"))  // 传递patientState，确保dialog-service能获取到最新的symptoms数据
+                        .context((Map<String, Object>) updates.get("patientState"))  // context也保留，用于向后兼容
                         .build();
                 
                 try {
@@ -218,6 +236,11 @@ public class DiagnosisWorkflowOrchestrator {
         } catch (Exception e) {
             log.error("调用dialog-service失败，使用默认问题", e);
             nextQuestion = "请详细描述一下您的症状";
+        }
+        
+        // 将completeness保存到patientState中，供后续使用
+        if (completeness != null) {
+            patientState.put("completeness", completeness);
         }
         
         // 如果没有生成问题，使用默认问题

@@ -3,6 +3,8 @@
 """
 import time
 import logging
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
@@ -12,16 +14,46 @@ from app.utils.logger import setup_logger
 from app.utils.metrics import (
     http_requests_total,
     http_request_duration_seconds,
-    http_request_errors_total
+    http_request_errors_total,
+    update_process_metrics
 )
 
 # 配置日志（支持文件输出）
 logger = setup_logger("diagnosis-engine-service", log_file="logs/app.log")
 
+
+async def update_metrics_task():
+    """后台任务：定期更新系统资源指标"""
+    while True:
+        try:
+            update_process_metrics()
+            await asyncio.sleep(5)  # 每5秒更新一次
+        except Exception as e:
+            logger.error(f"更新系统资源指标失败: {str(e)}")
+            await asyncio.sleep(5)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    # 启动时：启动后台任务
+    task = asyncio.create_task(update_metrics_task())
+    logger.info("系统资源监控任务已启动")
+    yield
+    # 关闭时：取消后台任务
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+    logger.info("系统资源监控任务已停止")
+
+
 app = FastAPI(
     title="诊断引擎服务",
     version="1.0.0",
-    description="智能诊断系统的诊断引擎服务"
+    description="智能诊断系统的诊断引擎服务",
+    lifespan=lifespan
 )
 
 # 性能监控中间件（非阻塞）

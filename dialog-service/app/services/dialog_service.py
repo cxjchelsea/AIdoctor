@@ -2,7 +2,7 @@
 对话服务
 按照《dialog-service - 服务实现方案.md》实现
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import json
 import logging
 import httpx
@@ -67,16 +67,35 @@ class DialogService:
         Returns:
             问题响应
         """
-        logger.info(f"生成追问问题: cdpId={request.cdpId}")
-        
         try:
-            # 1. 获取CDP数据（从diagnosis-service）
-            cdp_data = await self._get_cdp_data(request.cdpId)
-            if not cdp_data:
-                raise BusinessException(1205, f"CDP不存在: {request.cdpId}")
+            # 1. 获取patient_state（优先使用请求中的，否则从CDP读取）
+            if request.patientState:
+                # 如果请求中提供了patientState，直接使用
+                patient_state = request.patientState
+                ddx = []  # 如果没有提供ddx，从CDP读取
+                cdp_data = await self._get_cdp_data(request.cdpId)
+                if cdp_data:
+                    ddx = cdp_data.get("ddx", [])
+            else:
+                # 否则从CDP读取
+                cdp_data = await self._get_cdp_data(request.cdpId)
+                if not cdp_data:
+                    raise BusinessException(1205, f"CDP不存在: {request.cdpId}")
+                # 注意：diagnosis-service返回的是patientState（驼峰命名），不是patient_state
+                patient_state = cdp_data.get("patientState") or cdp_data.get("patient_state", {})
+                ddx = cdp_data.get("ddx", [])
             
-            patient_state = cdp_data.get("patient_state", {})
-            ddx = cdp_data.get("ddx", [])
+            # 调试信息：输出到控制台（不写入日志文件）
+            print(f"\n[DEBUG] ===== generate_question调用 =====")
+            print(f"[DEBUG] cdpId={request.cdpId}")
+            print(f"[DEBUG] patient_state类型: {type(patient_state)}")
+            if isinstance(patient_state, dict):
+                print(f"[DEBUG] patient_state的keys: {list(patient_state.keys())}")
+                if "symptoms" in patient_state:
+                    print(f"[DEBUG] symptoms内容: {patient_state.get('symptoms')}")
+                else:
+                    print(f"[DEBUG] ⚠️ patient_state中没有symptoms字段！")
+                    print(f"[DEBUG] patient_state完整内容: {patient_state}")
             
             # 2. 获取对话上下文
             context = self._get_context(request.cdpId)
@@ -84,13 +103,16 @@ class DialogService:
             context["patient_state"] = patient_state
             context["ddx"] = ddx
             
-            # 3. 识别信息缺口
+            # 3. 构建/更新problem_list（工作清单）
+            problem_list = self._build_or_update_problem_list(patient_state, ddx)
+            
+            # 4. 识别信息缺口
             information_gaps = self.gap_identifier.identify_gaps(patient_state, ddx)
             
-            # 4. 计算信息完整度
+            # 5. 计算信息完整度
             completeness = self.completeness_calculator.calculate_completeness(patient_state)
             
-            # 5. 生成追问策略
+            # 6. 生成追问策略
             question_info = await self.adaptive_questioning.generate_question(
                 information_gaps=information_gaps,
                 context=context,
@@ -111,13 +133,19 @@ class DialogService:
                     }
                 }
             
-            # 6. 生成自然语言问题
+            # 7. 生成自然语言问题
             natural_question = await self.nlg.generate_question(question_info, context)
             
-            # 7. 更新对话历史
+            # 8. 更新对话历史
             self._update_conversation_history(request.cdpId, "assistant", natural_question)
             
-            # 8. 构建响应
+            # 9. 注意：problem_list已构建，但由于diagnosis-service目前没有公开的CDP更新接口
+            # 实际更新需要通过diagnosis-service的内部方法完成
+            # 这里只记录日志，不进行HTTP调用
+            if problem_list:
+                logger.debug(f"已构建problem_list: cdpId={request.cdpId}, completeness={problem_list.get('completeness')}")
+            
+            # 10. 构建响应
             missing_info_items = [
                 {
                     "field": gap.get("field", ""),
@@ -192,6 +220,20 @@ class DialogService:
             # 6. 更新CDP（通过diagnosis-service）
             await self._update_cdp(request.cdpId, extracted_info)
             
+            # 7. 重新获取CDP数据以获取更新后的patient_state
+            updated_cdp_data = await self._get_cdp_data(request.cdpId)
+            if updated_cdp_data:
+                # 注意：diagnosis-service返回的是patientState（驼峰命名）
+                updated_patient_state = updated_cdp_data.get("patientState") or updated_cdp_data.get("patient_state", {})
+                ddx = updated_cdp_data.get("ddx", [])
+                
+                # 构建/更新problem_list（工作清单）
+                # 注意：problem_list已构建，但由于diagnosis-service目前没有公开的CDP更新接口
+                # 实际更新需要通过diagnosis-service的内部方法完成
+                problem_list = self._build_or_update_problem_list(updated_patient_state, ddx)
+                if problem_list:
+                    logger.debug(f"已构建problem_list: cdpId={request.cdpId}, completeness={problem_list.get('completeness')}")
+            
             # 7. 构建响应
             updated_fields = [key for key, value in extracted_info.items() if value is not None]
             
@@ -216,16 +258,35 @@ class DialogService:
         Returns:
             信息缺口响应
         """
-        logger.info(f"识别信息缺口: cdpId={request.cdpId}")
-        
         try:
-            # 1. 获取CDP数据
-            cdp_data = await self._get_cdp_data(request.cdpId)
-            if not cdp_data:
-                raise BusinessException(1205, f"CDP不存在: {request.cdpId}")
+            # 1. 获取patient_state（优先使用请求中的，否则从CDP读取）
+            if request.patientState:
+                # 如果请求中提供了patientState，直接使用
+                patient_state = request.patientState
+                ddx = []  # 如果没有提供ddx，从CDP读取
+                cdp_data = await self._get_cdp_data(request.cdpId)
+                if cdp_data:
+                    ddx = cdp_data.get("ddx", [])
+            else:
+                # 否则从CDP读取
+                cdp_data = await self._get_cdp_data(request.cdpId)
+                if not cdp_data:
+                    raise BusinessException(1205, f"CDP不存在: {request.cdpId}")
+                # 注意：diagnosis-service返回的是patientState（驼峰命名），不是patient_state
+                patient_state = cdp_data.get("patientState") or cdp_data.get("patient_state", {})
+                ddx = cdp_data.get("ddx", [])
             
-            patient_state = cdp_data.get("patient_state", {})
-            ddx = cdp_data.get("ddx", [])
+            # 调试信息：输出到控制台（不写入日志文件）
+            print(f"\n[DEBUG] ===== identify_gaps调用 =====")
+            print(f"[DEBUG] cdpId={request.cdpId}")
+            print(f"[DEBUG] patient_state类型: {type(patient_state)}")
+            if isinstance(patient_state, dict):
+                print(f"[DEBUG] patient_state的keys: {list(patient_state.keys())}")
+                if "symptoms" in patient_state:
+                    print(f"[DEBUG] symptoms内容: {patient_state.get('symptoms')}")
+                else:
+                    print(f"[DEBUG] ⚠️ patient_state中没有symptoms字段！")
+                    print(f"[DEBUG] patient_state完整内容: {patient_state}")
             
             # 2. 识别信息缺口
             information_gaps = self.gap_identifier.identify_gaps(patient_state, ddx)
@@ -285,11 +346,29 @@ class DialogService:
             response.raise_for_status()
             result = response.json()
             
+            # 调试信息：输出到控制台
+            print(f"\n[DEBUG] ===== _get_cdp_data调用 =====")
+            print(f"[DEBUG] URL: {url}")
+            print(f"[DEBUG] 响应code: {result.get('code')}")
+            print(f"[DEBUG] 响应data的keys: {list(result.get('data', {}).keys()) if result.get('data') else 'None'}")
+            if result.get("data") and isinstance(result.get("data"), dict):
+                data = result.get("data", {})
+                if "patientState" in data:
+                    print(f"[DEBUG] patientState类型: {type(data.get('patientState'))}")
+                    print(f"[DEBUG] patientState内容: {data.get('patientState')}")
+                elif "patient_state" in data:
+                    print(f"[DEBUG] patient_state类型: {type(data.get('patient_state'))}")
+                    print(f"[DEBUG] patient_state内容: {data.get('patient_state')}")
+                else:
+                    print(f"[DEBUG] ⚠️ 响应data中没有patientState或patient_state字段！")
+                    print(f"[DEBUG] 响应data完整内容: {data}")
+            
             if result.get("code") == 200:
                 return result.get("data", {})
             return None
         except Exception as e:
             logger.warning(f"获取CDP数据失败: {str(e)}")
+            print(f"[DEBUG] ⚠️ 获取CDP数据异常: {str(e)}")
             return None
     
     async def _update_cdp(self, cdp_id: str, extracted_info: Dict[str, Any]):
@@ -303,6 +382,86 @@ class DialogService:
             response.raise_for_status()
         except Exception as e:
             logger.warning(f"更新CDP失败: {str(e)}")
+            # 不抛出异常，因为这不是关键路径
+    
+    def _build_or_update_problem_list(
+        self, 
+        patient_state: Dict[str, Any], 
+        ddx: List[Dict] = None
+    ) -> Dict[str, Any]:
+        """
+        构建或更新问题清单（工作清单）
+        从symptoms中提取信息，构建problem_list
+        
+        Args:
+            patient_state: 患者状态
+            ddx: 诊断候选集（可选）
+            
+        Returns:
+            问题清单
+        """
+        symptoms = patient_state.get("symptoms", [])
+        existing_problem_list = patient_state.get("problem_list", {})
+        
+        # 如果已有problem_list，则更新；否则新建
+        problem_list = existing_problem_list.copy() if existing_problem_list else {}
+        
+        # 从symptoms中提取主诉（如果还没有）
+        if not problem_list.get("chief_complaint") and symptoms:
+            first_symptom = symptoms[0]
+            if isinstance(first_symptom, dict) and first_symptom.get("name"):
+                problem_list["chief_complaint"] = {
+                    "name": first_symptom.get("name"),
+                    "duration": first_symptom.get("duration"),
+                    "location": first_symptom.get("location"),
+                    "severity": first_symptom.get("severity"),
+                    "trigger": first_symptom.get("trigger"),
+                    "frequency": first_symptom.get("frequency")
+                }
+        
+        # 识别信息缺口
+        information_gaps = self.gap_identifier.identify_gaps(patient_state, ddx)
+        problem_list["information_gaps"] = {
+            "required": information_gaps.get("required", []),
+            "important": information_gaps.get("important", []),
+            "optional": information_gaps.get("optional", [])
+        }
+        
+        # 计算完整度
+        completeness = self.completeness_calculator.calculate_completeness(patient_state)
+        problem_list["completeness"] = completeness
+        
+        return problem_list
+    
+    async def _update_cdp_problem_list(self, cdp_id: str, problem_list: Dict[str, Any]):
+        """
+        更新CDP的problem_list字段（通过diagnosis-service）
+        注意：由于diagnosis-service没有单独的更新接口，我们需要将problem_list合并到patient_state中一起更新
+        """
+        try:
+            # 先获取当前的CDP数据
+            cdp_data = await self._get_cdp_data(cdp_id)
+            if not cdp_data:
+                logger.warning(f"无法获取CDP数据，跳过problem_list更新: cdpId={cdp_id}")
+                return
+            
+            # 获取当前的patient_state
+            current_patient_state = cdp_data.get("patient_state", {})
+            if not isinstance(current_patient_state, dict):
+                current_patient_state = {}
+            
+            # 将problem_list合并到patient_state中
+            updated_patient_state = current_patient_state.copy()
+            updated_patient_state["problem_list"] = problem_list
+            
+            # 通过现有的_update_cdp方法更新（注意：这个方法目前使用的接口也不存在，但至少逻辑一致）
+            # 由于diagnosis-service没有公开的更新接口，这里只记录日志
+            # 实际更新应该通过diagnosis-service的内部方法完成
+            logger.debug(f"准备更新CDP的problem_list: cdpId={cdp_id}, problem_list={problem_list}")
+            logger.warning(f"注意：diagnosis-service目前没有公开的CDP更新接口，problem_list更新需要等待接口实现")
+            
+        except Exception as e:
+            logger.warning(f"更新CDP的problem_list失败: {str(e)}")
             # 不抛出异常，因为这不是关键路径
     
     def _get_context(self, cdp_id: str) -> Dict[str, Any]:

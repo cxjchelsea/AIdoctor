@@ -83,13 +83,71 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
       const diagnosisId = data.diagnosisId || data.cdpId || `temp-${Date.now()}`
       const cdpId = data.cdpId || data.diagnosisId || diagnosisId
 
+      // 从响应中提取已收集信息
+      let collectedInfo = request.symptomInfo || {}
+      
+      // 如果响应中包含patientState，提取信息
+      const patientState = (data as any).patientState
+      
+      if (patientState) {
+        // 提取主诉
+        if (patientState.chiefComplaint && !collectedInfo.chiefComplaint) {
+          collectedInfo.chiefComplaint = patientState.chiefComplaint
+        }
+        
+        // 提取症状信息
+        const symptoms = patientState.symptoms
+        if (Array.isArray(symptoms) && symptoms.length > 0) {
+          const firstSymptom = symptoms[0]
+          if (typeof firstSymptom === 'object') {
+            collectedInfo = {
+              ...collectedInfo,
+              chiefComplaint: firstSymptom.name || collectedInfo.chiefComplaint,
+              duration: firstSymptom.duration || collectedInfo.duration,
+              severity: firstSymptom.severity ? 
+                       (String(firstSymptom.severity).toLowerCase() === 'mild' ? 3 : 
+                        String(firstSymptom.severity).toLowerCase() === 'moderate' ? 5 :
+                        String(firstSymptom.severity).toLowerCase() === 'severe' ? 8 : 
+                        typeof firstSymptom.severity === 'number' ? firstSymptom.severity : collectedInfo.severity) :
+                       collectedInfo.severity,
+              location: firstSymptom.location || collectedInfo.location,
+              frequency: firstSymptom.frequency || collectedInfo.frequency,
+            }
+          }
+        }
+        
+        // 从structuredData中提取（如果存在）
+        const structuredData = patientState.structuredData
+        if (structuredData && typeof structuredData === 'object') {
+          const structuredSymptoms = (structuredData as any).symptoms
+          if (Array.isArray(structuredSymptoms) && structuredSymptoms.length > 0) {
+            const firstSymptom = structuredSymptoms[0]
+            if (typeof firstSymptom === 'object') {
+              collectedInfo = {
+                ...collectedInfo,
+                chiefComplaint: firstSymptom.name || collectedInfo.chiefComplaint,
+                duration: firstSymptom.duration || collectedInfo.duration,
+                severity: firstSymptom.severity ? 
+                         (String(firstSymptom.severity).toLowerCase() === 'mild' ? 3 : 
+                          String(firstSymptom.severity).toLowerCase() === 'moderate' ? 5 :
+                          String(firstSymptom.severity).toLowerCase() === 'severe' ? 8 : 
+                          typeof firstSymptom.severity === 'number' ? firstSymptom.severity : collectedInfo.severity) :
+                         collectedInfo.severity,
+                location: firstSymptom.location || collectedInfo.location,
+                frequency: firstSymptom.frequency || collectedInfo.frequency,
+              }
+            }
+          }
+        }
+      }
+
       set({
         diagnosisId,
         cdpId,
         status: data.status || 'collecting',
         completeness: (data.completeness || 0) / 100,
         currentQuestion: data.question || null,
-        collectedInfo: request.symptomInfo || {},
+        collectedInfo,
         workMode: data.workMode,
       })
 
@@ -261,6 +319,80 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
         }
       }
 
+      // 从响应中提取已收集信息（如果有patientState或structuredData）
+      let updatedCollectedInfo = { ...state.collectedInfo }
+      
+      // 如果响应中包含patientState，提取信息
+      const patientState = (data as any).patientState
+      
+      if (patientState) {
+        // 提取主诉
+        if (patientState.chiefComplaint && !updatedCollectedInfo.chiefComplaint) {
+          updatedCollectedInfo.chiefComplaint = patientState.chiefComplaint
+        }
+        
+        // 提取症状信息
+        const symptoms = patientState.symptoms
+        if (Array.isArray(symptoms) && symptoms.length > 0) {
+          const firstSymptom = symptoms[0]
+          if (typeof firstSymptom === 'object') {
+            // 提取主诉（从症状名称）
+            if (firstSymptom.name && !updatedCollectedInfo.chiefComplaint) {
+              updatedCollectedInfo.chiefComplaint = firstSymptom.name
+            }
+            // 提取持续时间
+            if (firstSymptom.duration) {
+              updatedCollectedInfo.duration = firstSymptom.duration
+            }
+            // 提取严重程度（将字符串转换为数字）
+            if (firstSymptom.severity) {
+              const severityStr = String(firstSymptom.severity).toLowerCase()
+              updatedCollectedInfo.severity = severityStr === 'mild' ? 3 : 
+                                             severityStr === 'moderate' ? 5 :
+                                             severityStr === 'severe' ? 8 : 
+                                             typeof firstSymptom.severity === 'number' ? firstSymptom.severity : undefined
+            }
+            // 提取部位
+            if (firstSymptom.location) {
+              updatedCollectedInfo.location = firstSymptom.location
+            }
+            // 提取频率
+            if (firstSymptom.frequency) {
+              updatedCollectedInfo.frequency = firstSymptom.frequency
+            }
+          }
+        }
+        
+        // 从structuredData中提取（如果存在）
+        const structuredData = patientState.structuredData
+        if (structuredData && typeof structuredData === 'object') {
+          const structuredSymptoms = (structuredData as any).symptoms
+          if (Array.isArray(structuredSymptoms) && structuredSymptoms.length > 0) {
+            const firstSymptom = structuredSymptoms[0]
+            if (typeof firstSymptom === 'object') {
+              if (firstSymptom.name && !updatedCollectedInfo.chiefComplaint) {
+                updatedCollectedInfo.chiefComplaint = firstSymptom.name
+              }
+              if (firstSymptom.duration && !updatedCollectedInfo.duration) {
+                updatedCollectedInfo.duration = firstSymptom.duration
+              }
+              if (firstSymptom.severity && updatedCollectedInfo.severity === undefined) {
+                const severityStr = String(firstSymptom.severity).toLowerCase()
+                updatedCollectedInfo.severity = severityStr === 'mild' ? 3 : 
+                                               severityStr === 'moderate' ? 5 :
+                                               severityStr === 'severe' ? 8 : undefined
+              }
+              if (firstSymptom.location && !updatedCollectedInfo.location) {
+                updatedCollectedInfo.location = firstSymptom.location
+              }
+              if (firstSymptom.frequency && !updatedCollectedInfo.frequency) {
+                updatedCollectedInfo.frequency = firstSymptom.frequency
+              }
+            }
+          }
+        }
+      }
+
       set({
         status: data.status,
         completeness: (data.completeness || 0) / 100,
@@ -268,6 +400,7 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
         cdpId: data.cdpId || state.cdpId,
         diagnosisId: data.diagnosisId || data.cdpId || state.diagnosisId,
         workMode: data.workMode || state.workMode,
+        collectedInfo: updatedCollectedInfo,
       })
 
       // 如果有新问题，添加问题消息（支持 nextAction 和 question 两种格式）
@@ -421,6 +554,60 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
       const diagnosisId = data.diagnosisId || data.cdpId || `temp-${Date.now()}`
       const cdpId = data.cdpId || data.diagnosisId || diagnosisId
 
+      // 从响应中提取已收集信息
+      let collectedInfo: any = {}
+      
+      // 如果响应中包含patientState，提取信息
+      const patientState = (data as any).patientState
+      
+      if (patientState) {
+        // 提取主诉
+        if (patientState.chiefComplaint) {
+          collectedInfo.chiefComplaint = patientState.chiefComplaint
+        }
+        
+        // 提取症状信息
+        const symptoms = patientState.symptoms
+        if (Array.isArray(symptoms) && symptoms.length > 0) {
+          const firstSymptom = symptoms[0]
+          if (typeof firstSymptom === 'object') {
+            collectedInfo = {
+              chiefComplaint: firstSymptom.name || collectedInfo.chiefComplaint,
+              duration: firstSymptom.duration,
+              severity: firstSymptom.severity ? 
+                       (String(firstSymptom.severity).toLowerCase() === 'mild' ? 3 : 
+                        String(firstSymptom.severity).toLowerCase() === 'moderate' ? 5 :
+                        String(firstSymptom.severity).toLowerCase() === 'severe' ? 8 : undefined) :
+                       undefined,
+              location: firstSymptom.location,
+              frequency: firstSymptom.frequency,
+            }
+          }
+        }
+        
+        // 从structuredData中提取（如果存在）
+        const structuredData = patientState.structuredData
+        if (structuredData && typeof structuredData === 'object') {
+          const structuredSymptoms = (structuredData as any).symptoms
+          if (Array.isArray(structuredSymptoms) && structuredSymptoms.length > 0) {
+            const firstSymptom = structuredSymptoms[0]
+            if (typeof firstSymptom === 'object') {
+              collectedInfo = {
+                chiefComplaint: firstSymptom.name || collectedInfo.chiefComplaint,
+                duration: firstSymptom.duration || collectedInfo.duration,
+                severity: firstSymptom.severity ? 
+                         (String(firstSymptom.severity).toLowerCase() === 'mild' ? 3 : 
+                          String(firstSymptom.severity).toLowerCase() === 'moderate' ? 5 :
+                          String(firstSymptom.severity).toLowerCase() === 'severe' ? 8 : undefined) :
+                         collectedInfo.severity,
+                location: firstSymptom.location || collectedInfo.location,
+                frequency: firstSymptom.frequency || collectedInfo.frequency,
+              }
+            }
+          }
+        }
+      }
+
       set({
         diagnosisId,
         cdpId,
@@ -428,6 +615,7 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
         status: data.status || 'collecting',
         completeness: (data.completeness || 0) / 100,
         healthAssessmentDone: true,
+        collectedInfo,
       })
 
       // 构建健康状态判定结果用于展示（从诊断响应中提取）

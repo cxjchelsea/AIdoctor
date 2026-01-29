@@ -10,6 +10,7 @@ class QuestionRequest(BaseModel):
     """生成问题请求"""
     cdpId: str  # 使用cdpId而不是diagnosis_id，符合文档规范
     context: Optional[Dict[str, Any]] = None
+    patientState: Optional[Dict[str, Any]] = None  # 可选：如果提供则直接使用，否则从CDP读取
 
 
 class UserInputRequest(BaseModel):
@@ -22,4 +23,5 @@ class UserInputRequest(BaseModel):
 class IdentifyGapsRequest(BaseModel):
     """识别信息缺口请求"""
     cdpId: str
+    patientState: Optional[Dict[str, Any]] = None  # 可选：如果提供则直接使用，否则从CDP读取
 
