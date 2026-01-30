@@ -283,8 +283,17 @@ public class DiagnosisWorkflowOrchestrator {
         // 调用risk-assessment-service进行风险评估
         try {
             Map<String, Object> riskRequest = new HashMap<>();
-            riskRequest.put("cdpId", cdp.getId());
-            riskRequest.put("ddx", updates.get("ddx"));
+            // 构建完整的CDP数据（风险评估服务需要完整的CDP对象）
+            Map<String, Object> cdpData = new HashMap<>();
+            cdpData.put("id", cdp.getId());
+            cdpData.put("patient_id", cdp.getPatientId());
+            cdpData.put("session_id", cdp.getSessionId());
+            cdpData.put("patient_state", cdp.getPatientState());
+            cdpData.put("ddx", updates.get("ddx") != null ? updates.get("ddx") : cdp.getDdx());
+            
+            riskRequest.put("cdp", cdpData);
+            riskRequest.put("patient_state", cdp.getPatientState() != null ? cdp.getPatientState() : new HashMap<>());
+            riskRequest.put("ddx", updates.get("ddx") != null ? updates.get("ddx") : cdp.getDdx());
             
             Object riskResponse = riskAssessmentClient.assessRisk(riskRequest);
             // 解析响应并更新triage
@@ -462,9 +471,19 @@ public class DiagnosisWorkflowOrchestrator {
         // 调用risk-assessment-service进行最终风险评估
         try {
             Map<String, Object> finalRiskRequest = new HashMap<>();
-            finalRiskRequest.put("cdpId", cdp.getId());
-            finalRiskRequest.put("ddx", updates.get("ddx"));
-            finalRiskRequest.put("managementPlan", updates.get("managementPlan"));
+            // 构建完整的CDP数据
+            Map<String, Object> cdpData = new HashMap<>();
+            cdpData.put("id", cdp.getId());
+            cdpData.put("patient_id", cdp.getPatientId());
+            cdpData.put("session_id", cdp.getSessionId());
+            cdpData.put("patient_state", cdp.getPatientState());
+            cdpData.put("ddx", updates.get("ddx") != null ? updates.get("ddx") : cdp.getDdx());
+            cdpData.put("management_plan", updates.get("managementPlan") != null ? updates.get("managementPlan") : cdp.getManagementPlan());
+            
+            finalRiskRequest.put("cdp", cdpData);
+            finalRiskRequest.put("patient_state", cdp.getPatientState() != null ? cdp.getPatientState() : new HashMap<>());
+            finalRiskRequest.put("ddx", updates.get("ddx") != null ? updates.get("ddx") : cdp.getDdx());
+            finalRiskRequest.put("management_plan", updates.get("managementPlan") != null ? updates.get("managementPlan") : cdp.getManagementPlan());
             
             Object finalRiskResponse = riskAssessmentClient.assessFinalRisk(finalRiskRequest);
             // 解析响应并更新triage
@@ -486,7 +505,13 @@ public class DiagnosisWorkflowOrchestrator {
             
             Object explanationResponse = explanationServiceClient.generateConclusionPackage(explanationRequest);
             // 解析响应，生成终点结论包
-            // TODO: 根据实际响应格式解析并存储
+            Map<String, Object> conclusionPackage = parseExplanationResponse(explanationResponse);
+            if (conclusionPackage != null && !conclusionPackage.isEmpty()) {
+                log.info("成功解析explanation-service响应，结论包大小: {}", conclusionPackage.size());
+                updates.put("conclusionPackage", conclusionPackage);
+            } else {
+                log.warn("explanation-service响应解析为空或解析失败: response={}", explanationResponse);
+            }
         } catch (Exception e) {
             log.error("调用explanation-service失败", e);
             // 终点结论包生成失败不影响流程继续
@@ -635,12 +660,94 @@ public class DiagnosisWorkflowOrchestrator {
     }
     
     private List<Map<String, Object>> parseDDxResponse(Object response) {
-        // TODO: 解析diagnosis-engine-service的响应
+        /**
+         * 解析diagnosis-engine-service的响应
+         * 响应格式：{ddx: [...], classification: {...}, sourcePossibilities: {...}}
+         * 可能被包装在标准API响应格式中：{code: 200, message: "success", data: {...}}
+         */
+        try {
+            if (response == null) {
+                log.warn("diagnosis-engine-service响应为null");
+                return new ArrayList<>();
+            }
+            
+            log.debug("解析diagnosis-engine-service响应，类型: {}", response.getClass().getName());
+            
+            if (response instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> responseMap = (Map<String, Object>) response;
+                
+                // 如果响应包含data字段（标准API响应格式）
+                Object data = responseMap.get("data");
+                if (data instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> dataMap = (Map<String, Object>) data;
+                    Object ddxObj = dataMap.get("ddx");
+                    if (ddxObj instanceof List) {
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> ddxList = (List<Map<String, Object>>) ddxObj;
+                        log.info("从data字段提取ddx列表，数量: {}", ddxList.size());
+                        return ddxList;
+                    }
+                }
+                
+                // 如果响应直接包含ddx字段
+                Object ddxObj = responseMap.get("ddx");
+                if (ddxObj instanceof List) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> ddxList = (List<Map<String, Object>>) ddxObj;
+                    log.info("从响应直接提取ddx列表，数量: {}", ddxList.size());
+                    return ddxList;
+                }
+                
+                log.warn("响应中未找到ddx字段，响应keys: {}", responseMap.keySet());
+            } else {
+                log.warn("diagnosis-engine-service响应不是Map类型: {}", response.getClass().getName());
+            }
+        } catch (Exception e) {
+            log.error("解析diagnosis-engine-service响应失败", e);
+        }
+        
         return new ArrayList<>();
     }
     
     private Map<String, Object> parseRiskResponse(Object response) {
-        // TODO: 解析risk-assessment-service的响应
+        /**
+         * 解析risk-assessment-service的响应
+         * 响应格式：{riskLevel: "L2", severity: "moderate", urgency: "normal", redFlags: [], reviewPlan: {}}
+         * 可能被包装在标准API响应格式中：{code: 200, message: "success", data: {...}}
+         */
+        try {
+            if (response == null) {
+                log.warn("risk-assessment-service响应为null");
+                return new HashMap<>();
+            }
+            
+            log.debug("解析risk-assessment-service响应，类型: {}", response.getClass().getName());
+            
+            if (response instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> responseMap = (Map<String, Object>) response;
+                
+                // 如果响应包含data字段（标准API响应格式）
+                Object data = responseMap.get("data");
+                if (data instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> dataMap = (Map<String, Object>) data;
+                    log.info("从data字段提取风险评估结果，字段数: {}", dataMap.size());
+                    return dataMap;
+                }
+                
+                // 如果响应直接是风险评估结果
+                log.info("响应直接是风险评估结果，字段数: {}, keys: {}", responseMap.size(), responseMap.keySet());
+                return responseMap;
+            } else {
+                log.warn("risk-assessment-service响应不是Map类型: {}", response.getClass().getName());
+            }
+        } catch (Exception e) {
+            log.error("解析risk-assessment-service响应失败", e);
+        }
+        
         return new HashMap<>();
     }
     
@@ -677,6 +784,45 @@ public class DiagnosisWorkflowOrchestrator {
     private List<Map<String, Object>> parseTreatmentResponse(Object response) {
         // TODO: 解析treatment响应
         return new ArrayList<>();
+    }
+    
+    private Map<String, Object> parseExplanationResponse(Object response) {
+        /**
+         * 解析explanation-service的响应
+         * 响应格式：ConclusionPackage对象
+         */
+        try {
+            if (response == null) {
+                log.warn("explanation-service响应为null");
+                return null;
+            }
+            
+            log.debug("解析explanation-service响应，类型: {}", response.getClass().getName());
+            
+            if (response instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> responseMap = (Map<String, Object>) response;
+                
+                // 如果响应包含data字段（标准API响应格式）
+                Object data = responseMap.get("data");
+                if (data instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> dataMap = (Map<String, Object>) data;
+                    log.debug("从data字段提取结论包，字段数: {}", dataMap.size());
+                    return dataMap;
+                }
+                
+                // 如果响应直接是ConclusionPackage对象
+                log.debug("响应直接是ConclusionPackage对象，字段数: {}, keys: {}", responseMap.size(), responseMap.keySet());
+                return responseMap;
+            } else {
+                log.warn("explanation-service响应不是Map类型: {}", response.getClass().getName());
+            }
+        } catch (Exception e) {
+            log.error("解析explanation-service响应失败", e);
+        }
+        
+        return new HashMap<>();
     }
 }
 

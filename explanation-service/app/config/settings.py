@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     LLM_MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
     
     # 诊断服务配置（用于获取CDP数据）
-    DIAGNOSIS_SERVICE_URL: str = os.getenv("DIAGNOSIS_SERVICE_URL", "http://localhost:8080")
+    DIAGNOSIS_SERVICE_URL: str = os.getenv("DIAGNOSIS_SERVICE_URL", "http://localhost:8084")
     
     class Config:
         env_file = ".env"

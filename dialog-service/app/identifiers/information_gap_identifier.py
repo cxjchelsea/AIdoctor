@@ -234,4 +234,17 @@ class InformationGapIdentifier:
             "important": important_gaps,
             "optional": optional_gaps
         }
+    
+    def get_field_config(self) -> Dict[str, List[Dict]]:
+        """
+        获取所有字段配置（用于前端展示）
+        
+        Returns:
+            包含所有字段配置的字典（required/important/optional）
+        """
+        return {
+            "required": self.required_fields.copy(),
+            "important": self.important_fields.copy(),
+            "optional": self.optional_fields.copy()
+        }
 

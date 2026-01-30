@@ -4,7 +4,14 @@ import com.aidoctor.diagnosis.client.HealthStateAssessmentClient;
 import com.aidoctor.diagnosis.dto.request.DiagnosisRequest;
 import com.aidoctor.diagnosis.dto.request.UserAnswer;
 import com.aidoctor.diagnosis.dto.response.DiagnosisResponse;
+import com.aidoctor.diagnosis.dto.response.DiagnosisResult;
+import com.aidoctor.diagnosis.dto.conclusion.ConclusionPackage;
+import com.aidoctor.diagnosis.dto.conclusion.Conclusion;
+import com.aidoctor.diagnosis.dto.conclusion.MustExcludeStatus;
+import com.aidoctor.diagnosis.dto.conclusion.KeyEvidence;
+import com.aidoctor.diagnosis.dto.conclusion.ActionAndFollowUp;
 import com.aidoctor.diagnosis.entity.CDP;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.aidoctor.diagnosis.exception.CDPNotFoundException;
 import com.aidoctor.diagnosis.service.cdp.CDPManager;
 import com.aidoctor.diagnosis.service.orchestration.DiagnosisWorkflowOrchestrator;
@@ -366,24 +373,12 @@ public class DiagnosisOrchestrationService {
                     }
                 }
                 
-                // 如果信息还不完整，返回问题等待用户继续输入
-                if (nextQuestion != null && !nextQuestion.isEmpty()) {
-                    log.info("信息不完整，返回问题等待用户继续输入: nextQuestion={}", nextQuestion);
-                    return DiagnosisResponse.builder()
-                        .code(200)
-                        .message("请继续提供信息")
-                        .diagnosisId(cdp.getId())
-                        .status("clinical_mode_collecting")
-                        .cdpId(cdp.getId())
-                        .workMode("clinical_mode")
-                        .currentStep("step1_identify_problem")
-                        .completeness(completeness)
-                        .nextAction(buildNextAction("question", nextQuestion))
-                        .patientState(patientStateSummary.isEmpty() ? null : patientStateSummary)
-                        .timestamp(System.currentTimeMillis())
-                        .build();
-                } else {
-                    // 信息已完整，继续执行后续步骤
+                // 判断是否继续：基于完整度（>=60%）而不是基于是否有问题
+                // 如果完整度达到60%（最低要求），可以继续执行后续步骤
+                // 如果完整度 < 60% 或没有完整度信息，返回问题等待用户继续输入
+                if (completeness != null && completeness >= 60.0) {
+                    // 信息完整度达到最低要求（60%），继续执行后续步骤
+                    log.info("信息完整度达到最低要求（{}%），继续执行后续步骤", completeness);
                     cdp = diagnosisWorkflowOrchestrator.executeRemainingSteps(cdp);
                     
                     return DiagnosisResponse.builder()
@@ -393,11 +388,28 @@ public class DiagnosisOrchestrationService {
                         .status("completed")
                         .cdpId(cdp.getId())
                         .workMode("clinical_mode")
-                        .completeness(100.0) // 信息完整时设置为100%
+                        .completeness(completeness) // 使用实际完整度，而不是100%
                         .ddx(cdp.getDdx())
                         .workupPlan(cdp.getWorkupPlan())
                         .managementPlan(cdp.getManagementPlan())
                         .triage(cdp.getTriage())
+                        .patientState(patientStateSummary.isEmpty() ? null : patientStateSummary)
+                        .timestamp(System.currentTimeMillis())
+                        .build();
+                } else {
+                    // 信息完整度不足（<60%），返回问题等待用户继续输入
+                    log.info("信息完整度不足（{}%），返回问题等待用户继续输入: nextQuestion={}", 
+                        completeness != null ? completeness : "未知", nextQuestion);
+                    return DiagnosisResponse.builder()
+                        .code(200)
+                        .message("请继续提供信息")
+                        .diagnosisId(cdp.getId())
+                        .status("clinical_mode_collecting")
+                        .cdpId(cdp.getId())
+                        .workMode("clinical_mode")
+                        .currentStep("step1_identify_problem")
+                        .completeness(completeness != null ? completeness : 0.0)
+                        .nextAction(buildNextAction("question", nextQuestion != null ? nextQuestion : "请详细描述一下您的症状"))
                         .patientState(patientStateSummary.isEmpty() ? null : patientStateSummary)
                         .timestamp(System.currentTimeMillis())
                         .build();
@@ -468,7 +480,96 @@ public class DiagnosisOrchestrationService {
             throw new RuntimeException("诊断流程尚未完成");
         }
         
-        // TODO: 构建完整的诊断结果（包含终点结论包）
+        // 优先尝试从CDP中读取explanation-service生成的结论包
+        ConclusionPackage conclusionPackage = extractConclusionPackageFromCDP(cdp);
+        
+        // 构建诊断结果
+        DiagnosisResult.DiagnosisResultBuilder resultBuilder = DiagnosisResult.builder();
+        boolean hasSummary = false;
+        
+        // 如果有explanation-service生成的完整结论包，优先使用它
+        if (conclusionPackage != null) {
+            log.info("使用explanation-service生成的完整结论包: cdpId={}", cdpId);
+            resultBuilder.conclusionPackage(conclusionPackage);
+            
+            // 从结论包中提取摘要
+            if (conclusionPackage.getConclusion() != null) {
+                Conclusion conclusion = conclusionPackage.getConclusion();
+                String summary = buildSummaryFromConclusion(conclusion, conclusionPackage);
+                resultBuilder.summary(summary);
+                hasSummary = true;
+            }
+        } else {
+            // 降级方案：从CDP中提取基本信息构建简化的诊断结果
+            log.info("explanation-service结论包不存在，使用降级方案从CDP提取基本信息: cdpId={}", cdpId);
+            buildSimplifiedResultFromCDP(cdp, resultBuilder);
+            hasSummary = true; // buildSimplifiedResultFromCDP已经设置了summary
+        }
+        
+        // 补充可能性列表、检查建议、就医建议等基本信息
+        // 这些信息在两种情况下都需要（即使有完整结论包，也需要用于兼容性）
+        List<DiagnosisResult.DiseasePossibility> possibilities = new ArrayList<>();
+        if (cdp.getDdx() != null && !cdp.getDdx().isEmpty()) {
+            for (Map<String, Object> ddxItem : cdp.getDdx()) {
+                DiagnosisResult.DiseasePossibility possibility = DiagnosisResult.DiseasePossibility.builder()
+                    .disease((String) ddxItem.getOrDefault("disease", ddxItem.getOrDefault("name", "未知疾病")))
+                    .confidence(getConfidenceFromDDx(ddxItem))
+                    .level(getLevelFromConfidence(getConfidenceFromDDx(ddxItem)))
+                    .supportingEvidence(extractList(ddxItem, "supportingEvidence"))
+                    .opposingEvidence(extractList(ddxItem, "opposingEvidence"))
+                    .missingInfo(extractList(ddxItem, "missingInfo"))
+                    .build();
+                possibilities.add(possibility);
+            }
+        }
+        resultBuilder.possibilities(possibilities);
+        
+        // 从workupPlan构建检查建议
+        if (cdp.getWorkupPlan() != null && !cdp.getWorkupPlan().isEmpty()) {
+            List<DiagnosisResult.ExaminationItem> priorityExaminations = new ArrayList<>();
+            List<DiagnosisResult.ExaminationItem> optionalExaminations = new ArrayList<>();
+            
+            for (Map<String, Object> workupItem : cdp.getWorkupPlan()) {
+                DiagnosisResult.ExaminationItem item = DiagnosisResult.ExaminationItem.builder()
+                    .name((String) workupItem.getOrDefault("name", workupItem.getOrDefault("examination", "未知检查")))
+                    .purpose((String) workupItem.getOrDefault("purpose", workupItem.getOrDefault("reason", "")))
+                    .priority((String) workupItem.getOrDefault("priority", "optional"))
+                    .reason((String) workupItem.getOrDefault("reason", ""))
+                    .build();
+                
+                if ("priority".equals(item.getPriority()) || "high".equals(item.getPriority())) {
+                    priorityExaminations.add(item);
+                } else {
+                    optionalExaminations.add(item);
+                }
+            }
+            
+            DiagnosisResult.ExaminationSuggestion examinationSuggestion = DiagnosisResult.ExaminationSuggestion.builder()
+                .priorityExaminations(priorityExaminations)
+                .optionalExaminations(optionalExaminations)
+                .explanation("根据您的症状，建议进行以下检查以明确诊断")
+                .build();
+            resultBuilder.examinationSuggestion(examinationSuggestion);
+        }
+        
+        // 从managementPlan构建就医建议
+        if (cdp.getManagementPlan() != null && !cdp.getManagementPlan().isEmpty()) {
+            Map<String, Object> firstPlan = cdp.getManagementPlan().get(0);
+            DiagnosisResult.MedicalAdvice medicalAdvice = DiagnosisResult.MedicalAdvice.builder()
+                .department((String) firstPlan.getOrDefault("department", "内科"))
+                .timing((String) firstPlan.getOrDefault("timing", "建议尽快就医"))
+                .sbarSummary((String) firstPlan.getOrDefault("summary", "建议就医进一步检查"))
+                .build();
+            resultBuilder.medicalAdvice(medicalAdvice);
+        }
+        
+        // 如果没有从结论包中提取摘要，则从CDP构建摘要
+        if (!hasSummary) {
+            String summary = buildSummary(cdp, possibilities);
+            resultBuilder.summary(summary);
+        }
+        
+        DiagnosisResult result = resultBuilder.build();
         
         return DiagnosisResponse.builder()
             .code(200)
@@ -476,12 +577,81 @@ public class DiagnosisOrchestrationService {
             .diagnosisId(cdpId)
             .status("completed")
             .cdpId(cdpId)
+            .result(result)
             .ddx(cdp.getDdx())
             .workupPlan(cdp.getWorkupPlan())
             .managementPlan(cdp.getManagementPlan())
             .triage(cdp.getTriage())
             .timestamp(System.currentTimeMillis())
             .build();
+    }
+    
+    /**
+     * 从DDx项中提取置信度
+     */
+    private Double getConfidenceFromDDx(Map<String, Object> ddxItem) {
+        Object confidenceObj = ddxItem.get("confidence");
+        if (confidenceObj instanceof Number) {
+            return ((Number) confidenceObj).doubleValue();
+        } else if (confidenceObj instanceof String) {
+            try {
+                return Double.parseDouble((String) confidenceObj);
+            } catch (NumberFormatException e) {
+                return 0.5; // 默认值
+            }
+        }
+        return 0.5; // 默认值
+    }
+    
+    /**
+     * 根据置信度确定级别
+     */
+    private String getLevelFromConfidence(Double confidence) {
+        if (confidence == null) return "medium";
+        if (confidence >= 0.7) return "high";
+        if (confidence >= 0.4) return "medium";
+        return "low";
+    }
+    
+    /**
+     * 从Map中提取List字段
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> extractList(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value instanceof List) {
+            List<Object> list = (List<Object>) value;
+            List<String> result = new ArrayList<>();
+            for (Object item : list) {
+                if (item != null) {
+                    result.add(item.toString());
+                }
+            }
+            return result;
+        }
+        return new ArrayList<>();
+    }
+    
+    /**
+     * 构建诊断摘要
+     */
+    private String buildSummary(CDP cdp, List<DiagnosisResult.DiseasePossibility> possibilities) {
+        if (possibilities == null || possibilities.isEmpty()) {
+            return "根据您的症状描述，建议进一步检查以明确诊断。";
+        }
+        
+        StringBuilder summary = new StringBuilder("根据您的症状和健康档案，我考虑以下几个可能的方向：\n\n");
+        
+        for (int i = 0; i < Math.min(possibilities.size(), 3); i++) {
+            DiagnosisResult.DiseasePossibility possibility = possibilities.get(i);
+            summary.append(String.format("%d. %s（可能性：%.0f%%）\n", 
+                i + 1, 
+                possibility.getDisease(), 
+                (possibility.getConfidence() != null ? possibility.getConfidence() * 100 : 0)));
+        }
+        
+        summary.append("\n建议进行进一步检查以明确诊断。");
+        return summary.toString();
     }
     
     // ========== 辅助方法 ==========
@@ -717,6 +887,217 @@ public class DiagnosisOrchestrationService {
         }
         
         return summary;
+    }
+    
+    /**
+     * 从CDP中提取explanation-service生成的结论包
+     * 检查patientState、audit等字段中是否有conclusion_package
+     */
+    @SuppressWarnings("unchecked")
+    private ConclusionPackage extractConclusionPackageFromCDP(CDP cdp) {
+        try {
+            // 检查patientState中是否有conclusion_package
+            Map<String, Object> patientState = cdp.getPatientState();
+            if (patientState != null) {
+                Object conclusionPackageObj = patientState.get("conclusion_package");
+                if (conclusionPackageObj != null && conclusionPackageObj instanceof Map) {
+                    return convertMapToConclusionPackage((Map<String, Object>) conclusionPackageObj);
+                }
+            }
+            
+            // 检查audit字段中是否有conclusion_package
+            Map<String, Object> audit = cdp.getAudit();
+            if (audit != null) {
+                Object conclusionPackageObj = audit.get("conclusion_package");
+                if (conclusionPackageObj != null && conclusionPackageObj instanceof Map) {
+                    return convertMapToConclusionPackage((Map<String, Object>) conclusionPackageObj);
+                }
+            }
+            
+            return null;
+        } catch (Exception e) {
+            log.warn("提取结论包失败: cdpId={}", cdp.getId(), e);
+            return null;
+        }
+    }
+    
+    /**
+     * 将Map转换为ConclusionPackage对象
+     */
+    @SuppressWarnings("unchecked")
+    private ConclusionPackage convertMapToConclusionPackage(Map<String, Object> map) {
+        try {
+            ConclusionPackage.ConclusionPackageBuilder builder = ConclusionPackage.builder();
+            
+            // 转换conclusion
+            Object conclusionObj = map.get("conclusion");
+            if (conclusionObj instanceof Map) {
+                Map<String, Object> conclusionMap = (Map<String, Object>) conclusionObj;
+                Conclusion.ConclusionBuilder conclusionBuilder = Conclusion.builder();
+                Object typeObj = conclusionMap.get("type");
+                if (typeObj != null) {
+                    String typeStr = typeObj.toString().toUpperCase();
+                    if ("CONFIRMED".equals(typeStr) || "可确证".equals(typeObj.toString())) {
+                        conclusionBuilder.type(Conclusion.ConclusionType.CONFIRMED);
+                    } else {
+                        conclusionBuilder.type(Conclusion.ConclusionType.PROBABLE);
+                    }
+                }
+                conclusionBuilder.diagnosis((String) conclusionMap.getOrDefault("diagnosis", conclusionMap.get("name")));
+                conclusionBuilder.confidence(getDoubleValue(conclusionMap.get("confidence")));
+                conclusionBuilder.uncertaintyReason((String) conclusionMap.get("uncertaintyReason"));
+                conclusionBuilder.reviewWindow((String) conclusionMap.get("reviewWindow"));
+                conclusionBuilder.upgradeTriggers(extractList(conclusionMap, "upgradeTriggers"));
+                builder.conclusion(conclusionBuilder.build());
+            }
+            
+            // 转换mustExcludeStatus
+            Object mustExcludeObj = map.get("mustExcludeStatus");
+            if (mustExcludeObj instanceof Map) {
+                Map<String, Object> mustExcludeMap = (Map<String, Object>) mustExcludeObj;
+                MustExcludeStatus.MustExcludeStatusBuilder mustExcludeBuilder = MustExcludeStatus.builder();
+                Object statusObj = mustExcludeMap.get("status");
+                if (statusObj != null) {
+                    String statusStr = statusObj.toString().toUpperCase();
+                    try {
+                        mustExcludeBuilder.status(MustExcludeStatus.ExcludeStatus.valueOf(statusStr));
+                    } catch (IllegalArgumentException e) {
+                        mustExcludeBuilder.status(MustExcludeStatus.ExcludeStatus.NONE);
+                    }
+                }
+                mustExcludeBuilder.excludeReason((String) mustExcludeMap.get("excludeReason"));
+                builder.mustExcludeStatus(mustExcludeBuilder.build());
+            }
+            
+            // 转换keyEvidence
+            Object keyEvidenceObj = map.get("keyEvidence");
+            if (keyEvidenceObj instanceof List) {
+                List<Map<String, Object>> keyEvidenceList = (List<Map<String, Object>>) keyEvidenceObj;
+                List<KeyEvidence> keyEvidence = new ArrayList<>();
+                for (Map<String, Object> evidenceMap : keyEvidenceList) {
+                    KeyEvidence evidence = KeyEvidence.builder()
+                        .item((String) evidenceMap.getOrDefault("item", evidenceMap.get("description")))
+                        .type((String) evidenceMap.get("type"))
+                        .strength((String) evidenceMap.get("strength"))
+                        .role((String) evidenceMap.get("role"))
+                        .build();
+                    keyEvidence.add(evidence);
+                }
+                builder.keyEvidence(keyEvidence);
+            }
+            
+            // 转换actionAndFollowUp
+            Object actionObj = map.get("actionAndFollowUp");
+            if (actionObj instanceof Map) {
+                Map<String, Object> actionMap = (Map<String, Object>) actionObj;
+                ActionAndFollowUp.ActionAndFollowUpBuilder actionBuilder = ActionAndFollowUp.builder();
+                actionBuilder.reviewWindow((String) actionMap.get("reviewWindow"));
+                actionBuilder.upgradeTriggers(extractList(actionMap, "upgradeTriggers"));
+                
+                Object immediateActionObj = actionMap.get("immediateAction");
+                if (immediateActionObj instanceof Map) {
+                    Map<String, Object> immediateActionMap = (Map<String, Object>) immediateActionObj;
+                    List<ActionAndFollowUp.Action> actions = new ArrayList<>();
+                    Object examinationsObj = immediateActionMap.get("examinations");
+                    if (examinationsObj instanceof List) {
+                        for (Object examObj : (List<?>) examinationsObj) {
+                            ActionAndFollowUp.Action action = ActionAndFollowUp.Action.builder()
+                                .type("examination")
+                                .name(examObj.toString())
+                                .priority("high")
+                                .build();
+                            actions.add(action);
+                        }
+                    }
+                    actionBuilder.immediateActions(actions);
+                }
+                builder.actionAndFollowUp(actionBuilder.build());
+            }
+            
+            return builder.build();
+        } catch (Exception e) {
+            log.warn("转换结论包失败", e);
+            return null;
+        }
+    }
+    
+    /**
+     * 从结论包构建摘要
+     */
+    private String buildSummaryFromConclusion(Conclusion conclusion, ConclusionPackage conclusionPackage) {
+        StringBuilder summary = new StringBuilder();
+        
+        if (conclusion.getDiagnosis() != null) {
+            summary.append("根据您的症状和健康档案，我考虑最可能的诊断是：").append(conclusion.getDiagnosis());
+            if (conclusion.getConfidence() != null) {
+                summary.append(String.format("（可能性：%.0f%%）", conclusion.getConfidence() * 100));
+            }
+            summary.append("。\n\n");
+        }
+        
+        if (conclusion.getType() == Conclusion.ConclusionType.PROBABLE && conclusion.getUncertaintyReason() != null) {
+            summary.append("不确定性来源：").append(conclusion.getUncertaintyReason()).append("。\n\n");
+        }
+        
+        if (conclusionPackage.getKeyEvidence() != null && !conclusionPackage.getKeyEvidence().isEmpty()) {
+            summary.append("关键依据：\n");
+            for (int i = 0; i < Math.min(conclusionPackage.getKeyEvidence().size(), 3); i++) {
+                KeyEvidence evidence = conclusionPackage.getKeyEvidence().get(i);
+                summary.append(String.format("%d. %s\n", i + 1, evidence.getItem()));
+            }
+            summary.append("\n");
+        }
+        
+        if (conclusionPackage.getActionAndFollowUp() != null) {
+            ActionAndFollowUp action = conclusionPackage.getActionAndFollowUp();
+            if (action.getReviewWindow() != null) {
+                summary.append("建议在").append(action.getReviewWindow()).append("内复评。");
+            }
+        }
+        
+        return summary.toString();
+    }
+    
+    /**
+     * 从CDP构建简化的诊断结果（降级方案）
+     */
+    private void buildSimplifiedResultFromCDP(CDP cdp, DiagnosisResult.DiagnosisResultBuilder resultBuilder) {
+        // 从ddx构建可能性列表
+        List<DiagnosisResult.DiseasePossibility> possibilities = new ArrayList<>();
+        if (cdp.getDdx() != null && !cdp.getDdx().isEmpty()) {
+            for (Map<String, Object> ddxItem : cdp.getDdx()) {
+                DiagnosisResult.DiseasePossibility possibility = DiagnosisResult.DiseasePossibility.builder()
+                    .disease((String) ddxItem.getOrDefault("disease", ddxItem.getOrDefault("name", "未知疾病")))
+                    .confidence(getConfidenceFromDDx(ddxItem))
+                    .level(getLevelFromConfidence(getConfidenceFromDDx(ddxItem)))
+                    .supportingEvidence(extractList(ddxItem, "supportingEvidence"))
+                    .opposingEvidence(extractList(ddxItem, "opposingEvidence"))
+                    .missingInfo(extractList(ddxItem, "missingInfo"))
+                    .build();
+                possibilities.add(possibility);
+            }
+        }
+        resultBuilder.possibilities(possibilities);
+        
+        // 构建摘要
+        String summary = buildSummary(cdp, possibilities);
+        resultBuilder.summary(summary);
+    }
+    
+    /**
+     * 获取Double值
+     */
+    private Double getDoubleValue(Object obj) {
+        if (obj instanceof Number) {
+            return ((Number) obj).doubleValue();
+        } else if (obj instanceof String) {
+            try {
+                return Double.parseDouble((String) obj);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }
 

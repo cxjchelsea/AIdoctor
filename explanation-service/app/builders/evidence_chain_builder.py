@@ -33,7 +33,7 @@ class EvidenceChainBuilder:
             
             # 3. 构建证据-疾病关联
             evidence_items = []
-            ddx = cdp_data.get("ddx", {})
+            ddx = cdp_data.get("ddx", {})  # ddx可能是列表或字典
             
             for evidence in evidence_list:
                 # 计算证据支持强度
@@ -160,22 +160,33 @@ class EvidenceChainBuilder:
     def _get_supporting_diseases(
         self,
         evidence: Dict[str, Any],
-        ddx: Dict[str, Any]
+        ddx: Any
     ) -> List[str]:
         """
         获取证据支持的疾病列表
         
         Args:
             evidence: 证据
-            ddx: 鉴别诊断
+            ddx: 鉴别诊断（可能是列表或字典）
             
         Returns:
             支持的疾病列表
         """
         supporting_diseases = []
         
-        # 从DDx中查找相关疾病
-        primary_hypothesis = ddx.get("primary_hypothesis", [])
+        # 兼容处理：ddx可能是列表或字典
+        primary_hypothesis = []
+        major_alternatives = []
+        
+        if isinstance(ddx, list):
+            # 如果ddx是列表，前3个作为主要假设，其余作为备选
+            primary_hypothesis = ddx[:3] if len(ddx) > 0 else []
+            major_alternatives = ddx[3:6] if len(ddx) > 3 else []
+        elif isinstance(ddx, dict):
+            primary_hypothesis = ddx.get("primary_hypothesis", [])
+            major_alternatives = ddx.get("major_alternatives", [])
+        
+        # 处理主要假设
         if isinstance(primary_hypothesis, list):
             for item in primary_hypothesis:
                 if isinstance(item, dict):
@@ -185,7 +196,7 @@ class EvidenceChainBuilder:
                 elif isinstance(item, str):
                     supporting_diseases.append(item)
         
-        major_alternatives = ddx.get("major_alternatives", [])
+        # 处理备选假设
         if isinstance(major_alternatives, list):
             for item in major_alternatives:
                 if isinstance(item, dict):
@@ -200,14 +211,14 @@ class EvidenceChainBuilder:
     def _get_contradicting_diseases(
         self,
         evidence: Dict[str, Any],
-        ddx: Dict[str, Any]
+        ddx: Any
     ) -> List[str]:
         """
         获取证据反对的疾病列表
         
         Args:
             evidence: 证据
-            ddx: 鉴别诊断
+            ddx: 鉴别诊断（可能是列表或字典）
             
         Returns:
             反对的疾病列表
@@ -217,7 +228,14 @@ class EvidenceChainBuilder:
         if category == "negative":
             # 返回所有候选疾病（简化逻辑）
             contradicting_diseases = []
-            ddx_all = ddx.get("primary_hypothesis", []) + ddx.get("major_alternatives", [])
+            
+            # 兼容处理：ddx可能是列表或字典
+            ddx_all = []
+            if isinstance(ddx, list):
+                ddx_all = ddx[:5]  # 取前5个
+            elif isinstance(ddx, dict):
+                ddx_all = ddx.get("primary_hypothesis", []) + ddx.get("major_alternatives", [])
+            
             for item in ddx_all:
                 if isinstance(item, dict):
                     disease_name = item.get("disease", item.get("name", ""))
@@ -259,7 +277,13 @@ class EvidenceChainBuilder:
             symptoms = patient_state.get("symptoms", [])
             ddx = cdp_data.get("ddx", {})
             
-            primary_hypothesis = ddx.get("primary_hypothesis", [])
+            # 兼容处理：ddx可能是列表或字典
+            primary_hypothesis = []
+            if isinstance(ddx, list):
+                primary_hypothesis = ddx[:2]  # 取前2个
+            elif isinstance(ddx, dict):
+                primary_hypothesis = ddx.get("primary_hypothesis", [])
+            
             if symptoms and primary_hypothesis:
                 symptom_names = [s.get("name", str(s)) if isinstance(s, dict) else str(s) for s in symptoms[:2]]
                 disease_names = [d.get("disease", d.get("name", str(d))) if isinstance(d, dict) else str(d) for d in primary_hypothesis[:2]]

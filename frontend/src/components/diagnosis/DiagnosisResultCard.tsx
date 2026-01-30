@@ -25,13 +25,24 @@ const DiagnosisResultCard: React.FC<DiagnosisResultCardProps> = ({
     console.log('导出报告', result)
   }
 
+  // 防御性检查：确保 result 和 conclusion 存在
+  if (!result || !result.conclusion || !result.conclusion.type) {
+    return (
+      <Card title="诊断结果" style={{ marginBottom: 16 }}>
+        <Alert message="诊断结果数据不完整，请稍后重试" type="warning" />
+      </Card>
+    )
+  }
+
+  const { conclusion } = result
+
   return (
     <Card
       title={
         <Space>
           <span>诊断结果</span>
-          <Tag color={result.conclusion.type === 'confirmable' ? 'green' : 'orange'}>
-            {result.conclusion.type === 'confirmable' ? '可确证' : '不可确证'}
+          <Tag color={conclusion.type === 'confirmable' ? 'green' : 'orange'}>
+            {conclusion.type === 'confirmable' ? '可确证' : '不可确证'}
           </Tag>
         </Space>
       }
@@ -48,30 +59,32 @@ const DiagnosisResultCard: React.FC<DiagnosisResultCardProps> = ({
         <Text>根据您的症状和健康档案，我为您做了详细分析：</Text>
         
         {/* 首要假设 */}
-        <Card size="small" style={{ backgroundColor: '#f0f9ff', borderColor: '#1890ff' }}>
-          <Space direction="vertical" style={{ width: '100%' }} size="small">
-            <Text strong style={{ color: '#1890ff' }}>【首要假设】</Text>
-            <Text strong>{result.conclusion.primaryHypothesis.disease}</Text>
-            <Text type="secondary">
-              可能性：{Math.round(result.conclusion.primaryHypothesis.confidence * 100)}%
-            </Text>
-          </Space>
-        </Card>
+        {conclusion.primaryHypothesis && (
+          <Card size="small" style={{ backgroundColor: '#f0f9ff', borderColor: '#1890ff' }}>
+            <Space direction="vertical" style={{ width: '100%' }} size="small">
+              <Text strong style={{ color: '#1890ff' }}>【首要假设】</Text>
+              <Text strong>{conclusion.primaryHypothesis.disease}</Text>
+              <Text type="secondary">
+                可能性：{Math.round(conclusion.primaryHypothesis.confidence * 100)}%
+              </Text>
+            </Space>
+          </Card>
+        )}
         
         {/* 必须排除的高危诊断（如果有） */}
-        {result.conclusion.mustExcludeDiagnosis && (
+        {conclusion.mustExcludeDiagnosis && (
           <Alert
             message={
               <Space>
                 <Text strong>【必须排除的高危诊断】</Text>
                 <Text strong style={{ color: '#ff4d4f' }}>
-                  {result.conclusion.mustExcludeDiagnosis.disease}
+                  {conclusion.mustExcludeDiagnosis.disease}
                 </Text>
               </Space>
             }
             description={
               <Text>
-                虽然可能性较低（{Math.round(result.conclusion.mustExcludeDiagnosis.confidence * 100)}%），
+                虽然可能性较低（{Math.round(conclusion.mustExcludeDiagnosis.confidence * 100)}%），
                 但一旦漏诊后果严重，需要优先排除
               </Text>
             }
@@ -82,12 +95,12 @@ const DiagnosisResultCard: React.FC<DiagnosisResultCardProps> = ({
         )}
         
         {/* 主要备选诊断 */}
-        {result.conclusion.alternativeDiagnoses.length > 0 && (
+        {conclusion.alternativeDiagnoses && conclusion.alternativeDiagnoses.length > 0 && (
           <div>
             <Text strong>【主要备选诊断】</Text>
             <List
               size="small"
-              dataSource={result.conclusion.alternativeDiagnoses}
+              dataSource={conclusion.alternativeDiagnoses}
               renderItem={(item) => (
                 <List.Item>
                   <Text>{item.disease}</Text>
@@ -128,14 +141,25 @@ export const DiagnosisResultCardDetailed: React.FC<DiagnosisResultCardProps> = (
     console.log('导出报告', result)
   }
 
+  // 防御性检查：确保 result 和 conclusion 存在
+  if (!result || !result.conclusion || !result.conclusion.type) {
+    return (
+      <Card title="诊断结果 - 终点结论包" style={{ marginBottom: 16 }}>
+        <Alert message="诊断结果数据不完整，请稍后重试" type="warning" />
+      </Card>
+    )
+  }
+
+  const { conclusion } = result
+
   return (
     <Card
       title={
         <Space>
           <FileTextOutlined />
           <span>诊断结果 - 终点结论包</span>
-          <Tag color={result.conclusion.type === 'confirmable' ? 'green' : 'orange'}>
-            {result.conclusion.type === 'confirmable' ? '可确证' : '不可确证'}
+          <Tag color={conclusion.type === 'confirmable' ? 'green' : 'orange'}>
+            {conclusion.type === 'confirmable' ? '可确证' : '不可确证'}
           </Tag>
         </Space>
       }
@@ -173,30 +197,32 @@ export const DiagnosisResultCardDetailed: React.FC<DiagnosisResultCardProps> = (
         >
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
             {/* 首要假设 */}
-            <Card
-              size="small"
-              style={{ backgroundColor: '#f0f9ff', borderColor: '#1890ff' }}
-            >
-              <Space direction="vertical" style={{ width: '100%' }} size="small">
-                <Text strong style={{ color: '#1890ff' }}>
-                  首要假设
-                </Text>
-                <Text strong style={{ fontSize: 16 }}>
-                  {result.conclusion.primaryHypothesis.disease}
-                </Text>
-                <Text type="secondary">
-                  可能性：{Math.round(result.conclusion.primaryHypothesis.confidence * 100)}%
-                </Text>
-              </Space>
-            </Card>
+            {conclusion.primaryHypothesis && (
+              <Card
+                size="small"
+                style={{ backgroundColor: '#f0f9ff', borderColor: '#1890ff' }}
+              >
+                <Space direction="vertical" style={{ width: '100%' }} size="small">
+                  <Text strong style={{ color: '#1890ff' }}>
+                    首要假设
+                  </Text>
+                  <Text strong style={{ fontSize: 16 }}>
+                    {conclusion.primaryHypothesis.disease}
+                  </Text>
+                  <Text type="secondary">
+                    可能性：{Math.round(conclusion.primaryHypothesis.confidence * 100)}%
+                  </Text>
+                </Space>
+              </Card>
+            )}
 
             {/* 主要备选诊断 */}
-            {result.conclusion.alternativeDiagnoses.length > 0 && (
+            {conclusion.alternativeDiagnoses && conclusion.alternativeDiagnoses.length > 0 && (
               <div>
                 <Text strong>主要备选诊断：</Text>
                 <List
                   size="small"
-                  dataSource={result.conclusion.alternativeDiagnoses}
+                  dataSource={conclusion.alternativeDiagnoses}
                   renderItem={(item) => (
                     <List.Item>
                       <Text>{item.disease}</Text>
@@ -220,13 +246,13 @@ export const DiagnosisResultCardDetailed: React.FC<DiagnosisResultCardProps> = (
           }
           key="2"
         >
-          {result.conclusion.mustExcludeDiagnosis ? (
+          {conclusion.mustExcludeDiagnosis ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               <Alert
                 message={
                   <Space>
                     <Text strong style={{ color: '#ff4d4f', fontSize: 16 }}>
-                      {result.conclusion.mustExcludeDiagnosis.disease}
+                      {conclusion.mustExcludeDiagnosis.disease}
                     </Text>
                     <Tag color="red">必须排除</Tag>
                   </Space>
@@ -234,7 +260,7 @@ export const DiagnosisResultCardDetailed: React.FC<DiagnosisResultCardProps> = (
                 description={
                   <Space direction="vertical" size="small" style={{ width: '100%' }}>
                     <Text>
-                      可能性：{Math.round(result.conclusion.mustExcludeDiagnosis.confidence * 100)}%
+                      可能性：{Math.round(conclusion.mustExcludeDiagnosis.confidence * 100)}%
                     </Text>
                     <Text>
                       虽然可能性较低，但一旦漏诊后果严重，需要优先排除
@@ -278,7 +304,7 @@ export const DiagnosisResultCardDetailed: React.FC<DiagnosisResultCardProps> = (
         >
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
             {/* 阳性证据 */}
-            {result.keyEvidence.positiveEvidence.length > 0 && (
+            {result.keyEvidence && result.keyEvidence.positiveEvidence && result.keyEvidence.positiveEvidence.length > 0 && (
               <div>
                 <Text strong style={{ color: '#52c41a' }}>支持证据（阳性）：</Text>
                 <List
@@ -294,7 +320,7 @@ export const DiagnosisResultCardDetailed: React.FC<DiagnosisResultCardProps> = (
             )}
 
             {/* 阴性证据 */}
-            {result.keyEvidence.negativeEvidence.length > 0 && (
+            {result.keyEvidence && result.keyEvidence.negativeEvidence && result.keyEvidence.negativeEvidence.length > 0 && (
               <div>
                 <Text strong style={{ color: '#1890ff' }}>排除证据（阴性）：</Text>
                 <List
@@ -322,15 +348,17 @@ export const DiagnosisResultCardDetailed: React.FC<DiagnosisResultCardProps> = (
         >
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
             {/* 立即行动 */}
-            <Alert
-              message="立即行动"
-              description={result.actionAndFollowUp.immediateAction}
-              type="warning"
-              showIcon
-            />
+            {result.actionAndFollowUp && result.actionAndFollowUp.immediateAction && (
+              <Alert
+                message="立即行动"
+                description={result.actionAndFollowUp.immediateAction}
+                type="warning"
+                showIcon
+              />
+            )}
 
             {/* 复评时间窗 */}
-            {result.actionAndFollowUp.reviewTimeWindow && (
+            {result.actionAndFollowUp && result.actionAndFollowUp.reviewTimeWindow && (
               <div>
                 <Text strong>复评时间窗：</Text>
                 <Tag color="blue">{result.actionAndFollowUp.reviewTimeWindow}</Tag>
@@ -338,7 +366,7 @@ export const DiagnosisResultCardDetailed: React.FC<DiagnosisResultCardProps> = (
             )}
 
             {/* 升级触发条件 */}
-            {result.actionAndFollowUp.upgradeTriggerConditions.length > 0 && (
+            {result.actionAndFollowUp && result.actionAndFollowUp.upgradeTriggerConditions && result.actionAndFollowUp.upgradeTriggerConditions.length > 0 && (
               <div>
                 <Text strong>升级触发条件（出现以下情况需提前复评或立即升级）：</Text>
                 <List

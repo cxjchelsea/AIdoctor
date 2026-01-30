@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { diagnosisApi } from '@/services/diagnosisApi'
+import { dialogApi, type InformationGaps } from '@/services/dialogApi'
 import type {
   DiagnosisRequest,
   DiagnosisStatus,
@@ -43,8 +44,10 @@ interface DiagnosisState {
     severity?: number
     frequency?: string
     location?: string
+    trigger?: string
     accompanyingSymptoms?: string[]
   }
+  fieldConfig: InformationGaps | null // 字段配置（从后端获取）
 
   // Actions
   setWorkMode: (workMode: 'wellness_mode' | 'clinical_mode', cdpId?: string) => void
@@ -55,6 +58,7 @@ interface DiagnosisState {
   resetDiagnosis: () => void
   addSystemMessage: (content: string) => void
   performHealthAssessment: (userInput: string) => Promise<void>
+  fetchFieldConfig: () => Promise<void> // 获取字段配置
 }
 
 export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
@@ -68,6 +72,7 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
   cdpId: undefined,
   healthAssessmentDone: false,
   collectedInfo: {},
+  fieldConfig: null,
 
   startDiagnosis: async (request) => {
     try {
@@ -360,6 +365,10 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
             if (firstSymptom.frequency) {
               updatedCollectedInfo.frequency = firstSymptom.frequency
             }
+            // 提取诱因
+            if (firstSymptom.trigger) {
+              updatedCollectedInfo.trigger = firstSymptom.trigger
+            }
           }
         }
         
@@ -387,6 +396,9 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
               }
               if (firstSymptom.frequency && !updatedCollectedInfo.frequency) {
                 updatedCollectedInfo.frequency = firstSymptom.frequency
+              }
+              if (firstSymptom.trigger && !updatedCollectedInfo.trigger) {
+                updatedCollectedInfo.trigger = firstSymptom.trigger
               }
             }
           }
@@ -437,6 +449,39 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
         // 如果状态是分析中，自动触发分析
         if (data.status === 'analyzing') {
           await get().analyze()
+        } else if (data.status === 'completed') {
+          // 如果状态是已完成，自动获取诊断结果
+          try {
+            const resultResponse = await diagnosisApi.getResult(state.diagnosisId || state.cdpId || '')
+            if (resultResponse.data) {
+              const result = resultResponse.data
+              set({ diagnosisResult: result })
+              
+              // 在对话中添加诊断结果消息
+              const resultMessage: ChatMessage = {
+                id: generateMessageId(),
+                type: 'result',
+                content: '诊断结果',
+                timestamp: new Date(),
+                result: result,
+              }
+              set((state) => ({
+                messages: [...state.messages, resultMessage],
+              }))
+            }
+          } catch (error) {
+            console.error('获取诊断结果失败:', error)
+            // 即使获取失败，也显示一个提示消息
+            const errorMessage: ChatMessage = {
+              id: generateMessageId(),
+              type: 'system',
+              content: '诊断分析已完成，但结果获取失败，请稍后重试。',
+              timestamp: new Date(),
+            }
+            set((state) => ({
+              messages: [...state.messages, errorMessage],
+            }))
+          }
         }
       }
     } catch (error) {
@@ -517,7 +562,20 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
       cdpId: undefined,
       healthAssessmentDone: false,
       collectedInfo: {},
+      fieldConfig: null,
     })
+  },
+
+  fetchFieldConfig: async () => {
+    try {
+      const response = await dialogApi.getFieldConfig()
+      if (response.data?.fieldConfig) {
+        set({ fieldConfig: response.data.fieldConfig })
+      }
+    } catch (error) {
+      console.error('获取字段配置失败:', error)
+      // 如果获取失败，使用默认配置（可选）
+    }
   },
 
   addSystemMessage: (content: string) => {

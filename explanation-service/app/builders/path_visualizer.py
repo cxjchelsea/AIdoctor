@@ -96,7 +96,15 @@ class PathVisualizer:
         
         # 从症状到诊断的路径
         symptoms = patient_state.get("symptoms", [])
-        primary_hypothesis = ddx.get("primary_hypothesis", [])
+        
+        # 兼容处理：ddx可能是列表或字典
+        primary_hypothesis = []
+        if isinstance(ddx, list):
+            primary_hypothesis = ddx[:2]  # 取前2个
+        elif isinstance(ddx, dict):
+            primary_hypothesis = ddx.get("primary_hypothesis", [])
+        else:
+            primary_hypothesis = []
         
         if symptoms and primary_hypothesis:
             symptom_list = symptoms[:3] if isinstance(symptoms, list) else []

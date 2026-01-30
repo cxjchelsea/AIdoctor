@@ -56,7 +56,17 @@ class ConclusionPackageBuilder:
             结论
         """
         ddx = cdp_data.get("ddx", {})
-        primary_hypothesis = ddx.get("primary_hypothesis", [])
+        
+        # 兼容处理：ddx可能是列表或字典
+        primary_hypothesis = []
+        if isinstance(ddx, list):
+            # 如果ddx是列表，直接使用列表（第一个作为主要假设）
+            primary_hypothesis = ddx[:1] if ddx else []
+        elif isinstance(ddx, dict):
+            # 如果ddx是字典，尝试获取primary_hypothesis字段
+            primary_hypothesis = ddx.get("primary_hypothesis", [])
+        else:
+            primary_hypothesis = []
         
         if not primary_hypothesis:
             return {
@@ -106,7 +116,17 @@ class ConclusionPackageBuilder:
             必须排除项状态
         """
         ddx = cdp_data.get("ddx", {})
-        must_exclude = ddx.get("must_exclude", [])
+        
+        # 兼容处理：ddx可能是列表或字典
+        must_exclude = []
+        if isinstance(ddx, list):
+            # 如果ddx是列表，查找status为"excluded"的项
+            must_exclude = [item for item in ddx if isinstance(item, dict) and item.get("status") == "excluded"]
+        elif isinstance(ddx, dict):
+            must_exclude = ddx.get("must_exclude", [])
+        else:
+            must_exclude = []
+        
         risk_assessment = cdp_data.get("risk_assessment", {})
         
         excluded = []

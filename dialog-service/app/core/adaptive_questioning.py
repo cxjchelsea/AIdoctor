@@ -45,9 +45,9 @@ class AdaptiveQuestioningStrategy:
         """
         logger.info(f"生成追问问题: completeness={completeness:.2f}")
         
-        # 如果完整度已经很高，不再追问
-        if completeness >= 0.9:
-            logger.info("信息完整度已足够，无需追问")
+        # 如果完整度已经足够（达到停止追问阈值70%），不再追问
+        if completeness >= 0.7:
+            logger.info("信息完整度已足够（达到停止追问阈值70%），无需追问")
             return None
         
         # 选择最高优先级的信息缺口

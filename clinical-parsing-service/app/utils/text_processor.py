@@ -123,6 +123,40 @@ class TextProcessor:
         提取严重度表达式
         返回: [(严重度表达式, 标准化严重度), ...]
         """
+        import re
+        
+        results = []
+        
+        # 1. 先尝试提取数字分数（0-10分）
+        # 匹配模式：X分、X分痛、大概X分、有X分等
+        severity_score_patterns = [
+            r'(\d+)\s*分',
+            r'大概\s*(\d+)\s*分',
+            r'有\s*(\d+)\s*分',
+            r'(\d+)\s*分\s*痛',
+            r'(\d+)\s*分\s*疼',
+        ]
+        
+        for pattern in severity_score_patterns:
+            match = re.search(pattern, text)
+            if match:
+                try:
+                    score = int(match.group(1))
+                    if 0 <= score <= 10:
+                        # 将数字分数转换为标准化严重度
+                        if score <= 3:
+                            normalized = 'mild'
+                        elif score <= 6:
+                            normalized = 'moderate'
+                        else:
+                            normalized = 'severe'
+                        results.append((match.group(0), normalized))
+                        # 找到数字分数后，优先返回（不再检查关键字）
+                        return results
+                except ValueError:
+                    pass
+        
+        # 2. 如果没有找到数字分数，使用关键字匹配
         severity_mapping = {
             '轻微': 'mild',
             '轻度': 'mild',
@@ -137,7 +171,6 @@ class TextProcessor:
             '非常严重': 'severe',
         }
         
-        results = []
         for expr, normalized in severity_mapping.items():
             if expr in text:
                 results.append((expr, normalized))

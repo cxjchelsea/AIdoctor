@@ -25,6 +25,12 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path, // 不重写路径
       },
+      // 对话服务（脑区B）- 端口8088
+      '/api/v1/dialog': {
+        target: 'http://localhost:8088',
+        changeOrigin: true,
+        rewrite: (path) => path, // 不重写路径
+      },
       // 诊断服务等其他服务 - 端口8084
       '/api': {
         target: 'http://localhost:8084',

@@ -175,15 +175,15 @@
     <build>
         <plugins>
             <!-- Maven编译器插件 - 修复JDK版本兼容性问题 -->
+            <!-- 使用3.8.1版本，兼容JDK 8 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.8.1</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>
-                    <!-- 移除release选项，因为Java 8不支持release标记 -->
                 </configuration>
             </plugin>
             

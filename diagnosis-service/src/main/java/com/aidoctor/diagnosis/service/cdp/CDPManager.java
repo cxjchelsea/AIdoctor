@@ -265,6 +265,19 @@ public class CDPManager {
                 cdp.setExecutionTrace((Map<String, Object>) value);
             }
         }
+        if (updates.containsKey("conclusionPackage")) {
+            // 将conclusionPackage存储到patientState中，以便后续提取
+            Object value = updates.get("conclusionPackage");
+            if (value instanceof Map) {
+                Map<String, Object> patientState = cdp.getPatientState();
+                if (patientState == null) {
+                    patientState = new HashMap<>();
+                }
+                patientState.put("conclusion_package", value);
+                // 必须调用setPatientState来触发序列化，确保结论包被保存到数据库
+                cdp.setPatientState(patientState);
+            }
+        }
     }
 }
 

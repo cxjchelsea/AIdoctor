@@ -10,6 +10,7 @@ import {
   EyeOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons'
+import { useEffect, useMemo } from 'react'
 import { useDiagnosisStore } from '@/stores/diagnosisStore'
 
 const { Text } = Typography
@@ -29,7 +30,14 @@ const DiagnosisInfoPanel: React.FC<DiagnosisInfoPanelProps> = ({
   onOpenStructuredIntake,
   onViewCDP,
 }) => {
-  const { completeness, collectedInfo, status, diagnosisId, resetDiagnosis, workMode, cdpId, messages, healthAssessmentDone } = useDiagnosisStore()
+  const { completeness, collectedInfo, status, diagnosisId, resetDiagnosis, workMode, cdpId, messages, healthAssessmentDone, fieldConfig, fetchFieldConfig } = useDiagnosisStore()
+  
+  // 组件加载时获取字段配置
+  useEffect(() => {
+    if (!fieldConfig && workMode === 'clinical_mode') {
+      fetchFieldConfig()
+    }
+  }, [fieldConfig, workMode, fetchFieldConfig])
   
   // 从消息中获取最新的健康状态评估结果
   const latestAssessment = messages
@@ -37,39 +45,74 @@ const DiagnosisInfoPanel: React.FC<DiagnosisInfoPanelProps> = ({
     .map(msg => msg.assessment)
     .pop()
 
-  // 临床诊疗态的已收集信息列表
-  const clinicalCollectedInfoList = [
-    {
-      label: '主诉',
-      value: collectedInfo.chiefComplaint,
-      collected: !!collectedInfo.chiefComplaint,
-    },
-    {
-      label: '持续时间',
-      value: collectedInfo.duration,
-      collected: !!collectedInfo.duration,
-    },
-    {
-      label: '严重程度',
-      value: collectedInfo.severity ? `${collectedInfo.severity}/10` : undefined,
-      collected: collectedInfo.severity !== undefined,
-    },
-    {
-      label: '频率',
-      value: collectedInfo.frequency,
-      collected: !!collectedInfo.frequency,
-    },
-    {
-      label: '部位',
-      value: collectedInfo.location,
-      collected: !!collectedInfo.location,
-    },
-    {
-      label: '伴随症状',
-      value: collectedInfo.accompanyingSymptoms?.join('、'),
-      collected: !!collectedInfo.accompanyingSymptoms?.length,
-    },
-  ]
+  // 字段名到collectedInfo的映射
+  const fieldToCollectedInfoMap: Record<string, (info: typeof collectedInfo) => { value: any; collected: boolean }> = {
+    chief_complaint: (info) => ({
+      value: info.chiefComplaint,
+      collected: !!info.chiefComplaint,
+    }),
+    symptom_duration: (info) => ({
+      value: info.duration,
+      collected: !!info.duration,
+    }),
+    symptom_trigger: (info) => ({
+      value: info.trigger,
+      collected: !!info.trigger,
+    }),
+    symptom_severity: (info) => ({
+      value: info.severity ? `${info.severity}/10` : undefined,
+      collected: info.severity !== undefined,
+    }),
+    symptom_location: (info) => ({
+      value: info.location,
+      collected: !!info.location,
+    }),
+    symptom_frequency: (info) => ({
+      value: info.frequency,
+      collected: !!info.frequency,
+    }),
+    accompanying_symptoms: (info) => ({
+      value: info.accompanyingSymptoms?.join('、'),
+      collected: !!info.accompanyingSymptoms?.length,
+    }),
+  }
+
+  // 根据字段配置动态生成临床诊疗态的已收集信息列表
+  const clinicalCollectedInfoList = useMemo(() => {
+    if (!fieldConfig) {
+      // 如果还没有获取到配置，返回空数组或默认列表
+      return []
+    }
+    
+    // 合并所有字段（必填 + 重要 + 可选），按优先级排序
+    const allFields = [
+      ...fieldConfig.required.map(f => ({ ...f, level: 'required' as const })),
+      ...fieldConfig.important.map(f => ({ ...f, level: 'important' as const })),
+      ...fieldConfig.optional.map(f => ({ ...f, level: 'optional' as const })),
+    ]
+    
+    return allFields.map(field => {
+      const mapper = fieldToCollectedInfoMap[field.field]
+      if (mapper) {
+        const { value, collected } = mapper(collectedInfo)
+        return {
+          label: field.description,
+          value,
+          collected,
+          level: field.level,
+          field: field.field,
+        }
+      }
+      // 如果字段没有映射，返回默认值
+      return {
+        label: field.description,
+        value: undefined,
+        collected: false,
+        level: field.level,
+        field: field.field,
+      }
+    })
+  }, [fieldConfig, collectedInfo])
 
   // 健康管理态的已收集信息列表（从wellnessPlan.profile中提取）
   const wellnessProfile = latestAssessment?.wellnessPlan?.profile || {}
@@ -272,6 +315,20 @@ const DiagnosisInfoPanel: React.FC<DiagnosisInfoPanelProps> = ({
         return 'green'
       default:
         return 'default'
+    }
+  }
+
+  // 获取信息缺口分级标签配置
+  const getFieldLevelTag = (level?: 'required' | 'important' | 'optional') => {
+    switch (level) {
+      case 'required':
+        return { color: 'red', text: '必填' }
+      case 'important':
+        return { color: 'orange', text: '重要' }
+      case 'optional':
+        return { color: 'blue', text: '可选' }
+      default:
+        return { color: 'default', text: '未知' }
     }
   }
 
@@ -507,19 +564,27 @@ const DiagnosisInfoPanel: React.FC<DiagnosisInfoPanelProps> = ({
           <List
             size="small"
             dataSource={collectedInfoList}
-            renderItem={(item) => (
-              <List.Item>
-                {item.collected ? (
-                  <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />
-                ) : (
-                  <ClockCircleOutlined style={{ color: '#faad14', marginRight: 8 }} />
-                )}
-                <Text delete={!item.collected}>{item.label}</Text>
-                {item.collected && item.value && (
-                  <Text type="secondary">：{item.value}</Text>
-                )}
-              </List.Item>
-            )}
+            renderItem={(item) => {
+              const levelTag = getFieldLevelTag(item.level)
+              return (
+                <List.Item>
+                  <Space>
+                    {item.collected ? (
+                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                    ) : (
+                      <ClockCircleOutlined style={{ color: '#faad14' }} />
+                    )}
+                    <Text delete={!item.collected}>{item.label}</Text>
+                    <Tag color={levelTag.color} size="small">
+                      {levelTag.text}
+                    </Tag>
+                    {item.collected && item.value && (
+                      <Text type="secondary">：{item.value}</Text>
+                    )}
+                  </Space>
+                </List.Item>
+              )
+            }}
           />
         </Card>
       )}

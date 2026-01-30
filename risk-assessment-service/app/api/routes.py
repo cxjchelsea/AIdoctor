@@ -22,7 +22,16 @@ async def assess_risk(request: RiskAssessmentRequest):
     """
     风险评估
     """
-    result = risk_assessment_engine.assess_risk(request.cdp)
+    # 如果cdp为空，尝试从其他字段构建
+    cdp = request.cdp
+    if not cdp or len(cdp) == 0:
+        cdp = {
+            "id": getattr(request, "cdpId", ""),
+            "patient_state": request.patient_state,
+            "ddx": request.ddx
+        }
+    
+    result = risk_assessment_engine.assess_risk(cdp)
     return RiskAssessmentResponse(**result)
 
 
@@ -61,3 +70,22 @@ async def build_conclusion_package(request: dict):
     )
     return result
 
+
+@router.post("/risk/assess-final", response_model=RiskAssessmentResponse)
+async def assess_final_risk(request: dict):
+    """
+    最终风险评估
+    在诊断流程结束时进行最终风险评估
+    """
+    cdp = request.get("cdp", {})
+    if not cdp:
+        # 如果请求中没有cdp字段，尝试从其他字段构建
+        cdp = {
+            "id": request.get("cdpId", ""),
+            "patient_state": request.get("patient_state", {}),
+            "ddx": request.get("ddx", []),
+            "management_plan": request.get("management_plan", request.get("managementPlan", []))
+        }
+    
+    result = risk_assessment_engine.assess_risk(cdp)
+    return RiskAssessmentResponse(**result)

@@ -308,6 +308,22 @@ class DialogService:
             logger.error(f"识别信息缺口失败: {str(e)}", exc_info=True)
             raise BusinessException(1201, f"信息缺口识别失败: {str(e)}")
     
+    async def get_field_config(self) -> Dict[str, Any]:
+        """
+        获取字段配置（用于前端展示）
+        
+        Returns:
+            包含所有字段配置的字典
+        """
+        try:
+            field_config = self.gap_identifier.get_field_config()
+            return {
+                "fieldConfig": field_config
+            }
+        except Exception as e:
+            logger.error(f"获取字段配置失败: {str(e)}", exc_info=True)
+            raise BusinessException(1207, f"获取字段配置失败: {str(e)}")
+    
     async def handle_websocket_message(self, cdp_id: str, message: str) -> Dict[str, Any]:
         """处理WebSocket消息"""
         try:

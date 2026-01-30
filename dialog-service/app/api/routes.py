@@ -8,9 +8,11 @@ from app.models.request import QuestionRequest, UserInputRequest, IdentifyGapsRe
 from app.models.response import (
     QuestionResponse,
     UnderstandingResponse,
-    IdentifyGapsResponse
+    IdentifyGapsResponse,
+    FieldConfigResponse
 )
 from app.services.dialog_service import DialogService
+from app.utils.response import success_response
 
 router = APIRouter()
 dialog_service = DialogService()
@@ -47,6 +49,19 @@ async def identify_gaps(request: IdentifyGapsRequest) -> IdentifyGapsResponse:
     """
     result = await dialog_service.identify_gaps(request)
     return IdentifyGapsResponse(**result)
+
+
+@router.get("/field-config")
+async def get_field_config():
+    """
+    获取字段配置接口
+    
+    返回所有字段配置（必填/重要/可选），用于前端动态生成信息收集列表
+    """
+    result = await dialog_service.get_field_config()
+    # 将结果转换为Pydantic模型，然后序列化为字典
+    field_config_response = FieldConfigResponse(**result)
+    return success_response(field_config_response.dict())
 
 
 @router.post("/design-routing-path")

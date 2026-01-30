@@ -59,3 +59,7 @@ class IdentifyGapsResponse(BaseModel):
     informationGaps: InformationGaps
     completeness: float
 
+
+class FieldConfigResponse(BaseModel):
+    """字段配置响应"""
+    fieldConfig: InformationGaps
