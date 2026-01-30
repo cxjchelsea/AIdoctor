@@ -70,6 +70,9 @@ public class ExaminationRecord {
     @Column(name = "interpretation_result", columnDefinition = "json")
     private Map<String, Object> interpretationResult;
     
+    @Column(name = "ocr_status", length = 32)
+    private String ocrStatus;  // OCR识别状态：pending/completed/failed
+    
     @Column(name = "examination_date")
     private LocalDate examinationDate;
     
