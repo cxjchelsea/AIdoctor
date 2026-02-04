@@ -262,6 +262,14 @@ export const diagnosisApi = {
     return response.data
   },
 
+  // 启动健康筛查流程（A路径，A1-A5）
+  startWellnessScreening: async (cdpId: string): Promise<ApiResponse<DiagnosisResponse>> => {
+    const response = await apiClient.post<ApiResponse<DiagnosisResponse>>(
+      `/diagnosis/${cdpId}/wellness-screening/start`
+    )
+    return response.data
+  },
+
   // 回答追问
   answer: async (
     diagnosisId: string,

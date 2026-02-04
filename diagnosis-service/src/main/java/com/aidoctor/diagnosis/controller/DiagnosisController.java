@@ -98,5 +98,21 @@ public class DiagnosisController {
         DiagnosisResponse response = diagnosisOrchestrationService.continueDiagnosis(answer);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+    
+    /**
+     * 启动健康筛查流程（A路径，A1-A5）
+     * POST /api/v1/diagnosis/{cdpId}/wellness-screening/start
+     * 
+     * 此接口应该在健康状态判定完成后，由前端异步调用
+     * 避免阻塞初始响应，提升用户体验
+     */
+    @PostMapping("/{cdpId}/wellness-screening/start")
+    public ResponseEntity<ApiResponse<DiagnosisResponse>> startWellnessScreening(
+            @PathVariable String cdpId) {
+        log.info("启动健康筛查流程请求: cdpId={}", cdpId);
+        
+        DiagnosisResponse response = diagnosisOrchestrationService.startWellnessScreening(cdpId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 }
 

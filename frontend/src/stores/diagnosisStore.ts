@@ -702,8 +702,11 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
         messages: [...state.messages, assessmentMessage],
       }))
 
-      // 如果是健康管理态，显示健康管理计划
-      if (data.workMode === 'wellness_mode' && data.wellnessPlan) {
+      // 如果是健康管理态，异步启动健康筛查流程（A1-A5）
+      if (data.workMode === 'wellness_mode') {
+        // 检查是否已经完成健康筛查流程
+        if (data.status === 'wellness_mode' && data.wellnessPlan) {
+          // 已经完成，显示健康管理计划
         const wellnessMessage: ChatMessage = {
           id: generateMessageId(),
           type: 'system',
@@ -713,6 +716,84 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
         set((state) => ({
           messages: [...state.messages, wellnessMessage],
         }))
+        } else if (data.status === 'wellness_mode_pending') {
+          // 需要启动健康筛查流程，异步执行
+          const loadingMessage: ChatMessage = {
+            id: generateMessageId(),
+            type: 'system',
+            content: '正在执行健康筛查流程，请稍候...',
+            timestamp: new Date(),
+          }
+          set((state) => ({
+            messages: [...state.messages, loadingMessage],
+          }))
+          
+          // 异步启动健康筛查流程
+          diagnosisApi.startWellnessScreening(cdpId)
+            .then((screeningResponse) => {
+              const screeningData = screeningResponse.data
+              
+              // 更新状态
+              set({
+                workMode: screeningData.workMode || 'wellness_mode',
+                cdpId: screeningData.cdpId || cdpId,
+                completeness: screeningData.completeness || 0,
+              })
+              
+              // 移除加载消息，添加完成消息
+              set((state) => {
+                const filteredMessages = state.messages.filter(msg => msg.id !== loadingMessage.id)
+                const completeMessage: ChatMessage = {
+                  id: generateMessageId(),
+                  type: 'system',
+                  content: '健康筛查流程已完成，已为您生成个性化健康管理计划。',
+                  timestamp: new Date(),
+                }
+                return {
+                  messages: [...filteredMessages, completeMessage],
+                }
+              })
+              
+              // 如果有健康管理计划，添加到消息中
+              if (screeningData.wellnessPlan) {
+                const wellnessMessage: ChatMessage = {
+                  id: generateMessageId(),
+                  type: 'assessment',
+                  content: '健康管理计划',
+                  timestamp: new Date(),
+                  assessment: {
+                    needsClinicalMode: false,
+                    workMode: 'wellness_mode',
+                    riskLevel: screeningData.riskLevel || 'L4',
+                    assessmentReason: screeningData.assessmentReason || '健康筛查流程已完成',
+                    redFlags: screeningData.redFlags || [],
+                    cdpId: screeningData.cdpId || cdpId,
+                    wellnessPlan: screeningData.wellnessPlan,
+                    entryAssessment: screeningData.entryAssessment,
+                  },
+                }
+                set((state) => ({
+                  messages: [...state.messages, wellnessMessage],
+                }))
+              }
+            })
+            .catch((error) => {
+              console.error('健康筛查流程启动失败:', error)
+              // 移除加载消息，添加错误消息
+              set((state) => {
+                const filteredMessages = state.messages.filter(msg => msg.id !== loadingMessage.id)
+                const errorMessage: ChatMessage = {
+                  id: generateMessageId(),
+                  type: 'system',
+                  content: '健康筛查流程启动失败，请稍后重试。',
+                  timestamp: new Date(),
+                }
+                return {
+                  messages: [...filteredMessages, errorMessage],
+                }
+              })
+            })
+        }
       }
 
       // 如果有问题，添加问题消息（支持 nextAction 和 question 两种格式）

@@ -16,7 +16,7 @@ export default defineConfig({
   server: {
     port: 3001,
     proxy: {
-      // 执行追踪服务 - 端口8093
+      // 执行追踪服务 - 端口8093（必须放在前面，优先匹配）
       '/api/v1/trace': {
         target: 'http://localhost:8093',
         changeOrigin: true,
@@ -27,6 +27,12 @@ export default defineConfig({
         target: 'ws://localhost:8093',
         ws: true,
         changeOrigin: true,
+      },
+      // 知识库管理服务 - 端口8094（匹配其他 /api/v1 路径）
+      '/api/v1': {
+        target: 'http://localhost:8094',
+        changeOrigin: true,
+        rewrite: (path) => path,
       },
     },
   },

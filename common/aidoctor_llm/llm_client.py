@@ -187,18 +187,41 @@ class LangChainLLMClient:
                     f"prompt_length={len(prompt)}"
                 )
             
-            # 异步调用LLM
-            if hasattr(self.llm, 'apredict'):
-                result = await self.llm.apredict(prompt, **kwargs)
+            # 异步调用LLM（添加超时控制）
+            # 优先使用新的 ainvoke API（LangChain 0.2.0+）
+            if hasattr(self.llm, 'ainvoke'):
+                result = await asyncio.wait_for(
+                    self.llm.ainvoke(prompt, **kwargs),
+                    timeout=self.config.timeout
+                )
+                # ainvoke 返回的是 AIMessage 对象，需要提取 content
+                if hasattr(result, 'content'):
+                    result = result.content
+                elif isinstance(result, str):
+                    pass  # 已经是字符串
+                else:
+                    result = str(result)
+            elif hasattr(self.llm, 'apredict'):
+                # 兼容旧版本（已弃用）
+                result = await asyncio.wait_for(
+                    self.llm.apredict(prompt, **kwargs),
+                    timeout=self.config.timeout
+                )
             elif hasattr(self.llm, 'agenerate'):
-                result = await self.llm.agenerate([prompt], **kwargs)
+                result = await asyncio.wait_for(
+                    self.llm.agenerate([prompt], **kwargs),
+                    timeout=self.config.timeout
+                )
                 result = result.generations[0][0].text
             else:
-                # 同步调用（在线程池中执行）
+                # 同步调用（在线程池中执行，添加超时控制）
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(
+                result = await asyncio.wait_for(
+                    loop.run_in_executor(
                     None,
                     lambda: self.llm.predict(prompt, **kwargs)
+                    ),
+                    timeout=self.config.timeout
                 )
             
             return result

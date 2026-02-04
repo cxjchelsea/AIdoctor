@@ -5,7 +5,7 @@ import type { ApiResponse } from '@/types/diagnosis'
 // 创建axios实例
 const apiClient: AxiosInstance = axios.create({
   baseURL: '/api/v1',
-  timeout: 30000,
+  timeout: 60000, // 增加到60秒，因为健康筛查流程（A1-A5）可能需要较长时间
   headers: {
     'Content-Type': 'application/json',
   },

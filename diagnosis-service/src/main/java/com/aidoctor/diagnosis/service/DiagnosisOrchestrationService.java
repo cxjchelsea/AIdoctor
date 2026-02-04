@@ -185,22 +185,9 @@ public class DiagnosisOrchestrationService {
                     .timestamp(System.currentTimeMillis())
                     .build();
             } else {
-                // 健康管理态：执行健康筛查流程
-                cdp = wellnessScreeningOrchestrator.executeWellnessScreening(cdp);
-                
-                // 从wellnessPlan中提取完整度（A2步骤计算并存储的）
-                Double completeness = null;
-                if (cdp.getWellnessPlan() != null) {
-                    Object completenessObj = cdp.getWellnessPlan().get("completeness");
-                    if (completenessObj != null) {
-                        // wellnessPlan中存储的是0-1的浮点数，需要转换为0-100
-                        if (completenessObj instanceof Number) {
-                            double completenessValue = ((Number) completenessObj).doubleValue();
-                            completeness = completenessValue * 100; // 转换为0-100
-                            log.debug("从wellnessPlan提取完整度: {} -> {}", completenessValue, completeness);
-                        }
-                    }
-                }
+                // 健康管理态：不立即执行健康筛查流程，只返回健康状态判定结果
+                // 健康筛查流程（A1-A5）应该由前端异步调用单独的接口来启动
+                // 这样可以避免阻塞初始响应，提升用户体验
                 
                 // 提取健康状态判定相关信息
                 String assessmentReason = (String) assessmentResult.getOrDefault("assessmentReason", "症状在正常范围，建议健康管理");
@@ -210,19 +197,24 @@ public class DiagnosisOrchestrationService {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> entryAssessment = (Map<String, Object>) assessmentResult.get("entryAssessment");
                 
+                // 提取patientState摘要
+                Map<String, Object> patientStateSummary = extractPatientStateSummary(cdp);
+                
                 response = DiagnosisResponse.builder()
                     .code(200)
                     .message("success")
                     .diagnosisId(cdp.getId())
-                    .status("wellness_mode")
+                    .status("wellness_mode_pending") // 状态：健康管理态，等待启动健康筛查流程
                     .cdpId(cdp.getId())
                     .workMode("wellness_mode")
-                    .completeness(completeness) // 设置完整度
-                    .wellnessPlan(cdp.getWellnessPlan())
+                    .completeness(0.0) // 初始完整度为0，健康筛查流程执行后会更新
+                    .wellnessPlan(null) // 健康筛查流程完成后才会有wellnessPlan
                     .assessmentReason(assessmentReason)
                     .riskLevel(riskLevel)
                     .redFlags(redFlags)
                     .entryAssessment(entryAssessment)
+                    .patientState(patientStateSummary.isEmpty() ? null : patientStateSummary)
+                    .nextAction(buildNextAction("info", "健康状态判定完成，可以开始健康筛查流程"))
                     .timestamp(System.currentTimeMillis())
                     .build();
             }
@@ -235,6 +227,104 @@ public class DiagnosisOrchestrationService {
         }
         
         return response;
+    }
+    
+    /**
+     * 启动健康筛查流程（A路径，A1-A5）
+     * 
+     * 此方法应该在健康状态判定完成后，由前端异步调用
+     * 避免阻塞初始响应，提升用户体验
+     * 
+     * @param cdpId CDP ID
+     * @return 诊断响应
+     */
+    @Transactional
+    public DiagnosisResponse startWellnessScreening(String cdpId) {
+        log.info("启动健康筛查流程: cdpId={}", cdpId);
+        
+        // 设置追踪上下文
+        TraceContext.setCdpId(cdpId);
+        
+        try {
+            // 1. 获取CDP
+            Optional<CDP> cdpOpt = cdpManager.getCDPById(cdpId);
+            if (!cdpOpt.isPresent()) {
+                throw new RuntimeException("CDP不存在: " + cdpId);
+            }
+            CDP cdp = cdpOpt.get();
+            
+            // 2. 验证工作态
+            String workMode = getWorkMode(cdp);
+            if (workMode == null || !"wellness_mode".equals(workMode)) {
+                throw new RuntimeException("当前工作态不是健康管理态，无法启动健康筛查流程: workMode=" + workMode);
+            }
+            
+            // 3. 执行健康筛查流程（A1-A5）
+            cdp = wellnessScreeningOrchestrator.executeWellnessScreening(cdp);
+            
+            // 4. 从wellnessPlan中提取完整度（A2步骤计算并存储的）
+            Double completeness = null;
+            if (cdp.getWellnessPlan() != null) {
+                Object completenessObj = cdp.getWellnessPlan().get("completeness");
+                if (completenessObj != null) {
+                    // wellnessPlan中存储的是0-1的浮点数，需要转换为0-100
+                    if (completenessObj instanceof Number) {
+                        double completenessValue = ((Number) completenessObj).doubleValue();
+                        completeness = completenessValue * 100; // 转换为0-100
+                        log.debug("从wellnessPlan提取完整度: {} -> {}", completenessValue, completeness);
+                    }
+                }
+            }
+            
+            // 5. 提取健康状态判定相关信息
+            Map<String, Object> healthStateAssessment = cdp.getHealthStateAssessment();
+            String assessmentReason = "健康筛查流程已完成";
+            String riskLevel = "L4";
+            List<String> redFlags = new ArrayList<>();
+            Map<String, Object> entryAssessment = null;
+            
+            if (healthStateAssessment != null) {
+                assessmentReason = (String) healthStateAssessment.getOrDefault("assessmentReason", assessmentReason);
+                riskLevel = (String) healthStateAssessment.getOrDefault("riskLevel", riskLevel);
+                @SuppressWarnings("unchecked")
+                List<String> flags = (List<String>) healthStateAssessment.getOrDefault("redFlags", new ArrayList<>());
+                redFlags = flags != null ? flags : new ArrayList<>();
+                @SuppressWarnings("unchecked")
+                Map<String, Object> entry = (Map<String, Object>) healthStateAssessment.get("entryAssessment");
+                entryAssessment = entry;
+            }
+            
+            // 6. 提取patientState摘要
+            Map<String, Object> patientStateSummary = extractPatientStateSummary(cdp);
+            
+            // 7. 构建响应
+            DiagnosisResponse response = DiagnosisResponse.builder()
+                .code(200)
+                .message("success")
+                .diagnosisId(cdp.getId())
+                .status("wellness_mode") // 状态：健康管理态，健康筛查流程已完成
+                .cdpId(cdp.getId())
+                .workMode("wellness_mode")
+                .completeness(completeness != null ? completeness : 0.0)
+                .wellnessPlan(cdp.getWellnessPlan())
+                .assessmentReason(assessmentReason)
+                .riskLevel(riskLevel)
+                .redFlags(redFlags)
+                .entryAssessment(entryAssessment)
+                .patientState(patientStateSummary.isEmpty() ? null : patientStateSummary)
+                .timestamp(System.currentTimeMillis())
+                .build();
+            
+            log.info("健康筛查流程完成: cdpId={}, completeness={}", cdpId, completeness);
+            return response;
+            
+        } catch (Exception e) {
+            log.error("健康筛查流程执行失败: cdpId={}", cdpId, e);
+            throw new RuntimeException("健康筛查流程执行失败", e);
+        } finally {
+            // 清理追踪上下文
+            TraceContext.clear();
+        }
     }
     
     /**

@@ -1,0 +1,22 @@
+
+(base) E:\pycharmProject\AIdoctor\health-state-assessment-service>conda.bat activate
+另一个程序正在使用此文件，进程无法访问。
+系统找不到文件 C:\Users\陈雪娇\AppData\Local\Temp\__conda_tmp_23493.txt。
+Failed to run 'conda activate'.
+C:\Users\陈雪娇\AppData\Local\Temp\__conda_tmp_23493.txt
+正在启动服务...
+已加载环境变量文件: E:\pycharmProject\AIdoctor\.env
+[2026-02-03 16:49:26] [WARNING] [health-state-assessment-service] [ner_model.py:16] - Transformers库未安装，NER模型功能 将不可用
+[2026-02-03 16:49:26] [INFO] [health-state-assessment-service] [main.py:59] - 健康状态判定服务启动中...
+[2026-02-03 16:49:26] [INFO] [health-state-assessment-service] [main.py:126] - 健康状态判定服务启动完成
+[32mINFO[0m:     Started server process [[36m19480[0m]
+[32mINFO[0m:     Waiting for application startup.
+[2026-02-03 16:49:26] [INFO] [health-state-assessment-service] [main.py:41] - 系统资源监控任务已启动
+[32mINFO[0m:     Application startup complete.
+[32mINFO[0m:     Uvicorn running on [1mhttp://0.0.0.0:8081[0m (Press CTRL+C to quit)
+[2026-02-03 16:54:46] [INFO] [health-state-assessment-service] [routes.py:42] - 收到健康状态判定请求: userId=user-1
+[2026-02-03 16:54:46] [INFO] [health-state-assessment-service] [intent_recognizer.py:50] - LLM客户端初始化成功
+[2026-02-03 16:54:46] [INFO] [health-state-assessment-service] [entity_extractor.py:61] - 实体提取器LLM客户端初始化成功
+[2026-02-03 16:54:46] [INFO] [health-state-assessment-service] [clinical_parser_client.py:30] - 临床解析服务客户端初始化: base_url=http://localhost:8082, timeout=10
+[2026-02-03 16:55:03] [INFO] [health-state-assessment-service] [entity_extractor.py:142] - 使用降级方案进行实体提取
+[2026-02-03 16:55:03] [INFO] [health-state-assessment-service] [routes.py:55] - 健康状态判定完成: userId=user-1, workMode=wellness_mode, riskLevel=L4, cdpId=cdp_e7cd13742ad742399934e53d2ea3ab45

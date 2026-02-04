@@ -10,7 +10,7 @@ from datetime import datetime
 
 from app.models.request import HealthStateAssessmentRequest
 from app.models.response import HealthStateAssessmentResponse, WellnessPlan, EntryAssessmentResult
-from app.services.entry_assessment import perform_entry_assessment
+from app.services.entry_assessment import perform_entry_assessment_async
 from app.detectors.symptom_severity_detector import assess_symptom_severity, SeverityLevel
 from app.detectors.risk_signal_detector import early_risk_screening, RiskLevel
 from app.detectors.red_flag_detector import detect_red_flags
@@ -71,10 +71,12 @@ class HealthStateAssessmentService:
         user_input_dict = {
             "userInput": request.userInput or "",
             "basicInfo": request.basicInfo or {},
-            "symptoms": request.symptoms or []
+            "symptoms": request.symptoms or [],
+            "userId": request.userId,  # 传递userId用于临床解析服务调用
+            "sessionId": request.cdpId or f"session_{request.userId}"  # 使用cdpId作为sessionId，如果没有则生成
         }
         
-        entry_assessment_result = perform_entry_assessment(user_input_dict)
+        entry_assessment_result = await perform_entry_assessment_async(user_input_dict)
         entry_assessment_data = entry_assessment_result.get("entry_assessment", {})
         path_result = entry_assessment_result.get("path_result", {})
         

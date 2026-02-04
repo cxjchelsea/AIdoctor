@@ -198,8 +198,10 @@
                         </exclude>
                     </excludes>
                     <!-- JVM内存配置（性能优化） -->
+                    <!-- 如果系统内存不足，可以减少内存分配 -->
+                    <!-- 默认：-Xms256m -Xmx512m（最小256MB，最大512MB） -->
                     <jvmArguments>
-                        -Xms256m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+                        -Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
                     </jvmArguments>
                 </configuration>
             </plugin>
