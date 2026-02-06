@@ -2748,7 +2748,382 @@ public class SwaggerConfig {
 
 ---
 
-## 八、诊断引擎服务接口（diagnosis-engine-service）
+## 八、知识查询服务接口（knowledge-query-service）
 
-### 8.1 五引擎融合诊断（更新版）
+> **说明**：knowledge-query-service是知识演化与维护系统的在线层服务，提供只读的知识库查询功能，服务于通道1结构化推理。
+
+### 8.1 知识库查询接口
+
+#### 8.1.1 查询主诉知识图谱
+
+**接口**：`GET /api/v1/knowledge/chief-complaint`
+
+**功能**：查询主诉知识图谱，获取主诉相关的诊断候选、差异点等信息
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| chiefComplaint | String | 是 | 主诉名称 |
+| kgVersion | String | 否 | 知识版本（默认使用当前生产版本） |
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "chiefComplaint": "胸痛",
+    "knowledgeObjects": [
+      {
+        "koId": "KO_001",
+        "koType": "rule",
+        "content": {...},
+        "kgVersion": "v2.1",
+        "provenance": [...]
+      }
+    ],
+    "kgVersion": "v2.1",
+    "source": "knowledge_base"
+  },
+  "timestamp": 1705123456789
+}
+```
+
+#### 8.1.2 查询疾病知识图谱
+
+**接口**：`GET /api/v1/knowledge/disease`
+
+**功能**：查询疾病知识图谱，获取疾病详细信息
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| diseaseCui | String | 是 | 疾病CUI编码 |
+| kgVersion | String | 否 | 知识版本 |
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "diseaseCui": "CUI_001",
+    "knowledgeObjects": [...],
+    "kgVersion": "v2.1",
+    "source": "knowledge_base"
+  },
+  "timestamp": 1705123456789
+}
+```
+
+#### 8.1.3 路径检索验证
+
+**接口**：`POST /api/v1/knowledge/path/retrieve`
+
+**功能**：检索多跳推理路径，用于DR.KNOWS路径验证
+
+**请求体**：
+```json
+{
+  "symptomCuis": ["CUI_001", "CUI_002"],
+  "maxHops": 4,
+  "kgVersion": "v2.1"
+}
+```
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "paths": [
+      {
+        "nodes": [...],
+        "relationships": [...],
+        "length": 3,
+        "kgVersion": "v2.1"
+      }
+    ],
+    "kgVersion": "v2.1"
+  },
+  "timestamp": 1705123456789
+}
+```
+
+#### 8.1.4 验证知识库候选
+
+**接口**：`POST /api/v1/knowledge/path/validate`
+
+**功能**：验证知识库候选是否有路径支持
+
+**请求体**：
+```json
+{
+  "kbCandidates": ["CUI_001", "CUI_002"],
+  "paths": [...]
+}
+```
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "validated": ["CUI_001"],
+    "unvalidated": ["CUI_002"],
+    "validationRate": 0.5
+  },
+  "timestamp": 1705123456789
+}
+```
+
+#### 8.1.5 获取当前生产版本
+
+**接口**：`GET /api/v1/knowledge/version/current`
+
+**功能**：获取当前生产环境的知识版本
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "kgVersion": "v2.1",
+    "releaseId": "v2.1",
+    "status": "active"
+  },
+  "timestamp": 1705123456789
+}
+```
+
+### 8.2 错误码定义
+
+| 错误码 | 说明 | HTTP状态码 |
+|--------|------|-----------|
+| 8001 | 知识版本不存在 | 404 |
+| 8002 | 知识对象不存在 | 404 |
+| 8003 | 路径检索失败 | 500 |
+| 8004 | 知识库查询失败 | 500 |
+
+---
+
+## 九、知识运维服务接口（knowledge-ops-service）
+
+> **说明**：knowledge-ops-service是知识演化与维护系统的离线层服务，负责知识的抽取、验证、冲突处理、发布门禁等。
+
+### 9.1 知识提案接口
+
+#### 9.1.1 提交知识演化提案
+
+**接口**：`POST /api/v1/knowledge/proposal`
+
+**功能**：主Agent或离线任务提交知识演化提案
+
+**请求体**：
+```json
+{
+  "trigger": "知识覆盖缺口",
+  "diff": {
+    "add": [...],
+    "modify": [...],
+    "delete": [...]
+  },
+  "requiredTests": ["core_regression", "sampling_set"],
+  "riskLevel": "medium",
+  "dedupeKey": "knowledge_gap_ICD_I20_0_SYMP_001",
+  "cooldownWindow": 3600,
+  "evidenceSnapshot": "sha256:abc123..."
+}
+```
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "proposalId": "PROP_20260128_001",
+    "status": "pending"
+  },
+  "timestamp": 1705123456789
+}
+```
+
+#### 9.1.2 查询知识提案
+
+**接口**：`GET /api/v1/knowledge/proposal/{proposalId}`
+
+**功能**：查询知识提案详情
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "proposalId": "PROP_20260128_001",
+    "trigger": "知识覆盖缺口",
+    "status": "processing",
+    "riskLevel": "medium",
+    "createdAt": "2026-01-28T10:00:00Z"
+  },
+  "timestamp": 1705123456789
+}
+```
+
+### 9.2 知识对象管理接口
+
+#### 9.2.1 查询知识对象
+
+**接口**：`GET /api/v1/knowledge/object/{koId}`
+
+**功能**：查询知识对象详情（包括Neo4j中的内容和元数据）
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| kgVersion | String | 否 | 知识版本（默认使用当前生产版本） |
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "koId": "KO_001",
+    "koType": "rule",
+    "content": {...},
+    "conceptIds": ["CUI_001"],
+    "provenance": [...],
+    "status": "published",
+    "kgVersion": "v2.1",
+    "impactScope": ["DDx", "workup"],
+    "downstreamBindings": [...]
+  },
+  "timestamp": 1705123456789
+}
+```
+
+### 9.3 版本管理接口
+
+#### 9.3.1 查询版本列表
+
+**接口**：`GET /api/v1/knowledge/version/list`
+
+**功能**：查询所有知识版本列表
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| status | String | 否 | 版本状态（active/deprecated/archived） |
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "versions": [
+      {
+        "releaseId": "v2.1",
+        "status": "active",
+        "isCurrent": true,
+        "createdAt": "2026-01-28T10:00:00Z"
+      },
+      {
+        "releaseId": "v2.0",
+        "status": "deprecated",
+        "isCurrent": false,
+        "createdAt": "2026-01-20T10:00:00Z"
+      }
+    ]
+  },
+  "timestamp": 1705123456789
+}
+```
+
+#### 9.3.2 切换知识版本
+
+**接口**：`POST /api/v1/knowledge/version/switch`
+
+**功能**：切换当前生产版本（需要管理员权限）
+
+**请求体**：
+```json
+{
+  "releaseId": "v2.1",
+  "reason": "新版本发布"
+}
+```
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "releaseId": "v2.1",
+    "status": "active",
+    "isCurrent": true
+  },
+  "timestamp": 1705123456789
+}
+```
+
+### 9.4 发布门禁接口
+
+#### 9.4.1 评估候选发布包
+
+**接口**：`POST /api/v1/knowledge/publish/evaluate`
+
+**功能**：评估候选发布包，通过四道门禁
+
+**请求体**：
+```json
+{
+  "candidateReleaseId": "RELEASE_20260128_001"
+}
+```
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "candidateReleaseId": "RELEASE_20260128_001",
+    "passed": true,
+    "gateResults": {
+      "gate1": {"passed": true},
+      "gate2": {"passed": true},
+      "gate3": {"passed": true, "evaluationResult": {...}},
+      "gate4": {"passed": true, "approvalType": "auto"}
+    }
+  },
+  "timestamp": 1705123456789
+}
+```
+
+### 9.5 错误码定义
+
+| 错误码 | 说明 | HTTP状态码 |
+|--------|------|-----------|
+| 9001 | 知识提案不存在 | 404 |
+| 9002 | 知识提案已存在 | 409 |
+| 9003 | 知识提案处理失败 | 500 |
+| 9004 | 发布门禁未通过 | 400 |
+| 9005 | 版本切换失败 | 500 |
+
+---
+
+## 十、诊断引擎服务接口（diagnosis-engine-service）
+
+### 10.1 五引擎融合诊断（更新版）
 

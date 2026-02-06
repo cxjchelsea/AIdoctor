@@ -155,6 +155,8 @@
 | 5000-5999 | 通用错误（跨服务） | 参数校验/格式/DB/缓存/外部依赖 |
 | 6000-6099 | 并发与幂等（跨服务） | 乐观锁/版本冲突/幂等冲突 |
 | 6100-6199 | 调用治理（跨服务） | 超时/熔断/限流/降级/重试耗尽 |
+| 8000-8999 | knowledge-query-service（知识查询服务） | 知识库查询/路径检索/版本管理 |
+| 9000-9999 | knowledge-ops-service（知识运维服务） | 知识提案/知识对象/发布门禁/版本管理 |
 
 #### diagnosis-service（主Agent服务）错误码（2000-2099）
 
@@ -366,6 +368,66 @@
 | 6104 | 限流触发 | 429 |
 | 6105 | 降级执行（返回默认/空结果） | 200 |
 
+#### knowledge-query-service（知识查询服务）错误码（8000-8999）
+
+| 错误码 | 说明 | HTTP状态码 |
+|--------|------|-----------|
+| 8001 | 知识版本不存在 | 404 |
+| 8002 | 知识对象不存在 | 404 |
+| 8003 | 路径检索失败 | 500 |
+| 8004 | 知识库查询失败 | 500 |
+| 8005 | Neo4j连接失败 | 503 |
+| 8006 | 知识版本查询失败 | 500 |
+| 8007 | 路径验证失败 | 500 |
+| 8008 | 知识对象格式错误 | 500 |
+| 8009 | 版本元数据查询失败 | 500 |
+| 8010 | 当前生产版本获取失败 | 500 |
+
+#### knowledge-ops-service（知识运维服务）错误码（9000-9999）
+
+| 错误码 | 说明 | HTTP状态码 |
+|--------|------|-----------|
+| 9001 | 知识提案不存在 | 404 |
+| 9002 | 知识提案已存在 | 409 |
+| 9003 | 知识提案处理失败 | 500 |
+| 9004 | 发布门禁未通过 | 400 |
+| 9005 | 版本切换失败 | 500 |
+| 9006 | 知识对象创建失败 | 500 |
+| 9007 | 知识对象更新失败 | 500 |
+| 9008 | 知识对象删除失败 | 500 |
+| 9009 | Extractor Agent执行失败 | 500 |
+| 9010 | Verifier Agent执行失败 | 500 |
+| 9011 | Conflict Resolver Agent执行失败 | 500 |
+| 9012 | Release Builder Agent执行失败 | 500 |
+| 9013 | Shadow Evaluator Agent执行失败 | 500 |
+| 9014 | Rollback Monitor Agent执行失败 | 500 |
+| 9015 | 知识抽取失败 | 500 |
+| 9016 | 知识验证失败 | 500 |
+| 9017 | 冲突解决失败 | 500 |
+| 9018 | 候选发布包构建失败 | 500 |
+| 9019 | 影子评测失败 | 500 |
+| 9020 | 发布门禁Gate-1失败（结构合法性） | 400 |
+| 9021 | 发布门禁Gate-2失败（证据可追溯性） | 400 |
+| 9022 | 发布门禁Gate-3失败（回归评测） | 400 |
+| 9023 | 发布门禁Gate-4失败（风险分级审批） | 400 |
+| 9024 | 知识对象状态转换失败 | 400 |
+| 9025 | Sandbox操作失败 | 500 |
+| 9026 | Staging操作失败 | 500 |
+| 9027 | Production操作失败 | 500 |
+| 9028 | 版本发布失败 | 500 |
+| 9029 | 版本回滚失败 | 500 |
+| 9030 | 灰度发布失败 | 500 |
+| 9031 | 知识提案去重键冲突 | 409 |
+| 9032 | 知识提案冷却窗口未过期 | 429 |
+| 9033 | 知识提案节流限制 | 429 |
+| 9034 | 依赖分析失败 | 500 |
+| 9035 | 影响范围评估失败 | 500 |
+| 9036 | 局部回滚失败 | 500 |
+| 9037 | 全局回滚失败 | 500 |
+| 9038 | 监控漂移检测失败 | 500 |
+| 9039 | 评测报告生成失败 | 500 |
+| 9040 | 评测报告验证失败 | 400 |
+
 ---
 
 ## 四、异常类设计
@@ -512,6 +574,182 @@ package com.aidoctor.diagnosis.exception;
 public class OcrRecognitionException extends BusinessException {
     public OcrRecognitionException(String reason) {
         super(4001, String.format("OCR识别失败: %s", reason));
+    }
+}
+```
+
+### 4.6 知识查询服务异常类
+
+```java
+package com.aidoctor.knowledge.exception;
+
+/**
+ * 知识版本不存在异常
+ */
+public class KnowledgeVersionNotFoundException extends BusinessException {
+    public KnowledgeVersionNotFoundException(String kgVersion) {
+        super(8001, String.format("知识版本不存在: %s", kgVersion));
+    }
+}
+
+/**
+ * 知识对象不存在异常
+ */
+public class KnowledgeObjectNotFoundException extends BusinessException {
+    public KnowledgeObjectNotFoundException(String koId) {
+        super(8002, String.format("知识对象不存在: %s", koId));
+    }
+}
+
+/**
+ * 路径检索失败异常
+ */
+public class PathRetrievalException extends BusinessException {
+    public PathRetrievalException(String reason) {
+        super(8003, String.format("路径检索失败: %s", reason));
+    }
+}
+
+/**
+ * 知识库查询失败异常
+ */
+public class KnowledgeQueryException extends BusinessException {
+    public KnowledgeQueryException(String reason) {
+        super(8004, String.format("知识库查询失败: %s", reason));
+    }
+}
+
+/**
+ * Neo4j连接失败异常
+ */
+public class Neo4jConnectionException extends BusinessException {
+    public Neo4jConnectionException(String reason) {
+        super(8005, String.format("Neo4j连接失败: %s", reason));
+    }
+}
+```
+
+### 4.7 知识运维服务异常类
+
+```java
+package com.aidoctor.knowledge.exception;
+
+/**
+ * 知识提案不存在异常
+ */
+public class KnowledgeProposalNotFoundException extends BusinessException {
+    public KnowledgeProposalNotFoundException(String proposalId) {
+        super(9001, String.format("知识提案不存在: %s", proposalId));
+    }
+}
+
+/**
+ * 知识提案已存在异常
+ */
+public class KnowledgeProposalExistsException extends BusinessException {
+    public KnowledgeProposalExistsException(String proposalId) {
+        super(9002, String.format("知识提案已存在: %s", proposalId));
+    }
+}
+
+/**
+ * 知识提案处理失败异常
+ */
+public class KnowledgeProposalProcessException extends BusinessException {
+    public KnowledgeProposalProcessException(String proposalId, String reason) {
+        super(9003, String.format("知识提案处理失败: proposalId=%s, reason=%s", proposalId, reason));
+    }
+}
+
+/**
+ * 发布门禁未通过异常
+ */
+public class PublishGateFailedException extends BusinessException {
+    public PublishGateFailedException(String candidateReleaseId, String gateName, String reason) {
+        super(9004, String.format("发布门禁未通过: candidateReleaseId=%s, gate=%s, reason=%s", 
+            candidateReleaseId, gateName, reason));
+    }
+}
+
+/**
+ * 版本切换失败异常
+ */
+public class VersionSwitchException extends BusinessException {
+    public VersionSwitchException(String releaseId, String reason) {
+        super(9005, String.format("版本切换失败: releaseId=%s, reason=%s", releaseId, reason));
+    }
+}
+
+/**
+ * Extractor Agent执行失败异常
+ */
+public class ExtractorAgentException extends BusinessException {
+    public ExtractorAgentException(String reason) {
+        super(9009, String.format("Extractor Agent执行失败: %s", reason));
+    }
+}
+
+/**
+ * Verifier Agent执行失败异常
+ */
+public class VerifierAgentException extends BusinessException {
+    public VerifierAgentException(String reason) {
+        super(9010, String.format("Verifier Agent执行失败: %s", reason));
+    }
+}
+
+/**
+ * Conflict Resolver Agent执行失败异常
+ */
+public class ConflictResolverAgentException extends BusinessException {
+    public ConflictResolverAgentException(String reason) {
+        super(9011, String.format("Conflict Resolver Agent执行失败: %s", reason));
+    }
+}
+
+/**
+ * Shadow Evaluator Agent执行失败异常
+ */
+public class ShadowEvaluatorAgentException extends BusinessException {
+    public ShadowEvaluatorAgentException(String reason) {
+        super(9013, String.format("Shadow Evaluator Agent执行失败: %s", reason));
+    }
+}
+
+/**
+ * 知识提案去重键冲突异常
+ */
+public class KnowledgeProposalDedupeConflictException extends BusinessException {
+    public KnowledgeProposalDedupeConflictException(String dedupeKey) {
+        super(9031, String.format("知识提案去重键冲突: dedupeKey=%s", dedupeKey));
+    }
+}
+
+/**
+ * 知识提案冷却窗口未过期异常
+ */
+public class KnowledgeProposalCooldownException extends BusinessException {
+    public KnowledgeProposalCooldownException(String dedupeKey, Long remainingSeconds) {
+        super(9032, String.format("知识提案冷却窗口未过期: dedupeKey=%s, 剩余时间=%d秒", 
+            dedupeKey, remainingSeconds));
+    }
+}
+
+/**
+ * 知识提案节流限制异常
+ */
+public class KnowledgeProposalThrottleException extends BusinessException {
+    public KnowledgeProposalThrottleException(String reason) {
+        super(9033, String.format("知识提案节流限制: %s", reason));
+    }
+}
+
+/**
+ * 版本回滚失败异常
+ */
+public class VersionRollbackException extends BusinessException {
+    public VersionRollbackException(String releaseId, String reason) {
+        super(9029, String.format("版本回滚失败: releaseId=%s, reason=%s", releaseId, reason));
     }
 }
 ```
@@ -673,6 +911,19 @@ public class GlobalExceptionHandler {
             if (code == 6104) return HttpStatus.TOO_MANY_REQUESTS;
             if (code == 6105) return HttpStatus.OK;
             return HttpStatus.GATEWAY_TIMEOUT;
+        } else if (code >= 8000 && code < 9000) {
+            // knowledge-query-service错误
+            if (code == 8001 || code == 8002) return HttpStatus.NOT_FOUND;
+            if (code == 8005) return HttpStatus.SERVICE_UNAVAILABLE;
+            return HttpStatus.INTERNAL_SERVER_ERROR;
+        } else if (code >= 9000 && code < 10000) {
+            // knowledge-ops-service错误
+            if (code == 9001) return HttpStatus.NOT_FOUND;
+            if (code == 9002 || code == 9031) return HttpStatus.CONFLICT;
+            if (code == 9004 || code == 9020 || code == 9021 || code == 9022 || 
+                code == 9023 || code == 9024 || code == 9040) return HttpStatus.BAD_REQUEST;
+            if (code == 9032 || code == 9033) return HttpStatus.TOO_MANY_REQUESTS;
+            return HttpStatus.INTERNAL_SERVER_ERROR;
         }
         return HttpStatus.INTERNAL_SERVER_ERROR;
     }
@@ -903,9 +1154,140 @@ log.debug("诊断引擎调用: engine={}, request={}", engineType, request);
 
 ---
 
-## 九、错误处理最佳实践
+## 九、知识演化错误处理特殊说明
 
-### 8.1 异常处理原则
+### 9.1 知识查询服务错误处理
+
+**特点**：
+- 知识查询服务是**在线层服务**，必须保证高可用性
+- 查询失败时，不应阻塞诊断流程，应降级处理
+- 版本不存在时，应fallback到当前生产版本
+
+**错误处理策略**：
+1. **知识版本不存在（8001）**：
+   - 自动fallback到当前生产版本
+   - 记录警告日志
+   - 返回降级结果（使用当前生产版本）
+
+2. **知识对象不存在（8002）**：
+   - 返回空结果，不抛出异常
+   - 记录警告日志
+   - 允许诊断流程继续（可能触发知识演化提案）
+
+3. **路径检索失败（8003）**：
+   - 记录错误日志
+   - 返回空路径列表
+   - 允许诊断流程继续（可能触发知识演化提案）
+
+4. **Neo4j连接失败（8005）**：
+   - 记录错误日志
+   - 返回服务不可用错误（503）
+   - 触发熔断机制
+   - 诊断流程降级（不使用知识库，仅使用规则引擎）
+
+### 9.2 知识运维服务错误处理
+
+**特点**：
+- 知识运维服务是**离线层服务**，异步运行
+- 错误不应影响在线诊断流程
+- 需要完整的错误追溯和审计
+
+**错误处理策略**：
+
+1. **知识提案处理失败（9003）**：
+   - 记录详细错误日志（包含proposalId、失败原因、堆栈信息）
+   - 更新提案状态为"failed"
+   - 发送告警通知（可选）
+   - 不阻塞其他提案的处理
+
+2. **发布门禁未通过（9004）**：
+   - 记录门禁失败详情（包含gate名称、失败原因）
+   - 更新candidate_release状态为"rejected"
+   - 生成失败报告
+   - 通知相关人员（根据风险等级）
+
+3. **Agent执行失败（9009-9014）**：
+   - 记录Agent执行失败详情（包含Agent名称、输入参数、失败原因）
+   - 更新相关KO状态（如Extractor失败，KO状态保持为"proposed"）
+   - 支持重试机制（可配置重试次数）
+   - 失败超过阈值时，标记为"需要人工审核"
+
+4. **知识提案去重键冲突（9031）**：
+   - 合并相同dedupe_key的提案（更新trigger_count）
+   - 记录合并日志
+   - 保留第一个提案，后续提案标记为"merged"
+
+5. **知识提案冷却窗口未过期（9032）**：
+   - 拒绝新提案
+   - 返回429状态码
+   - 记录拒绝原因（包含剩余冷却时间）
+   - 不阻塞其他提案的处理
+
+6. **版本回滚失败（9029）**：
+   - 记录回滚失败详情（包含releaseId、失败原因）
+   - 发送紧急告警
+   - 支持手动回滚（通过管理接口）
+   - 记录审计日志
+
+### 9.3 发布门禁错误处理
+
+**Gate-1（结构合法性）失败（9020）**：
+- 记录失败详情（包含哪些KO的哪些字段不符合规范）
+- 拒绝整个candidate_release
+- 生成修复建议报告
+- 通知Release Builder Agent修复
+
+**Gate-2（证据可追溯性）失败（9021）**：
+- 记录失败详情（包含哪些KO缺少provenance）
+- 拒绝整个candidate_release
+- 要求Extractor Agent补充provenance
+- 不允许进入Gate-3
+
+**Gate-3（回归评测）失败（9022）**：
+- 记录评测失败详情（包含哪些硬阈值/软阈值未满足）
+- 拒绝整个candidate_release
+- 生成评测报告（包含失败用例、指标对比）
+- 通知Shadow Evaluator Agent分析失败原因
+- 不允许进入Gate-4
+
+**Gate-4（风险分级审批）失败（9023）**：
+- 记录审批失败详情（包含风险等级、审批结果）
+- 高风险变更必须人工审批
+- 中风险变更可以重新提交审批
+- 低风险变更自动通过
+
+### 9.4 知识演化错误处理最佳实践
+
+1. **异步处理**：
+   - 知识演化流程是异步的，错误不应阻塞在线诊断
+   - 使用消息队列保证任务不丢失
+   - 支持任务重试和死信队列
+
+2. **错误追溯**：
+   - 所有错误都要记录到AuditTrail
+   - 包含完整的上下文信息（proposalId、koId、releaseId等）
+   - 支持错误查询和统计
+
+3. **降级策略**：
+   - 知识查询失败时，诊断流程应能降级（不使用知识库）
+   - 知识演化失败时，不应影响生产环境
+   - 版本切换失败时，保持当前版本
+
+4. **告警机制**：
+   - 关键错误（如发布门禁失败、版本回滚失败）应发送告警
+   - 根据错误严重程度选择告警方式（邮件、短信、钉钉等）
+   - 告警应包含错误详情和修复建议
+
+5. **人工介入**：
+   - 复杂错误（如冲突解决失败、发布门禁失败）需要人工审核
+   - 提供Web界面查看错误详情和修复建议
+   - 支持人工触发重试和修复
+
+---
+
+## 十、错误处理最佳实践
+
+### 10.1 异常处理原则
 
 1. **尽早捕获**：在业务逻辑层捕获异常
 2. **明确分类**：区分业务异常和系统异常
@@ -955,15 +1337,15 @@ public class DiagnosisService {
 
 ---
 
-## 十、错误码维护
+## 十一、错误码维护
 
-### 9.1 错误码管理
+### 11.1 错误码管理
 
 - 错误码统一管理在常量类中
 - 错误码文档及时更新
 - 新增错误码需要评审
 
-### 9.2 错误码常量类
+### 11.2 错误码常量类
 
 ```java
 package com.aidoctor.diagnosis.constant;
@@ -996,16 +1378,40 @@ public class ErrorCode {
     public static final int INTERNAL_ERROR = 500;
     // 并发与幂等
     public static final int CDP_VERSION_CONFLICT = 6001;
+    
+    // knowledge-query-service（知识查询服务）
+    public static final int KNOWLEDGE_VERSION_NOT_FOUND = 8001;
+    public static final int KNOWLEDGE_OBJECT_NOT_FOUND = 8002;
+    public static final int PATH_RETRIEVAL_FAILED = 8003;
+    public static final int KNOWLEDGE_QUERY_FAILED = 8004;
+    public static final int NEO4J_CONNECTION_FAILED = 8005;
+    
+    // knowledge-ops-service（知识运维服务）
+    public static final int KNOWLEDGE_PROPOSAL_NOT_FOUND = 9001;
+    public static final int KNOWLEDGE_PROPOSAL_EXISTS = 9002;
+    public static final int KNOWLEDGE_PROPOSAL_PROCESS_FAILED = 9003;
+    public static final int PUBLISH_GATE_FAILED = 9004;
+    public static final int VERSION_SWITCH_FAILED = 9005;
+    public static final int EXTRACTOR_AGENT_FAILED = 9009;
+    public static final int VERIFIER_AGENT_FAILED = 9010;
+    public static final int CONFLICT_RESOLVER_AGENT_FAILED = 9011;
+    public static final int SHADOW_EVALUATOR_AGENT_FAILED = 9013;
+    public static final int KNOWLEDGE_PROPOSAL_DEDUPE_CONFLICT = 9031;
+    public static final int KNOWLEDGE_PROPOSAL_COOLDOWN = 9032;
+    public static final int KNOWLEDGE_PROPOSAL_THROTTLE = 9033;
+    public static final int VERSION_ROLLBACK_FAILED = 9029;
 }
 ```
 
 ---
 
-**文档版本**：v4.0（对齐“多智能体 + 多微服务 + CDP版本管理/回退机制 + 调用治理”）  
+**文档版本**：v5.0（对齐"多智能体 + 多微服务 + CDP版本管理/回退机制 + 调用治理 + 知识演化与维护"）  
 **创建日期**：2025年1月  
 **更新日期**：2026年1月  
 **文档定位**：AI医生系统的错误处理规范（异常类、错误码、全局异常处理）  
-**参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》  
-**设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计  
-**更新说明**：修正错误码分段冲突（examination-service改为2100段），补齐主Agent服务/并发/调用治理错误码；统一错误响应契约字段（traceId/cdpId/agentId/retryable）；对齐跨服务调用超时重试与降级策略；修正Python业务异常不再统一返回HTTP 200。
+**参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》、《知识演化与知识维护-完整设计方案.md》  
+**设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计，集成知识演化与维护系统  
+**更新说明**：
+- v4.0：修正错误码分段冲突（examination-service改为2100段），补齐主Agent服务/并发/调用治理错误码；统一错误响应契约字段（traceId/cdpId/agentId/retryable）；对齐跨服务调用超时重试与降级策略；修正Python业务异常不再统一返回HTTP 200。
+- v5.0：新增知识演化与维护相关错误处理（knowledge-query-service错误码8000-8999、knowledge-ops-service错误码9000-9999）；补充知识查询服务和知识运维服务的异常类设计；补充知识演化错误处理特殊说明（包括错误处理策略、发布门禁错误处理、最佳实践等）。
 

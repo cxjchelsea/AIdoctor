@@ -52,6 +52,8 @@ AIdoctor/
 ├── diagnosis-service/                 # 主Agent服务（Java）
 ├── examination-service/              # 检查服务（Java）
 ├── ocr-service/                      # OCR服务（Python）
+├── knowledge-query-service/          # 知识查询服务（Python，在线层）
+├── knowledge-ops-service/            # 知识运维服务（Python，离线层）
 ├── frontend/                         # 前端服务（React/TypeScript）
 ├── docker-compose.yml                # Docker编排文件
 └── docs/                             # 文档目录
@@ -330,6 +332,12 @@ service-name/
 ┌───▼───┐ ┌──▼────┐
 │ Java  │ │Python │
 │Services│ │Services│
+│       │ │       │
+│       │ │  ┌────▼──────┐
+│       │ │  │Knowledge  │
+│       │ │  │Query Svc  │
+│       │ │  │(在线层)    │
+│       │ │  └────┬──────┘
 └───┬───┘ └──┬────┘
     │         │
     └────┬────┘
@@ -339,7 +347,26 @@ service-name/
 │ MySQL/Oracle/   │
 │ Neo4j/Redis     │
 └─────────────────┘
+         │
+┌────────▼────────┐
+│Knowledge Ops   │
+│Service          │
+│(离线层)         │
+└─────────────────┘
 ```
+
+**服务分类**：
+
+1. **在线服务**（实时响应诊断请求）：
+   - Java服务：diagnosis-service, examination-service
+   - Python服务：所有工具服务（tool_0-tool_7）、knowledge-query-service
+
+2. **离线服务**（异步知识演化）：
+   - knowledge-ops-service：知识运维服务，包含多个Agent（Extractor、Verifier、Conflict Resolver等）
+
+**部署策略**：
+- **在线服务**：高可用部署，支持负载均衡和自动扩缩容
+- **离线服务**：独立部署，不阻塞在线诊断流程，支持异步任务队列
 
 ### 11.2 容器化部署
 
@@ -684,6 +711,107 @@ CREATE TABLE follow_up_rule (
     INDEX idx_demand_type (demand_type)
 );
 ```
+
+### 11.2 知识演化服务部署
+
+#### 11.2.1 知识查询服务（Knowledge Query Service）
+
+**部署方式**：
+- **服务类型**：Python服务（FastAPI）
+- **端口**：8093
+- **部署模式**：在线服务，高可用部署
+- **依赖**：Neo4j（知识图谱）、MySQL/Oracle（知识库元数据）
+
+**服务职责**：
+- 知识库优先查询（主诉知识图谱、疾病知识图谱）
+- Neo4j路径检索验证
+- 路径约束推理
+- 版本化知识访问
+
+**部署配置**：
+```yaml
+knowledge-query-service:
+  image: aidoctor/knowledge-query-service:latest
+  ports:
+    - "8093:8093"
+  environment:
+    - NEO4J_URI=neo4j://neo4j:7687
+    - MYSQL_HOST=mysql
+    - MYSQL_PORT=3306
+  depends_on:
+    - neo4j
+    - mysql
+  replicas: 2  # 高可用部署
+```
+
+#### 11.2.2 知识运维服务（Knowledge Operations Service）
+
+**部署方式**：
+- **服务类型**：Python服务（FastAPI + 异步任务队列）
+- **端口**：8094
+- **部署模式**：离线服务，独立部署
+- **依赖**：Neo4j（三个知识库区）、MySQL/Oracle（元数据）、Redis（任务队列）
+
+**服务职责**：
+- 知识抽取（Extractor Agent）
+- 知识验证（Verifier Agent）
+- 冲突处理（Conflict Resolver Agent）
+- 候选构建（Release Builder Agent）
+- 回归评测（Shadow Evaluator Agent）
+- 发布门禁（Publish Gate）
+- 监控与回滚（Rollback & Drift Monitor Agent）
+
+**部署配置**：
+```yaml
+knowledge-ops-service:
+  image: aidoctor/knowledge-ops-service:latest
+  ports:
+    - "8094:8094"
+  environment:
+    - NEO4J_URI=neo4j://neo4j:7687
+    - MYSQL_HOST=mysql
+    - MYSQL_PORT=3306
+    - REDIS_HOST=redis
+    - REDIS_PORT=6379
+    - WORK_MODE=offline  # 离线模式
+  depends_on:
+    - neo4j
+    - mysql
+    - redis
+  replicas: 1  # 单实例部署（离线服务）
+```
+
+**Agent部署**：
+- 所有Agent作为knowledge-ops-service的内部模块
+- 通过消息队列（Redis）异步执行任务
+- 支持任务调度、重试、限流
+
+#### 11.2.3 知识库存储部署
+
+**Neo4j部署**：
+- **存储方案**：一套Neo4j + release/label分区 + current_release指针
+- **分区策略**：通过label实现Sandbox/Staging/Production分区
+- **版本管理**：通过release_id字段区分不同版本
+
+**部署配置**：
+```yaml
+neo4j:
+  image: neo4j:5.0
+  ports:
+    - "7474:7474"  # HTTP
+    - "7687:7687"  # Bolt
+  environment:
+    - NEO4J_AUTH=neo4j/password
+    - NEO4J_dbms_memory_heap_max__size=4G
+  volumes:
+    - neo4j_data:/data
+    - neo4j_logs:/logs
+```
+
+**元数据存储**（MySQL/Oracle）：
+- ReleaseMetadata表：存储release元数据（release_id、is_current等）
+- KnowledgeObjectMetadata表：存储KO元数据
+- Proposal表：存储知识演化提案
 
 ### 12.3 工作态切换机制
 

@@ -600,6 +600,76 @@ DB_USERNAME=aidoctor
 DB_PASSWORD=password
 ```
 
+**knowledge-query-service/.env**:
+```bash
+# Neo4j配置（知识图谱，支持三个知识库区）
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=password
+
+# 数据库配置（知识库元数据）
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=aidoctor
+DB_USERNAME=aidoctor
+DB_PASSWORD=password
+
+# 知识版本配置
+DEFAULT_KG_VERSION=v2.1  # 默认使用的知识版本
+
+# 服务配置
+SERVICE_PORT=8093
+SERVICE_NAME=knowledge-query-service
+```
+
+**knowledge-ops-service/.env**:
+```bash
+# Neo4j配置（三个知识库区：Sandbox/Staging/Production）
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=password
+
+# 数据库配置（知识库元数据）
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=aidoctor
+DB_USERNAME=aidoctor
+DB_PASSWORD=password
+
+# Redis配置（任务队列）
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# 服务配置
+SERVICE_PORT=8094
+SERVICE_NAME=knowledge-ops-service
+WORK_MODE=offline  # 离线模式
+
+# 知识演化配置
+SANDBOX_RELEASE_ID=Sandbox
+STAGING_RELEASE_ID=Staging
+DEFAULT_PRODUCTION_VERSION=v2.1
+
+# Publish Gate配置
+GATE_EVALUATION_ENABLED=true
+GATE_MANUAL_APPROVAL_REQUIRED=false  # 中高风险需要人工审批
+
+# Agent配置
+EXTRACTOR_AGENT_ENABLED=true
+VERIFIER_AGENT_ENABLED=true
+CONFLICT_RESOLVER_AGENT_ENABLED=true
+RELEASE_BUILDER_AGENT_ENABLED=true
+SHADOW_EVALUATOR_AGENT_ENABLED=true
+ROLLBACK_MONITOR_AGENT_ENABLED=true
+
+# LLM配置（用于知识抽取）
+LLM_BACKEND=openai
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-4
+OPENAI_TEMPERATURE=0.3
+```
+
 ---
 
 ### 3.6（新增）统一环境变量清单（建议）
@@ -617,9 +687,13 @@ DB_PASSWORD=password
 | `DB_PASSWORD` | `password` | 密码 |
 | `REDIS_HOST` | `localhost` | Redis主机 |
 | `REDIS_PORT` | `6379` | Redis端口 |
-| `NEO4J_URI` | `bolt://localhost:7687` | Neo4j Bolt URI |
+| `NEO4J_URI` | `bolt://localhost:7687` | Neo4j Bolt URI（知识图谱，支持三个知识库区） |
 | `NEO4J_USER` | `neo4j` | 用户名 |
 | `NEO4J_PASSWORD` | `password` | 密码 |
+| `DEFAULT_KG_VERSION` | `v2.1` | 默认知识版本（knowledge-query-service使用） |
+| `SANDBOX_RELEASE_ID` | `Sandbox` | Sandbox发布区域ID（knowledge-ops-service使用） |
+| `STAGING_RELEASE_ID` | `Staging` | Staging发布区域ID（knowledge-ops-service使用） |
+| `DEFAULT_PRODUCTION_VERSION` | `v2.1` | 默认生产版本（knowledge-ops-service使用） |
 
 #### 3.6.2 下游服务地址（主Agent调用用）
 
@@ -627,6 +701,8 @@ DB_PASSWORD=password
 |------|------|
 | `HEALTH_STATE_URL` | `http://localhost:8081` |
 | `CLINICAL_PARSING_URL` | `http://localhost:8082` |
+| `KNOWLEDGE_QUERY_URL` | `http://localhost:8093` | 知识查询服务地址 |
+| `KNOWLEDGE_OPS_URL` | `http://localhost:8094` | 知识运维服务地址 |
 | `DIALOG_URL` | `http://localhost:8088` |
 | `DIAGNOSIS_ENGINE_URL` | `http://localhost:8086` |
 | `WORKUP_PLANNER_URL` | `http://localhost:8090` |
@@ -1091,7 +1167,56 @@ curl http://localhost:8087/health
 # - examination-service
 ```
 
-### 5.7 验证Neo4j（如果使用）
+### 5.6 验证知识查询服务（knowledge-query-service）
+
+```bash
+# 进入knowledge-query-service目录
+cd knowledge-query-service
+
+# 激活虚拟环境
+source venv/bin/activate  # Linux/Mac
+# 或
+venv\Scripts\activate  # Windows
+
+# 启动服务
+uvicorn app.main:app --host 0.0.0.0 --port 8093 --reload
+
+# 检查服务是否启动成功
+# 访问：http://localhost:8093/docs
+# 或访问：http://localhost:8093/health
+
+# 测试知识查询接口
+curl -X GET "http://localhost:8093/api/v1/knowledge/version/current"
+```
+
+### 5.7 验证知识运维服务（knowledge-ops-service）
+
+```bash
+# 进入knowledge-ops-service目录
+cd knowledge-ops-service
+
+# 激活虚拟环境
+source venv/bin/activate  # Linux/Mac
+# 或
+venv\Scripts\activate  # Windows
+
+# 启动服务
+uvicorn app.main:app --host 0.0.0.0 --port 8094 --reload
+
+# 检查服务是否启动成功
+# 访问：http://localhost:8094/docs
+# 或访问：http://localhost:8094/health
+
+# 测试知识提案接口
+curl -X POST "http://localhost:8094/api/v1/knowledge/proposal" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "trigger": "知识覆盖缺口",
+    "riskLevel": "medium"
+  }'
+```
+
+### 5.8 验证Neo4j（如果使用）
 
 ```bash
 # 访问Neo4j Browser
@@ -1107,10 +1232,13 @@ MATCH (n) RETURN n LIMIT 25
 ## 六、配置验证清单（新增）
 
 - **基础依赖**：MySQL/Redis/Neo4j 三者均可连接（能执行简单读写/查询）
-- **端口对齐**：`dialog-service=8088`、`explanation-service=8089`、其余端口与附录表一致
+- **端口对齐**：`dialog-service=8088`、`explanation-service=8089`、`knowledge-query-service=8093`、`knowledge-ops-service=8094`、其余端口与附录表一致
 - **健康检查**：每个服务至少提供 `/health`（FastAPI）或 `/actuator/health`（Spring Boot）
 - **跨服务调用**：主Agent能按"超时/重试"策略调用下游并在失败时降级
 - **错误契约**：任一服务返回错误时包含 `traceId`（便于日志串联）
+- **知识库配置**：Neo4j支持三个知识库区（Sandbox/Staging/Production），ReleaseMetadata表配置正确
+- **知识查询服务**：knowledge-query-service能正常查询知识库，支持版本化访问
+- **知识运维服务**：knowledge-ops-service能正常处理知识演化提案，Agent正常工作
 
 ---
 
@@ -1436,15 +1564,16 @@ set key value                 # 设置值
 
 ---
 
-**文档版本**：v3.1（对齐"多智能体 + 多微服务 + LangChain集成"）  
+**文档版本**：v4.0（对齐"多智能体 + 多微服务 + LangChain集成 + 知识演化与维护"）  
 **创建日期**：2025年1月  
 **更新日期**：2025年1月  
 **文档定位**：AI医生系统的环境配置指南（开发环境和生产环境的配置方法）  
-**参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》  
-**设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计  
+**参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》、《知识演化与知识维护-完整设计方案.md》  
+**设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计，集成知识演化与维护系统  
 **最后更新**: 2025年1月  
 **维护者**: 开发团队  
 **更新说明**：
+- v4.0：添加知识演化相关服务配置（knowledge-query-service、knowledge-ops-service），添加Neo4j三个知识库区配置，添加知识版本管理配置，更新配置验证清单
 - v3.1：添加LangChain配置说明，更新LLM配置方式（从直接HTTP调用改为LangChain统一管理）
 - v3.0：修正端口与架构文档一致（dialog=8088）；Docker基础服务补齐mysql/redis/neo4j；新增统一环境变量清单（DB/Redis/Neo4j/下游URL/超时重试/LLM）；新增配置验证清单；补齐"服务调用超时与重试"默认值表。
 

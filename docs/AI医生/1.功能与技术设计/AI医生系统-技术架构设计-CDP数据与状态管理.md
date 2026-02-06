@@ -48,6 +48,9 @@ CREATE TABLE cdp (
     uncertainty JSON,
     -- 审计信息（模型版本、提示词版本、知识版本、推理轨迹等）
     audit JSON,
+    -- 知识引用（记录使用的知识对象和版本）
+    -- 对应知识演化与维护设计：CDP中的知识引用
+    knowledge_refs JSON,
     created_at TIMESTAMP,
     updated_at TIMESTAMP
 );
@@ -961,6 +964,74 @@ CDP更新（健康管理）    CDP更新（信息收集）
   }
 }
 ```
+
+#### knowledge_refs 字段
+
+**用途**：记录CDP推理过程中使用的知识对象（KO）和知识版本，支持知识追溯和审计
+
+**数据结构**（对应知识演化与维护设计：CDP中的知识引用）：
+
+```json
+{
+  "knowledge_refs": [
+    {
+      "ko_id": "KO_001",
+      "ko_type": "rule",
+      "kg_version": "v2.1",
+      "provenance_pointer": "指南v2026-第3章-第5段",
+      "usage_context": "ddx_candidate_generation",
+      "referenced_by": "tool_3",
+      "referenced_at": "2026-01-28T10:00:00Z"
+    },
+    {
+      "ko_id": "KO_002",
+      "ko_type": "pathway_template",
+      "kg_version": "v2.1",
+      "provenance_pointer": "指南v2026-第4章-第2段",
+      "usage_context": "workup_planning",
+      "referenced_by": "tool_4",
+      "referenced_at": "2026-01-28T10:05:00Z"
+    }
+  ],
+  "default_kg_version": "v2.1",
+  "knowledge_usage_summary": {
+    "total_ko_count": 2,
+    "ko_types": ["rule", "pathway_template"],
+    "kg_versions": ["v2.1"]
+  }
+}
+```
+
+**字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `knowledge_refs` | Array | 知识引用列表 |
+| `knowledge_refs[].ko_id` | String | 知识对象ID |
+| `knowledge_refs[].ko_type` | String | 知识对象类型（rule/relation/pathway_template等） |
+| `knowledge_refs[].kg_version` | String | 知识版本（v1.0/v2.1等） |
+| `knowledge_refs[].provenance_pointer` | String | 证据来源指针（便于追溯） |
+| `knowledge_refs[].usage_context` | String | 使用上下文（ddx_candidate_generation/workup_planning等） |
+| `knowledge_refs[].referenced_by` | String | 引用工具ID（tool_3/tool_4等） |
+| `knowledge_refs[].referenced_at` | String | 引用时间戳 |
+| `default_kg_version` | String | 默认使用的知识版本 |
+| `knowledge_usage_summary` | Object | 知识使用摘要 |
+
+**更新时机**：
+- 工具调用时：当工具使用知识对象进行推理时，自动记录到knowledge_refs
+- CDP更新时：每次CDP更新时，合并新的知识引用
+- 知识版本切换时：当切换知识版本时，更新default_kg_version
+
+**相关服务**：
+- `KnowledgeQueryService.query_knowledge_base()`：查询知识时记录引用
+- `DiagnosisEngineService.generate_ddx()`：生成DDx时记录使用的知识对象
+- `WorkupPlannerService.generate_workup_plan()`：生成检查计划时记录使用的路径模板
+
+**作用**：
+- **知识追溯**：可以追溯诊断过程中使用了哪些知识对象
+- **版本管理**：记录使用的知识版本，支持版本对比和回滚
+- **审计支持**：支持知识使用的审计和问题定位
+- **依赖分析**：分析知识对象的使用情况，评估知识变更的影响范围
 
 ### 7.3 CDP状态转换
 

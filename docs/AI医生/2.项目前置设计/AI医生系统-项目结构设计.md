@@ -23,6 +23,8 @@ AIdoctor/
 ├── risk-assessment-service/         # 风险评估工具服务（Python）- tool_6
 ├── explanation-service/             # 证据链工具服务（Python）- tool_7
 ├── ocr-service/                     # OCR服务（Python）- 多模态理解
+├── knowledge-query-service/         # 知识查询服务（Python）- 在线层，提供只读知识库查询
+├── knowledge-ops-service/          # 知识运维服务（Python）- 离线层，知识演化与维护
 ├── frontend/                        # 前端应用（React + TypeScript）
 ├── docker-compose.yml              # Docker编排配置
 └── docs/                           # 文档目录
@@ -878,7 +880,251 @@ python run.py
 
 ---
 
-## 十五、服务端口分配
+## 十二、知识查询服务（knowledge-query-service）
+
+> **说明**：knowledge-query-service是知识演化与维护系统的在线层服务，提供只读的知识库查询功能，服务于通道1结构化推理。
+
+### 12.1 项目结构
+
+```
+knowledge-query-service/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                      # FastAPI应用入口
+│   ├── api/                         # API路由
+│   │   ├── __init__.py
+│   │   └── routes.py                # 知识查询路由
+│   ├── services/                    # 业务逻辑层
+│   │   ├── __init__.py
+│   │   ├── knowledge_query_service.py  # 知识查询服务
+│   │   ├── path_retriever.py       # 路径检索服务
+│   │   └── version_manager.py      # 版本管理服务
+│   ├── models/                      # 数据模型
+│   │   ├── __init__.py
+│   │   ├── request.py              # 请求模型
+│   │   └── response.py             # 响应模型
+│   ├── config/                      # 配置管理
+│   │   ├── __init__.py
+│   │   └── settings.py            # 配置设置
+│   └── utils/                       # 工具类
+│       ├── __init__.py
+│       ├── neo4j_client.py         # Neo4j客户端
+│       └── exceptions.py           # 异常类
+├── tests/                           # 测试代码
+├── requirements.txt                 # Python依赖
+├── Dockerfile                       # Docker镜像构建
+├── README.md                        # 服务说明文档
+└── run.py                           # 服务启动脚本
+```
+
+### 12.2 关键说明
+
+**服务定位**：
+- **在线层服务**：实时响应诊断请求，提供知识库查询
+- **只读访问**：只读访问生产知识库，不参与知识演化流程
+- **版本化支持**：支持版本化知识访问，可以指定知识版本
+
+**核心功能**：
+- 知识库优先查询（主诉知识图谱、疾病知识图谱）
+- Neo4j路径检索验证
+- 路径约束推理
+- 版本化知识访问
+
+**依赖服务**：
+- Neo4j（知识图谱）
+- MySQL/Oracle（知识库元数据）
+
+---
+
+## 十三、知识运维服务（knowledge-ops-service）
+
+> **说明**：knowledge-ops-service是知识演化与维护系统的离线层服务，负责知识的抽取、验证、冲突处理、发布门禁等。
+
+### 13.1 项目结构
+
+```
+knowledge-ops-service/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                      # FastAPI应用入口
+│   ├── api/                         # API路由
+│   │   ├── __init__.py
+│   │   └── routes.py                # 知识运维路由
+│   ├── agents/                      # 知识演化Agent
+│   │   ├── __init__.py
+│   │   ├── extractor_agent.py      # 抽取Agent
+│   │   ├── verifier_agent.py       # 验证Agent
+│   │   ├── conflict_resolver_agent.py  # 冲突解决Agent
+│   │   ├── release_builder_agent.py   # 发布候选构建Agent
+│   │   ├── shadow_evaluator_agent.py  # 影子评测Agent
+│   │   └── rollback_monitor_agent.py  # 回滚与漂移监控Agent
+│   ├── services/                    # 业务逻辑层
+│   │   ├── __init__.py
+│   │   ├── knowledge_storage.py    # 知识存储服务
+│   │   ├── publish_gate.py         # 发布门禁服务
+│   │   └── proposal_service.py     # 提案服务
+│   ├── models/                      # 数据模型
+│   │   ├── __init__.py
+│   │   ├── knowledge_object.py     # 知识对象模型
+│   │   ├── proposal.py             # 提案模型
+│   │   └── release.py              # 发布模型
+│   ├── config/                      # 配置管理
+│   │   ├── __init__.py
+│   │   └── settings.py            # 配置设置
+│   └── utils/                       # 工具类
+│       ├── __init__.py
+│       ├── neo4j_client.py         # Neo4j客户端
+│       └── exceptions.py           # 异常类
+├── tests/                           # 测试代码
+├── requirements.txt                 # Python依赖
+├── Dockerfile                       # Docker镜像构建
+├── README.md                        # 服务说明文档
+└── run.py                           # 服务启动脚本
+```
+
+### 13.2 关键说明
+
+**服务定位**：
+- **离线层服务**：异步运行，不阻塞在线诊断流程
+- **工作在候选区**：不直接修改生产知识，工作在Sandbox/Staging
+- **通过门禁发布**：必须通过Publish Gate才能进入生产
+
+**核心功能**：
+- 知识抽取（Extractor Agent）
+- 知识验证（Verifier Agent）
+- 冲突处理（Conflict Resolver Agent）
+- 候选构建（Release Builder Agent）
+- 回归评测（Shadow Evaluator Agent）
+- 发布门禁（Publish Gate）
+- 监控与回滚（Rollback & Drift Monitor Agent）
+
+**依赖服务**：
+- Neo4j（三个知识库区：Sandbox/Staging/Production）
+- MySQL/Oracle（元数据）
+- Redis（任务队列）
+
+**Agent协作流程**：
+```
+新知识源
+  ↓
+Extractor Agent（抽取）→ Sandbox
+  ↓
+Verifier Agent（验证）→ Staging
+  ↓
+Conflict Resolver Agent（冲突解决）→ Staging
+  ↓
+Release Builder Agent（打包）→ candidate_release
+  ↓
+Shadow Evaluator Agent（影子评测）→ 评测报告
+  ↓
+Publish Gate（门禁）→ Production
+  ↓
+Rollback & Drift Monitor Agent（监控）→ 持续监控
+```
+
+---
+
+## 十四、代码组织规范
+
+### 14.1 Python服务规范
+
+**目录结构**：
+- `app/`：应用主目录
+- `app/main.py`：FastAPI应用入口
+- `app/api/`：API路由定义
+- `app/services/`：业务逻辑服务
+- `app/models/`：数据模型（Pydantic）
+- `app/config/`：配置文件
+- `app/utils/`：工具类
+
+**命名规范**：
+- **文件名**：小写下划线，如 `parsing_service.py`
+- **类名**：大驼峰，如 `ParsingService`
+- **函数名**：小写下划线，如 `extract_concepts`
+- **常量**：全大写下划线，如 `MAX_RETRY_COUNT`
+
+### 14.2 Java服务规范
+
+**目录结构**：
+- `controller/`：控制器层，处理HTTP请求
+- `service/`：业务逻辑层
+- `repository/`：数据访问层
+- `entity/`：实体类，对应数据库表
+- `dto/`：数据传输对象
+- `client/`：外部服务客户端（Feign）
+- `config/`：配置类
+- `exception/`：异常类
+- `util/`：工具类
+
+**命名规范**：
+- **类名**：大驼峰，如 `DiagnosisService`
+- **方法名**：小驼峰，如 `startDiagnosis`
+- **常量**：全大写下划线，如 `MAX_QUESTIONING_COUNT`
+- **包名**：全小写，如 `com.aidoctor.diagnosis`
+
+### 14.3 前端规范
+
+**目录结构**：
+- `components/`：可复用组件
+- `pages/`：页面组件
+- `services/`：API服务层
+- `stores/`：状态管理
+- `types/`：TypeScript类型定义
+- `utils/`：工具函数
+
+**命名规范**：
+- **组件名**：大驼峰，如 `DiagnosisInfoPanel`
+- **文件名**：与组件名一致
+- **函数名**：小驼峰，如 `fetchDiagnosisData`
+
+---
+
+## 十五、开发环境配置
+
+### 15.1 必需工具
+
+- **Java**：JDK 8+
+- **Python**：Python 3.10+
+- **Node.js**：Node.js 18+
+- **Maven**：Maven 3.8+
+- **Docker**：Docker 20.10+
+- **Docker Compose**：Docker Compose 2.0+
+
+### 15.2 数据库和中间件
+
+- **MySQL**：8.0+（用于Java服务）
+- **Redis**：7.0+（用于缓存和消息队列）
+- **Neo4j**：5.0+（用于知识图谱，支持三个知识库区）
+
+### 15.3 启动服务
+
+```bash
+# 启动基础设施
+docker-compose up -d mysql redis neo4j
+
+# 启动Java服务
+cd diagnosis-service
+mvn spring-boot:run
+
+# 启动Python服务
+cd diagnosis-engine-service
+pip install -r requirements.txt
+python run.py
+
+# 启动知识查询服务（在线层）
+cd knowledge-query-service
+pip install -r requirements.txt
+python run.py
+
+# 启动知识运维服务（离线层）
+cd knowledge-ops-service
+pip install -r requirements.txt
+python run.py
+```
+
+---
+
+## 十六、服务端口分配
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
@@ -893,6 +1139,8 @@ python run.py
 | risk-assessment-service | 8092 | 风险评估服务（Python） |
 | health-state-assessment-service | 8081 | 健康状态判定服务（Python） |
 | clinical-parsing-service | 8082 | 病例理解服务（Python） |
+| knowledge-query-service | 8093 | 知识查询服务（Python，在线层） |
+| knowledge-ops-service | 8094 | 知识运维服务（Python，离线层） |
 | frontend | 5173 | 前端应用（开发端口） |
 
 ---

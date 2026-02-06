@@ -170,6 +170,39 @@ public class CDP {
     private Map<String, Object> audit;
     
     /**
+     * 知识引用（JSON格式）
+     * 记录CDP推理过程中使用的知识对象（KO）和知识版本
+     * 对应知识演化与维护设计：CDP中的知识引用
+     * 包含：knowledge_refs数组、default_kg_version、knowledge_usage_summary
+     * 
+     * 字段结构：
+     * {
+     *   "default_kg_version": "v2.1",  // 默认使用的知识版本
+     *   "knowledge_refs": [            // 知识引用数组
+     *     {
+     *       "ko_id": "KO_001",         // 知识对象ID
+     *       "kg_version": "v2.1",      // 知识版本
+     *       "provenance_pointer": "指南v2026-第3章-第5段",  // 来源指针
+     *       "usage_context": "ddx_candidate_generation",    // 使用上下文
+     *       "binding_strength": "required"                 // 绑定强度
+     *     }
+     *   ],
+     *   "knowledge_usage_summary": {   // 知识使用摘要
+     *     "total_ko_count": 10,         // 使用的KO总数
+     *     "ko_types": {                 // 按类型统计
+     *       "rule": 5,
+     *       "relation": 3,
+     *       "pathway_template": 2
+     *     },
+     *     "impact_scope": ["DDx", "workup"]  // 影响模块
+     *   }
+     * }
+     */
+    @Type(type = "jsonb")
+    @Column(name = "knowledge_refs", columnDefinition = "jsonb")
+    private Map<String, Object> knowledgeRefs;
+    
+    /**
      * 创建时间
      */
     @CreationTimestamp
@@ -3527,6 +3560,530 @@ public class DiagnosisEngineResult {
         private Map<String, Object> differential;
     }
 }
+```
+
+---
+
+### 1.10 知识对象实体（Knowledge Object - KO）
+
+**对应表**：`knowledge_object`（存储在Neo4j中，MySQL/Oracle存储元数据）
+
+> **说明**：知识对象（KO）是知识演化与维护系统的核心数据结构，存储在Neo4j知识图谱中，支持版本化管理和可追溯性。
+
+**Neo4j节点结构**：
+```cypher
+(:KnowledgeObject {
+  ko_id: "KO_001",
+  ko_type: "rule",
+  content: {...},
+  concept_ids: ["CUI_001", "ICD_I20.0"],
+  provenance: [...],
+  status: "published",
+  kg_version: "v2.1",
+  impact_scope: ["DDx", "workup"],
+  downstream_bindings: [...],
+  release_id: "v2.1"
+})
+```
+
+**downstream_bindings字段详解**：
+
+**字段结构**：
+```json
+{
+  "downstream_bindings": [
+    {
+      "binding_type": "tool",           // tool / rule_engine / pathway_template
+      "binding_id": "tool_3",          // 工具ID或规则引擎ID
+      "binding_name": "鉴别诊断工具",    // 名称
+      "usage_context": "ddx_candidate_generation",  // 使用上下文
+      "binding_strength": "required"   // required / optional / conditional
+    },
+    {
+      "binding_type": "pathway_template",
+      "binding_id": "pathway_acute_mi",
+      "binding_name": "急性心肌梗死路径",
+      "usage_context": "workup_planning",
+      "binding_strength": "required"
+    }
+  ]
+}
+```
+
+**字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `binding_type` | String | 绑定类型：tool（工具）/ rule_engine（规则引擎）/ pathway_template（路径模板） |
+| `binding_id` | String | 绑定ID：工具ID（如tool_3）、规则引擎ID、路径模板ID |
+| `binding_name` | String | 绑定名称：便于识别的名称 |
+| `usage_context` | String | 使用上下文：描述KO在组件中的使用场景 |
+| `binding_strength` | String | 绑定强度：required（必需）/ optional（可选）/ conditional（条件） |
+
+**作用**：
+- **依赖分析**：明确知道哪些组件依赖这条KO
+- **影响范围评估**：评估KO变更的影响范围
+- **局部回滚**：回滚时可以精确知道需要更新哪些组件
+- **变更通知**：KO变更时可以通知相关组件
+
+**维护方式**：
+- 在KO发布时自动分析依赖关系
+- 在工具/规则引擎注册时建立绑定
+- 在KO变更时更新绑定关系
+
+#### 1.10.1 Neo4j存储实现方案（三个知识库区的label分区机制）
+
+**核心问题**：三个知识库区（Sandbox/Staging/Production）在存储层的实现方式
+
+**推荐方案：方案Y（一套物理库 + release/label分区 + current_release指针）**
+
+**存储架构**：
+- **一套Neo4j物理库**：所有知识数据存储在同一个Neo4j实例中
+- **release/label分区**：通过Neo4j的label机制实现分区
+  - Sandbox：`(:KnowledgeObject:Release_Sandbox)`
+  - Staging：`(:KnowledgeObject:Release_Staging)`
+  - Production：`(:KnowledgeObject:Release_v1)`、`(:KnowledgeObject:Release_v2.1)`等
+- **current_release指针**：在ReleaseMetadata元数据表中维护当前生产版本指针
+  ```cypher
+  (:ReleaseMetadata {
+    release_id: "v2.1",
+    status: "active",
+    created_at: timestamp,
+    is_current: true
+  })
+  ```
+
+**查询方式**：
+- **生产查询**：`MATCH (ko:KnowledgeObject:Release_v2.1) WHERE ko.status = 'published'`
+- **通过current_release指针查询**：
+  ```cypher
+  MATCH (rm:ReleaseMetadata {is_current: true})
+  MATCH (ko:KnowledgeObject)
+  WHERE ko.release_id = rm.release_id AND ko.status = 'published'
+  RETURN ko
+  ```
+- **Sandbox查询**：`MATCH (ko:KnowledgeObject:Release_Sandbox) RETURN ko`
+- **Staging查询**：`MATCH (ko:KnowledgeObject:Release_Staging) RETURN ko`
+
+**发布流程**：
+1. Staging中的KO标记为`Release_Staging`
+2. 通过Publish Gate后，创建新release（如`Release_v2.1`）
+3. 将Staging中的KO复制并标记为新release（写时复制）
+   ```cypher
+   // 复制Staging中的KO到新release
+   MATCH (ko:KnowledgeObject:Release_Staging {status: 'verified'})
+   CREATE (new_ko:KnowledgeObject:Release_v2.1)
+   SET new_ko = ko,
+       new_ko.release_id = 'v2.1',
+       new_ko.status = 'published',
+       new_ko.kg_version = 'v2.1'
+   ```
+4. 更新`current_release`指针指向新release
+   ```sql
+   -- 更新ReleaseMetadata表
+   UPDATE release_metadata SET is_current = false WHERE is_current = true;
+   UPDATE release_metadata SET is_current = true WHERE release_id = 'v2.1';
+   ```
+5. 旧release保留，支持回滚
+
+**回滚机制**：
+- **全局回滚**：只需修改`current_release`指针，指向旧release
+  ```sql
+  -- 全局回滚：修改current_release指针
+  UPDATE release_metadata SET is_current = false WHERE is_current = true;
+  UPDATE release_metadata SET is_current = true WHERE release_id = 'v2.0';
+  ```
+- **局部回滚**：按ko_id在新release中标记为deprecated，查询时fallback到旧release
+  ```cypher
+  // 局部回滚：标记KO为deprecated
+  MATCH (ko:KnowledgeObject:Release_v2.1 {ko_id: 'KO_001'})
+  SET ko.status = 'deprecated',
+      ko.deprecated_at = timestamp(),
+      ko.deprecated_reason = '性能回归'
+  // 查询时fallback到旧release
+  MATCH (ko:KnowledgeObject {ko_id: 'KO_001'})
+  WHERE ko.status = 'published' OR (ko.status = 'deprecated' AND ko.release_id = 'v2.1')
+  WITH ko
+  MATCH (old_ko:KnowledgeObject {ko_id: 'KO_001', release_id: 'v2.0', status: 'published'})
+  RETURN COALESCE(ko, old_ko) as result
+  ```
+- **优势**：回滚速度快（O(1)），不需要重建数据
+
+**运维优势**：
+- **查询一致性**：所有查询在同一库中，保证ACID特性
+- **回滚成本低**：只需改指针，不需要数据迁移
+- **运维简单**：只需管理一套Neo4j实例
+- **存储效率**：通过label分区，不需要数据复制（发布时才复制）
+
+**注意事项**：
+- **严格的分区管理**：避免跨分区污染，确保查询时使用正确的label
+- **维护release元数据表**：确保current_release指针的准确性
+- **定期清理过期的Sandbox数据**：避免数据积累过多
+- **label命名规范**：统一使用`Release_{release_id}`格式
+
+**MySQL/Oracle元数据表**：
+```sql
+-- 知识对象元数据表
+CREATE TABLE knowledge_object_metadata (
+    id VARCHAR(64) PRIMARY KEY,
+    ko_id VARCHAR(64) UNIQUE NOT NULL,
+    ko_type VARCHAR(32) NOT NULL,  -- rule/relation/pathway_template/contraindication/threshold/ddx_feature
+    status VARCHAR(32) NOT NULL,  -- proposed/verified/published/deprecated
+    kg_version VARCHAR(32),  -- 仅对published状态
+    release_id VARCHAR(32) NOT NULL,  -- Sandbox/Staging/v1.0/v2.0等
+    impact_scope JSON,  -- 影响模块数组
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    INDEX idx_ko_id (ko_id),
+    INDEX idx_status (status),
+    INDEX idx_kg_version (kg_version),
+    INDEX idx_release_id (release_id)
+);
+```
+
+**Java实体类**（元数据部分）：
+```java
+package com.aidoctor.knowledge.entity;
+
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Type;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+import java.util.List;
+
+/**
+ * 知识对象元数据实体
+ * 知识对象（KO）的元数据存储在MySQL/Oracle中
+ * 实际内容存储在Neo4j知识图谱中
+ */
+@Entity
+@Table(name = "knowledge_object_metadata", indexes = {
+    @Index(name = "idx_ko_id", columnList = "ko_id"),
+    @Index(name = "idx_status", columnList = "status"),
+    @Index(name = "idx_kg_version", columnList = "kg_version"),
+    @Index(name = "idx_release_id", columnList = "release_id")
+})
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class KnowledgeObjectMetadata {
+    
+    /**
+     * 元数据ID（主键）
+     */
+    @Id
+    @Column(name = "id", length = 64, nullable = false)
+    private String id;
+    
+    /**
+     * 知识对象ID（唯一标识，对应Neo4j中的ko_id）
+     */
+    @Column(name = "ko_id", length = 64, unique = true, nullable = false)
+    private String koId;
+    
+    /**
+     * 知识对象类型
+     * rule/relation/pathway_template/contraindication/threshold/ddx_feature
+     */
+    @Column(name = "ko_type", length = 32, nullable = false)
+    private String koType;
+    
+    /**
+     * 状态
+     * proposed/verified/published/deprecated
+     */
+    @Column(name = "status", length = 32, nullable = false)
+    private String status;
+    
+    /**
+     * 知识版本（仅对published状态）
+     */
+    @Column(name = "kg_version", length = 32)
+    private String kgVersion;
+    
+    /**
+     * 发布区域ID
+     * Sandbox/Staging/v1.0/v2.0等
+     */
+    @Column(name = "release_id", length = 32, nullable = false)
+    private String releaseId;
+    
+    /**
+     * 影响模块（JSON格式）
+     * 包含：DDx/workup/treatment/risk
+     */
+    @Type(type = "jsonb")
+    @Column(name = "impact_scope", columnDefinition = "jsonb")
+    private List<String> impactScope;
+    
+    /**
+     * 创建时间
+     */
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+    
+    /**
+     * 更新时间
+     */
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+}
+```
+
+### 1.11 知识提案实体（Knowledge Proposal）
+
+**对应表**：`knowledge_proposal`
+
+> **说明**：知识提案用于记录知识演化的触发和变更需求，由主Agent或离线任务触发。
+
+```java
+package com.aidoctor.knowledge.entity;
+
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Type;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 知识提案实体
+ * 记录知识演化的触发和变更需求
+ */
+@Entity
+@Table(name = "knowledge_proposal", indexes = {
+    @Index(name = "idx_proposal_id", columnList = "proposal_id"),
+    @Index(name = "idx_dedupe_key", columnList = "dedupe_key"),
+    @Index(name = "idx_status", columnList = "status"),
+    @Index(name = "idx_created_at", columnList = "created_at")
+})
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class KnowledgeProposal {
+    
+    /**
+     * 提案ID（主键）
+     */
+    @Id
+    @Column(name = "id", length = 64, nullable = false)
+    private String id;
+    
+    /**
+     * 提案ID（业务标识）
+     */
+    @Column(name = "proposal_id", length = 64, unique = true, nullable = false)
+    private String proposalId;
+    
+    /**
+     * 触发原因
+     * 知识覆盖缺口/冲突复核失败/证据不足/新指南发布/内部规则变更/线上监控回归
+     */
+    @Column(name = "trigger", length = 128, nullable = false)
+    private String trigger;
+    
+    /**
+     * 变更内容（JSON格式）
+     * 对哪些ko做新增/修改/删除
+     */
+    @Type(type = "jsonb")
+    @Column(name = "diff", columnDefinition = "jsonb")
+    private Map<String, Object> diff;
+    
+    /**
+     * 需要跑的回归/影子评测（JSON格式）
+     */
+    @Type(type = "jsonb")
+    @Column(name = "required_tests", columnDefinition = "jsonb")
+    private List<String> requiredTests;
+    
+    /**
+     * 风险等级
+     * high/medium/low
+     */
+    @Column(name = "risk_level", length = 32, nullable = false)
+    private String riskLevel;
+    
+    /**
+     * 去重键
+     * 按病种/概念/缺口类型聚合
+     */
+    @Column(name = "dedupe_key", length = 128)
+    private String dedupeKey;
+    
+    /**
+     * 冷却时间窗口（秒）
+     */
+    @Column(name = "cooldown_window")
+    private Integer cooldownWindow;
+    
+    /**
+     * 证据快照hash
+     */
+    @Column(name = "evidence_snapshot", length = 128)
+    private String evidenceSnapshot;
+    
+    /**
+     * 触发次数
+     */
+    @Column(name = "trigger_count", nullable = false)
+    private Integer triggerCount;
+    
+    /**
+     * 状态
+     * pending/processing/completed/rejected
+     */
+    @Column(name = "status", length = 32, nullable = false)
+    private String status;
+    
+    /**
+     * 创建时间
+     */
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+    
+    /**
+     * 更新时间
+     */
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+}
+```
+
+**数据库表设计**：
+```sql
+-- 知识提案表
+CREATE TABLE knowledge_proposal (
+    id VARCHAR(64) PRIMARY KEY,
+    proposal_id VARCHAR(64) UNIQUE NOT NULL,
+    trigger VARCHAR(128) NOT NULL,
+    diff JSONB,
+    required_tests JSONB,
+    risk_level VARCHAR(32) NOT NULL,
+    dedupe_key VARCHAR(128),
+    cooldown_window INT,
+    evidence_snapshot VARCHAR(128),
+    trigger_count INT NOT NULL DEFAULT 1,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    INDEX idx_proposal_id (proposal_id),
+    INDEX idx_dedupe_key (dedupe_key),
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at)
+);
+```
+
+### 1.12 版本元数据实体（Release Metadata）
+
+**对应表**：`release_metadata`
+
+> **说明**：版本元数据用于管理知识库的版本信息，支持版本切换和回滚。
+
+```java
+package com.aidoctor.knowledge.entity;
+
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+
+/**
+ * 版本元数据实体
+ * 管理知识库的版本信息
+ */
+@Entity
+@Table(name = "release_metadata", indexes = {
+    @Index(name = "idx_release_id", columnList = "release_id"),
+    @Index(name = "idx_is_current", columnList = "is_current"),
+    @Index(name = "idx_status", columnList = "status")
+})
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ReleaseMetadata {
+    
+    /**
+     * 元数据ID（主键）
+     */
+    @Id
+    @Column(name = "id", length = 64, nullable = false)
+    private String id;
+    
+    /**
+     * 发布版本ID
+     * Sandbox/Staging/v1.0/v2.0等
+     */
+    @Column(name = "release_id", length = 32, unique = true, nullable = false)
+    private String releaseId;
+    
+    /**
+     * 状态
+     * active/deprecated/archived
+     */
+    @Column(name = "status", length = 32, nullable = false)
+    private String status;
+    
+    /**
+     * 是否为当前生产版本
+     */
+    @Column(name = "is_current", nullable = false)
+    private Boolean isCurrent;
+    
+    /**
+     * 创建时间
+     */
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+    
+    /**
+     * 更新时间
+     */
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+}
+```
+
+**数据库表设计**：
+```sql
+-- 版本元数据表
+CREATE TABLE release_metadata (
+    id VARCHAR(64) PRIMARY KEY,
+    release_id VARCHAR(32) UNIQUE NOT NULL,
+    status VARCHAR(32) NOT NULL,  -- active/deprecated/archived
+    is_current BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    INDEX idx_release_id (release_id),
+    INDEX idx_is_current (is_current),
+    INDEX idx_status (status)
+);
 ```
 
 ---

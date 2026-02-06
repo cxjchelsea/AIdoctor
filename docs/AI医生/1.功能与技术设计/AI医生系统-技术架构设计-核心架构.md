@@ -323,6 +323,43 @@
 │  │  - 结构化数据提取                                      │  │
 │  │  - 多模态理解支持                                      │  │
 │  └──────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  知识查询服务（knowledge-query-service:8093）          │  │
+│  │  - 知识库优先查询（只读）                              │  │
+│  │  - Neo4j路径检索验证                                   │  │
+│  │  - 路径约束推理                                        │  │
+│  │  - 版本化知识访问                                      │  │
+│  └──────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│           知识演化与维护层（Knowledge Evolution Layer）          │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  知识运维服务（knowledge-ops-service:8094）            │  │
+│  │  ├─ Extractor Agent（抽取Agent）                      │  │
+│  │  │   - 从知识源中抽取结构化知识                        │  │
+│  │  │   - 生成KO草稿 + provenance                        │  │
+│  │  ├─ Verifier Agent（验证Agent）                       │  │
+│  │  │   - 证据一致性验证                                  │  │
+│  │  │   - 冲突检测                                        │  │
+│  │  ├─ Conflict Resolver Agent（冲突解决Agent）           │  │
+│  │  │   - 解决知识冲突                                    │  │
+│  │  │   - 冲突解决策略                                    │  │
+│  │  ├─ Release Builder Agent（打包发布候选Agent）         │  │
+│  │  │   - 打包candidate_release                          │  │
+│  │  │   - 生成diff与测试计划                              │  │
+│  │  ├─ Shadow Evaluator Agent（影子评测Agent）            │  │
+│  │  │   - 离线环境评测                                    │  │
+│  │  │   - 回归测试                                        │  │
+│  │  ├─ Rollback & Drift Monitor Agent（回滚与漂移监控）  │  │
+│  │  │   - 监控生产环境知识使用情况                        │  │
+│  │  │   - 自动触发回滚                                    │  │
+│  │  └─ Publish Gate（发布门禁）                          │  │
+│  │      - Gate-1: 结构合法性检查                          │  │
+│  │      - Gate-2: 证据可追溯性检查                        │  │
+│  │      - Gate-3: 回归评测与影子评测                     │  │
+│  │      - Gate-4: 风险分级审批                           │  │
+│  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -331,6 +368,9 @@
 │    （CDP存储、诊断记录、检查记录、健康状态判定记录等）          │
 │  - Redis 7（缓存、会话状态、CDP临时状态、工具调用队列）         │
 │  - Neo4j 5（知识图谱，DR.KNOWS核心依赖）                        │
+│    ├─ Production（生产知识库，只读）                            │
+│    ├─ Staging（候选验证区）                                    │
+│    └─ Sandbox（实验/构建区）                                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -364,6 +404,8 @@
 | risk-assessment-service | 风险评估工具 | tool_6 | 高危识别、紧急程度评估 |
 | explanation-service | 证据链工具 | tool_7 | 证据链构建、解释生成 |
 | diagnosis-service | 主Agent（Clinical Agent Brain） | agent_main | 任务分配、流程编排、冲突解决、最终决策 |
+| knowledge-query-service | 知识查询服务 | - | 知识库查询、路径检索、版本化知识访问 |
+| knowledge-ops-service | 知识运维服务 | - | 知识抽取、验证、冲突处理、发布门禁 |
 
 ### 1.4 服务依赖关系与调用策略
 
@@ -1291,10 +1333,571 @@ tool_3返回：候选集为空
 
 ---
 
+## 七、知识演化与维护子系统
+
+### 7.1 设计概述
+
+**核心思想**：
+- **双层决策架构**：诊断域（主Agent）与知识域（知识演化Agent集群）分离
+- **权限分离**：Read（生产知识）、Write（候选区）、Publish（发布门禁）、Rollback（回滚控制）
+- **版本化管理**：类似CDP的写时复制思想，支持知识版本追溯和回滚
+
+**设计原则**：
+1. **诊断决策单点负责**：主Agent仍是诊断与临床动作的唯一责任主体
+2. **知识演化多点自治**：知识演化Agent集群可以自动运行，最大化研究空间
+3. **发布单点门禁**：知识演化不能直接改生产知识，必须通过Publish Gate
+4. **可追溯性**：所有知识变更可追溯，支持审计和回滚
+
+### 7.2 架构分层
+
+#### 7.2.1 在线层：Knowledge Query（只读）
+
+**定位**：服务于通道1结构化推理
+
+**功能**：
+- 知识库优先查询
+- Neo4j路径检索验证
+- 路径约束推理
+
+**实现方式**：
+- 新增工具服务：`knowledge-query-service`
+- 或作为 `diagnosis-engine-service` 的可插拔retriever模块
+
+**特点**：
+- 只读访问生产知识库
+- 不参与知识演化流程
+- 响应主Agent的工具调用请求
+
+#### 7.2.2 离线层：Knowledge Evolution（写候选/跑评测/提发布）
+
+**定位**：知识演化的核心子系统
+
+**功能**：
+- 知识抽取
+- 知识验证
+- 冲突处理
+- 候选构建
+- 回归评测
+- 发布提议
+
+**实现方式**：
+- 新增独立子系统：`knowledge-ops-service`
+- 内部由多个"知识维护Agent"组成
+- 通过消息队列异步运行（复用现有调度层能力）
+
+**特点**：
+- 异步运行，不阻塞在线诊断流程
+- 工作在候选区，不直接修改生产知识
+- 通过Publish Gate控制发布
+
+### 7.3 三个知识库区
+
+#### 7.3.1 Sandbox（实验/构建区）
+
+**定位**：知识演化的起点，实验和构建区域
+
+**功能**：
+- 抽取Agent、解析Agent在这里生成结构化知识对象（KO）
+- 与证据绑定
+- 不影响任何线上推理
+
+**特点**：
+- 完全隔离，不影响生产环境
+- 支持快速迭代和实验
+- 可以随时清理和重建
+
+#### 7.3.2 Staging（候选验证区）
+
+**定位**：知识验证和候选构建区域
+
+**功能**：
+- 验证Agent工作：证据一致性、冲突检测
+- 冲突处理Agent工作：解决知识冲突
+- 回归评测Agent工作：影子评测
+- 产出"候选release（candidate_release）"
+
+**特点**：
+- 通过验证的知识才能进入Staging
+- 支持完整的验证和测试流程
+- 生成候选发布包
+
+#### 7.3.3 Production（线上只读发布区）
+
+**定位**：生产环境的知识库，只读访问
+
+**功能**：
+- 只有通过Publish Gate的release才进入Production
+- 生成 `kg_version`（v1, v2, v3...）
+- 支持版本化管理和回滚
+
+**特点**：
+- 只读访问，不直接修改
+- 版本化管理，支持回滚
+- 对应CDP的写时复制思想
+
+**数据流向**：
+```
+Sandbox（KO草稿）
+  ↓ 验证通过
+Staging（candidate_release）
+  ↓ 通过Publish Gate
+Production（kg_version）
+  ↓
+在线推理使用
+```
+
+### 7.4 知识演化Agent集群
+
+**Agent职责划分**：
+
+| Agent | 职责 | 工作区域 |
+|-------|------|---------|
+| Extractor Agent | 从知识源中抽取结构化知识 | Sandbox |
+| Verifier Agent | 验证知识的正确性和一致性 | Sandbox → Staging |
+| Conflict Resolver Agent | 解决知识冲突 | Staging |
+| Release Builder Agent | 打包发布候选 | Staging |
+| Shadow Evaluator Agent | 在离线环境进行评测 | Staging |
+| Rollback & Drift Monitor Agent | 监控生产环境的知识使用情况 | Production |
+
+**Agent协作流程**：
+```
+新知识源
+  ↓
+Extractor Agent（抽取）→ Sandbox
+  ↓
+Verifier Agent（验证）→ Staging
+  ↓
+Conflict Resolver Agent（冲突解决）→ Staging
+  ↓
+Release Builder Agent（打包）→ candidate_release
+  ↓
+Shadow Evaluator Agent（影子评测）→ 评测报告
+  ↓
+Publish Gate（门禁）→ Production
+  ↓
+Rollback & Drift Monitor Agent（监控）→ 持续监控
+```
+
+### 7.5 Publish Gate：发布门禁机制
+
+**定位**：非LLM、规则/测试驱动的发布控制器
+
+**四道门禁**：
+
+1. **Gate-1：结构合法性**
+   - 检查KO schema完整
+   - concept标准化字段齐全
+   - 避免脏数据
+
+2. **Gate-2：证据可追溯性**
+   - 每条KO必须绑定provenance
+   - 没有证据不允许进入发布候选
+
+3. **Gate-3：回归评测与影子评测通过**
+
+**检查内容**：
+- 必须跑最小回归集
+- 核心DDx场景测试
+- 红旗病种测试
+- 关键路径断裂测试
+
+**测试契约（Test Contract）**：
+
+**必跑测试集**：
+1. **固定小集（Core Regression Set）**：
+   - 核心DDx场景：50个标准病例（覆盖前10大常见疾病）
+   - 红旗病种：20个急危重病例（急性心肌梗死、脑卒中、肺栓塞等）
+   - 关键路径：30个关键诊疗路径（覆盖主要诊疗流程）
+   - **总计：100个固定测试用例**
+
+2. **抽样大集（Sampling Set）**：
+   - 从历史病例库中随机抽样500个病例
+   - 覆盖不同病种、不同严重程度、不同人群
+   - 每次发布都重新抽样，确保覆盖全面
+
+**硬阈值（Hard Thresholds）**：
+- **红旗召回率**：不得下降（与基线版本对比，红旗病种召回率 ≥ 基线）
+- **关键路径断裂**：必须为0（关键路径断裂数 = 0）
+- **总体性能下降**：不超过5%（总体诊断准确率下降 ≤ 5%）
+- **新增错误**：不超过2%（新增错误病例数 / 总测试病例数 ≤ 2%）
+
+**软阈值（Soft Thresholds）**：
+- **平均响应时间**：增加不超过10%
+- **证据完整性**：证据链完整性得分 ≥ 基线 - 3%
+- **路径可追溯性**：路径可追溯性得分 ≥ 基线 - 5%
+
+**评测输出要求**：
+- **评测报告**：必须生成完整的评测报告
+- **报告摘要hash**：评测报告的hash值必须记录到candidate_release中
+- **审计记录**：评测过程必须记录到AuditTrail
+- **对比基线**：必须与当前生产版本（基线）进行对比
+
+**评测报告结构**：
+```json
+{
+  "evaluation_id": "EVAL_20260128_001",
+  "candidate_release_id": "RELEASE_20260128_001",
+  "baseline_version": "v2.0",
+  "test_sets": {
+    "core_regression": {
+      "total_cases": 100,
+      "passed": 98,
+      "failed": 2,
+      "pass_rate": 0.98
+    },
+    "sampling_set": {
+      "total_cases": 500,
+      "passed": 485,
+      "failed": 15,
+      "pass_rate": 0.97
+    }
+  },
+  "metrics": {
+    "red_flag_recall": {
+      "baseline": 0.95,
+      "candidate": 0.96,
+      "delta": 0.01,
+      "threshold_met": true
+    },
+    "critical_path_breaks": {
+      "count": 0,
+      "threshold_met": true
+    },
+    "overall_accuracy": {
+      "baseline": 0.92,
+      "candidate": 0.91,
+      "delta": -0.01,
+      "threshold_met": true
+    },
+    "new_errors": {
+      "count": 10,
+      "rate": 0.0167,
+      "threshold_met": true
+    }
+  },
+  "report_hash": "sha256:abc123...",
+  "evaluation_timestamp": "2026-01-28T10:00:00Z",
+  "evaluator": "ShadowEvaluatorAgent_v1.0"
+}
+```
+
+**通过条件（明确契约）**：
+1. **所有硬阈值必须满足**：
+   - 红旗召回率 ≥ 基线
+   - 关键路径断裂 = 0
+   - 总体性能下降 ≤ 5%
+   - 新增错误率 ≤ 2%
+
+2. **至少80%的软阈值满足**：
+   - 响应时间、证据完整性、路径可追溯性等
+
+3. **评测报告必须完整**：
+   - 报告hash已记录
+   - 所有测试用例都有结果
+   - 对比基线数据完整
+
+4. **评测结果必须入审计**：
+   - candidate_release的评测报告hash已记录
+   - 评测过程已记录到AuditTrail
+
+**不通过处理**：
+- 如果硬阈值不满足：直接拒绝，不允许进入Gate-4
+- 如果软阈值不满足：标记为"需要人工审核"，进入Gate-4但需要人工审批
+- 如果评测报告不完整：拒绝，要求重新评测
+
+**与主Agent的"停止条件必须证据链完整"思想一致**：
+- Gate-3的评测也要求证据链完整
+- 评测报告必须包含证据链完整性评估
+- 证据链不完整的测试用例视为失败
+
+4. **Gate-4：风险分级审批（可选人工）**
+   - 低风险：自动发布
+   - 中风险：需要人工审批或双人签署
+   - 高风险：必须人工审批+灰度发布
+
+**门禁决策流程**：
+```
+candidate_release
+  ↓
+Gate-1: 结构合法性检查
+  ↓ (通过)
+Gate-2: 证据可追溯性检查
+  ↓ (通过)
+Gate-3: 回归评测与影子评测
+  ↓ (通过)
+Gate-4: 风险分级审批
+  ↓ (通过)
+生成 kg_version
+  ↓
+发布到 Production
+```
+
+### 7.6 与现有系统的集成
+
+#### 7.6.1 与主Agent的集成
+
+**主Agent职责不变**：
+- 诊断与临床动作的唯一责任主体仍是主Agent
+- 主Agent运行循环不变：Observe→Plan→Act→Update→Evaluate→Stop/Escalate
+- 主Agent负责证据融合和冲突解决
+
+**新增能力**：
+- 主Agent可以触发知识演化提案（异步）
+- 主Agent使用版本化知识进行推理
+- 主Agent在CDP中记录知识引用
+
+#### 7.6.2 与工具服务的集成
+
+**工具服务职责不变**：
+- 工具仍然无独立目标、无长期策略状态
+- 工具只按主Agent调用执行并返回结构化结果
+- 工具必须提供evidence引用和suggestedWrites
+
+**新增能力**：
+- 工具可以访问版本化知识
+- 工具的evidence引用包含kg_version和ko_id
+- 工具通过knowledge-query-service访问知识
+
+#### 7.6.3 与CDP的集成
+
+**CDP职责不变**：
+- CDP仍然是病例事实的唯一事实源
+- 所有工具从CDP读取，建议写回CDP
+- CDP支持版本控制、回放、回退
+
+**新增能力**：
+- CDP记录知识引用（knowledge_refs）
+- CDP的audit包含kg_version
+- CDP支持知识版本追溯
+
+### 7.7 知识演化触发机制
+
+#### 7.7.1 在线触发：只产生Proposal
+
+**触发场景**：
+- tool_3鉴别诊断候选为空/很弱（知识覆盖缺口）
+- 冲突复核反复失败（图谱路径无法验证、证据互斥）
+- 反复"证据不足"仍无法满足停止条件中的"证据链完整"
+
+**处理方式**：
+- 主Agent在Evaluate阶段可决定：向knowledge-ops提交 `proposal`（异步）
+- **不阻塞当前会话闭环**
+- 只产生提案，不直接更新生产知识
+
+#### 7.7.3 去噪/节流机制
+
+**问题**：真实运行中会出现"提案风暴"（同类缺口重复触发）
+
+**解决方案**：
+
+**1. dedupe_key（去重键）**
+
+**生成规则**：
+- 按病种/概念/缺口类型聚合
+- 格式：`{gap_type}_{disease_concept_id}_{symptom_concept_id}`
+- 示例：
+  - `knowledge_gap_ICD_I20_0_SYMP_001`：心绞痛的知识缺口
+  - `conflict_resolution_failed_ICD_I21_0`：急性心肌梗死冲突解决失败
+  - `evidence_insufficient_ICD_J18_0`：肺炎证据不足
+
+**去重逻辑**：
+- 相同`dedupe_key`的proposal在`cooldown_window`内只保留第一个
+- 后续相同key的proposal会被合并或丢弃
+- 合并时更新`trigger_count`（触发次数）和`latest_evidence_snapshot`
+
+**2. cooldown_window（冷却时间窗口）**
+
+**配置规则**：
+- 默认冷却时间：3600秒（1小时）
+- 可根据gap_type调整：
+  - 知识缺口：3600秒（1小时）
+  - 冲突解决失败：7200秒（2小时）
+  - 证据不足：1800秒（30分钟）
+
+**冷却逻辑**：
+- 在冷却窗口内，相同`dedupe_key`的proposal会被拒绝
+- 冷却窗口外，允许新的proposal
+- 冷却窗口可以动态调整（根据触发频率）
+
+**3. evidence_snapshot（证据快照）**
+
+**快照内容**：
+- 触发时的CDP状态（关键字段）
+- 触发时的工具调用结果
+- 触发时的知识查询结果
+- 触发时的错误信息
+
+**快照格式**：
+```json
+{
+  "evidence_snapshot": {
+    "snapshot_hash": "sha256:abc123...",
+    "cdp_snapshot": {
+      "patient_state": {...},
+      "ddx": [...],
+      "evidence_graph": {...}
+    },
+    "tool_results": [
+      {
+        "tool_id": "tool_3",
+        "result": {...},
+        "error": "knowledge_gap: no candidate found"
+      }
+    ],
+    "knowledge_queries": [
+      {
+        "query": "...",
+        "result_count": 0
+      }
+    ],
+    "trigger_context": {
+      "session_id": "...",
+      "timestamp": "2026-01-28T10:00:00Z",
+      "agent_state": {...}
+    }
+  }
+}
+```
+
+**作用**：
+- **便于复现**：可以复现触发场景，用于知识演化Agent分析
+- **问题诊断**：可以分析为什么触发，是否误触发
+- **审计追溯**：记录触发时的完整上下文
+
+**4. 节流策略**
+
+**触发频率限制**：
+- 单个`dedupe_key`：每小时最多触发1次
+- 单个会话：每小时最多触发5次proposal
+- 全局：每小时最多触发100个proposal
+
+**超出限制处理**：
+- 超出限制的proposal会被标记为"节流"
+- 记录到日志，但不提交到knowledge-ops
+- 可以人工查看被节流的proposal
+
+**5. Proposal合并策略**
+
+**合并条件**：
+- 相同`dedupe_key`
+- 在`cooldown_window`内
+- 触发原因相同或相似
+
+**合并方式**：
+- 保留第一个proposal
+- 更新`trigger_count`（触发次数）
+- 更新`latest_evidence_snapshot`（最新证据快照）
+- 合并`diff`（如果有多个KO变更）
+
+**合并后的Proposal结构**：
+```json
+{
+  "proposal_id": "PROP_20260128_001",
+  "dedupe_key": "knowledge_gap_ICD_I20_0_SYMP_001",
+  "trigger": "知识覆盖缺口",
+  "trigger_count": 5,
+  "first_trigger_time": "2026-01-28T09:00:00Z",
+  "latest_trigger_time": "2026-01-28T10:00:00Z",
+  "cooldown_window": 3600,
+  "evidence_snapshot": {
+    "snapshot_hash": "sha256:abc123...",
+    "first_snapshot": {...},
+    "latest_snapshot": {...}
+  },
+  "diff": {...},
+  "risk_level": "medium"
+}
+```
+
+#### 7.7.2 离线触发：周期性扫描
+
+**触发场景**：
+- 新指南/新共识发布
+- 内部规则变更
+- 线上监控发现某类case回归，触发"修复提案"
+
+**处理方式**：
+- 定时任务扫描知识源
+- 检测到更新后触发知识演化流程
+- 自动生成提案
+
+### 7.8 版本化管理与回滚
+
+**版本生成**：
+- 每次发布生成 `kg_version`（v1, v2, v3...）
+- 对应CDP的写时复制思想
+- 新版本、旧版本保留用于审计回滚
+
+**回滚机制**：
+
+**1. 全局回滚**
+
+**实现方式**：
+- 把默认kg_version指针回退（通过修改current_release指针）
+- 只需修改`current_release`指针，指向旧release
+- 回滚速度快（O(1)），不需要重建数据
+
+**2. 局部回滚（基于downstream_bindings的精确回滚）**
+
+**依赖分析流程**：
+
+**步骤1：识别受影响组件**
+- 根据KO的`downstream_bindings`字段，识别所有依赖该KO的组件
+- 包括：工具、规则引擎、路径模板等
+
+**步骤2：影响范围评估**
+- 评估回滚对每个组件的影响
+- 评估是否需要更新组件配置
+- 评估是否需要通知组件重新加载
+
+**步骤3：回滚执行**
+- 在新release中标记KO为deprecated
+- 查询时fallback到旧release的KO
+- 通知相关组件（通过downstream_bindings）
+- 更新组件配置（如果需要）
+
+**步骤4：回滚验证**
+- 验证回滚后的KO是否可用
+- 验证相关组件是否正常工作
+- 验证诊断流程是否恢复正常
+
+**局部回滚示例**：
+```cypher
+// 1. 识别需要回滚的KO
+MATCH (ko:KnowledgeObject {ko_id: "KO_001"})
+WHERE ko.release_id = "v2.1"
+
+// 2. 获取下游绑定
+WITH ko, ko.downstream_bindings as bindings
+
+// 3. 标记为deprecated
+SET ko.status = "deprecated"
+SET ko.deprecated_at = timestamp()
+SET ko.deprecated_reason = "性能回归"
+
+// 4. 通知相关组件（通过bindings）
+// - tool_3: 需要重新加载知识
+// - pathway_acute_mi: 需要更新路径配置
+```
+
+**回滚特点**：
+- **可追溯**：回滚操作记录到AuditTrail
+- **支持审计**：回滚原因、影响范围都有记录
+- **不影响其他版本**：只影响当前版本
+- **精确控制**：基于downstream_bindings实现精确回滚
+
+**灰度发布**：
+- 按会话分流
+- 按机构分流
+- 按病种分流
+
+---
+
 ## 相关文档
 
 - [AI医生系统-技术架构设计-工具清单](./AI医生系统-技术架构设计-工具清单.md)
 - [AI医生系统-技术架构设计-核心技术组件](./AI医生系统-技术架构设计-核心技术组件.md)
 - [AI医生系统-技术架构设计-CDP数据与状态管理](./AI医生系统-技术架构设计-CDP数据与状态管理.md)
 - [AI医生系统-技术架构设计-索引](./AI医生系统-技术架构设计-索引.md)
+- [知识演化与知识维护-完整设计方案](../../3.知识内容提取/知识库结构设计/知识演化与维护/知识演化与知识维护-完整设计方案.md)
 

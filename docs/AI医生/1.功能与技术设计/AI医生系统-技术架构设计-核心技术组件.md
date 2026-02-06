@@ -1055,10 +1055,1284 @@ CREATE TABLE difference_point_library (
 
 ---
 
+### 3.6 知识查询服务（Knowledge Query Service）
+
+> **对应架构文档**：核心架构 - 七、知识演化与维护子系统 - 7.2.1 在线层：Knowledge Query  
+> **功能定位**：服务于通道1结构化推理，提供只读的知识库查询服务
+
+#### 3.6.1 服务定位与职责
+
+**定位**：
+- 在线层服务，服务于通道1结构化推理
+- 只读访问生产知识库
+- 不参与知识演化流程
+
+**核心职责**：
+- 知识库优先查询（主诉知识图谱、疾病知识图谱）
+- Neo4j路径检索验证
+- 路径约束推理
+- 版本化知识访问
+
+#### 3.6.2 知识库查询接口
+
+**技术实现**：
+
+```python
+class KnowledgeQueryService:
+    def __init__(self):
+        self.neo4j_client = Neo4jClient()
+        self.knowledge_base_client = KnowledgeBaseClient()
+        self.version_manager = KnowledgeVersionManager()
+    
+    def query_knowledge_base(self, 
+                           query_type: str,
+                           query_params: Dict,
+                           kg_version: str = None) -> Dict:
+        """
+        知识库优先查询
+        
+        Args:
+            query_type: 查询类型（chief_complaint/disease/relation）
+            query_params: 查询参数
+            kg_version: 知识版本（可选，默认使用当前生产版本）
+        
+        Returns:
+            查询结果（包含知识对象、证据来源、版本信息）
+        """
+        # 1. 确定使用的知识版本
+        if not kg_version:
+            kg_version = self.version_manager.get_current_production_version()
+        
+        # 2. 查询知识库
+        if query_type == "chief_complaint":
+            return self._query_chief_complaint_kb(query_params, kg_version)
+        elif query_type == "disease":
+            return self._query_disease_kb(query_params, kg_version)
+        elif query_type == "relation":
+            return self._query_relation_kb(query_params, kg_version)
+        else:
+            raise ValueError(f"Unknown query type: {query_type}")
+    
+    def _query_chief_complaint_kb(self, params: Dict, kg_version: str) -> Dict:
+        """
+        查询主诉知识图谱
+        """
+        chief_complaint = params.get("chief_complaint")
+        
+        # 查询主诉知识图谱（从MySQL/Oracle）
+        kb_result = self.knowledge_base_client.query_chief_complaint(
+            chief_complaint=chief_complaint,
+            kg_version=kg_version
+        )
+        
+        return {
+            "knowledge_objects": kb_result,
+            "kg_version": kg_version,
+            "source": "knowledge_base"
+        }
+    
+    def _query_disease_kb(self, params: Dict, kg_version: str) -> Dict:
+        """
+        查询疾病知识图谱
+        """
+        disease_cui = params.get("disease_cui")
+        
+        # 查询疾病知识图谱
+        kb_result = self.knowledge_base_client.query_disease(
+            disease_cui=disease_cui,
+            kg_version=kg_version
+        )
+        
+        return {
+            "knowledge_objects": kb_result,
+            "kg_version": kg_version,
+            "source": "knowledge_base"
+        }
+```
+
+#### 3.6.3 Neo4j路径检索验证
+
+**技术实现**：
+
+```python
+class PathRetriever:
+    def __init__(self):
+        self.neo4j_client = Neo4jClient()
+    
+    def retrieve_paths(self,
+                      symptom_cuis: List[str],
+                      max_hops: int = 4,
+                      kg_version: str = None) -> List[Path]:
+        """
+        检索多跳推理路径
+        
+        Args:
+            symptom_cuis: 症状CUI列表
+            max_hops: 最大跳数（默认4）
+            kg_version: 知识版本
+        
+        Returns:
+            推理路径列表
+        """
+        # 构建Cypher查询（根据kg_version过滤）
+        cypher_query = f"""
+        MATCH path = (s:Symptom)-[*2..{max_hops}]->(d:Disease)
+        WHERE s.cui IN $symptom_cuis
+        AND d.release_id = $kg_version
+        RETURN path, 
+               relationships(path) as rels,
+               nodes(path) as nodes,
+               length(path) as path_length
+        ORDER BY path_length
+        LIMIT 50
+        """
+        
+        results = self.neo4j_client.execute_query(
+            cypher_query,
+            symptom_cuis=symptom_cuis,
+            kg_version=kg_version or "current"
+        )
+        
+        paths = []
+        for result in results:
+            paths.append(Path(
+                nodes=result["nodes"],
+                relationships=result["rels"],
+                length=result["path_length"],
+                kg_version=kg_version
+            ))
+        
+        return paths
+    
+    def validate_knowledge_base_candidates(self,
+                                          kb_candidates: List[str],
+                                          paths: List[Path]) -> Dict:
+        """
+        验证知识库候选是否有路径支持
+        """
+        validated = []
+        unvalidated = []
+        
+        for candidate in kb_candidates:
+            # 检查是否有路径指向该候选
+            has_path = any(
+                path.target_disease_cui == candidate 
+                for path in paths
+            )
+            
+            if has_path:
+                validated.append(candidate)
+            else:
+                unvalidated.append(candidate)
+        
+        return {
+            "validated": validated,
+            "unvalidated": unvalidated,
+            "validation_rate": len(validated) / len(kb_candidates) if kb_candidates else 0
+        }
+```
+
+#### 3.6.4 版本化知识访问
+
+**技术实现**：
+
+```python
+class KnowledgeVersionManager:
+    def __init__(self):
+        self.neo4j_client = Neo4jClient()
+        self.metadata_db = MetadataDatabase()
+    
+    def get_current_production_version(self) -> str:
+        """
+        获取当前生产版本
+        """
+        metadata = self.metadata_db.query(
+            "SELECT release_id FROM ReleaseMetadata WHERE is_current = true"
+        )
+        if metadata:
+            return metadata[0]["release_id"]
+        return "v1.0"  # 默认版本
+    
+    def query_with_version(self, 
+                          query: str,
+                          kg_version: str = None) -> Dict:
+        """
+        使用指定版本查询知识
+        """
+        if not kg_version:
+            kg_version = self.get_current_production_version()
+        
+        # 在查询中添加版本过滤
+        versioned_query = self._add_version_filter(query, kg_version)
+        
+        return self.neo4j_client.execute_query(versioned_query)
+    
+    def _add_version_filter(self, query: str, kg_version: str) -> str:
+        """
+        在Cypher查询中添加版本过滤
+        """
+        # 在WHERE子句中添加版本过滤
+        if "WHERE" in query.upper():
+            query = query.replace(
+                "WHERE",
+                f"WHERE ko.release_id = '{kg_version}' AND"
+            )
+        else:
+            query = query + f" WHERE ko.release_id = '{kg_version}'"
+        
+        return query
+```
+
+### 3.7 知识运维服务（Knowledge Operations Service）
+
+> **对应架构文档**：核心架构 - 七、知识演化与维护子系统 - 7.2.2 离线层：Knowledge Evolution  
+> **功能定位**：知识演化的核心子系统，负责知识的抽取、验证、冲突处理、发布门禁
+
+#### 3.7.1 服务定位与职责
+
+**定位**：
+- 离线层服务，知识演化的核心子系统
+- 异步运行，不阻塞在线诊断流程
+- 工作在候选区，不直接修改生产知识
+
+**核心职责**：
+- 知识抽取（Extractor Agent）
+- 知识验证（Verifier Agent）
+- 冲突处理（Conflict Resolver Agent）
+- 候选构建（Release Builder Agent）
+- 回归评测（Shadow Evaluator Agent）
+- 发布门禁（Publish Gate）
+- 监控与回滚（Rollback & Drift Monitor Agent）
+
+#### 3.7.2 知识对象（KO）数据结构
+
+**技术实现**：
+
+```python
+from dataclasses import dataclass
+from typing import List, Dict, Optional
+from enum import Enum
+
+class KOType(Enum):
+    RULE = "rule"
+    RELATION = "relation"
+    PATHWAY_TEMPLATE = "pathway_template"
+    CONTRAINDICATION = "contraindication"
+    THRESHOLD = "threshold"
+    DDX_FEATURE = "ddx_feature"
+
+class KOStatus(Enum):
+    PROPOSED = "proposed"
+    VERIFIED = "verified"
+    PUBLISHED = "published"
+    DEPRECATED = "deprecated"
+
+@dataclass
+class Provenance:
+    """证据来源"""
+    doc_id: str
+    doc_version: str
+    section: str
+    paragraph: str
+    page_range: Optional[tuple] = None
+    timestamp: str = None
+
+@dataclass
+class DownstreamBinding:
+    """下游绑定"""
+    binding_type: str  # tool / rule_engine / pathway_template
+    binding_id: str
+    binding_name: str
+    usage_context: str
+    binding_strength: str  # required / optional / conditional
+
+@dataclass
+class KnowledgeObject:
+    """知识对象（KO）"""
+    ko_id: str
+    ko_type: KOType
+    content: Dict
+    concept_ids: List[str]  # CUI/ICD/SNOMED
+    provenance: List[Provenance]
+    status: KOStatus
+    kg_version: Optional[str] = None  # 仅对published状态
+    impact_scope: List[str] = None  # DDx / workup / treatment / risk
+    downstream_bindings: List[DownstreamBinding] = None
+    release_id: str = None  # Sandbox / Staging / v1.0 / v2.0等
+```
+
+#### 3.7.3 知识更新提案（Knowledge Proposal）数据结构
+
+**技术实现**：
+
+```python
+from enum import Enum
+from typing import Dict, List, Optional
+
+class ProposalTrigger(Enum):
+    """提案触发原因"""
+    KNOWLEDGE_GAP = "knowledge_gap"  # 知识覆盖缺口
+    CONFLICT_RESOLUTION_FAILED = "conflict_resolution_failed"  # 冲突解决失败
+    EVIDENCE_INSUFFICIENT = "evidence_insufficient"  # 证据不足
+    NEW_GUIDELINE = "new_guideline"  # 新指南发布
+    RULE_CHANGE = "rule_change"  # 内部规则变更
+    REGRESSION_DETECTED = "regression_detected"  # 线上监控发现回归
+
+class RiskLevel(Enum):
+    """风险等级"""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+@dataclass
+class EvidenceSnapshot:
+    """证据快照"""
+    snapshot_hash: str  # sha256 hash
+    cdp_snapshot: Dict  # CDP状态快照
+    tool_results: List[Dict]  # 工具调用结果
+    knowledge_queries: List[Dict]  # 知识查询结果
+    trigger_context: Dict  # 触发上下文（session_id、timestamp、agent_state等）
+
+@dataclass
+class KnowledgeProposal:
+    """知识更新提案"""
+    proposal_id: str
+    trigger: ProposalTrigger
+    diff: Dict  # 对哪些ko做新增/修改/删除
+    required_tests: List[str]  # 需要跑哪些回归/影子评测
+    risk_level: RiskLevel
+    dedupe_key: str  # 去重键：按病种/概念/缺口类型聚合
+    cooldown_window: int  # 冷却时间窗口（秒）
+    evidence_snapshot: EvidenceSnapshot  # 触发当时的关键证据快照
+    trigger_count: int = 1  # 触发次数（合并时更新）
+    first_trigger_time: Optional[str] = None  # 首次触发时间
+    latest_trigger_time: Optional[str] = None  # 最新触发时间
+    created_at: Optional[str] = None
+    status: str = "pending"  # pending / processing / completed / rejected
+```
+
+**dedupe_key生成规则**：
+
+```python
+def generate_dedupe_key(trigger: ProposalTrigger, 
+                        disease_concept_id: Optional[str] = None,
+                        symptom_concept_id: Optional[str] = None) -> str:
+    """
+    生成去重键
+    
+    格式：{gap_type}_{disease_concept_id}_{symptom_concept_id}
+    示例：
+    - knowledge_gap_ICD_I20_0_SYMP_001：心绞痛的知识缺口
+    - conflict_resolution_failed_ICD_I21_0：急性心肌梗死冲突解决失败
+    - evidence_insufficient_ICD_J18_0：肺炎证据不足
+    """
+    gap_type = trigger.value
+    disease_part = disease_concept_id or "UNKNOWN"
+    symptom_part = symptom_concept_id or "UNKNOWN"
+    return f"{gap_type}_{disease_part}_{symptom_part}"
+```
+
+**cooldown_window配置规则**：
+
+```python
+def get_cooldown_window(trigger: ProposalTrigger) -> int:
+    """
+    根据触发类型获取冷却时间窗口（秒）
+    """
+    cooldown_map = {
+        ProposalTrigger.KNOWLEDGE_GAP: 3600,  # 1小时
+        ProposalTrigger.CONFLICT_RESOLUTION_FAILED: 7200,  # 2小时
+        ProposalTrigger.EVIDENCE_INSUFFICIENT: 1800,  # 30分钟
+        ProposalTrigger.NEW_GUIDELINE: 0,  # 新指南立即处理
+        ProposalTrigger.RULE_CHANGE: 0,  # 规则变更立即处理
+        ProposalTrigger.REGRESSION_DETECTED: 3600,  # 1小时
+    }
+    return cooldown_map.get(trigger, 3600)  # 默认1小时
+```
+
+#### 3.7.4 Extractor Agent（抽取Agent）
+
+**技术实现**：
+
+```python
+class ExtractorAgent:
+    def __init__(self):
+        self.llm_client = LLMClient()
+        self.sandbox_db = SandboxDatabase()
+    
+    def extract_knowledge(self,
+                         source_text: str,
+                         source_metadata: Dict) -> KnowledgeObject:
+        """
+        从知识源中抽取结构化知识
+        
+        Args:
+            source_text: 知识源文本
+            source_metadata: 知识源元数据（doc_id、版本等）
+        
+        Returns:
+            知识对象（KO草稿）
+        """
+        # 1. 构建提取Prompt
+        prompt = self._build_extraction_prompt(source_text)
+        
+        # 2. 调用LLM提取
+        extraction_result = self.llm_client.extract(
+            prompt=prompt,
+            schema=self._get_ko_schema()
+        )
+        
+        # 3. 构建知识对象
+        ko = KnowledgeObject(
+            ko_id=self._generate_ko_id(),
+            ko_type=extraction_result["ko_type"],
+            content=extraction_result["content"],
+            concept_ids=extraction_result["concept_ids"],
+            provenance=[Provenance(
+                doc_id=source_metadata["doc_id"],
+                doc_version=source_metadata["version"],
+                section=source_metadata.get("section"),
+                paragraph=source_metadata.get("paragraph")
+            )],
+            status=KOStatus.PROPOSED,
+            release_id="Sandbox"
+        )
+        
+        # 4. 保存到Sandbox
+        self.sandbox_db.save_ko(ko)
+        
+        return ko
+```
+
+#### 3.7.4 Verifier Agent（验证Agent）
+
+**技术实现**：
+
+```python
+class VerifierAgent:
+    def __init__(self):
+        self.sandbox_db = SandboxDatabase()
+        self.staging_db = StagingDatabase()
+    
+    def verify_knowledge(self, ko: KnowledgeObject) -> Dict:
+        """
+        验证知识的正确性和一致性
+        
+        Returns:
+            验证结果（包含是否通过、验证报告）
+        """
+        verification_result = {
+            "ko_id": ko.ko_id,
+            "passed": True,
+            "issues": []
+        }
+        
+        # 1. 证据一致性验证
+        evidence_consistency = self._verify_evidence_consistency(ko)
+        if not evidence_consistency["passed"]:
+            verification_result["passed"] = False
+            verification_result["issues"].extend(evidence_consistency["issues"])
+        
+        # 2. 冲突检测
+        conflicts = self._detect_conflicts(ko)
+        if conflicts:
+            verification_result["passed"] = False
+            verification_result["issues"].extend(conflicts)
+        
+        # 3. 如果通过验证，移动到Staging
+        if verification_result["passed"]:
+            ko.status = KOStatus.VERIFIED
+            ko.release_id = "Staging"
+            self.staging_db.save_ko(ko)
+            self.sandbox_db.remove_ko(ko.ko_id)
+        
+        return verification_result
+    
+    def _verify_evidence_consistency(self, ko: KnowledgeObject) -> Dict:
+        """
+        验证证据一致性
+        """
+        # 检查provenance是否完整
+        if not ko.provenance:
+            return {
+                "passed": False,
+                "issues": ["缺少证据来源（provenance）"]
+            }
+        
+        # 检查证据是否支持KO内容
+        # ... 实现细节
+        
+        return {"passed": True, "issues": []}
+    
+    def _detect_conflicts(self, ko: KnowledgeObject) -> List[Dict]:
+        """
+        检测与现有KO的冲突
+        """
+        conflicts = []
+        
+        # 查询现有KO（从Staging和Production）
+        existing_kos = self._query_existing_kos(ko)
+        
+        for existing_ko in existing_kos:
+            conflict = self._check_conflict(ko, existing_ko)
+            if conflict:
+                conflicts.append(conflict)
+        
+        return conflicts
+```
+
+#### 3.7.5 Conflict Resolver Agent（冲突解决Agent）
+
+**技术实现**：
+
+```python
+@dataclass
+class ConflictResolutionRecord:
+    """冲突解决记录"""
+    conflict_case_id: str  # 冲突实例ID
+    conflicting_ko_ids: List[str]  # 冲突的KO ID列表
+    conflict_type: str  # 冲突类型（value_conflict / logic_conflict / path_conflict等）
+    conflict_description: str  # 冲突描述
+    resolution_strategy: str  # 解决策略（覆盖/并存/分支/降级）
+    resolution_rationale: str  # 解决理由
+    resolution_timestamp: str  # 解决时间
+    resolved_by: str  # 解决者（Agent ID或人工审核者）
+    resolution_evidence: Dict  # 解决证据（如新指南版本、证据等级对比等）
+
+class ConflictResolverAgent:
+    def __init__(self):
+        self.staging_db = StagingDatabase()
+        self.resolution_history_db = ResolutionHistoryDatabase()
+    
+    def resolve_conflict(self, conflict: Dict) -> ConflictResolutionRecord:
+        """
+        解决知识冲突
+        
+        Args:
+            conflict: 冲突信息（包含conflicting_ko_ids、conflict_type等）
+        
+        Returns:
+            冲突解决记录
+        """
+        # 1. 分析冲突类型和严重程度
+        conflict_analysis = self._analyze_conflict(conflict)
+        
+        # 2. 选择解决策略
+        resolution_strategy = self._select_resolution_strategy(conflict_analysis)
+        
+        # 3. 执行解决策略
+        resolution_result = self._execute_resolution(conflict, resolution_strategy)
+        
+        # 4. 生成冲突解决记录
+        resolution_record = ConflictResolutionRecord(
+            conflict_case_id=self._generate_conflict_case_id(),
+            conflicting_ko_ids=conflict["conflicting_ko_ids"],
+            conflict_type=conflict["conflict_type"],
+            conflict_description=conflict["description"],
+            resolution_strategy=resolution_strategy,
+            resolution_rationale=resolution_result["rationale"],
+            resolution_timestamp=self._get_current_timestamp(),
+            resolved_by="ConflictResolverAgent_v1.0",
+            resolution_evidence=resolution_result["evidence"]
+        )
+        
+        # 5. 保存解决记录
+        self.resolution_history_db.save_resolution_record(resolution_record)
+        
+        # 6. 更新KO状态
+        self._update_ko_status(conflict, resolution_strategy, resolution_result)
+        
+        return resolution_record
+    
+    def _select_resolution_strategy(self, conflict_analysis: Dict) -> str:
+        """
+        选择冲突解决策略
+        
+        策略：
+        - 覆盖：新知识覆盖旧知识（新指南证据等级更高）
+        - 并存：多个版本并存（机构政策差异）
+        - 分支：按不同场景分支（不同人群适用不同标准）
+        - 降级：降级为"需人工审阅"（复杂冲突无法自动解决）
+        """
+        if conflict_analysis["can_auto_resolve"]:
+            if conflict_analysis["newer_evidence_level"] > conflict_analysis["older_evidence_level"]:
+                return "覆盖"
+            elif conflict_analysis["institutional_difference"]:
+                return "并存"
+            elif conflict_analysis["scenario_dependent"]:
+                return "分支"
+        return "降级"
+    
+    def _execute_resolution(self, conflict: Dict, strategy: str) -> Dict:
+        """
+        执行解决策略
+        """
+        if strategy == "覆盖":
+            return self._resolve_by_override(conflict)
+        elif strategy == "并存":
+            return self._resolve_by_coexist(conflict)
+        elif strategy == "分支":
+            return self._resolve_by_branch(conflict)
+        else:  # 降级
+            return self._resolve_by_downgrade(conflict)
+```
+
+#### 3.7.6 Release Builder Agent（打包发布候选Agent）
+
+**技术实现**：
+
+```python
+class ReleaseBuilderAgent:
+    def __init__(self):
+        self.staging_db = StagingDatabase()
+        self.diff_analyzer = DiffAnalyzer()
+    
+    def build_candidate_release(self, 
+                                verified_ko_ids: List[str]) -> Dict:
+        """
+        打包发布候选
+        
+        Args:
+            verified_ko_ids: 通过验证的KO ID列表
+        
+        Returns:
+            candidate_release对象
+        """
+        # 1. 收集通过验证的KO
+        verified_kos = self.staging_db.get_kos_by_ids(verified_ko_ids)
+        
+        # 2. 生成diff（与当前生产版本对比）
+        diff = self._generate_diff(verified_kos)
+        
+        # 3. 生成测试计划
+        test_plan = self._generate_test_plan(diff)
+        
+        # 4. 准备发布材料
+        release_materials = self._prepare_release_materials(
+            verified_kos, diff, test_plan
+        )
+        
+        # 5. 创建candidate_release
+        candidate_release = {
+            "candidate_release_id": self._generate_release_id(),
+            "knowledge_objects": verified_kos,
+            "diff": diff,
+            "test_plan": test_plan,
+            "release_materials": release_materials,
+            "created_at": self._get_current_timestamp(),
+            "status": "pending_evaluation"
+        }
+        
+        # 6. 保存到Staging
+        self.staging_db.save_candidate_release(candidate_release)
+        
+        return candidate_release
+    
+    def _generate_diff(self, verified_kos: List[KnowledgeObject]) -> Dict:
+        """
+        生成与当前生产版本的diff
+        """
+        current_production_kos = self._get_current_production_kos()
+        
+        diff = {
+            "added": [],  # 新增的KO
+            "modified": [],  # 修改的KO
+            "deleted": []  # 删除的KO
+        }
+        
+        for ko in verified_kos:
+            existing_ko = self._find_existing_ko(ko.ko_id, current_production_kos)
+            if not existing_ko:
+                diff["added"].append(ko.ko_id)
+            elif self._has_changes(ko, existing_ko):
+                diff["modified"].append({
+                    "ko_id": ko.ko_id,
+                    "changes": self._compare_ko(ko, existing_ko)
+                })
+        
+        return diff
+    
+    def _generate_test_plan(self, diff: Dict) -> Dict:
+        """
+        生成测试计划
+        """
+        test_plan = {
+            "required_tests": [],
+            "priority_tests": [],
+            "optional_tests": []
+        }
+        
+        # 根据diff确定需要测试的范围
+        if diff["added"] or diff["modified"]:
+            test_plan["required_tests"].extend([
+                "core_regression_set",  # 核心回归集
+                "affected_disease_tests"  # 受影响疾病的测试
+            ])
+        
+        if diff["deleted"]:
+            test_plan["required_tests"].append("deletion_impact_tests")
+        
+        return test_plan
+```
+
+#### 3.7.7 Shadow Evaluator Agent（影子评测Agent）
+
+**技术实现**：
+
+```python
+class ShadowEvaluatorAgent:
+    def __init__(self):
+        self.test_case_db = TestCaseDatabase()
+        self.evaluation_result_db = EvaluationResultDatabase()
+        self.baseline_version = None
+    
+    def evaluate(self, candidate_release: Dict) -> Dict:
+        """
+        在离线环境进行评测
+        
+        评测内容：
+        - 下游诊断性能
+        - 路径可追溯性
+        - 失败模式分布
+        """
+        # 1. 加载测试用例
+        test_sets = self._load_test_sets()
+        
+        # 2. 获取基线版本
+        baseline_version = self._get_baseline_version()
+        
+        # 3. 运行评测
+        evaluation_results = {}
+        for test_set_name, test_cases in test_sets.items():
+            results = self._run_test_set(test_cases, candidate_release)
+            evaluation_results[test_set_name] = results
+        
+        # 4. 计算指标
+        metrics = self._calculate_metrics(evaluation_results, baseline_version)
+        
+        # 5. 生成评测报告
+        evaluation_report = self._generate_evaluation_report(
+            candidate_release, evaluation_results, metrics, baseline_version
+        )
+        
+        # 6. 保存评测结果
+        self.evaluation_result_db.save_evaluation_report(evaluation_report)
+        
+        return evaluation_report
+    
+    def _load_test_sets(self) -> Dict:
+        """
+        加载测试用例集
+        
+        测试契约：
+        1. 固定小集（Core Regression Set）：100个固定测试用例
+           - 核心DDx场景：50个标准病例
+           - 红旗病种：20个急危重病例
+           - 关键路径：30个关键诊疗路径
+        2. 抽样大集（Sampling Set）：500个随机抽样病例
+        """
+        return {
+            "core_regression": self._load_core_regression_set(),  # 100个固定用例
+            "sampling_set": self._load_sampling_set()  # 500个随机抽样
+        }
+    
+    def _calculate_metrics(self, 
+                           evaluation_results: Dict,
+                           baseline_version: str) -> Dict:
+        """
+        计算评测指标
+        
+        硬阈值：
+        - 红旗召回率：≥ 基线
+        - 关键路径断裂：= 0
+        - 总体性能下降：≤ 5%
+        - 新增错误率：≤ 2%
+        
+        软阈值：
+        - 平均响应时间：增加 ≤ 10%
+        - 证据完整性：≥ 基线 - 3%
+        - 路径可追溯性：≥ 基线 - 5%
+        """
+        baseline_metrics = self._get_baseline_metrics(baseline_version)
+        
+        metrics = {
+            "red_flag_recall": self._calculate_red_flag_recall(evaluation_results),
+            "critical_path_breaks": self._count_critical_path_breaks(evaluation_results),
+            "overall_accuracy": self._calculate_overall_accuracy(evaluation_results),
+            "new_errors": self._count_new_errors(evaluation_results),
+            "avg_response_time": self._calculate_avg_response_time(evaluation_results),
+            "evidence_completeness": self._calculate_evidence_completeness(evaluation_results),
+            "path_traceability": self._calculate_path_traceability(evaluation_results)
+        }
+        
+        # 检查硬阈值
+        metrics["red_flag_recall"]["threshold_met"] = (
+            metrics["red_flag_recall"]["candidate"] >= 
+            baseline_metrics["red_flag_recall"]
+        )
+        metrics["critical_path_breaks"]["threshold_met"] = (
+            metrics["critical_path_breaks"]["count"] == 0
+        )
+        metrics["overall_accuracy"]["threshold_met"] = (
+            metrics["overall_accuracy"]["delta"] >= -0.05
+        )
+        metrics["new_errors"]["threshold_met"] = (
+            metrics["new_errors"]["rate"] <= 0.02
+        )
+        
+        # 检查软阈值
+        metrics["avg_response_time"]["threshold_met"] = (
+            metrics["avg_response_time"]["delta"] <= 0.10
+        )
+        metrics["evidence_completeness"]["threshold_met"] = (
+            metrics["evidence_completeness"]["candidate"] >= 
+            (baseline_metrics["evidence_completeness"] - 0.03)
+        )
+        metrics["path_traceability"]["threshold_met"] = (
+            metrics["path_traceability"]["candidate"] >= 
+            (baseline_metrics["path_traceability"] - 0.05)
+        )
+        
+        return metrics
+    
+    def _generate_evaluation_report(self,
+                                    candidate_release: Dict,
+                                    evaluation_results: Dict,
+                                    metrics: Dict,
+                                    baseline_version: str) -> Dict:
+        """
+        生成评测报告
+        
+        报告结构：
+        - evaluation_id
+        - candidate_release_id
+        - baseline_version
+        - test_sets（测试集结果）
+        - metrics（指标对比）
+        - report_hash（报告hash）
+        - evaluation_timestamp
+        - evaluator
+        """
+        import hashlib
+        import json
+        
+        report = {
+            "evaluation_id": self._generate_evaluation_id(),
+            "candidate_release_id": candidate_release["candidate_release_id"],
+            "baseline_version": baseline_version,
+            "test_sets": evaluation_results,
+            "metrics": metrics,
+            "evaluation_timestamp": self._get_current_timestamp(),
+            "evaluator": "ShadowEvaluatorAgent_v1.0"
+        }
+        
+        # 计算报告hash
+        report_json = json.dumps(report, sort_keys=True)
+        report_hash = hashlib.sha256(report_json.encode()).hexdigest()
+        report["report_hash"] = f"sha256:{report_hash}"
+        
+        return report
+```
+
+#### 3.7.8 Rollback & Drift Monitor Agent（回滚与漂移监控Agent）
+
+**技术实现**：
+
+```python
+class RollbackDriftMonitorAgent:
+    def __init__(self):
+        self.production_db = ProductionDatabase()
+        self.monitoring_db = MonitoringDatabase()
+        self.rollback_engine = RollbackEngine()
+    
+    def monitor_production(self):
+        """
+        监控生产环境的知识使用情况
+        
+        监控内容：
+        - DDx波动（新版本上线后是否出现DDx波动）
+        - 风险评估异常（风险评估是否异常）
+        - 特定人群退化（特定人群的诊断性能是否下降）
+        """
+        # 1. 收集生产环境指标
+        production_metrics = self._collect_production_metrics()
+        
+        # 2. 检测异常
+        anomalies = self._detect_anomalies(production_metrics)
+        
+        # 3. 评估是否需要回滚
+        if anomalies:
+            rollback_decision = self._evaluate_rollback_need(anomalies)
+            if rollback_decision["should_rollback"]:
+                self._trigger_rollback(rollback_decision)
+        
+        # 4. 生成监控报告
+        monitoring_report = self._generate_monitoring_report(
+            production_metrics, anomalies
+        )
+        
+        # 5. 保存监控记录
+        self.monitoring_db.save_monitoring_report(monitoring_report)
+    
+    def _detect_anomalies(self, metrics: Dict) -> List[Dict]:
+        """
+        检测异常
+        
+        异常类型：
+        - DDx波动：新版本上线后，DDx分布发生显著变化
+        - 风险评估异常：高风险病例识别率下降
+        - 特定人群退化：特定人群（如老年人、儿童）的诊断准确率下降
+        """
+        anomalies = []
+        
+        # 检测DDx波动
+        ddx_anomaly = self._detect_ddx_drift(metrics)
+        if ddx_anomaly:
+            anomalies.append(ddx_anomaly)
+        
+        # 检测风险评估异常
+        risk_anomaly = self._detect_risk_assessment_anomaly(metrics)
+        if risk_anomaly:
+            anomalies.append(risk_anomaly)
+        
+        # 检测特定人群退化
+        population_anomaly = self._detect_population_degradation(metrics)
+        if population_anomaly:
+            anomalies.append(population_anomaly)
+        
+        return anomalies
+    
+    def _evaluate_rollback_need(self, anomalies: List[Dict]) -> Dict:
+        """
+        评估是否需要回滚
+        
+        回滚触发条件：
+        - 严重异常（如高风险病例识别率下降超过10%）
+        - 多个异常同时出现
+        - 异常持续时间超过阈值
+        """
+        severity_score = sum(anomaly["severity"] for anomaly in anomalies)
+        duration = max(anomaly["duration"] for anomaly in anomalies)
+        
+        should_rollback = (
+            severity_score > 50 or  # 严重异常
+            (len(anomalies) >= 2 and duration > 3600)  # 多个异常且持续时间超过1小时
+        )
+        
+        return {
+            "should_rollback": should_rollback,
+            "anomalies": anomalies,
+            "rollback_reason": self._generate_rollback_reason(anomalies),
+            "rollback_type": "global" if severity_score > 50 else "partial"
+        }
+    
+    def _trigger_rollback(self, rollback_decision: Dict):
+        """
+        触发回滚
+        """
+        self.rollback_engine.execute_rollback(
+            rollback_type=rollback_decision["rollback_type"],
+            reason=rollback_decision["rollback_reason"],
+            anomalies=rollback_decision["anomalies"]
+        )
+```
+
+#### 3.7.9 Publish Gate（发布门禁）
+
+**技术实现**：
+
+```python
+class PublishGate:
+    def __init__(self):
+        self.staging_db = StagingDatabase()
+        self.production_db = ProductionDatabase()
+        self.evaluator = ShadowEvaluatorAgent()
+    
+    def evaluate_candidate_release(self,
+                                   candidate_release_id: str) -> Dict:
+        """
+        评估候选发布包，通过四道门禁
+        
+        Returns:
+            评估结果（包含是否通过、门禁结果）
+        """
+        candidate_release = self.staging_db.get_candidate_release(
+            candidate_release_id
+        )
+        
+        gate_results = {
+            "candidate_release_id": candidate_release_id,
+            "passed": True,
+            "gate_results": {}
+        }
+        
+        # Gate-1: 结构合法性检查
+        gate1_result = self._gate1_structure_check(candidate_release)
+        gate_results["gate_results"]["gate1"] = gate1_result
+        if not gate1_result["passed"]:
+            gate_results["passed"] = False
+            return gate_results
+        
+        # Gate-2: 证据可追溯性检查
+        gate2_result = self._gate2_provenance_check(candidate_release)
+        gate_results["gate_results"]["gate2"] = gate2_result
+        if not gate2_result["passed"]:
+            gate_results["passed"] = False
+            return gate_results
+        
+        # Gate-3: 回归评测与影子评测
+        gate3_result = self._gate3_evaluation(candidate_release)
+        gate_results["gate_results"]["gate3"] = gate3_result
+        if not gate3_result["passed"]:
+            gate_results["passed"] = False
+            return gate_results
+        
+        # Gate-4: 风险分级审批
+        gate4_result = self._gate4_risk_approval(candidate_release)
+        gate_results["gate_results"]["gate4"] = gate4_result
+        if not gate4_result["passed"]:
+            gate_results["passed"] = False
+            return gate_results
+        
+        # 如果全部通过，发布到Production
+        if gate_results["passed"]:
+            self._publish_to_production(candidate_release)
+        
+        return gate_results
+    
+    def _gate1_structure_check(self, candidate_release) -> Dict:
+        """
+        Gate-1: 结构合法性检查
+        """
+        issues = []
+        
+        for ko in candidate_release.knowledge_objects:
+            # 检查必需字段
+            if not ko.ko_id or not ko.ko_type or not ko.content:
+                issues.append(f"KO {ko.ko_id} 缺少必需字段")
+            
+            # 检查concept_ids
+            if not ko.concept_ids:
+                issues.append(f"KO {ko.ko_id} 缺少concept_ids")
+        
+        return {
+            "passed": len(issues) == 0,
+            "issues": issues
+        }
+    
+    def _gate2_provenance_check(self, candidate_release) -> Dict:
+        """
+        Gate-2: 证据可追溯性检查
+        """
+        issues = []
+        
+        for ko in candidate_release.knowledge_objects:
+            if not ko.provenance:
+                issues.append(f"KO {ko.ko_id} 缺少provenance")
+            else:
+                # 检查provenance完整性
+                for prov in ko.provenance:
+                    if not prov.doc_id:
+                        issues.append(f"KO {ko.ko_id} provenance缺少doc_id")
+        
+        return {
+            "passed": len(issues) == 0,
+            "issues": issues
+        }
+    
+    def _gate3_evaluation(self, candidate_release) -> Dict:
+        """
+        Gate-3: 回归评测与影子评测
+        
+        测试契约（Test Contract）：
+        
+        必跑测试集：
+        1. 固定小集（Core Regression Set）：100个固定测试用例
+           - 核心DDx场景：50个标准病例（覆盖前10大常见疾病）
+           - 红旗病种：20个急危重病例（急性心肌梗死、脑卒中、肺栓塞等）
+           - 关键路径：30个关键诊疗路径（覆盖主要诊疗流程）
+        2. 抽样大集（Sampling Set）：500个随机抽样病例
+        
+        硬阈值（Hard Thresholds）：
+        - 红旗召回率：不得下降（≥ 基线）
+        - 关键路径断裂：必须为0
+        - 总体性能下降：不超过5%（≤ 5%）
+        - 新增错误：不超过2%（≤ 2%）
+        
+        软阈值（Soft Thresholds）：
+        - 平均响应时间：增加不超过10%
+        - 证据完整性：≥ 基线 - 3%
+        - 路径可追溯性：≥ 基线 - 5%
+        
+        通过条件：
+        1. 所有硬阈值必须满足
+        2. 至少80%的软阈值满足
+        3. 评测报告必须完整（包含report_hash）
+        4. 评测结果必须入审计
+        """
+        # 调用Shadow Evaluator Agent进行评测
+        evaluation_result = self.evaluator.evaluate(candidate_release)
+        
+        # 检查硬阈值（所有必须满足）
+        hard_thresholds_met = (
+            evaluation_result["metrics"]["red_flag_recall"]["threshold_met"] and
+            evaluation_result["metrics"]["critical_path_breaks"]["threshold_met"] and
+            evaluation_result["metrics"]["overall_accuracy"]["threshold_met"] and
+            evaluation_result["metrics"]["new_errors"]["threshold_met"]
+        )
+        
+        if not hard_thresholds_met:
+            return {
+                "passed": False,
+                "reason": "硬阈值不满足",
+                "evaluation_result": evaluation_result
+            }
+        
+        # 检查软阈值（至少80%满足）
+        soft_thresholds = [
+            evaluation_result["metrics"]["avg_response_time"]["threshold_met"],
+            evaluation_result["metrics"]["evidence_completeness"]["threshold_met"],
+            evaluation_result["metrics"]["path_traceability"]["threshold_met"]
+        ]
+        soft_thresholds_met_count = sum(soft_thresholds)
+        soft_thresholds_met_rate = soft_thresholds_met_count / len(soft_thresholds)
+        
+        # 检查评测报告完整性
+        report_complete = (
+            "report_hash" in evaluation_result and
+            evaluation_result["report_hash"] and
+            "test_sets" in evaluation_result and
+            "baseline_version" in evaluation_result
+        )
+        
+        # 综合判断
+        passed = (
+            hard_thresholds_met and
+            soft_thresholds_met_rate >= 0.8 and
+            report_complete
+        )
+        
+        # 如果软阈值不满足，标记为需要人工审核
+        requires_manual_review = not passed and hard_thresholds_met
+        
+        return {
+            "passed": passed,
+            "requires_manual_review": requires_manual_review,
+            "hard_thresholds_met": hard_thresholds_met,
+            "soft_thresholds_met_rate": soft_thresholds_met_rate,
+            "report_complete": report_complete,
+            "evaluation_result": evaluation_result
+        }
+    
+    def _gate4_risk_approval(self, candidate_release) -> Dict:
+        """
+        Gate-4: 风险分级审批
+        """
+        risk_level = self._assess_risk_level(candidate_release)
+        
+        if risk_level == "low":
+            # 低风险：自动发布
+            return {"passed": True, "approval_type": "auto"}
+        elif risk_level == "medium":
+            # 中风险：需要人工审批
+            return {"passed": False, "approval_type": "manual", "requires_approval": True}
+        elif risk_level == "high":
+            # 高风险：必须人工审批+灰度发布
+            return {"passed": False, "approval_type": "manual", "requires_approval": True, "requires_gray_release": True}
+    
+    def _publish_to_production(self, candidate_release):
+        """
+        发布到Production
+        """
+        # 生成新版本号
+        new_version = self._generate_new_version()
+        
+        # 复制KO到Production，标记新版本
+        for ko in candidate_release.knowledge_objects:
+            ko.status = KOStatus.PUBLISHED
+            ko.kg_version = new_version
+            ko.release_id = new_version
+            self.production_db.save_ko(ko)
+        
+        # 更新current_release指针
+        self._update_current_release(new_version)
+```
+
+#### 3.7.6 存储实现方案
+
+**方案：一套Neo4j + release/label分区 + current_release指针**
+
+**技术实现**：
+
+```python
+class KnowledgeStorage:
+    def __init__(self):
+        self.neo4j_client = Neo4jClient()
+        self.metadata_db = MetadataDatabase()
+    
+    def save_ko_to_sandbox(self, ko: KnowledgeObject):
+        """
+        保存KO到Sandbox
+        """
+        cypher = """
+        CREATE (ko:KnowledgeObject:Release_Sandbox {
+            ko_id: $ko_id,
+            ko_type: $ko_type,
+            content: $content,
+            concept_ids: $concept_ids,
+            provenance: $provenance,
+            status: $status,
+            release_id: 'Sandbox'
+        })
+        """
+        self.neo4j_client.execute_query(
+            cypher,
+            ko_id=ko.ko_id,
+            ko_type=ko.ko_type.value,
+            content=ko.content,
+            concept_ids=ko.concept_ids,
+            provenance=[p.__dict__ for p in ko.provenance],
+            status=ko.status.value
+        )
+    
+    def query_production_ko(self, ko_id: str, kg_version: str = None):
+        """
+        查询生产环境的KO
+        """
+        if not kg_version:
+            kg_version = self._get_current_production_version()
+        
+        cypher = f"""
+        MATCH (ko:KnowledgeObject)
+        WHERE ko.ko_id = $ko_id
+        AND ko.release_id = $kg_version
+        AND ko.status = 'published'
+        RETURN ko
+        """
+        
+        return self.neo4j_client.execute_query(
+            cypher,
+            ko_id=ko_id,
+            kg_version=kg_version
+        )
+    
+    def _get_current_production_version(self) -> str:
+        """
+        获取当前生产版本
+        """
+        result = self.metadata_db.query(
+            "SELECT release_id FROM ReleaseMetadata WHERE is_current = true"
+        )
+        return result[0]["release_id"] if result else "v1.0"
+```
+
+---
+
 ## 相关文档
 
 - [AI医生系统-技术架构设计-核心架构](./AI医生系统-技术架构设计-核心架构.md)
 - [AI医生系统-技术架构设计-工具清单](./AI医生系统-技术架构设计-工具清单.md)
 - [AI医生系统-技术架构设计-CDP数据与状态管理](./AI医生系统-技术架构设计-CDP数据与状态管理.md)
 - [AI医生系统-技术架构设计-索引](./AI医生系统-技术架构设计-索引.md)
+- [知识演化与知识维护-完整设计方案](../../3.知识内容提取/知识库结构设计/知识演化与维护/知识演化与知识维护-完整设计方案.md)
 
