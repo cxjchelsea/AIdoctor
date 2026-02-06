@@ -1,8 +1,8 @@
 # AI医生系统 - 项目结构设计
 
 > **文档定位**：本文档定义AI医生系统的项目目录结构、模块划分、代码组织方式等。  
-> **参考文档**：《AI医生系统-技术架构设计.md》、《AI医生系统-系统功能设计.md》  
-> **设计基础**：基于DR.KNOWS论文，采用八个脑区架构设计，实现双通道推理架构
+> **参考文档**：《AI医生系统-技术架构设计-核心架构.md》、《AI医生系统-技术架构设计-项目实现与部署.md》、《AI医生系统-系统功能设计.md》  
+> **设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构，实现双通道推理架构
 
 ---
 
@@ -12,42 +12,95 @@
 
 ```
 AIdoctor/
-├── diagnosis-service/              # 诊断服务（Java）- CDP管理、诊断流程编排
+├── diagnosis-service/              # 主Agent服务（Java）- CDP管理、诊断流程编排、工具调用调度
 ├── examination-service/             # 检查服务（Java）- 检查方案、报告识别
-├── health-state-assessment-service/ # 健康状态判定服务（Python）- 脑区0 + 健康管理态
-├── clinical-parsing-service/        # 病例理解服务（Python）- 脑区A
-├── dialog-service/                  # 对话管理服务（Python）- 脑区B
-├── diagnosis-engine-service/        # 诊断引擎服务（Python）- 脑区C
-├── workup-planner-service/         # 检查建议服务（Python）- 脑区D
-├── treatment-engine-service/        # 治疗推理服务（Python）- 脑区E
-├── risk-assessment-service/         # 风险评估服务（Python）- 脑区F
-├── explanation-service/             # 解释生成服务（Python）- 脑区G
+├── health-state-assessment-service/ # 健康状态判定工具服务（Python）- tool_0
+├── clinical-parsing-service/        # 病例理解工具服务（Python）- tool_1
+├── dialog-service/                  # 主动问诊工具服务（Python）- tool_2
+├── diagnosis-engine-service/        # 鉴别诊断工具服务（Python）- tool_3
+├── workup-planner-service/         # 检查建议工具服务（Python）- tool_4
+├── treatment-engine-service/        # 治疗建议工具服务（Python）- tool_5
+├── risk-assessment-service/         # 风险评估工具服务（Python）- tool_6
+├── explanation-service/             # 证据链工具服务（Python）- tool_7
 ├── ocr-service/                     # OCR服务（Python）- 多模态理解
 ├── frontend/                        # 前端应用（React + TypeScript）
 ├── docker-compose.yml              # Docker编排配置
 └── docs/                           # 文档目录
 ```
 
-### 1.2 双通道推理架构说明
+### 1.2 单主Agent架构说明
+
+> **核心设计理念**：将原八大智能体重构为单主Agent + 多工具Tools架构，主Agent具备自主决策能力，工具只负责执行并返回结构化结果。
+
+**主Agent（Clinical Agent Brain）**：
+- **唯一决策者**：主Agent是唯一"最终结论提交者"，所有诊断结论、检查建议、治疗方案都由主Agent最终决定
+- **自主调用工具**：主Agent根据当前CDP状态和AgentState，自主决定调用哪些工具、调用顺序、调用参数
+- **停止/升级/拒答能力**：主Agent具备停止条件判断、升级策略执行、拒答边界判断的能力
+- **证据融合**：主Agent内部融合多个工具返回的证据，进行冲突解决和一致性检查
+- **策略状态管理**：主Agent维护AgentState，包括阈值、预算、失败回退、已尝试工具等
+
+**工具（Tools）**：
+- **无独立目标**：工具不拥有独立的诊断目标或治疗目标，只按主Agent调用执行
+- **无长期策略状态**：工具不维护长期状态，每次调用都是独立的
+- **结构化输出**：工具返回结构化的payload、evidence、quality、suggestedWrites
+- **证据引用**：工具必须提供evidence引用，说明输出结果的依据来源
+- **建议写回字段**：工具通过suggestedWrites建议主Agent写回CDP的字段路径
+
+**原八大智能体 → 工具映射**：
+
+| 原智能体 | 工具名称 | 工具ID | 对应服务 | 主要职责 |
+|---------|---------|--------|---------|---------|
+| 健康状态判定智能体 | 健康状态判定工具 | tool_0 | health-state-assessment-service | 判断工作态、入口判定流程 |
+| 病例理解智能体 | 病例理解工具 | tool_1 | clinical-parsing-service | 概念归一化、结构化提取 |
+| 主动问诊智能体 | 主动问诊工具 | tool_2 | dialog-service | 信息缺口识别、问诊生成 |
+| 鉴别诊断智能体 | 鉴别诊断工具 | tool_3 | diagnosis-engine-service | 多引擎融合诊断、DDx生成 |
+| 检查建议智能体 | 检查建议工具 | tool_4 | workup-planner-service | 检查价值评估、验证计划 |
+| 治疗建议智能体 | 治疗建议工具 | tool_5 | treatment-engine-service | 治疗方案推理、药物推荐 |
+| 风险评估智能体 | 风险评估工具 | tool_6 | risk-assessment-service | 高危识别、紧急程度评估 |
+| 证据链智能体 | 证据链工具 | tool_7 | explanation-service | 证据链构建、解释生成 |
+
+### 1.3 双通道推理架构说明
 
 > **核心设计理念**：让结构化通道决定"该往哪想"，让LLM决定"怎么说、怎么问、怎么组织方案"
 
 **通道1：结构化推理通道**（决定"该往哪想" - 临床逻辑）
-- 脑区A：病例理解与结构化 → `clinical-parsing-service`
-- 脑区C：鉴别诊断引擎（DR.KNOWS核心） → `diagnosis-engine-service`
-- 脑区D：检查建议引擎 → `workup-planner-service`
-- 脑区E：治疗推理引擎 → `treatment-engine-service`
-- 脑区F：风险评估引擎 → `risk-assessment-service`
+- tool_1（病例理解工具）：概念归一化、结构化提取
+- tool_3（鉴别诊断工具）：知识库优先 + DR.KNOWS路径验证、路径约束推理
+- tool_4（检查建议工具）：检查价值评估、信息增益计算
+- tool_5（治疗建议工具）：治疗方案推理、药物推荐
+- tool_6（风险评估工具）：风险识别、紧急程度评估
+- tool_0（健康状态判定工具）：规则推理、风险评估
 
 **通道2：语言与策略通道**（决定"怎么说、怎么问" - 医生表达）
-- 脑区B：主动问诊与信息补全 → `dialog-service`
-- 脑区G：可解释性与证据链 → `explanation-service`
+- tool_2（主动问诊工具）：生成问诊问题、自然语言对话
+- tool_7（证据链工具）：生成解释和说明、推理路径可视化
 
 **连接点**：CDP（Clinical Decision Package）- 两个通道通过CDP交换数据
 
+**双通道协作机制**：
+```
+通道1工具（结构化推理）
+    ↓
+生成结构化结果（DDx、检查建议等）
+    ↓
+写入CDP（结构化数据）
+    ↓
+主Agent读取CDP
+    ↓
+通道2工具（语言与策略）
+    ↓
+读取CDP
+    ↓
+生成自然语言表达
+    ↓
+输出给用户
+```
+
 ---
 
-## 二、诊断服务（diagnosis-service）
+## 二、诊断服务（diagnosis-service）- 主Agent服务
+
+> **说明**：diagnosis-service是主Agent（Clinical Agent Brain）的实现，负责运行循环、工具调用调度、CDP管理、证据融合、冲突解决等核心功能。
 
 ### 2.1 项目结构
 
@@ -64,6 +117,16 @@ diagnosis-service/
 │   │   │   │   ├── DiagnosisController.java
 │   │   │   │   └── HealthController.java
 │   │   │   │
+│   │   │   ├── agent/                              # 主Agent核心模块
+│   │   │   │   ├── ClinicalAgentBrain.java         # 主Agent主类
+│   │   │   │   ├── AgentLoop.java                  # 运行循环（Observe→Plan→Act→Update→Evaluate）
+│   │   │   │   ├── ToolCaller.java                 # 工具调用器
+│   │   │   │   ├── EvidenceFusion.java             # 证据融合算法
+│   │   │   │   ├── ConflictResolution.java         # 冲突解决算法
+│   │   │   │   ├── StopConditionEvaluator.java    # 停止条件评估
+│   │   │   │   ├── EscalationHandler.java          # 升级策略处理
+│   │   │   │   └── RefusalHandler.java            # 拒答策略处理
+│   │   │   │
 │   │   │   ├── service/                            # 业务逻辑层
 │   │   │   │   ├── DiagnosisService.java           # 诊断服务主入口
 │   │   │   │   ├── DiagnosisOrchestrationService.java  # 诊断流程编排
@@ -77,8 +140,12 @@ diagnosis-service/
 │   │   │   │   │   ├── CDPRerankService.java      # CDP重排服务
 │   │   │   │   │   └── CDPRollbackService.java    # CDP回退服务
 │   │   │   │   │
+│   │   │   │   ├── agent_state/                    # AgentState管理服务
+│   │   │   │   │   ├── AgentStateManager.java     # AgentState管理器
+│   │   │   │   │   └── AgentStateService.java      # AgentState服务
+│   │   │   │   │
 │   │   │   │   ├── orchestration/                 # 流程编排
-│   │   │   │   │   └── DiagnosisWorkflowOrchestrator.java
+│   │   │   │   │   └── DiagnosisWorkflowCoordinator.java
 │   │   │   │   │
 │   │   │   │   ├── step1/                        # Step 1：识别问题
 │   │   │   │   │   ├── ConceptNormalizationService.java
@@ -124,7 +191,14 @@ diagnosis-service/
 │   │   │   │   ├── DiagnosisRecord.java
 │   │   │   │   ├── CDP.java
 │   │   │   │   ├── CDPVersion.java
+│   │   │   │   ├── AgentState.java                # AgentState实体
+│   │   │   │   ├── AuditTrail.java                # AuditTrail实体
 │   │   │   │   └── HealthStateAssessmentRecord.java
+│   │   │   │
+│   │   │   ├── dto/                               # DTO类
+│   │   │   │   ├── tool/                         # 工具调用DTO
+│   │   │   │   │   ├── ToolContext.java          # 工具调用上下文
+│   │   │   │   │   └── ToolResult.java           # 工具返回结果
 │   │   │   │
 │   │   │   ├── dto/                               # DTO类
 │   │   │   │   ├── request/                       # 请求DTO
@@ -134,16 +208,24 @@ diagnosis-service/
 │   │   │   │   ├── conclusion/                    # 终点结论包DTO
 │   │   │   │   └── evidence/                      # 证据分析DTO
 │   │   │   │
-│   │   │   ├── client/                            # Feign客户端
-│   │   │   │   ├── DiagnosisEngineClient.java
-│   │   │   │   ├── ClinicalParsingClient.java
-│   │   │   │   ├── DialogServiceClient.java
-│   │   │   │   ├── WorkupPlannerClient.java
-│   │   │   │   ├── TreatmentEngineClient.java
-│   │   │   │   ├── RiskAssessmentClient.java
-│   │   │   │   ├── ExplanationServiceClient.java
-│   │   │   │   ├── HealthStateAssessmentClient.java
-│   │   │   │   └── OcrServiceClient.java
+│   │   │   ├── client/                            # Feign客户端（工具服务调用）
+│   │   │   │   ├── Tool0Client.java               # tool_0: 健康状态判定工具
+│   │   │   │   ├── Tool1Client.java               # tool_1: 病例理解工具
+│   │   │   │   ├── Tool2Client.java               # tool_2: 主动问诊工具
+│   │   │   │   ├── Tool3Client.java               # tool_3: 鉴别诊断工具
+│   │   │   │   ├── Tool4Client.java               # tool_4: 检查建议工具
+│   │   │   │   ├── Tool5Client.java               # tool_5: 治疗建议工具
+│   │   │   │   ├── Tool6Client.java               # tool_6: 风险评估工具
+│   │   │   │   ├── Tool7Client.java               # tool_7: 证据链工具
+│   │   │   │   └── OcrServiceClient.java          # OCR服务
+│   │   │   │
+│   │   │   ├── scheduler/                         # 工具调用调度层
+│   │   │   │   ├── ToolScheduler.java             # 工具调度器
+│   │   │   │   ├── ParallelExecutor.java         # 并行执行器
+│   │   │   │   ├── AsyncExecutor.java            # 异步执行器
+│   │   │   │   ├── TimeoutHandler.java           # 超时处理
+│   │   │   │   ├── RetryHandler.java             # 重试处理
+│   │   │   │   └── RateLimiter.java              # 限流器
 │   │   │   │
 │   │   │   ├── config/                            # 配置类
 │   │   │   │   ├── SwaggerConfig.java
@@ -169,8 +251,19 @@ diagnosis-service/
 
 ### 2.2 关键说明
 
-- **diagnosis-service** 是编排服务，负责CDP管理和流程编排
-- **step1-step5** 对应临床诊疗态的5步AI循证诊断流程
+- **diagnosis-service** 是主Agent服务，负责：
+  - 运行循环（Observe→Plan→Act→Update→Evaluate）
+  - 工具调用调度（并行、异步、超时、重试、限流）
+  - CDP管理（创建、更新、版本控制、回放、回退）
+  - AgentState管理（阈值、预算、失败回退、已尝试工具）
+  - AuditTrail管理（工具调用记录、CDP更新记录、主Agent决策记录）
+  - 证据融合与冲突解决
+  - 停止条件评估、升级策略执行、拒答边界判断
+- **agent/** 目录包含主Agent核心算法实现
+- **scheduler/** 目录包含工具调用调度层实现（基于Redis消息队列）
+  - 职责：工具调用调度（并行、异步、超时、重试、限流）
+  - 重要：消息层不拥有决策提交权，主Agent仍是唯一提交者
+- **step1-step5** 对应临床诊疗态的5步AI循证诊断流程（已整合到主Agent运行循环中）
 - **wellness-screening** 是健康筛查流程的编排层，实际业务逻辑在Python服务中
 
 ---
@@ -194,7 +287,7 @@ health-state-assessment-service/
 │   │
 │   ├── services/                    # 业务服务
 │   │   ├── __init__.py
-│   │   ├── health_state_assessment.py  # 健康状态判定服务（脑区0）
+│   │   ├── health_state_assessment.py  # 健康状态判定服务（tool_0）
 │   │   ├── wellness_plan_generator.py   # 健康管理计划生成
 │   │   │
 │   │   ├── entry_assessment/           # AI诊断入口判定（P0模块）
@@ -287,7 +380,7 @@ clinical-parsing-service/
 │   │
 │   ├── services/                    # 业务服务
 │   │   ├── __init__.py
-│   │   └── parsing_service.py       # 病例理解服务（脑区A）
+│   │   └── parsing_service.py       # 病例理解服务（tool_1）
 │   │
 │   ├── models/                      # 数据模型
 │   │   ├── __init__.py
@@ -326,7 +419,7 @@ dialog-service/
 │   │
 │   ├── services/                    # 业务服务
 │   │   ├── __init__.py
-│   │   └── dialog_service.py       # 对话管理服务（脑区B）
+│   │   └── dialog_service.py       # 对话管理服务（tool_2）
 │   │
 │   ├── core/                        # 核心功能
 │   │   ├── __init__.py
@@ -471,7 +564,7 @@ workup-planner-service/
 │   │
 │   ├── services/                    # 业务服务
 │   │   ├── __init__.py
-│   │   ├── workup_planner.py        # 检查建议引擎（脑区D）
+│   │   ├── workup_planner.py        # 检查建议引擎（tool_4）
 │   │   └── verification_planner.py  # 验证计划构建器
 │   │
 │   ├── calculators/                 # 计算器
@@ -516,7 +609,7 @@ treatment-engine-service/
 │   │
 │   ├── services/                    # 业务服务
 │   │   ├── __init__.py
-│   │   ├── treatment_engine.py     # 治疗方案推理引擎（脑区E）
+│   │   ├── treatment_engine.py     # 治疗方案推理引擎（tool_5）
 │   │   └── medication_recommender.py  # 药物推荐器
 │   │
 │   ├── models/                      # 数据模型
@@ -556,7 +649,7 @@ risk-assessment-service/
 │   │
 │   ├── services/                    # 业务服务
 │   │   ├── __init__.py
-│   │   ├── risk_assessment_engine.py  # 风险评估引擎（脑区F）
+│   │   ├── risk_assessment_engine.py  # 风险评估引擎（tool_6）
 │   │   ├── triage_engine.py         # 分诊引擎
 │   │   └── upgrade_rule_engine.py   # 升级规则引擎
 │   │
@@ -601,7 +694,7 @@ explanation-service/
 │   │
 │   ├── services/                    # 业务服务
 │   │   ├── __init__.py
-│   │   └── explanation_service.py   # 解释生成服务（脑区G）
+│   │   └── explanation_service.py   # 解释生成服务（tool_7）
 │   │
 │   ├── models/                      # 数据模型
 │   │   ├── __init__.py
@@ -809,4 +902,4 @@ python run.py
 **更新日期**：2025年1月  
 **文档定位**：AI医生系统的项目结构设计（目录结构、代码组织、开发环境）  
 **参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》  
-**设计基础**：基于DR.KNOWS论文的八个脑区架构设计
+**设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计

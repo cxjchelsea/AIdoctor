@@ -3,8 +3,8 @@
 > **文档定位**：本文档详细设计AI医生系统的前端页面，包括页面布局、组件设计、交互流程等。  
 > **参考产品**：百度健康智能AI预问诊、春雨医生、丁香医生、好大夫在线等  
 > **技术栈**：React 18 + TypeScript + Ant Design + Zustand  
-> **设计基础**：基于DR.KNOWS论文的八个脑区架构设计  
-> **核心理念**：AI医生是**完整的医学推理引擎**，具备八个脑区的完整能力，支持健康管理态和临床诊疗态。
+> **设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计  
+> **核心理念**：AI医生是**完整的医学推理引擎**，具备完整的工具能力（tool_0到tool_7），支持健康管理态和临床诊疗态。
 
 ---
 
@@ -169,7 +169,7 @@
 
 #### 3.1.1 业务说明
 
-**页面说明**：这是用户发起咨询后，经过P0模块判定后的页面，展示健康状态判定结果（脑区0的输出）。
+**页面说明**：这是用户发起咨询后，经过P0模块判定后的页面，展示健康状态判定结果（tool_0的输出）。
 
 #### 3.1.2 页面结构
 
@@ -1719,7 +1719,7 @@ const MedicalAdvice: React.FC<MedicalAdviceProps> = ({ advice }) => {
 
 #### 3.5.1 业务说明
 
-**页面说明**：展示CDP（临床决策包）的演变过程，包括推理路径可视化（DR.KNOWS核心）、证据链可视化、八个脑区的执行结果等。
+**页面说明**：展示CDP（临床决策包）的演变过程，包括推理路径可视化（DR.KNOWS核心）、证据链可视化、各工具的执行结果等。
 
 #### 3.5.2 页面结构
 
@@ -1741,8 +1741,8 @@ const CDPVisualizationPage: React.FC<{ cdpId: string }> = ({ cdpId }) => {
               <EvidenceChainVisualization cdpId={cdpId} />
             </TabPane>
             
-            {/* 八个脑区执行结果 */}
-            <TabPane tab="脑区执行结果" key="brain-results">
+            {/* 工具执行结果 */}
+            <TabPane tab="工具执行结果" key="tool-results">
               <BrainResultsVisualization cdpId={cdpId} />
             </TabPane>
             
@@ -1827,7 +1827,7 @@ const EvidenceChainVisualization: React.FC<{ cdpId: string }> = ({ cdpId }) => {
 };
 ```
 
-#### 3.5.5 八个脑区执行结果可视化组件（BrainResultsVisualization）
+#### 3.5.5 工具执行结果可视化组件（ToolResultsVisualization）
 
 ```tsx
 // BrainResultsVisualization.tsx
@@ -1836,11 +1836,11 @@ const BrainResultsVisualization: React.FC<{ cdpId: string }> = ({ cdpId }) => {
   
   return (
     <Card>
-      <Typography.Title level={4}>八个脑区执行结果</Typography.Title>
+      <Typography.Title level={4}>工具执行结果</Typography.Title>
       <Row gutter={16}>
-        {/* 脑区0：健康状态判定 */}
+        {/* tool_0：健康状态判定 */}
         <Col span={12}>
-          <Card size="small" title="脑区0：健康状态判定">
+          <Card size="small" title="tool_0：健康状态判定">
             <Descriptions size="small" column={1}>
               <Descriptions.Item label="工作态">
                 <Tag color={brainResults.brain0.workMode === 'clinical_mode' ? 'red' : 'green'}>
@@ -1854,16 +1854,16 @@ const BrainResultsVisualization: React.FC<{ cdpId: string }> = ({ cdpId }) => {
           </Card>
         </Col>
         
-        {/* 脑区A：病例理解 */}
+        {/* tool_1：病例理解 */}
         <Col span={12}>
-          <Card size="small" title="脑区A：病例理解">
+          <Card size="small" title="tool_1：病例理解">
             <Text>识别概念数：{brainResults.brainA.concepts.length}</Text>
           </Card>
         </Col>
         
-        {/* 脑区B：主动问诊 */}
+        {/* tool_2：主动问诊 */}
         <Col span={12}>
-          <Card size="small" title="脑区B：主动问诊">
+          <Card size="small" title="tool_2：主动问诊">
             <Progress 
               percent={brainResults.brainB.completeness * 100} 
               format={(percent) => `${percent}%`}
@@ -1871,15 +1871,15 @@ const BrainResultsVisualization: React.FC<{ cdpId: string }> = ({ cdpId }) => {
           </Card>
         </Col>
         
-        {/* 脑区C：鉴别诊断（DR.KNOWS核心） */}
+        {/* tool_3：鉴别诊断（DR.KNOWS核心） */}
         <Col span={12}>
-          <Card size="small" title="脑区C：鉴别诊断（DR.KNOWS核心）">
+          <Card size="small" title="tool_3：鉴别诊断（DR.KNOWS核心）">
             <Text>推理路径数：{brainResults.brainC.reasoningPaths.length}</Text>
             <Text>鉴别诊断数：{brainResults.brainC.ddx.length}</Text>
           </Card>
         </Col>
         
-        {/* 其他脑区... */}
+        {/* 其他工具... */}
       </Row>
     </Card>
   );
@@ -2702,7 +2702,7 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
 
 ### 9.1 API客户端
 
-#### 9.1.1 健康状态判定API（脑区0整合入口，包含P0 Step 1-5）
+#### 9.1.1 健康状态判定API（tool_0整合入口，包含P0 Step 1-5）
 
 ```typescript
 // services/api/healthStateAssessmentApi.ts
@@ -3345,20 +3345,20 @@ const SmartRecommendations: React.FC = () => {
 
 ---
 
-**文档版本**：v4.0（基于DR.KNOWS的八个脑区架构）  
+**文档版本**：v4.0（基于DR.KNOWS的单主Agent + 多工具Tools架构）  
 **创建日期**：2025年1月  
 **更新日期**：2025年1月  
-**文档定位**：AI医生系统的前端页面设计（统一界面架构、八个脑区功能展示、CDP可视化、推理路径可视化等）  
+**文档定位**：AI医生系统的前端页面设计（统一界面架构、工具功能展示、CDP可视化、推理路径可视化等）  
 **参考产品**：百度健康、春雨医生、丁香医生、好大夫在线等  
 **参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》  
-**设计基础**：基于DR.KNOWS论文的八个脑区架构设计
+**设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计
 
 **更新说明（v4.0）**：
-- ✅ 新增健康状态判定页面（脑区0）
-- ✅ 新增CDP可视化页面（推理路径可视化、证据链可视化、八个脑区执行结果）
+- ✅ 新增健康状态判定页面（tool_0）
+- ✅ 新增CDP可视化页面（推理路径可视化、证据链可视化、工具执行结果）
 - ✅ 添加推理路径可视化组件（DR.KNOWS核心）
-- ✅ 添加八个脑区执行结果可视化组件
-- ✅ 更新诊断结果页面，展示八个脑区的执行结果
+- ✅ 添加工具执行结果可视化组件
+- ✅ 更新诊断结果页面，展示工具的执行结果
 - ✅ 添加三层分层结构设计（首要假设、主要备选诊断、必须排除的高危诊断）
 - ✅ 添加终点结论包四要素的完整设计（结论、必须排除项状态、关键依据、行动与随访）
 

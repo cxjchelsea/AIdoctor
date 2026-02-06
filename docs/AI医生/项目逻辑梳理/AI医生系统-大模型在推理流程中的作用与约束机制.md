@@ -1,8 +1,9 @@
 # AI医生系统 - 大模型在推理流程中的作用与约束机制
 
-> **文档目的**：详细说明大模型在整个推理流程中的具体作用、连接方式、约束机制和实施方法  
-> **文档定位**：面向技术团队，用于指导大模型集成与约束实现  
-> **核心原则**：遵循双通道推理架构，确保大模型在受控环境下工作，保证医疗诊断的准确性和可追溯性  
+> **文档目的**：详细说明大模型在工具内部的使用方式、连接方式、约束机制和实施方法  
+> **文档定位**：面向技术团队，用于指导大模型在工具中的集成与约束实现  
+> **核心原则**：大模型作为工具内部的能力组件，在主Agent的调用下工作，确保医疗诊断的准确性和可追溯性  
+> **架构定位**：主Agent + 工具架构，大模型在工具内部使用，不直接暴露给主Agent  
 > **更新时间**：2024年（根据最新系统功能设计和技术架构设计更新）
 
 ---
@@ -11,18 +12,19 @@
 
 **本次更新内容**（基于《AI医生系统-系统功能设计.md》和《AI医生系统-技术架构设计.md》）：
 
-1. **新增健康状态判定服务中大模型的作用**（位置4）：
-   - Step 1-3：入口判定流程中大模型的NLU/NLG能力
-   - 健康管理引擎：健康管理计划生成中的大模型应用
+1. **架构定位调整**：
+   - 明确大模型在工具内部使用，不在主Agent层面直接调用
+   - 工具内部使用大模型，返回结构化结果给主Agent
+   - 主Agent通过调用工具间接使用大模型能力
 
 2. **完善5步AI循证诊断流程中大模型的作用**：
-   - Step 2：补充三层分层诊断结构（首要假设、主要备选诊断、必须排除的高危诊断）的输出格式化和入选依据生成
-   - Step 5：完善终点结论包四要素（结论、必须排除项状态、关键依据、行动与随访）的自然语言生成
+   - Step 2：诊断工具内部使用大模型进行推理，输出三层分层诊断结构
+   - Step 5：解释生成工具内部使用大模型生成自然语言解释
 
 3. **新增流程回退机制中大模型的作用**（第三章）：
-   - 回退到Step 1：重新澄清问题
-   - 回退到Step 3：重新组织分流路径
-   - 回退到Step 4：基于新证据重新评估诊断
+   - 回退到Step 1：问题识别工具内部使用大模型重新澄清问题
+   - 回退到Step 3：分流路径工具内部使用大模型重新组织分流路径
+   - 回退到Step 4：诊断工具内部使用大模型基于新证据重新评估诊断
 
 4. **完善知识图谱路径注入机制**：
    - 基于贝叶斯诊断理论的三层评分体系（先验概率、似然评分、后验概率）
@@ -39,173 +41,259 @@
 
 ## 一、大模型在系统中的使用位置与作用
 
-### 1.1 总体架构：双通道推理中的大模型角色
+### 1.1 总体架构：工具内部使用大模型
 
-系统采用**双通道推理架构**，大模型在两个通道中发挥不同作用：
+系统采用**主Agent + 工具**架构，大模型在工具内部使用，不直接暴露给主Agent：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    通道1：结构化推理通道                      │
-│              （决定"该往哪想" - 临床逻辑）                    │
+│                    主Agent（Clinical Agent Brain）            │
+│  - 自主决策、工具调用、停止/升级/拒答                          │
+│  - 唯一"最终结论提交者"                                        │
+└─────────────────────────────────────────────────────────────┘
+                            ↓ 调用工具
+┌─────────────────────────────────────────────────────────────┐
+│                    工具1：诊断工具（Diagnosis Tool）          │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │  大模型引擎（LLM Engine）                                 │  │
+│  │  工具内部：大模型推理引擎（LLM Engine）                  │  │
 │  │  - 作用：在知识图谱路径约束下进行深度推理                │  │
-│  │  - 输入：患者信息 + 知识图谱推理路径（DR.KNOWS方法）     │  │
+│  │  - 输入：从CDP读取患者信息 + 知识图谱推理路径            │  │
 │  │  - 输出：疾病可能性分析（结构化JSON）                    │  │
 │  │  - 约束：必须基于注入的推理路径进行推理                   │  │
+│  │  - 返回：ToolResult（status, payload, evidence）       │  │
 │  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
-                            ↓
+                            ↓ 写回CDP
                     CDP（Clinical Decision Package）
-                            ↓
+                            ↓ 主Agent读取
 ┌─────────────────────────────────────────────────────────────┐
-│                    通道2：语言与策略通道                      │
-│            （决定"怎么说、怎么问" - 医生表达）               │
+│                    工具2：解释生成工具（Explanation Tool）    │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │  大模型NLG（自然语言生成）                                 │  │
+│  │  工具内部：大模型NLG（自然语言生成）                      │  │
 │  │  - 作用：将结构化诊断结果转换为自然语言                 │  │
-│  │  - 输入：结构化诊断结果 + 终点结论包                     │  │
+│  │  - 输入：从CDP读取结构化诊断结果 + 终点结论包            │  │
 │  │  - 输出：人性化的自然语言解释                           │  │
 │  │  - 约束：必须基于结构化的诊断结果，不能自行推理          │  │
+│  │  - 返回：ToolResult（status, payload, evidence）       │  │
 │  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **核心理念**：
-> **通道1决定"该往哪想"，让LLM在路径约束下深度推理；通道2决定"怎么说、怎么问"，让LLM将结构化结果转换为自然语言。**
+> **大模型在工具内部使用，工具返回结构化结果给主Agent。主Agent不直接调用大模型，而是通过调用工具间接使用大模型能力。**
 
 ### 1.2 大模型使用位置详细说明
 
-#### 位置1：诊断引擎服务 - 大模型引擎（LLM Engine）
+#### 位置1：诊断工具（Diagnosis Tool）内部 - 大模型推理引擎
 
-**服务路径**：`diagnosis-engine-service/app/engines/llm_engine.py`
+**工具路径**：`diagnosis-tool/app/engines/llm_engine.py`
 
-**作用**：
-- 在**通道1：结构化推理通道**中，作为五引擎之一参与诊断推理
-- 结合知识图谱推理路径（DR.KNOWS方法）进行深度推理
-- 输出疾病可能性评分、支持证据、反对证据等结构化信息
+**工具职责**：
+- 主Agent调用诊断工具，工具内部使用大模型进行推理
+- 工具从CDP读取患者信息，结合知识图谱推理路径（DR.KNOWS方法）进行深度推理
+- 工具返回结构化结果（ToolResult），包含疾病可能性评分、支持证据、反对证据等
 
-**调用时机**：
-- 在`FusionEngine.fuse()`方法中，与其他四个引擎并行执行
-- 作为多引擎融合诊断的一部分
+**调用流程**：
+1. 主Agent调用诊断工具，传入ToolContext（包含CDP引用、agentState摘要等）
+2. 诊断工具内部：
+   - 从CDP读取患者信息（`cdp.problem_representation`, `cdp.patient_state`等）
+   - 调用知识图谱工具获取推理路径
+   - 调用大模型引擎进行推理（工具内部使用）
+   - 融合多个引擎结果（规则引擎、知识图谱引擎、统计模型引擎、大模型引擎、鉴别诊断引擎）
+3. 工具返回ToolResult给主Agent，主Agent根据结果更新CDP
 
-**代码位置**：
+**工具内部实现**：
 ```python
-# diagnosis-engine-service/app/engines/fusion_engine.py
-class FusionEngine:
-    async def fuse(self, request: DiagnosisEngineRequest) -> Dict:
-        # 并行执行五个引擎
+# diagnosis-tool/app/tools/diagnosis_tool.py
+class DiagnosisTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 1. 从CDP读取患者信息
+        cdp = context.cdp
+        patient_info = cdp.problem_representation
+        symptoms = cdp.patient_state.symptoms
+        
+        # 2. 工具内部调用多个引擎（包括大模型引擎）
         results = await asyncio.gather(
-            self.rule_engine.diagnose(request),
-            self.kg_engine.diagnose(request),
-            self.statistical_engine.diagnose(request),
-            self.llm_engine.diagnose(request),  # 大模型引擎
-            self.differential_engine.diagnose(request),
+            self.rule_engine.diagnose(patient_info),
+            self.kg_engine.diagnose(patient_info),
+            self.statistical_engine.diagnose(patient_info),
+            self.llm_engine.diagnose(patient_info),  # 工具内部使用大模型
+            self.differential_engine.diagnose(patient_info),
             return_exceptions=True
+        )
+        
+        # 3. 融合结果
+        fused_result = self._fuse_results(results)
+        
+        # 4. 返回ToolResult
+        return ToolResult(
+            status="success",
+            payload={
+                "ddx": fused_result.ddx,
+                "confidence": fused_result.confidence
+            },
+            evidence=fused_result.evidence,
+            suggestedWrites={
+                "cdp.ddx.rank_list": fused_result.ddx,
+                "cdp.ddx.confidence": fused_result.confidence
+            }
         )
 ```
 
-**权重分配**：
+**权重分配**（工具内部）：
 ```python
 weights = {
     'rule': 0.25,           # 规则引擎
     'kg': 0.25,             # 知识图谱引擎
     'statistical': 0.20,    # 统计模型引擎
-    'llm': 0.25,            # 大模型引擎（25%权重）
+    'llm': 0.25,            # 大模型引擎（25%权重，工具内部使用）
     'differential': 0.05    # 鉴别诊断引擎
 }
 ```
 
-#### 位置2：解释服务 - 自然语言生成（NLG）
+#### 位置2：解释生成工具（Explanation Tool）内部 - 自然语言生成
 
-**服务路径**：`explanation-service/app/services/explanation_service.py`
+**工具路径**：`explanation-tool/app/services/explanation_service.py`
 
-**作用**：
-- 在**通道2：语言与策略通道**中，将结构化诊断结果转换为自然语言
-- 生成人性化的诊断解释、建议和指导
-- 生成终点结论包的自然语言版本（基于四要素）
+**工具职责**：
+- 主Agent调用解释生成工具，工具内部使用大模型生成自然语言解释
+- 工具从CDP读取结构化诊断结果，转换为用户友好的自然语言
+- 工具返回ToolResult，包含自然语言解释和建议写回CDP的字段
 
-**调用时机**：
-- 在5步AI循证诊断流程的Step 5完成后，基于CDP生成最终解释
-- 将结构化的诊断结果、证据链、推理路径等转换为用户友好的自然语言
-- 生成终点结论包的四要素说明（结论、必须排除项状态、关键依据、行动与随访）
+**调用流程**：
+1. 主Agent在Step 5完成后调用解释生成工具
+2. 工具从CDP读取结构化诊断结果（`cdp.conclusion_package`等）
+3. 工具内部使用大模型生成自然语言解释
+4. 工具返回ToolResult，主Agent根据结果更新CDP
 
-**实现说明**：
+**工具内部实现**：
 ```python
-# explanation-service/app/services/explanation_service.py
-class ExplanationService:
-    async def explain(self, request: ExplanationRequest) -> ExplanationResponse:
-        # 1. 构建结构化结论包（使用模板）
-        conclusion_package = self._build_conclusion_package(request.cdp)
+# explanation-tool/app/tools/explanation_tool.py
+class ExplanationTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 1. 从CDP读取结构化诊断结果
+        cdp = context.cdp
+        conclusion_package = cdp.conclusion_package
         
-        # 2. 使用大模型生成自然语言解释（通道2）
+        # 2. 工具内部使用大模型生成自然语言解释
         natural_language_explanation = await self._llm_generate_explanation(
             conclusion_package,
-            request.cdp
+            cdp
         )
         
-        return ExplanationResponse(
-            evidenceChain=evidence_chain,
-            conclusionPackage=conclusion_package,
-            naturalLanguageExplanation=natural_language_explanation
+        # 3. 返回ToolResult
+        return ToolResult(
+            status="success",
+            payload={
+                "explanation": natural_language_explanation
+            },
+            evidence=[],
+            suggestedWrites={
+                "cdp.final.explanation": natural_language_explanation
+            }
         )
 ```
 
-#### 位置3：对话服务 - 自然语言理解与生成（NLU/NLG）
+#### 位置3：问题识别工具（Problem Identification Tool）内部 - 自然语言理解
 
-**服务路径**：`dialog-service/app/core/nlu.py`, `dialog-service/app/core/nlg.py`
+**工具路径**：`problem-identification-tool/app/core/nlu.py`
 
-**作用**：
-- **NLU**：理解用户的自然语言输入，提取结构化信息（在Step 1中）
-- **NLG**：生成自然的追问问题（在Step 3和Step 4中）
-- **问诊策略生成**：基于临床决策分析生成问诊问题
+**工具职责**：
+- 主Agent在Step 1调用问题识别工具，工具内部使用大模型进行NLU
+- 工具理解用户的自然语言输入，提取结构化问题清单
+- 工具返回ToolResult，包含结构化问题清单和建议写回CDP的字段
 
-**调用时机**：
-- **Step 1：识别问题**：使用NLU理解用户主诉，提取结构化问题清单
-- **Step 3：组织候选集并建立分流路径**：生成第一层分叉问题
-- **Step 4：采集关键证据**：生成追问问题，基于信息增益和临床决策分析
+**调用流程**：
+1. 主Agent在Step 1调用问题识别工具，传入用户输入
+2. 工具内部使用大模型进行NLU，提取结构化信息
+3. 工具返回ToolResult，主Agent根据结果更新CDP（`cdp.problem_representation`）
 
-**预期增强**：
+#### 位置4：问诊问题生成工具（Question Generation Tool）内部 - 自然语言生成
+
+**工具路径**：`question-generation-tool/app/core/nlg.py`
+
+**工具职责**：
+- 主Agent在Step 3和Step 4调用问诊问题生成工具
+- 工具内部使用大模型生成自然的追问问题
+- 工具返回ToolResult，包含生成的问诊问题和建议写回CDP的字段
+
+**调用流程**：
+1. 主Agent在Step 3或Step 4调用问诊问题生成工具
+2. 工具从CDP读取诊断候选、信息缺口等（`cdp.ddx.rank_list`, `cdp.missing_info`等）
+3. 工具内部使用大模型生成问诊问题
+4. 工具返回ToolResult，主Agent根据结果更新CDP
+
+**工具内部实现**：
 ```python
-# dialog-service/app/core/nlg.py
-class NaturalLanguageGenerator:
-    async def generate_question_with_llm(self, question_info: Dict, context: Dict) -> str:
-        """使用大模型生成更自然的追问问题（基于临床决策分析）"""
-        prompt = f"""根据以下信息，生成一个自然的追问问题：
-        需要收集的信息：{question_info.get('missing_info')}
-        诊断候选：{context.get('ddx_candidates', [])}
-        信息增益：{question_info.get('information_gain', 0)}
+# question-generation-tool/app/tools/question_generation_tool.py
+class QuestionGenerationTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 1. 从CDP读取诊断候选和信息缺口
+        cdp = context.cdp
+        ddx_candidates = cdp.ddx.rank_list
+        missing_info = cdp.missing_info
         
-        要求：
-        1. 问题要自然、口语化，符合医生的问诊风格
-        2. 优先问能排除高危诊断的问题（风险优先）
-        3. 优先问信息增益高的问题（效率优先）
-        4. 不要询问已经回答过的问题
-        5. 一次只问一个问题
-        """
-        # 调用大模型API
-        # ...
+        # 2. 工具内部使用大模型生成问诊问题
+        question = await self._llm_generate_question(
+            ddx_candidates=ddx_candidates,
+            missing_info=missing_info,
+            context=cdp
+        )
+        
+        # 3. 返回ToolResult
+        return ToolResult(
+            status="success",
+            payload={
+                "question": question
+            },
+            evidence=[],
+            suggestedWrites={
+                "cdp.current_question": question
+            }
+        )
 ```
 
-#### 位置4：健康状态判定服务 - 入口判定（可选增强）
+#### 位置5：健康状态判定工具（Health State Assessment Tool）内部 - 入口判定（可选增强）
 
-**服务路径**：`health-state-assessment-service/app/services/entry_assessment/`
+**工具路径**：`health-state-assessment-tool/app/services/entry_assessment/`
 
-**作用**（可选增强）：
-- **Step 1：接收用户输入**：使用NLU理解用户意图，提取症状和需求
-- **Step 2：识别症状/困扰**：识别用户是否有症状或困扰
-- **Step 3：方向澄清**：当用户表达模糊时，生成澄清问题
+**工具职责**（可选增强）：
+- 主Agent在入口判定时调用健康状态判定工具
+- 工具内部使用大模型进行NLU，理解用户意图，提取症状和需求
+- 工具返回ToolResult，包含判定结果和建议写回CDP的字段
 
 **当前状态**：
 - 基础版本使用规则和关键词匹配
 - 可选增强：使用大模型提高识别准确性
 
-**预期增强**（可选）：
+**工具内部实现**（可选增强）：
 ```python
-# health-state-assessment-service/app/services/entry_assessment/step1_receive_input.py
-def receive_user_input(user_input: dict) -> dict:
-    """Step 1：接收用户输入（当前实现为规则/关键词NLU，可选用LLM增强意图识别与实体抽取）"""
-        prompt = f"""分析用户的输入，提取以下信息：
+# health-state-assessment-tool/app/tools/health_state_assessment_tool.py
+class HealthStateAssessmentTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 1. 从CDP读取用户输入
+        cdp = context.cdp
+        user_input = cdp.user_input
+        
+        # 2. 工具内部使用大模型进行入口判定
+        assessment_result = await self._assess_entry_with_llm(user_input)
+        
+        # 3. 返回ToolResult
+        return ToolResult(
+            status="success",
+            payload={
+                "assessment": assessment_result
+            },
+            evidence=[],
+            suggestedWrites={
+                "cdp.health_state_assessment": assessment_result
+            }
+        )
+    
+    async def _assess_entry_with_llm(self, user_input: str) -> dict:
+        """工具内部：使用大模型进行入口判定"""
+        # Step 1：接收用户输入
+        prompt_step1 = f"""分析用户的输入，提取以下信息：
         用户输入：{user_input}
         
         请提取：
@@ -223,16 +311,13 @@ def receive_user_input(user_input: dict) -> dict:
             "is_mixed": true/false
         }}
         """
-        # 调用大模型API
-        # ...
-    
-# health-state-assessment-service/app/services/entry_assessment/step2_identify_symptom.py
-def identify_symptom(input_data: dict) -> dict:
-    """Step 2：识别用户是否有症状/困扰（当前实现为规则判断，可选用LLM增强鲁棒性）"""
-        prompt = f"""判断用户输入是否表示有症状/困扰：
+        step1_result = await self.llm_client.generate(prompt_step1)
         
-        用户输入：{user_intent.get('text')}
-        提取的症状：{user_intent.get('symptoms', [])}
+        # Step 2：识别用户是否有症状/困扰
+        prompt_step2 = f"""判断用户输入是否表示有症状/困扰：
+        
+        用户输入：{user_input}
+        提取的症状：{step1_result.get('symptoms', [])}
         
         判断结果：
         - 情况A（明确无症状）：用户表达的是"健康管理/体检规划/筛查/预防"，且没有任何不适描述
@@ -247,52 +332,79 @@ def identify_symptom(input_data: dict) -> dict:
             "is_mixed": true/false
         }}
         """
-        # 调用大模型API
-        # ...
-    
-# health-state-assessment-service/app/services/entry_assessment/step3_clarification.py
-def clarify_direction(symptom_data: dict) -> dict | None:
-    """Step 3：方向澄清（仅对 uncertain 触发一次；澄清结果只能落到 A 或 B，可选用LLM生成更自然的澄清问句）"""
-        prompt = f"""用户的表达模糊或混合诉求，需要生成一个最小澄清问题：
+        step2_result = await self.llm_client.generate(prompt_step2)
         
-        用户输入：{user_intent.get('text')}
-        当前判断：{user_intent.get('status')}
+        # Step 3：方向澄清（如果不确定）
+        if step2_result.get('status') == 'uncertain':
+            prompt_step3 = f"""用户的表达模糊或混合诉求，需要生成一个最小澄清问题：
+            
+            用户输入：{user_input}
+            当前判断：{step2_result.get('status')}
+            
+            生成一个澄清问题，确认用户主要目标是：
+            - A：健康筛查/体检规划
+            - B：症状咨询/问题排查
+            
+            要求：
+            1. 问题要简洁明了，只问一次
+            2. 问题要自然、口语化
+            3. 澄清后不得反复追问
+            
+            返回：
+            {{
+                "question": "澄清问题文本",
+                "direction": "A/B",
+                "clarified": true/false
+            }}
+            """
+            step3_result = await self.llm_client.generate(prompt_step3)
+            return {
+                **step1_result,
+                **step2_result,
+                **step3_result
+            }
         
-        生成一个澄清问题，确认用户主要目标是：
-        - A：健康筛查/体检规划
-        - B：症状咨询/问题排查
-        
-        要求：
-        1. 问题要简洁明了，只问一次
-        2. 问题要自然、口语化
-        3. 澄清后不得反复追问
-        
-        返回：
-        {{
-            "question": "澄清问题文本",
-            "direction": "A/B",
-            "clarified": true/false
-        }}
-        """
-        # 调用大模型API
-        # ...
+        return {
+            **step1_result,
+            **step2_result
+        }
 ```
 
-#### 位置5：健康管理引擎 - 健康管理计划生成（可选增强）
+#### 位置5：健康管理工具（Health Management Tool）内部 - 健康管理计划生成（可选增强）
 
-**服务路径**：`health-state-assessment-service/app/services/wellness_management_engine.py`
+**工具路径**：`health-management-tool/app/tools/health_management_tool.py`
 
-**作用**（可选增强）：
+**工具职责**（可选增强）：
+- 主Agent调用健康管理工具，工具内部使用大模型生成健康管理计划
 - **安抚与解释生成**：为健康管理态用户生成安抚性的解释文本
 - **健康建议生成**：生成生活方式建议的自然语言表述
 - **随访提醒生成**：生成随访提醒的自然语言话术
 
-**预期增强**（可选）：
+**工具内部实现**（可选增强）：
 ```python
-# health-state-assessment-service/app/services/wellness_management_engine.py
-class WellnessManagementEngine:
-    async def generate_reassurance_with_llm(self, cdp: CDP) -> str:
-        """使用大模型生成安抚与解释文本"""
+# health-management-tool/app/tools/health_management_tool.py
+class HealthManagementTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 1. 从CDP读取患者情况
+        cdp = context.cdp
+        
+        # 2. 工具内部使用大模型生成安抚与解释文本
+        reassurance_text = await self._generate_reassurance_with_llm(cdp)
+        
+        # 3. 返回ToolResult
+        return ToolResult(
+            status="success",
+            payload={
+                "reassurance_text": reassurance_text
+            },
+            evidence=[],
+            suggestedWrites={
+                "cdp.health_management.reassurance": reassurance_text
+            }
+        )
+    
+    async def _generate_reassurance_with_llm(self, cdp: CDP) -> str:
+        """工具内部：使用大模型生成安抚与解释文本"""
         prompt = f"""根据以下情况，生成一段安抚性的解释文本：
         
         患者情况：
@@ -318,45 +430,74 @@ class WellnessManagementEngine:
 
 ### 2.0 总体流程概览
 
-系统采用**5步AI循证诊断流程**，大模型在以下步骤中发挥作用：
+系统采用**5步AI循证诊断流程**，主Agent调用工具，工具内部使用大模型：
 
 ```
+主Agent运行循环：Observe → Plan → Act → Update → Evaluate → Stop/Escalate
+
 Step 1: 识别问题
-  ├─ NLU（可选）：理解用户主诉，提取结构化信息
-  └─ 概念归一化（可选）：将口语化表达转换为标准医学术语
-  ↓
+  主Agent调用问题识别工具
+  ├─ 工具内部：NLU（可选）- 理解用户主诉，提取结构化信息
+  └─ 工具内部：概念归一化（可选）- 将口语化表达转换为标准医学术语
+  ↓ 工具返回ToolResult，主Agent更新CDP
 Step 2: 构建鉴别诊断候选集并分层
-  ├─ 大模型引擎（核心）：在路径约束下生成鉴别诊断
-  └─ 知识图谱路径注入：DR.KNOWS方法
-  ↓
+  主Agent调用诊断工具
+  ├─ 工具内部：大模型引擎（核心）- 在路径约束下生成鉴别诊断
+  └─ 工具内部：知识图谱路径注入 - DR.KNOWS方法
+  ↓ 工具返回ToolResult，主Agent更新CDP
 Step 3: 组织候选集并建立分流路径
-  └─ NLG（可选）：生成第一层分叉问题的自然语言表述
-  ↓
+  主Agent调用分流路径工具
+  └─ 工具内部：NLG（可选）- 生成第一层分叉问题的自然语言表述
+  ↓ 工具返回ToolResult，主Agent更新CDP
 Step 4: 采集关键证据并形成排序与验证计划
-  ├─ NLG（可选）：生成自然的追问问题
-  └─ 基于临床决策分析的问题生成
-  ↓
+  主Agent调用问诊问题生成工具
+  ├─ 工具内部：NLG（可选）- 生成自然的追问问题
+  └─ 工具内部：基于临床决策分析的问题生成
+  ↓ 工具返回ToolResult，主Agent更新CDP
 Step 5: 回填证据并输出终点结论包
-  ├─ 大模型引擎（可选）：重新评估诊断（基于新证据）
-  └─ NLG（核心）：生成自然语言解释和终点结论包说明
+  主Agent调用解释生成工具
+  ├─ 工具内部：大模型引擎（可选）- 重新评估诊断（基于新证据）
+  └─ 工具内部：NLG（核心）- 生成自然语言解释和终点结论包说明
+  ↓ 工具返回ToolResult，主Agent更新CDP并提交最终结论
 ```
 
-### 2.1 Step 1：识别问题中的大模型（可选）
+### 2.1 Step 1：识别问题中的大模型（工具内部使用）
 
-**作用**：
+**工具**：问题识别工具（Problem Identification Tool）
+
+**工具职责**：
+- 主Agent调用问题识别工具，工具内部使用大模型进行NLU
 - 理解用户的自然语言输入，提取结构化信息
 - 将口语化表达转换为标准医学术语
 
-**当前实现**：
-- 主要使用规则和关键词匹配
-- 大模型作为可选增强，提高理解准确性
-
-**预期增强**：
+**工具内部实现**：
 ```python
-# diagnosis-engine-service/app/services/clinical_parsing_service.py
-class ClinicalParsingService:
-    async def normalize_concepts_with_llm(self, user_input: str) -> List[Concept]:
-        """使用大模型进行概念归一化"""
+# problem-identification-tool/app/tools/problem_identification_tool.py
+class ProblemIdentificationTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 1. 从ToolContext获取用户输入
+        user_input = context.cdp.user_input
+        
+        # 2. 工具内部使用大模型进行概念归一化
+        concepts = await self._normalize_concepts_with_llm(user_input)
+        
+        # 3. 构建结构化问题清单
+        problem_list = self._build_problem_list(concepts)
+        
+        # 4. 返回ToolResult
+        return ToolResult(
+            status="success",
+            payload={
+                "problem_list": problem_list
+            },
+            evidence=[],
+            suggestedWrites={
+                "cdp.problem_representation": problem_list
+            }
+        )
+    
+    async def _normalize_concepts_with_llm(self, user_input: str) -> List[Concept]:
+        """工具内部使用大模型进行概念归一化"""
         prompt = f"""将以下患者描述转换为标准医学术语（CUI编码）：
 
 患者描述：{user_input}
@@ -380,40 +521,69 @@ class ClinicalParsingService:
     ]
 }}
 """
-        # 调用大模型API
-        # ...
+        # 工具内部调用大模型API
+        llm_response = await self.llm_client.generate(prompt)
+        return self._parse_concepts(llm_response)
 ```
 
-### 2.2 Step 2：构建鉴别诊断候选集并分层中的大模型（核心）
+### 2.2 Step 2：构建鉴别诊断候选集并分层中的大模型（工具内部使用，核心）
 
-**作用**：
-- **核心功能**：在知识图谱路径约束下，生成鉴别诊断候选集
+**工具**：诊断工具（Diagnosis Tool）
+
+**工具职责**：
+- 主Agent调用诊断工具，工具内部使用大模型进行推理
+- 在知识图谱路径约束下，生成鉴别诊断候选集
 - 结合DR.KNOWS方法的推理路径进行深度推理
 - 输出三层分层的诊断候选（首要假设、主要备选诊断、必须排除的高危诊断）
 
-**调用时机**：
-- 在5步流程的Step 2中，作为多引擎融合诊断的一部分
-- 与其他四个引擎并行执行
-
-**实现说明**：
+**工具内部实现**：
 ```python
-# diagnosis-engine-service/app/engines/llm_engine.py
-class LLMEngine:
-    async def diagnose(self, request: DiagnosisEngineRequest, kg_paths: List[Dict] = None) -> Dict:
-        """大模型推理（Step 2）"""
-        # 1. 构建增强提示词（包含知识图谱推理路径）
-        prompt = self._build_enhanced_prompt(request, kg_paths)
+# diagnosis-tool/app/tools/diagnosis_tool.py
+class DiagnosisTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 1. 从CDP读取患者信息
+        cdp = context.cdp
+        patient_info = cdp.problem_representation
         
-        # 2. 调用LLM API
-        llm_response = await self._call_llm_api(prompt)
+        # 2. 调用知识图谱工具获取推理路径
+        kg_paths = await self._get_kg_paths(patient_info)
+        
+        # 3. 工具内部调用大模型引擎进行推理
+        llm_result = await self._llm_engine_diagnose(patient_info, kg_paths)
+        
+        # 4. 融合多个引擎结果（包括大模型引擎）
+        fused_result = await self._fuse_engines(patient_info, llm_result)
+        
+        # 5. 格式化为三层分层结构
+        three_layer_ddx = self._format_to_three_layer(fused_result, cdp.problem_representation)
+        
+        # 6. 返回ToolResult
+        return ToolResult(
+            status="success",
+            payload={
+                "ddx": three_layer_ddx
+            },
+            evidence=llm_result.evidence,
+            suggestedWrites={
+                "cdp.ddx.rank_list": three_layer_ddx,
+                "cdp.ddx.primary_hypothesis": three_layer_ddx.get("首要假设"),
+                "cdp.ddx.main_alternatives": three_layer_ddx.get("主要备选诊断"),
+                "cdp.ddx.must_exclude": three_layer_ddx.get("必须排除的高危诊断")
+            }
+        )
+    
+    async def _llm_engine_diagnose(self, patient_info: Dict, kg_paths: List[Dict]) -> Dict:
+        """工具内部：大模型推理"""
+        # 1. 构建增强提示词（包含知识图谱推理路径）
+        prompt = self._build_enhanced_prompt(patient_info, kg_paths)
+        
+        # 2. 工具内部调用LLM API
+        llm_response = await self.llm_client.generate(prompt)
         
         # 3. 解析响应并输出三层分层结构
         result = self._parse_response(llm_response)
         
-        # 4. 格式化为三层分层结构
-        three_layer_ddx = self._format_to_three_layer(result)
-        
-        return three_layer_ddx
+        return result
     
     def _format_to_three_layer(self, result: Dict, problem_list: Dict) -> Dict:
         """将大模型输出格式化为三层分层结构"""
@@ -497,18 +667,41 @@ class LLMEngine:
         return "；".join(reasons) if reasons else "基于症状匹配"
 ```
 
-### 2.3 Step 3：组织候选集并建立分流路径中的大模型（可选）
+### 2.3 Step 3：组织候选集并建立分流路径中的大模型（工具内部使用，可选）
 
-**作用**：
-- **NLG**：将第一层分叉问题转换为自然的追问表述
+**工具**：分流路径工具（Routing Path Tool）
+
+**工具职责**：
+- 主Agent调用分流路径工具，工具内部使用大模型进行NLG
+- 将第一层分叉问题转换为自然的追问表述
 - 生成差异点的标准问法
 
-**实现说明**：
+**工具内部实现**：
 ```python
-# dialog-service/app/core/nlg.py
-class NaturalLanguageGenerator:
-    async def generate_routing_question_with_llm(self, difference_point: Dict, context: Dict) -> str:
-        """使用大模型生成分流问题的自然语言表述"""
+# routing-path-tool/app/tools/routing_path_tool.py
+class RoutingPathTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 1. 从CDP读取诊断候选和差异点
+        cdp = context.cdp
+        difference_point = cdp.routing_path.difference_point
+        
+        # 2. 工具内部使用大模型生成分流问题的自然语言表述
+        question = await self._generate_routing_question_with_llm(difference_point, cdp)
+        
+        # 3. 返回ToolResult
+        return ToolResult(
+            status="success",
+            payload={
+                "question": question
+            },
+            evidence=[],
+            suggestedWrites={
+                "cdp.routing_path.current_question": question
+            }
+        )
+    
+    async def _generate_routing_question_with_llm(self, difference_point: Dict, context: Dict) -> str:
+        """工具内部：使用大模型生成分流问题的自然语言表述"""
         prompt = f"""根据以下差异点，生成一个自然的追问问题：
 
 差异点：{difference_point.get('difference_point_name')}
@@ -529,21 +722,47 @@ class NaturalLanguageGenerator:
         # ...
 ```
 
-### 2.4 Step 4：采集关键证据并形成排序与验证计划中的大模型（可选）
+### 2.4 Step 4：采集关键证据并形成排序与验证计划中的大模型（工具内部使用，可选）
 
-**作用**：
-- **NLG**：基于临床决策分析生成自然的追问问题
+**工具**：问诊问题生成工具（Question Generation Tool）
+
+**工具职责**：
+- 主Agent调用问诊问题生成工具，工具内部使用大模型进行NLG
+- 基于临床决策分析生成自然的追问问题
 - 优先生成能排除高危诊断或信息增益高的问题
 
-**实现说明**：
+**工具内部实现**：
 ```python
-# dialog-service/app/core/nlg.py
-class NaturalLanguageGenerator:
-    async def generate_question_with_clinical_analysis(self, 
+# question-generation-tool/app/tools/question_generation_tool.py
+class QuestionGenerationTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 1. 从CDP读取信息缺口和临床决策分析
+        cdp = context.cdp
+        gap = cdp.missing_info[0]  # 信息缺口
+        clinical_analysis = cdp.clinical_analysis
+        
+        # 2. 工具内部使用大模型生成追问问题
+        question = await self._generate_question_with_clinical_analysis(
+            gap, clinical_analysis, cdp
+        )
+        
+        # 3. 返回ToolResult
+        return ToolResult(
+            status="success",
+            payload={
+                "question": question
+            },
+            evidence=[],
+            suggestedWrites={
+                "cdp.current_question": question
+            }
+        )
+    
+    async def _generate_question_with_clinical_analysis(self, 
                                                         gap: InformationGap,
                                                         clinical_analysis: Dict,
                                                         context: Dict) -> str:
-        """使用大模型生成追问问题（基于临床决策分析）"""
+        """工具内部：使用大模型生成追问问题（基于临床决策分析）"""
         prompt = f"""根据以下信息，生成一个自然的追问问题：
 
 需要收集的信息：{gap.info_type}
@@ -568,19 +787,42 @@ class NaturalLanguageGenerator:
         # ...
 ```
 
-### 2.5 Step 5：回填证据并输出终点结论包中的大模型（核心）
+### 2.5 Step 5：回填证据并输出终点结论包中的大模型（工具内部使用，核心）
 
-**作用**：
-- **重新评估诊断**（可选）：基于新证据重新评估诊断可能性
-- **NLG（核心）**：生成终点结论包的自然语言说明
+**工具**：解释生成工具（Explanation Tool）
+
+**工具职责**：
+- 主Agent调用解释生成工具，工具内部使用大模型进行NLG
+- 重新评估诊断（可选）：基于新证据重新评估诊断可能性
+- 生成终点结论包的自然语言说明（核心）
 - 生成终点结论包四要素的详细说明（结论、必须排除项状态、关键依据、行动与随访）
 
-**实现说明**：
+**工具内部实现**：
 ```python
-# explanation-service/app/services/explanation_service.py
-class ExplanationService:
-    async def generate_conclusion_package_explanation(self, cdp: CDP) -> str:
-        """使用大模型生成终点结论包的自然语言说明（四要素）"""
+# explanation-tool/app/tools/explanation_tool.py
+class ExplanationTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 1. 从CDP读取终点结论包
+        cdp = context.cdp
+        conclusion_package = cdp.conclusion_package
+        
+        # 2. 工具内部使用大模型生成终点结论包的自然语言说明
+        explanation = await self._generate_conclusion_package_explanation(cdp)
+        
+        # 3. 返回ToolResult
+        return ToolResult(
+            status="success",
+            payload={
+                "explanation": explanation
+            },
+            evidence=[],
+            suggestedWrites={
+                "cdp.final.explanation": explanation
+            }
+        )
+    
+    async def _generate_conclusion_package_explanation(self, cdp: CDP) -> str:
+        """工具内部：使用大模型生成终点结论包的自然语言说明（四要素）"""
         conclusion_pkg = cdp.conclusion_package
         
         prompt = f"""你是一位经验丰富的医生，需要根据以下诊断结果，生成一段自然、友好、专业的解释：
@@ -687,9 +929,11 @@ class ExplanationService:
 - **诊断修正理论**（Diagnostic Revision Theory）
 - **治疗性诊断**（Therapeutic Diagnosis）
 
-**核心思想**：临床推理是一个动态过程，诊断假设应该能够根据新证据动态调整。当出现证据冲突、症状演变或处理无效时，需要回退到之前的步骤重新推理。
+**核心思想**：临床推理是一个动态过程，诊断假设应该能够根据新证据动态调整。当出现证据冲突、症状演变或处理无效时，主Agent需要回退到之前的步骤，重新调用工具进行推理。
 
-### 3.1 回退触发条件与大模型角色
+**架构定位**：主Agent在回退时重新调用工具，工具内部使用大模型进行重新评估。
+
+### 3.1 回退触发条件与大模型角色（工具内部使用）
 
 #### 回退到 Step 4（采集关键证据并形成排序与验证计划）
 
@@ -698,15 +942,36 @@ class ExplanationService:
 - 治疗无效
 - 必须排除项未完成排除
 
-**大模型角色**（可选增强）：
+**工具**：诊断工具（Diagnosis Tool）
+
+**工具内部实现**：
 ```python
-# diagnosis-engine-service/app/engines/llm_engine.py
-class LLMEngine:
-    async def reassess_with_new_evidence(self, 
+# diagnosis-tool/app/tools/diagnosis_tool.py
+class DiagnosisTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 主Agent在回退时重新调用诊断工具
+        # 工具内部使用大模型重新评估诊断
+        cdp = context.cdp
+        old_result = cdp.ddx
+        new_evidence = cdp.new_evidence
+        
+        # 工具内部使用大模型重新评估
+        reassessed_result = await self._reassess_with_new_evidence(
+            old_result, new_evidence, cdp
+        )
+        
+        return ToolResult(
+            status="success",
+            payload={"ddx": reassessed_result},
+            evidence=reassessed_result.evidence,
+            suggestedWrites={"cdp.ddx": reassessed_result}
+        )
+    
+    async def _reassess_with_new_evidence(self, 
                                         old_result: Dict, 
                                         new_evidence: List[Evidence],
                                         cdp: CDP) -> Dict:
-        """基于新证据重新评估诊断（回退到Step 4时）"""
+        """工具内部：基于新证据重新评估诊断（回退到Step 4时）"""
         prompt = f"""之前的诊断结果与新的证据存在冲突或矛盾，需要重新评估：
 
 之前的诊断结果：
@@ -745,15 +1010,35 @@ class LLMEngine:
 - 新症状出现
 - 新红旗信号
 
-**大模型角色**（可选增强）：
+**工具**：分流路径工具（Routing Path Tool）
+
+**工具内部实现**：
 ```python
-# diagnosis-engine-service/app/engines/llm_engine.py
-class LLMEngine:
-    async def reorganize_routing_path(self, 
+# routing-path-tool/app/tools/routing_path_tool.py
+class RoutingPathTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 主Agent在回退时重新调用分流路径工具
+        cdp = context.cdp
+        symptom_changes = cdp.symptom_changes
+        old_routing_path = cdp.routing_path
+        
+        # 工具内部使用大模型重新组织分流路径
+        updated_path = await self._reorganize_routing_path(
+            symptom_changes, old_routing_path, cdp
+        )
+        
+        return ToolResult(
+            status="success",
+            payload={"routing_path": updated_path},
+            evidence=[],
+            suggestedWrites={"cdp.routing_path": updated_path}
+        )
+    
+    async def _reorganize_routing_path(self, 
                                      symptom_changes: Dict,
                                      old_routing_path: Dict,
                                      cdp: CDP) -> Dict:
-        """重新组织分流路径（回退到Step 3时）"""
+        """工具内部：重新组织分流路径（回退到Step 3时）"""
         prompt = f"""症状发生变化，需要重新组织分流路径：
 
 症状变化：
@@ -788,14 +1073,34 @@ class LLMEngine:
 - 信息不完整
 - 关键信息缺失
 
-**大模型角色**（可选增强）：
+**工具**：问题识别工具（Problem Identification Tool）
+
+**工具内部实现**：
 ```python
-# diagnosis-engine-service/app/services/clinical_parsing_service.py
-class ClinicalParsingService:
-    async def reclarify_problem_with_llm(self, 
+# problem-identification-tool/app/tools/problem_identification_tool.py
+class ProblemIdentificationTool:
+    async def execute(self, context: ToolContext) -> ToolResult:
+        # 主Agent在回退时重新调用问题识别工具
+        cdp = context.cdp
+        conflict_info = cdp.conflict_info
+        old_problem_list = cdp.problem_representation
+        
+        # 工具内部使用大模型重新澄清问题
+        revised_problem_list = await self._reclarify_problem_with_llm(
+            conflict_info, old_problem_list
+        )
+        
+        return ToolResult(
+            status="success",
+            payload={"problem_list": revised_problem_list},
+            evidence=[],
+            suggestedWrites={"cdp.problem_representation": revised_problem_list}
+        )
+    
+    async def _reclarify_problem_with_llm(self, 
                                         conflict_info: Dict,
                                         old_problem_list: Dict) -> Dict:
-        """重新澄清问题（回退到Step 1时）"""
+        """工具内部：重新澄清问题（回退到Step 1时）"""
         prompt = f"""检测到信息冲突或不完整，需要重新澄清问题：
 
 信息冲突：
@@ -899,9 +1204,9 @@ class ClinicalParsingService:
   后验概率：0.65（综合评分）
 ```
 
-**实现位置**：
+**工具内部实现**：
 ```python
-# diagnosis-engine-service/app/kg-reasoning-engine/kg_reasoning_engine.py
+# diagnosis-tool/app/kg-reasoning-engine/kg_reasoning_engine.py
 class KGReasoningEngine:
     def build_enhanced_prompt(self, patient_info: str, ranked_paths: List[RankedPath], problem_list: Dict) -> str:
         """路径注入LLM（DR.KNOWS核心方法，基于贝叶斯诊断理论）"""
@@ -992,9 +1297,9 @@ class KGReasoningEngine:
 
 #### 4.1.2 提示词构建流程
 
-**当前实现**（基础版本）：
+**工具内部实现**（基础版本）：
 ```python
-# diagnosis-engine-service/app/engines/llm_engine.py
+# diagnosis-tool/app/engines/llm_engine.py
 def _build_prompt(self, request: DiagnosisEngineRequest) -> str:
     """构建提示词"""
     health_profile = request.health_profile or {}
@@ -1070,9 +1375,9 @@ def _build_prompt(self, request: DiagnosisEngineRequest, kg_paths: List[Dict] = 
 
 #### 4.1.3 输出解析
 
-**结构化输出解析**：
+**工具内部实现**：
 ```python
-# diagnosis-engine-service/app/engines/llm_engine.py
+# diagnosis-tool/app/engines/llm_engine.py
 def _parse_response(self, response: str) -> Dict:
     """解析大模型返回结果"""
     import json
@@ -1115,10 +1420,11 @@ def _parse_response(self, response: str) -> Dict:
 - 诊断依据说明
 - 建议和指导
 
-**预期实现**（待实现）：
+**工具内部实现**：
 ```python
-# explanation-service/app/services/explanation_service.py
-async def _llm_generate_explanation(
+# explanation-tool/app/tools/explanation_tool.py
+class ExplanationTool:
+    async def _llm_generate_explanation(
     self, 
     conclusion_package: ConclusionPackage,
     cdp: Dict
@@ -1155,10 +1461,11 @@ async def _llm_generate_explanation(
 
 **当前实现**：使用模板生成问题
 
-**可选增强**：使用大模型生成更自然的问题
+**工具内部实现**（可选增强）：
 ```python
-# dialog-service/app/core/nlg.py
-async def generate_question_with_llm(self, question_info: Dict, context: Dict) -> str:
+# question-generation-tool/app/tools/question_generation_tool.py
+class QuestionGenerationTool:
+    async def _generate_question_with_llm(self, question_info: Dict, context: Dict) -> str:
     """使用大模型生成自然的追问问题"""
     prompt = f"""你是一位经验丰富的医生，需要根据以下信息生成一个追问问题。
 
@@ -1186,11 +1493,16 @@ async def generate_question_with_llm(self, question_info: Dict, context: Dict) -
 
 ---
 
-## 六、大模型的约束机制：如何"管住"大模型？
+## 六、大模型的约束机制：工具内部如何"管住"大模型？
 
 ### 6.1 约束机制的总体思路：四道"安全防线"
 
-我们用**四道防线**来约束大模型，就像给车辆加装多重安全保障：
+工具内部使用**四道防线**来约束大模型，就像给车辆加装多重安全保障：
+
+**架构定位**：
+- 约束机制在工具内部实施，主Agent不直接约束大模型
+- 工具负责确保大模型输出的质量和安全性
+- 工具返回给主Agent的结果已经经过约束和验证
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -1389,13 +1701,14 @@ async def generate_question_with_llm(self, question_info: Dict, context: Dict) -
 
 **通俗解释**：
 - **问题**：如果完全相信大模型，它一旦出错，整个系统就错了
-- **解决**：我们同时使用5个不同的诊断方法（引擎），每个方法的意见都有权重，最后综合投票
+- **解决**：工具内部同时使用5个不同的诊断方法（引擎），每个方法的意见都有权重，最后综合投票
   - 规则引擎：25%（基于医学规则的判断）
   - 知识图谱引擎：25%（基于知识图谱的推理）
   - 统计模型引擎：20%（基于历史数据的预测）
-  - **大模型引擎：25%**（基于大模型的深度推理）⭐
+  - **大模型引擎：25%**（基于大模型的深度推理，工具内部使用）⭐
   - 鉴别诊断引擎：5%（区分相似疾病）
 - **类比**：就像专家会诊，5位专家各自给出意见，最后综合讨论决定
+- **架构定位**：融合在工具内部完成，工具返回融合后的结果给主Agent
 
 **实际效果**：
 - ✅ 即使大模型出错，还有其他4个引擎的结果
@@ -1544,15 +1857,15 @@ async def generate_question_with_llm(self, question_info: Dict, context: Dict) -
 #### 6.7.2 技术实现要点
 
 **输入约束**：
-- 实现位置：`diagnosis-engine-service/app/kg-reasoning-engine/kg_reasoning_engine.py`
+- 实现位置：`diagnosis-tool/app/kg-reasoning-engine/kg_reasoning_engine.py`（工具内部）
 - 核心功能：将知识图谱推理路径注入提示词
 
 **输出约束**：
-- 实现位置：`diagnosis-engine-service/app/engines/llm_engine.py`
+- 实现位置：`diagnosis-tool/app/engines/llm_engine.py`（工具内部）
 - 核心功能：增强 `_parse_response()` 方法，添加验证逻辑
 
 **过程约束**：
-- 实现位置：`diagnosis-engine-service/app/engines/fusion_engine.py`
+- 实现位置：`diagnosis-tool/app/engines/fusion_engine.py`（工具内部）
 - 核心功能：实现 `_is_llm_output_abnormal()` 方法，动态调整权重
 
 ### 6.8 约束机制实施建议（详细版）
@@ -1562,12 +1875,12 @@ async def generate_question_with_llm(self, question_info: Dict, context: Dict) -
 **优先级：高**
 
 1. **完善知识图谱路径注入**
-   - 位置：`diagnosis-engine-service/app/kg-reasoning-engine/kg_reasoning_engine.py`
+   - 位置：`diagnosis-tool/app/kg-reasoning-engine/kg_reasoning_engine.py`（工具内部）
    - 任务：实现 `build_enhanced_prompt()` 方法，将知识图谱推理路径注入提示词
    - 依赖：需要先完成知识图谱引擎的路径检索功能
 
 2. **标准化提示词模板**
-   - 位置：`diagnosis-engine-service/app/engines/llm_engine.py`
+   - 位置：`diagnosis-tool/app/engines/llm_engine.py`（工具内部）
    - 任务：创建标准化的提示词模板库，支持不同场景的提示词
    - 建议：将提示词模板抽取到配置文件或数据库中
 
@@ -1576,7 +1889,7 @@ async def generate_question_with_llm(self, question_info: Dict, context: Dict) -
 **优先级：高**
 
 1. **增强输出解析与验证**
-   - 位置：`diagnosis-engine-service/app/engines/llm_engine.py`
+   - 位置：`diagnosis-tool/app/engines/llm_engine.py`（工具内部）
    - 任务：增强 `_parse_response()` 方法，添加更多验证逻辑
    - 建议：
      - 验证概率值范围
@@ -1585,7 +1898,7 @@ async def generate_question_with_llm(self, question_info: Dict, context: Dict) -
      - 处理解析失败的情况
 
 2. **输出内容校验**
-   - 位置：`diagnosis-engine-service/app/engines/llm_engine.py`
+   - 位置：`diagnosis-tool/app/engines/llm_engine.py`（工具内部）
    - 任务：添加疾病名称校验、概率值校验等功能
    - 依赖：需要疾病知识库或标准化术语库
 
@@ -1594,12 +1907,12 @@ async def generate_question_with_llm(self, question_info: Dict, context: Dict) -
 **优先级：中**
 
 1. **引擎结果一致性检查**
-   - 位置：`diagnosis-engine-service/app/engines/fusion_engine.py`
+   - 位置：`diagnosis-tool/app/engines/fusion_engine.py`（工具内部）
    - 任务：添加大模型输出与其他引擎结果的一致性检查
    - 建议：如果差异过大，可以降低权重或标记异常
 
 2. **推理路径追踪**
-   - 位置：提示词模板
+   - 位置：提示词模板（工具内部）
    - 任务：要求大模型输出使用了哪些推理路径
    - 效果：便于追溯和验证
 
@@ -1608,12 +1921,12 @@ async def generate_question_with_llm(self, question_info: Dict, context: Dict) -
 **优先级：低**（已基本实现）
 
 1. **参数调优**
-   - 位置：`diagnosis-engine-service/app/engines/llm_engine.py`
+   - 位置：`diagnosis-tool/app/engines/llm_engine.py`（工具内部）
    - 任务：根据实际效果调整temperature、num_predict等参数
    - 建议：通过A/B测试找到最佳参数组合
 
 2. **参数可配置化**
-   - 位置：环境变量或配置文件
+   - 位置：环境变量或配置文件（工具内部）
    - 任务：将大模型参数配置化，便于不同环境使用不同参数
    - 建议：支持通过环境变量配置
 
@@ -1621,17 +1934,22 @@ async def generate_question_with_llm(self, question_info: Dict, context: Dict) -
 
 ---
 
-## 五、大模型的连接方式：如何调用LLM服务？
+## 五、大模型的连接方式：工具内部如何调用LLM？
 
 ### 5.1 连接架构
 
-系统通过**LangChain框架**统一管理大模型调用，支持多种LLM后端（OpenAI、ChatGLM、Ollama、自定义API），采用异步调用模式，确保系统性能和响应速度。
+系统采用**主Agent + 工具**架构，大模型在工具内部通过**LangChain框架**统一管理调用，支持多种LLM后端（OpenAI、ChatGLM、Ollama、自定义API），采用异步调用模式，确保系统性能和响应速度。
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│             诊断引擎服务 (diagnosis-engine-service)        │
+│                    主Agent（Clinical Agent Brain）        │
+│  - 调用工具，不直接调用大模型                              │
+└─────────────────────────────────────────────────────────┘
+                            ↓ 调用工具
+┌─────────────────────────────────────────────────────────┐
+│                    诊断工具 (Diagnosis Tool)             │
 │  ┌───────────────────────────────────────────────────┐  │
-│  │  LLMEngine (大模型引擎)                              │  │
+│  │  工具内部：LLMEngine (大模型引擎)                    │  │
 │  │  - LangChainLLMClient (统一LLM客户端)              │  │
 │  │  - PromptTemplateManager (提示词模板管理)          │  │
 │  │  - 构建提示词（使用Jinja2模板）                    │  │
@@ -1648,6 +1966,11 @@ async def generate_question_with_llm(self, question_info: Dict, context: Dict) -
 │  └─ 自定义HTTP API                                      │
 └─────────────────────────────────────────────────────────┘
 ```
+
+**关键点**：
+- 主Agent不直接调用大模型，而是通过调用工具间接使用
+- 工具内部使用LangChain统一管理大模型调用
+- 工具返回结构化结果（ToolResult）给主Agent
 
 ### 5.2 连接配置
 
@@ -1686,7 +2009,7 @@ LLM_RETRY_DELAY=1.0
 ```
 
 **提示词模板配置**：
-- 模板位置：`diagnosis-engine-service/app/config/prompt_templates/`
+- 模板位置：`diagnosis-tool/app/config/prompt_templates/`（工具内部）
 - 模板格式：Jinja2模板（`.jinja2`文件）
 - 模板类型：
   - `diagnosis_reasoning.jinja2` - 诊断推理模板
@@ -1696,68 +2019,89 @@ LLM_RETRY_DELAY=1.0
 
 ### 5.3 API调用实现
 
-**当前实现**（`diagnosis-engine-service/app/multi-engine-fusion/llm_engine.py`，使用LangChain）：
+**工具内部实现**（`diagnosis-tool/app/engines/llm_engine.py`，使用LangChain）：
 
 ```python
 from app.utils.llm_client import LangChainLLMClient
 from app.utils.prompt_templates import PromptTemplateManager
 from app.kg_reasoning_engine.path_injector import PathInjector
 
-class LLMEngine(BaseEngine):
-    """大模型引擎（路径约束）- 使用LangChain"""
+class DiagnosisTool:
+    """诊断工具 - 工具内部使用大模型"""
     
     def __init__(self):
-        # 使用LangChain统一管理LLM调用
+        # 工具内部：使用LangChain统一管理LLM调用
         self.llm_client = LangChainLLMClient()  # 自动从环境变量读取配置
         self.template_manager = PromptTemplateManager()  # 提示词模板管理器
         self.path_injector = PathInjector()
-        logger.info("LLM引擎初始化完成（使用LangChain）")
+        logger.info("诊断工具初始化完成（工具内部使用LangChain）")
     
-    async def diagnose_async(self, symptoms, signs, context):
-        """大模型推理（异步版本）"""
+    async def execute(self, context: ToolContext) -> ToolResult:
+        """工具执行 - 主Agent调用此方法"""
         try:
-            # 1. 检索推理路径
+            # 1. 从CDP读取患者信息
+            cdp = context.cdp
+            symptoms = cdp.problem_representation.symptoms
+            signs = cdp.patient_state.vital_signs
+            
+            # 2. 检索推理路径
             if self.path_retriever:
                 paths = self.path_retriever.retrieve_disease_paths(symptoms)
             else:
                 paths = []
             
-            # 2. 使用模板管理器构建提示词
-            paths_text = self._format_paths(paths) if paths else None
-            prompt = self.template_manager.format_diagnosis_reasoning(
-                symptoms=symptoms,
-                signs=signs,
-                context=context,
-                paths=paths_text
+            # 3. 工具内部使用大模型进行推理
+            llm_result = await self._llm_diagnose_async(symptoms, signs, cdp, paths)
+            
+            # 4. 融合多个引擎结果
+            fused_result = await self._fuse_engines(llm_result, cdp)
+            
+            # 5. 返回ToolResult
+            return ToolResult(
+                status="success",
+                payload={
+                    "ddx": fused_result.ddx,
+                    "confidence": fused_result.confidence
+                },
+                evidence=llm_result.evidence,
+                suggestedWrites={
+                    "cdp.ddx": fused_result.ddx
+                }
             )
-            
-            # 3. 如果路径注入器需要，可以进一步处理
-            if paths and self.path_injector:
-                prompt = self.path_injector.inject_paths(prompt, paths)
-            
-            # 4. 使用LangChain调用LLM（自动重试和错误处理）
-            llm_result = await self.llm_client.generate(prompt)
-            
-            # 5. 解析结果
-            parsed_result = self._parse_llm_result(llm_result)
-            
-            return {
-                'diseases': parsed_result.get('diseases', []),
-                'confidence': parsed_result.get('confidence', 0.0),
-                'engine': self.get_engine_name(),
-                'reasoning': parsed_result.get('reasoning', '')
-            }
         except Exception as e:
-            logger.error(f"LLM引擎诊断失败: {str(e)}", exc_info=True)
-            return {
-                'diseases': [],
-                'confidence': 0.0,
-                'engine': self.get_engine_name(),
-                'error': str(e)
-            }
+            logger.error(f"诊断工具执行失败: {str(e)}", exc_info=True)
+            return ToolResult(
+                status="error",
+                payload={},
+                evidence=[],
+                errors=[str(e)]
+            )
+    
+    async def _llm_diagnose_async(self, symptoms, signs, context, paths):
+        """工具内部：大模型推理（异步版本）"""
+        # 1. 使用模板管理器构建提示词
+        paths_text = self._format_paths(paths) if paths else None
+        prompt = self.template_manager.format_diagnosis_reasoning(
+            symptoms=symptoms,
+            signs=signs,
+            context=context,
+            paths=paths_text
+        )
+        
+        # 2. 如果路径注入器需要，可以进一步处理
+        if paths and self.path_injector:
+            prompt = self.path_injector.inject_paths(prompt, paths)
+        
+        # 3. 工具内部使用LangChain调用LLM（自动重试和错误处理）
+        llm_result = await self.llm_client.generate(prompt)
+        
+        # 4. 解析结果
+        parsed_result = self._parse_llm_result(llm_result)
+        
+        return parsed_result
 ```
 
-**LangChain客户端实现**（`diagnosis-engine-service/app/utils/llm_client.py`）：
+**工具内部实现**（`diagnosis-tool/app/utils/llm_client.py`）：
 
 ```python
 from langchain.llms.base import BaseLLM
@@ -1814,7 +2158,7 @@ prompt = template_manager.format_diagnosis_reasoning(
 ```
 
 **模板文件位置**：
-- `diagnosis-engine-service/app/config/prompt_templates/`
+- `diagnosis-tool/app/config/prompt_templates/`（工具内部）
 - 模板文件：`.jinja2`格式（Jinja2语法）
 - 配置文件：`templates.yaml`（模板元数据）
 

@@ -2,7 +2,7 @@
 
 > **文档定位**：本文档详细定义AI医生系统的所有REST API接口规范，包括请求参数、响应格式、错误码等。  
 > **参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》、《AI医生系统-数据模型设计.md》  
-> **设计基础**：基于DR.KNOWS论文的八个脑区架构设计
+> **设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计
 
 ---
 
@@ -68,7 +68,7 @@
   "traceId": "3f1a9b1d2c5a4b0e",
   "requestId": "req_20260122_0001",
   "service": "diagnosis-service",
-  "agentId": "orchestrator",
+  "agentId": "agent_main",
   "cdpId": "cdp_123456",
   "retryable": false,
   "timestamp": 1705123456789,
@@ -90,7 +90,207 @@
 
 ## 二、诊断服务接口（diagnosis-service）
 
-### 2.1 AI诊断入口判定流程（脑区0）
+> **说明**：diagnosis-service是主Agent（Clinical Agent Brain）的实现，负责运行循环、工具调用调度、CDP管理、证据融合、冲突解决等核心功能。
+
+### 2.0 工具调用协议（Tool Protocol）
+
+> **说明**：主Agent通过工具调用协议调用各个工具服务。所有工具服务必须实现统一的ToolContext输入和ToolResult输出格式。
+
+#### 2.0.1 工具调用接口（通用）
+
+**接口路径**：`POST /api/v1/tools/{tool_id}/invoke`
+
+**接口描述**：主Agent调用工具服务的统一接口
+
+**路径参数**：
+- `tool_id`：工具ID（tool_0, tool_1, tool_2, tool_3, tool_4, tool_5, tool_6, tool_7）
+
+**请求头**：
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**请求参数（ToolContext）**：
+```json
+{
+  "traceId": "trace_123456",
+  "cdpReference": {
+    "cdpId": "cdp_001",
+    "version": 1,
+    "readFields": ["cdp.patient_state", "cdp.ddx"]
+  },
+  "agentStateSummary": {
+    "currentStep": 2,
+    "workMode": "clinical_mode"
+  },
+  "constraints": {
+    "maxTimeSeconds": 30,
+    "maxCost": 10.0,
+    "riskLevelLimit": "L3"
+  },
+  "callParams": {
+    "tool_specific_params": "value"
+  }
+}
+```
+
+**响应示例（ToolResult）**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "traceId": "trace_123456",
+    "toolId": "tool_3",
+    "status": "success",
+    "payload": {
+      "ddx_rank_list": [
+        {
+          "disease_name": "疾病名称",
+          "disease_cui": "CUI编码",
+          "rank": 1,
+          "tier": "Tier1",
+          "probability": 0.85,
+          "pros": ["支持证据列表"],
+          "cons": ["反对证据列表"],
+          "missing": ["缺失证据列表"]
+        }
+      ],
+      "tier1_most_likely": [
+        {
+          "disease_name": "疾病名称",
+          "disease_cui": "CUI编码",
+          "probability": 0.85
+        }
+      ],
+      "tier2_must_exclude": [],
+      "tier3_active_alternatives": []
+    },
+    "evidence": [
+      {
+        "source": "knowledge_base",
+        "reference": "chief_complaint_kg_entry_001",
+        "strength": "strong"
+      }
+    ],
+    "quality": {
+      "confidence": 0.85,
+      "completeness": 0.90,
+      "accuracy": 0.88
+    },
+    "suggestedWrites": [
+      {
+        "fieldPath": "cdp.ddx",
+        "value": {
+          "ddx_rank_list": [...],
+          "tier1_most_likely": [...],
+          "tier2_must_exclude": [],
+          "tier3_active_alternatives": []
+        },
+        "reason": "更新鉴别诊断列表"
+      }
+    ],
+    "errors": [],
+    "durationMs": 2500,
+    "metadata": {}
+  },
+  "timestamp": 1705123456789
+}
+```
+
+**响应状态说明**：
+
+| status | 说明 | 主Agent处理策略 |
+|--------|------|----------------|
+| `success` | 工具执行成功，输出完整 | 评估quality，决定是否写回CDP |
+| `partial_success` | 工具执行部分成功，输出不完整 | 评估quality和errors，决定是否写回CDP或重试 |
+| `failure` | 工具执行失败 | 根据错误类型决定是否重试或使用降级策略 |
+| `timeout` | 工具执行超时 | 根据工具重要性决定是否重试或使用降级策略 |
+
+**错误响应示例**：
+```json
+{
+  "code": 500,
+  "message": "工具执行失败",
+  "data": {
+    "traceId": "trace_123456",
+    "toolId": "tool_3",
+    "status": "failure",
+    "payload": null,
+    "evidence": [],
+    "quality": {
+      "confidence": 0.0,
+      "completeness": 0.0
+    },
+    "suggestedWrites": [],
+    "errors": [
+      {
+        "errorType": "runtime_error",
+        "errorMessage": "知识库连接失败",
+        "errorDetails": {
+          "service": "knowledge_base_service",
+          "error_code": "KB_CONNECTION_FAILED"
+        }
+      }
+    ],
+    "durationMs": 5000,
+    "metadata": {}
+  },
+  "timestamp": 1705123456789
+}
+```
+
+#### 2.0.2 工具调用协议字段说明
+
+**ToolContext字段说明**：
+
+| 字段路径 | 数据类型 | 是否必填 | 说明 |
+|---------|---------|---------|------|
+| `traceId` | String | 是 | 追踪ID（用于审计和调试） |
+| `cdpReference` | JSON | 是 | CDP引用 |
+| `cdpReference.cdpId` | String | 是 | CDP ID |
+| `cdpReference.version` | Integer | 是 | CDP版本号 |
+| `cdpReference.readFields` | Array | 是 | 工具需要读取的CDP字段路径 |
+| `agentStateSummary` | JSON | 是 | AgentState摘要 |
+| `agentStateSummary.currentStep` | Integer | 是 | 当前诊断步骤（1-5） |
+| `agentStateSummary.workMode` | String | 是 | 工作态（wellness_mode/clinical_mode） |
+| `constraints` | JSON | 否 | 约束（成本/时间/风险） |
+| `constraints.maxTimeSeconds` | Integer | 否 | 最大执行时间（秒） |
+| `constraints.maxCost` | Float | 否 | 最大成本 |
+| `constraints.riskLevelLimit` | String | 否 | 风险等级限制（L1/L2/L3/L4） |
+| `callParams` | JSON | 否 | 工具调用参数（工具特定） |
+
+**ToolResult字段说明**：
+
+| 字段路径 | 数据类型 | 是否必填 | 说明 |
+|---------|---------|---------|------|
+| `traceId` | String | 是 | 追踪ID（与ToolContext中的traceId一致） |
+| `toolId` | String | 是 | 工具ID |
+| `status` | String | 是 | 执行状态（success/partial_success/failure/timeout） |
+| `payload` | JSON | 是 | 输出payload（工具特定结构） |
+| `evidence` | Array | 是 | 证据引用 |
+| `evidence[].source` | String | 是 | 证据来源（knowledge_base/kg_path/rule/llm） |
+| `evidence[].reference` | String | 是 | 证据引用（CUI/路径ID/规则ID/LLM prompt） |
+| `evidence[].strength` | String | 是 | 证据强度（strong/medium/weak） |
+| `quality` | JSON | 是 | 质量指标 |
+| `quality.confidence` | Float | 是 | 置信度（0.0-1.0） |
+| `quality.completeness` | Float | 是 | 完整度（0.0-1.0） |
+| `quality.accuracy` | Float | 否 | 准确度（0.0-1.0，如可评估） |
+| `suggestedWrites` | Array | 是 | 建议写回CDP的字段路径 |
+| `suggestedWrites[].fieldPath` | String | 是 | 字段路径（如`cdp.ddx`） |
+| `suggestedWrites[].value` | JSON | 是 | 字段值 |
+| `suggestedWrites[].reason` | String | 是 | 写回原因 |
+| `errors` | Array | 是 | 错误信息（无错误时为空数组） |
+| `errors[].errorType` | String | 是 | 错误类型（timeout/validation_error/runtime_error） |
+| `errors[].errorMessage` | String | 是 | 错误消息 |
+| `errors[].errorDetails` | JSON | 否 | 错误详情 |
+| `durationMs` | Integer | 是 | 执行时间（毫秒） |
+| `metadata` | JSON | 否 | 元数据（工具特定） |
+
+> **参考文档**：详细的工具调用协议定义请参考《AI医生系统-技术架构设计-核心架构.md》第三章 Tool协议与I/O契约。
+
+### 2.1 AI诊断入口判定流程（tool_0）
 
 **说明**：这是用户发起咨询后的第一步，通过五个步骤完成用户意图识别、症状识别、方向澄清、危险信号检查和路径输出。
 
@@ -334,7 +534,7 @@ Content-Type: application/json
 
 **接口路径**：`POST /api/v1/health-state-assessment/assess`
 
-**接口描述**：完整的健康状态判定流程（整合Step 1-5）。这是诊断流程的第一步（脑区0）。
+**接口描述**：完整的健康状态判定流程（整合Step 1-5）。这是诊断流程的第一步（tool_0：健康状态判定工具）。
 
 **请求头**：
 ```
@@ -445,7 +645,7 @@ Content-Type: application/json
 
 **接口路径**：`POST /api/v1/diagnosis/start`
 
-**接口描述**：开始一个新的诊断流程。先调用健康状态判定（脑区0），然后根据工作态进入不同的流程：
+**接口描述**：开始一个新的诊断流程。先调用健康状态判定（tool_0），然后根据工作态进入不同的流程：
 - **健康管理态**：进入健康筛查流程（A路径，A1-A5）
 - **临床诊疗态**：进入5步AI循证诊断流程（Step 1-5）
 
@@ -1600,13 +1800,13 @@ Content-Type: application/json
 
 ---
 
-### 8.3 八个脑区接口
+### 8.3 工具接口
 
-#### 8.3.1 脑区A：病例理解服务
+#### 8.3.1 tool_1：病例理解工具
 
 **接口路径**：`POST /api/v1/brain-a/parse`
 
-**接口描述**：病例理解与结构化（脑区A）- 医学概念识别与归一化
+**接口描述**：病例理解与结构化（tool_1）- 医学概念识别与归一化
 
 **请求参数**：
 ```json
@@ -1637,11 +1837,11 @@ Content-Type: application/json
 
 ---
 
-#### 8.3.2 脑区B：主动问诊服务
+#### 8.3.2 tool_2：主动问诊工具
 
 **接口路径**：`POST /api/v1/brain-b/interview`
 
-**接口描述**：主动问诊与信息补全（脑区B）- 智能追问生成
+**接口描述**：主动问诊与信息补全（tool_2）- 智能追问生成
 
 **请求参数**：
 ```json
@@ -1671,11 +1871,11 @@ Content-Type: application/json
 
 ---
 
-#### 8.3.3 脑区C：鉴别诊断引擎（DR.KNOWS核心）
+#### 8.3.3 tool_3：鉴别诊断工具（DR.KNOWS核心）
 
 **接口路径**：`POST /api/v1/brain-c/diagnose`
 
-**接口描述**：鉴别诊断引擎（脑区C）- 基于DR.KNOWS的路径检索+路径注入LLM
+**接口描述**：鉴别诊断工具（tool_3）- 基于DR.KNOWS的路径检索+路径注入LLM
 
 **请求参数**：
 ```json
@@ -1715,11 +1915,11 @@ Content-Type: application/json
 
 ---
 
-#### 8.3.4 脑区D：检查建议引擎
+#### 8.3.4 tool_4：检查建议工具
 
 **接口路径**：`POST /api/v1/brain-d/plan-workup`
 
-**接口描述**：检查/检验建议与价值评估（脑区D）
+**接口描述**：检查/检验建议与价值评估（tool_4）
 
 **响应示例**：
 ```json
@@ -1741,11 +1941,11 @@ Content-Type: application/json
 
 ---
 
-#### 8.3.5 脑区E：治疗推理引擎
+#### 8.3.5 tool_5：治疗建议工具
 
 **接口路径**：`POST /api/v1/brain-e/plan-treatment`
 
-**接口描述**：治疗/处置建议引擎（脑区E）
+**接口描述**：治疗/处置建议工具（tool_5）
 
 **响应示例**：
 ```json
@@ -1764,11 +1964,11 @@ Content-Type: application/json
 
 ---
 
-#### 8.3.6 脑区F：风险评估引擎
+#### 8.3.6 tool_6：风险评估工具
 
 **接口路径**：`POST /api/v1/brain-f/assess-risk`
 
-**接口描述**：风险与急症识别服务（脑区F）
+**接口描述**：风险与急症识别工具（tool_6）
 
 **响应示例**：
 ```json
@@ -1791,11 +1991,11 @@ Content-Type: application/json
 
 ---
 
-#### 8.3.7 脑区G：可解释性服务
+#### 8.3.7 tool_7：证据链工具
 
 **接口路径**：`POST /api/v1/brain-g/explain`
 
-**接口描述**：可解释性与证据链服务（脑区G）
+**接口描述**：可解释性与证据链工具（tool_7）
 
 **响应示例**：
 ```json
@@ -2076,7 +2276,7 @@ Content-Type: application/json
 
 **响应格式**：各引擎返回各自的结果格式
 
-> **注意**：推荐使用脑区C接口（`/api/v1/brain-c/diagnose`），包含完整的DR.KNOWS路径检索+路径注入功能。
+> **注意**：推荐使用tool_3接口（`/api/v1/tools/tool_3/invoke`），包含完整的DR.KNOWS路径检索+路径注入功能。
 
 ---
 
@@ -2385,24 +2585,24 @@ Content-Type: application/json
 
 ### 6.2 业务错误码
 
-> **权威来源**：请以《AI医生系统-错误处理规范.md》为准（按微服务/脑区分段，确保全系统唯一）。
+> **权威来源**：请以《AI医生系统-错误处理规范.md》为准（按微服务/工具分段，确保全系统唯一）。
 
 **业务错误码分段（摘要）**：
 
 | 范围 | 归属 | 说明 |
 |------|------|------|
-| 1000-1099 | health-state-assessment-service（脑区0） | 入口判定/健康状态判定/红旗兜底 |
-| 1100-1199 | clinical-parsing-service（脑区A） | 概念识别/归一化/结构化提取/多模态 |
-| 1200-1299 | dialog-service（脑区B） | 信息缺口/追问生成/对话上下文 |
-| 1300-1399 | workup-planner-service（脑区D） | 信息增益/检查价值/验证计划 |
-| 1400-1499 | treatment-engine-service（脑区E） | 处置建议/药物类别/生活方式 |
-| 1500-1599 | risk-assessment-service（脑区F） | 风险分级/高危识别/升级规则 |
-| 1600-1699 | explanation-service（脑区G） | 证据链/可解释/终点结论包 |
+| 1000-1099 | health-state-assessment-service（tool_0） | 入口判定/健康状态判定/红旗兜底 |
+| 1100-1199 | clinical-parsing-service（tool_1） | 概念识别/归一化/结构化提取/多模态 |
+| 1200-1299 | dialog-service（tool_2） | 信息缺口/追问生成/对话上下文 |
+| 1300-1399 | workup-planner-service（tool_4） | 信息增益/检查价值/验证计划 |
+| 1400-1499 | treatment-engine-service（tool_5） | 处置建议/药物类别/生活方式 |
+| 1500-1599 | risk-assessment-service（tool_6） | 风险分级/高危识别/升级规则 |
+| 1600-1699 | explanation-service（tool_7） | 证据链/可解释/终点结论包 |
 | 1700-1799 | CDP管理（跨服务通用） | CDP创建/更新/版本/回放/回填/回退 |
 | 1800-1899 | A路径健康筛查（跨服务通用） | 需求分类/健康档案/分支执行/随访闭环 |
-| 2000-2099 | diagnosis-service（协调器/编排器，Java） | 流程编排/聚合/下游调用失败封装 |
+| 2000-2099 | diagnosis-service（主Agent服务，Java） | 流程编排/聚合/下游调用失败封装 |
 | 2100-2199 | examination-service（Java） | 检查业务/报告上传/解析/OCR编排 |
-| 3000-3999 | diagnosis-engine-service（脑区C） | 规则/知识图谱/融合/路径注入LLM |
+| 3000-3999 | diagnosis-engine-service（tool_3） | 规则/知识图谱/融合/路径注入LLM |
 | 4000-4999 | ocr-service（Python） | OCR识别/解析/置信度/格式 |
 | 5000-5999 | 通用错误（跨服务） | 参数校验/格式/DB/缓存/外部依赖 |
 | 6000-6099 | 并发与幂等（跨服务） | 乐观锁/版本冲突/幂等冲突 |
@@ -2466,16 +2666,16 @@ public class SwaggerConfig {
 
 ---
 
-**文档版本**：v4.0（基于DR.KNOWS的八个脑区架构 + 健康状态判定 + 健康筛查流程）  
+**文档版本**：v4.0（基于DR.KNOWS的单主Agent + 多工具Tools架构 + 健康状态判定 + 健康筛查流程）  
 **创建日期**：2025年1月  
 **更新日期**：2025年1月  
 **文档定位**：AI医生系统的API接口规范（完整的接口定义和示例）  
 **参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》  
-**设计基础**：基于DR.KNOWS论文的八个脑区架构设计  
+**设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计  
 
 **更新说明**：
 1. **新增AI诊断入口判定流程接口**（Step 1-5）：接收用户输入、识别症状、方向澄清、危险信号检查、路径选择
-2. **新增健康状态判定接口**（脑区0）：整合Step 1-5，输出工作态判定结果
+2. **新增健康状态判定接口**（tool_0）：整合Step 1-5，输出工作态判定结果
 3. **新增健康筛查流程接口**（A路径，A1-A5）：需求分类、健康档案采集、分支执行、统一结果输出、随访闭环
 4. **更新诊断结果接口**：添加终点结论包四要素（结论、必须排除项状态、关键依据、行动与随访）
 5. **新增回填与重排接口**：回填与重排诊断方向、检查证据冲突

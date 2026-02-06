@@ -1,7 +1,7 @@
 # AI医生系统 - 环境配置指南
 
 > **文档定位**：本文档详细说明AI医生系统的环境配置步骤，包括开发环境和生产环境的配置方法。  
-> **设计基础**：基于DR.KNOWS论文的八个脑区架构设计
+> **设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计
 
 ---
 
@@ -33,7 +33,7 @@
 
 | 软件 | 版本要求 | 用途 | 说明 |
 |------|---------|------|------|
-| **Neo4j** | 5+ | 图数据库（知识图谱） | **必需**，DR.KNOWS核心依赖（脑区C：知识图谱推理引擎） |
+| **Neo4j** | 5+ | 图数据库（知识图谱） | **必需**，DR.KNOWS核心依赖（tool_3：鉴别诊断工具） |
 | **Nacos** | 2.2+ | 服务注册中心 | 可选，微服务使用 |
 | **Docker** | 20.10+ | 容器化部署 | 推荐使用 |
 | **Docker Compose** | 2.0+ | 容器编排 | 推荐使用 |
@@ -621,7 +621,7 @@ DB_PASSWORD=password
 | `NEO4J_USER` | `neo4j` | 用户名 |
 | `NEO4J_PASSWORD` | `password` | 密码 |
 
-#### 3.6.2 下游服务地址（编排器调用用）
+#### 3.6.2 下游服务地址（主Agent调用用）
 
 | 变量名 | 示例 |
 |------|------|
@@ -672,7 +672,7 @@ DB_PASSWORD=password
 
 #### 3.5.1 安装Neo4j（必需 - DR.KNOWS核心依赖）
 
-> **重要**：Neo4j是DR.KNOWS方法的核心依赖，用于知识图谱路径检索（脑区C：鉴别诊断引擎）。系统**必须**安装Neo4j。
+> **重要**：Neo4j是DR.KNOWS方法的核心依赖，用于知识图谱路径检索（tool_3：鉴别诊断工具）。系统**必须**安装Neo4j。
 
 **Windows:**
 ```bash
@@ -1109,7 +1109,7 @@ MATCH (n) RETURN n LIMIT 25
 - **基础依赖**：MySQL/Redis/Neo4j 三者均可连接（能执行简单读写/查询）
 - **端口对齐**：`dialog-service=8088`、`explanation-service=8089`、其余端口与附录表一致
 - **健康检查**：每个服务至少提供 `/health`（FastAPI）或 `/actuator/health`（Spring Boot）
-- **跨服务调用**：编排器能按“超时/重试”策略调用下游并在失败时降级
+- **跨服务调用**：主Agent能按"超时/重试"策略调用下游并在失败时降级
 - **错误契约**：任一服务返回错误时包含 `traceId`（便于日志串联）
 
 ---
@@ -1331,15 +1331,15 @@ Unable to connect to Neo4j
 | **Java服务** | | |
 | diagnosis-service | 8084 | 诊断服务（CDP管理、诊断流程编排） |
 | examination-service | 8085 | 检查服务 |
-| **Python AI服务（八个脑区）** | | |
-| health-state-assessment-service | 8081 | 脑区0：健康状态判定服务 |
-| clinical-parsing-service | 8082 | 脑区A：病例理解服务 |
-| dialog-service | 8088 | 脑区B：对话管理服务（主动问诊） |
-| diagnosis-engine-service | 8086 | 脑区C：鉴别诊断引擎服务（DR.KNOWS核心） |
-| workup-planner-service | 8090 | 脑区D：检查/检验建议与价值评估服务 |
-| treatment-engine-service | 8091 | 脑区E：治疗/处置建议引擎服务 |
-| risk-assessment-service | 8092 | 脑区F：风险与急症识别服务 |
-| explanation-service | 8089 | 脑区G：解释生成服务（可解释性） |
+| **Python AI服务（工具服务）** | | |
+| health-state-assessment-service | 8081 | tool_0：健康状态判定工具 |
+| clinical-parsing-service | 8082 | tool_1：病例理解工具 |
+| dialog-service | 8088 | tool_2：主动问诊工具 |
+| diagnosis-engine-service | 8086 | tool_3：鉴别诊断工具（DR.KNOWS核心） |
+| workup-planner-service | 8090 | tool_4：检查建议工具 |
+| treatment-engine-service | 8091 | tool_5：治疗建议工具 |
+| risk-assessment-service | 8092 | tool_6：风险评估工具 |
+| explanation-service | 8089 | tool_7：证据链工具 |
 | ocr-service | 8087 | OCR服务（多模态理解） |
 | **数据存储服务** | | |
 | MySQL | 3306 | 数据库（本地开发，mysql profile） |
@@ -1385,7 +1385,7 @@ Unable to connect to Neo4j
 | ocr-service | .env (可选) | `ocr-service/` |
 | Docker | docker-compose.yml | 项目根目录 |
 
-> **说明**：八个脑区对应的Python服务配置说明请参考各服务的README文档。
+> **说明**：各工具服务对应的Python服务配置说明请参考各服务的README文档。
 
 ---
 
@@ -1441,7 +1441,7 @@ set key value                 # 设置值
 **更新日期**：2025年1月  
 **文档定位**：AI医生系统的环境配置指南（开发环境和生产环境的配置方法）  
 **参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》  
-**设计基础**：基于DR.KNOWS论文的八个脑区架构设计  
+**设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计  
 **最后更新**: 2025年1月  
 **维护者**: 开发团队  
 **更新说明**：

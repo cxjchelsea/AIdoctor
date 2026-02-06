@@ -2,7 +2,7 @@
 
 > **文档定位**：本文档详细定义AI医生系统的实体类（Entity）和DTO类（Data Transfer Object）设计。  
 > **参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》  
-> **设计基础**：基于DR.KNOWS论文的八个脑区架构设计
+> **设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计
 
 ---
 
@@ -88,7 +88,7 @@ public class CDP {
     
     /**
      * 健康状态判定结果（JSON格式）
-     * 脑区0的输出
+     * tool_0（健康状态判定工具）的输出
      * 包含：工作态判定（wellness_mode/clinical_mode）、风险等级、入口判定流程结果等
      * 对应功能设计文档：2.0节 健康状态判定
      */
@@ -131,7 +131,7 @@ public class CDP {
     
     /**
      * 检查计划（JSON格式）
-     * 脑区D的输出
+     * tool_4（检查建议工具）的输出
      */
     @Type(type = "jsonb")
     @Column(name = "workup_plan", columnDefinition = "jsonb")
@@ -139,7 +139,7 @@ public class CDP {
     
     /**
      * 治疗计划（JSON格式）
-     * 脑区E的输出
+     * tool_5（治疗建议工具）的输出
      */
     @Type(type = "jsonb")
     @Column(name = "management_plan", columnDefinition = "jsonb")
@@ -147,7 +147,7 @@ public class CDP {
     
     /**
      * 风险评估（JSON格式）
-     * 脑区F的输出
+     * tool_6（风险评估工具）的输出
      */
     @Type(type = "jsonb")
     @Column(name = "triage", columnDefinition = "jsonb")
@@ -197,7 +197,307 @@ public class CDP {
 
 ---
 
-### 1.2 CDP版本实体（CDPVersion）
+### 1.2 AgentState实体（主Agent策略状态）
+
+**对应表**：`agent_state`
+
+> **说明**：AgentState存储主Agent的策略状态，包括阈值、预算、失败回退、已尝试工具等。工具不能直接访问AgentState，只能通过ToolContext获取AgentState摘要。
+
+```java
+package com.aidoctor.diagnosis.entity;
+
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Type;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * AgentState实体
+ * 主Agent策略状态 - 存储主Agent的策略状态
+ */
+@Entity
+@Table(name = "agent_state", indexes = {
+    @Index(name = "idx_session_id", columnList = "session_id"),
+    @Index(name = "idx_cdp_id", columnList = "cdp_id"),
+    @Index(name = "idx_created_at", columnList = "created_at")
+})
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AgentState {
+    
+    /**
+     * AgentState ID（主键）
+     */
+    @Id
+    @Column(name = "id", length = 64, nullable = false)
+    private String id;
+    
+    /**
+     * 会话ID（与CDP关联）
+     */
+    @Column(name = "session_id", length = 64, nullable = false)
+    private String sessionId;
+    
+    /**
+     * CDP ID（与CDP关联）
+     */
+    @Column(name = "cdp_id", length = 64, nullable = false)
+    private String cdpId;
+    
+    /**
+     * 当前诊断步骤（1-5）
+     */
+    @Column(name = "current_step")
+    private Integer currentStep;
+    
+    /**
+     * 工作态（wellness_mode/clinical_mode）
+     */
+    @Column(name = "work_mode", length = 32)
+    private String workMode;
+    
+    /**
+     * 阈值配置（JSON格式）
+     * 包含：confidence_threshold、evidence_count_threshold、information_gain_threshold
+     */
+    @Type(type = "jsonb")
+    @Column(name = "thresholds", columnDefinition = "jsonb")
+    private Map<String, Object> thresholds;
+    
+    /**
+     * 预算配置（JSON格式）
+     * 包含：max_tool_calls、max_time_seconds、max_cost、current_tool_calls、current_time_seconds、current_cost
+     */
+    @Type(type = "jsonb")
+    @Column(name = "budget", columnDefinition = "jsonb")
+    private Map<String, Object> budget;
+    
+    /**
+     * 失败回退策略（JSON格式）
+     * 包含：max_retries、backoff_strategy
+     */
+    @Type(type = "jsonb")
+    @Column(name = "failure_backoff", columnDefinition = "jsonb")
+    private Map<String, Object> failureBackoff;
+    
+    /**
+     * 已尝试工具列表（JSON格式）
+     * 包含：tool_id、call_count、last_result、last_call_time
+     */
+    @Type(type = "jsonb")
+    @Column(name = "tried_tools", columnDefinition = "jsonb")
+    private List<Map<String, Object>> triedTools;
+    
+    /**
+     * 证据融合状态（JSON格式）
+     * 包含：conflicts、resolution_strategy
+     */
+    @Type(type = "jsonb")
+    @Column(name = "evidence_fusion_state", columnDefinition = "jsonb")
+    private Map<String, Object> evidenceFusionState;
+    
+    /**
+     * 停止条件状态（JSON格式）
+     * 包含：cdp_required_fields_complete、evidence_references_complete、risk_assessment_complete等
+     */
+    @Type(type = "jsonb")
+    @Column(name = "stop_conditions", columnDefinition = "jsonb")
+    private Map<String, Object> stopConditions;
+    
+    /**
+     * 创建时间
+     */
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+    
+    /**
+     * 更新时间
+     */
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+}
+```
+
+#### 1.2.1 AgentState字段结构对齐说明
+
+**字段命名规范**：
+- **数据库字段**：使用`snake_case`（如`current_step`、`work_mode`）
+- **Java实体字段**：使用`camelCase`（如`currentStep`、`workMode`）
+- **JSON字段**：使用`snake_case`（与数据库字段一致）
+
+**字段详细说明**：
+
+| 字段路径 | 数据类型 | 说明 | 默认值 |
+|---------|---------|------|--------|
+| `thresholds.confidence_threshold` | Float | 置信度阈值 | 0.7 |
+| `thresholds.evidence_count_threshold` | Integer | 证据数量阈值 | 3 |
+| `thresholds.information_gain_threshold` | Float | 信息增益阈值 | 0.5 |
+| `budget.max_tool_calls` | Integer | 最大工具调用次数 | 50 |
+| `budget.max_time_seconds` | Integer | 最大执行时间（秒） | 300 |
+| `budget.max_cost` | Float | 最大成本 | 100.0 |
+| `failure_backoff.max_retries` | Integer | 最大重试次数 | 3 |
+| `failure_backoff.backoff_strategy` | String | 回退策略（exponential/linear） | exponential |
+
+> **参考文档**：详细的AgentState数据结构定义请参考《AI医生系统-技术架构设计-CDP数据与状态管理.md》6.2节。
+
+---
+
+### 1.3 AuditTrail实体（审计轨迹）
+
+**对应表**：`audit_trail`
+
+> **说明**：AuditTrail记录所有工具调用、CDP更新、主Agent决策等审计信息，采用追加写入模式，历史记录不可修改。
+
+```java
+package com.aidoctor.diagnosis.entity;
+
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Type;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+import java.util.Map;
+
+/**
+ * AuditTrail实体
+ * 审计轨迹 - 记录所有工具调用、CDP更新、主Agent决策等审计信息
+ */
+@Entity
+@Table(name = "audit_trail", indexes = {
+    @Index(name = "idx_cdp_id", columnList = "cdp_id"),
+    @Index(name = "idx_session_id", columnList = "session_id"),
+    @Index(name = "idx_event_type", columnList = "event_type"),
+    @Index(name = "idx_timestamp", columnList = "timestamp")
+})
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AuditTrail {
+    
+    /**
+     * AuditTrail ID（主键）
+     */
+    @Id
+    @Column(name = "id", length = 64, nullable = false)
+    private String id;
+    
+    /**
+     * CDP ID
+     */
+    @Column(name = "cdp_id", length = 64, nullable = false)
+    private String cdpId;
+    
+    /**
+     * 会话ID
+     */
+    @Column(name = "session_id", length = 64, nullable = false)
+    private String sessionId;
+    
+    /**
+     * 时间戳
+     */
+    @Column(name = "timestamp", nullable = false)
+    private LocalDateTime timestamp;
+    
+    /**
+     * 事件类型（tool_call/cdp_update/agent_decision）
+     */
+    @Column(name = "event_type", length = 32, nullable = false)
+    private String eventType;
+    
+    /**
+     * 工具调用记录（如event_type=tool_call）
+     * 包含：tool_id、tool_name、trace_id、input、output、evidence、suggested_writes、quality、errors、duration_ms
+     */
+    @Type(type = "jsonb")
+    @Column(name = "tool_call", columnDefinition = "jsonb")
+    private Map<String, Object> toolCall;
+    
+    /**
+     * CDP更新记录（如event_type=cdp_update）
+     * 包含：from_version、to_version、changed_fields、reason、updated_by、tool_trace_id
+     */
+    @Type(type = "jsonb")
+    @Column(name = "cdp_update", columnDefinition = "jsonb")
+    private Map<String, Object> cdpUpdate;
+    
+    /**
+     * 主Agent决策记录（如event_type=agent_decision）
+     * 包含：decision_type、reason、evidence_fusion、conflict_resolution
+     */
+    @Type(type = "jsonb")
+    @Column(name = "agent_decision", columnDefinition = "jsonb")
+    private Map<String, Object> agentDecision;
+    
+    /**
+     * 创建时间
+     */
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+}
+```
+
+#### 1.3.1 AuditTrail字段结构对齐说明
+
+**事件类型说明**：
+
+| 事件类型 | 说明 | 使用字段 |
+|---------|------|---------|
+| `tool_call` | 工具调用记录 | `tool_call` |
+| `cdp_update` | CDP更新记录 | `cdp_update` |
+| `agent_decision` | 主Agent决策记录 | `agent_decision` |
+
+**字段详细说明**：
+
+**tool_call字段结构**（event_type=tool_call时）：
+- `tool_id`：工具ID
+- `tool_name`：工具名称
+- `trace_id`：追踪ID
+- `input`：输入（CDP字段路径引用）
+- `output`：输出（payload摘要）
+- `evidence`：证据引用
+- `suggested_writes`：建议写回字段路径
+- `quality`：质量指标
+- `errors`：错误信息
+- `duration_ms`：执行时间（毫秒）
+
+**cdp_update字段结构**（event_type=cdp_update时）：
+- `from_version`：源版本号
+- `to_version`：目标版本号
+- `changed_fields`：变更字段路径
+- `reason`：更新原因
+- `updated_by`：更新者（agent_main）
+- `tool_trace_id`：工具追踪ID
+
+**agent_decision字段结构**（event_type=agent_decision时）：
+- `decision_type`：决策类型（stop/escalate/refuse/continue）
+- `reason`：决策原因
+- `evidence_fusion`：证据融合结果
+- `conflict_resolution`：冲突解决结果
+
+> **参考文档**：详细的AuditTrail数据结构定义请参考《AI医生系统-技术架构设计-CDP数据与状态管理.md》6.3节。
+
+---
+
+### 1.4 CDP版本实体（CDPVersion）
 
 **对应表**：`cdp_version`
 
@@ -569,7 +869,7 @@ import java.util.Map;
 
 /**
  * 健康状态判定记录实体
- * 对应脑区0（健康状态判定服务）
+ * 对应tool_0（健康状态判定工具）
  */
 @Entity
 @Table(name = "health_state_assessment_record", indexes = {
@@ -2274,9 +2574,9 @@ public class FollowUpPlanResponse {
 }
 ```
 
-### 2.7 八个脑区相关DTO
+### 2.7 工具相关DTO
 
-#### 2.7.1 脑区0：健康状态判定结果（HealthStateAssessmentResult）
+#### 2.7.1 tool_0：健康状态判定结果（HealthStateAssessmentResult）
 
 ```java
 package com.aidoctor.diagnosis.dto.response;
@@ -2285,7 +2585,7 @@ import lombok.Data;
 import lombok.Builder;
 
 /**
- * 脑区0：健康状态判定结果
+ * tool_0：健康状态判定结果
  */
 @Data
 @Builder
@@ -2337,7 +2637,7 @@ public class HealthStateAssessmentResult {
 
 ---
 
-#### 2.6.2 脑区A：病例理解结果（ClinicalParsingResult）
+#### 2.6.2 tool_1：病例理解结果（ClinicalParsingResult）
 
 ```java
 package com.aidoctor.diagnosis.dto.response;
@@ -2347,7 +2647,7 @@ import lombok.Builder;
 import java.util.List;
 
 /**
- * 脑区A：病例理解结果
+ * tool_1：病例理解结果
  */
 @Data
 @Builder
@@ -2383,7 +2683,7 @@ public class ClinicalParsingResult {
 
 ---
 
-#### 2.6.3 脑区B：主动问诊结果（InterviewResult）
+#### 2.6.3 tool_2：主动问诊结果（InterviewResult）
 
 ```java
 package com.aidoctor.diagnosis.dto.response;
@@ -2392,7 +2692,7 @@ import lombok.Data;
 import lombok.Builder;
 
 /**
- * 脑区B：主动问诊结果
+ * tool_2：主动问诊结果
  */
 @Data
 @Builder
@@ -2425,7 +2725,7 @@ public class InterviewResult {
 
 ---
 
-#### 2.6.4 脑区C：鉴别诊断结果（DifferentialDiagnosisResult）
+#### 2.6.4 tool_3：鉴别诊断结果（DifferentialDiagnosisResult）
 
 ```java
 package com.aidoctor.diagnosis.dto.response;
@@ -2436,7 +2736,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 脑区C：鉴别诊断结果（DR.KNOWS核心）
+ * tool_3：鉴别诊断结果（DR.KNOWS核心）
  */
 @Data
 @Builder
@@ -2484,7 +2784,7 @@ public class DifferentialDiagnosisResult {
 
 ---
 
-#### 2.6.5 脑区D：检查建议结果（WorkupPlanResult）
+#### 2.6.5 tool_4：检查建议结果（WorkupPlanResult）
 
 ```java
 package com.aidoctor.diagnosis.dto.response;
@@ -2494,7 +2794,7 @@ import lombok.Builder;
 import java.util.List;
 
 /**
- * 脑区D：检查建议结果
+ * tool_4：检查建议结果
  */
 @Data
 @Builder
@@ -2517,7 +2817,7 @@ public class WorkupPlanResult {
 
 ---
 
-#### 2.6.6 脑区E：治疗建议结果（TreatmentPlanResult）
+#### 2.6.6 tool_5：治疗建议结果（TreatmentPlanResult）
 
 ```java
 package com.aidoctor.diagnosis.dto.response;
@@ -2527,7 +2827,7 @@ import lombok.Builder;
 import java.util.List;
 
 /**
- * 脑区E：治疗建议结果
+ * tool_5：治疗建议结果
  */
 @Data
 @Builder
@@ -2568,7 +2868,7 @@ public class TreatmentPlanResult {
 
 ---
 
-#### 2.6.7 脑区F：风险评估结果（RiskAssessmentResult）
+#### 2.6.7 tool_6：风险评估结果（RiskAssessmentResult）
 
 ```java
 package com.aidoctor.diagnosis.dto.response;
@@ -2577,7 +2877,7 @@ import lombok.Data;
 import lombok.Builder;
 
 /**
- * 脑区F：风险评估结果
+ * tool_6：风险评估结果
  */
 @Data
 @Builder
@@ -2619,7 +2919,7 @@ public class RiskAssessmentResult {
 
 ---
 
-#### 2.6.8 脑区G：可解释性结果（EvidenceChainResult）
+#### 2.6.8 tool_7：可解释性结果（EvidenceChainResult）
 
 ```java
 package com.aidoctor.diagnosis.dto.response;
@@ -2629,7 +2929,7 @@ import lombok.Builder;
 import java.util.List;
 
 /**
- * 脑区G：可解释性结果
+ * tool_7：可解释性结果
  */
 @Data
 @Builder
@@ -3265,11 +3565,11 @@ public class DiagnosisEngineResult {
 
 ---
 
-**文档版本**：v3.0（基于DR.KNOWS的八个脑区架构）  
+**文档版本**：v3.0（基于DR.KNOWS的单主Agent + 多工具Tools架构）  
 **创建日期**：2025年1月  
 **更新日期**：2025年1月  
 **文档定位**：AI医生系统的数据模型设计（Entity和DTO详细定义）  
 **参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》  
-**设计基础**：基于DR.KNOWS论文的八个脑区架构设计  
-**更新说明**：根据DR.KNOWS设计，新增CDP实体和CDP版本实体，添加健康状态判定记录实体、健康筛查记录实体、随访计划实体，添加健康筛查流程（A路径）相关DTO（需求分类、健康画像收集、分支执行、统一结果、随访计划），添加八个脑区相关的DTO（HealthStateAssessmentResult、ClinicalParsingResult、DifferentialDiagnosisResult等），更新诊断记录实体添加cdpId和工作态（WorkMode）字段。
+**设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计  
+**更新说明**：根据DR.KNOWS设计，新增CDP实体和CDP版本实体，添加健康状态判定记录实体、健康筛查记录实体、随访计划实体，添加健康筛查流程（A路径）相关DTO（需求分类、健康画像收集、分支执行、统一结果、随访计划），添加工具相关的DTO（HealthStateAssessmentResult、ClinicalParsingResult、DifferentialDiagnosisResult等），更新诊断记录实体添加cdpId和工作态（WorkMode）字段。
 

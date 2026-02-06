@@ -1,0 +1,776 @@
+# ============================================
+# 入口角度统一转换规则
+# ============================================
+# 对应编号：16 - 入口角度统一转换规则
+# 说明：如何将不同入口统一转换为主诉诊断流程
+# 文件位置：健康状态评估服务/数据/入口判定规则/入口角度统一转换规则.yaml
+
+元数据:
+  配置名称: 入口角度统一转换规则
+  版本号: v1.2
+  更新时间: 2026-02-04
+  说明: "将用户从不同角度（家族史、既往疾病、异常指标、生命体征异常等）提出的问题统一转换为主诉诊断流程"
+  对应编号: 16
+  文件位置: "健康状态评估服务/数据/入口判定规则/入口角度统一转换规则.yaml"
+
+# ============================================
+# 转换规则总览
+# ============================================
+# 支持将以下入口类型转换为标准主诉链路：
+# 1. 家族史 → 可能主诉映射
+# 2. 既往疾病 → 可能主诉映射
+# 3. 异常指标 → 可能主诉映射
+# 4. 生命体征异常 → 可能主诉映射
+# 5. 已诊断疾病咨询 → 可能主诉映射
+#
+# 说明：本规则是入口判定规则的一部分，用于在入口判定阶段识别和处理非标准入口
+# 使用时机：在入口判定流程的Step 2（识别症状/困扰）中使用
+
+# ============================================
+# 家族史 → 可能主诉映射表
+# ============================================
+# 将家族史转换为可能的主诉，用于生成问诊问题
+家族史转换规则:
+  # 心血管疾病家族史
+  家族史_心血管疾病:
+    rule_id: "CONV_FAMILY_CVD"
+    entry_type: "家族史"
+    entry_value: "心血管疾病"
+    entry_description: "家族中有心血管疾病史（如冠心病、心肌梗死、高血压等）"
+    # 可能的主诉列表（按优先级排序）
+    可能主诉:
+      - chief_complaint_id: "CC_CHEST_PAIN"
+        chief_complaint_name: "胸痛"
+        priority: 1
+        conversion_reason: "家族心血管疾病史，建议关注胸痛症状"
+        confidence: 0.7
+      - chief_complaint_id: "CC_PALPITATION"
+        chief_complaint_name: "心悸"
+        priority: 2
+        conversion_reason: "家族心血管疾病史，建议关注心悸症状"
+        confidence: 0.6
+      - chief_complaint_id: "CC_DYSPNEA"
+        chief_complaint_name: "呼吸困难"
+        priority: 3
+        conversion_reason: "家族心血管疾病史，建议关注呼吸困难症状"
+        confidence: 0.5
+    # 建议筛查项目
+    建议筛查:
+      - "心电图"
+      - "血脂"
+      - "血压"
+    # 转换后路径
+    转换路径: "B"  # 进入症状诊断路径
+    转换说明: "家族心血管疾病史，建议进入症状诊断路径，关注相关症状"
+  
+  # 糖尿病家族史
+  家族史_糖尿病:
+    rule_id: "CONV_FAMILY_DIABETES"
+    entry_type: "家族史"
+    entry_value: "糖尿病"
+    entry_description: "家族中有糖尿病史"
+    可能主诉:
+      - chief_complaint_id: "CC_POLYURIA"
+        chief_complaint_name: "多尿"
+        priority: 1
+        conversion_reason: "家族糖尿病史，建议关注多尿症状"
+        confidence: 0.7
+      - chief_complaint_id: "CC_POLYDIPSIA"
+        chief_complaint_name: "多饮"
+        priority: 2
+        conversion_reason: "家族糖尿病史，建议关注多饮症状"
+        confidence: 0.7
+      - chief_complaint_id: "CC_WEIGHT_LOSS"
+        chief_complaint_name: "体重下降"
+        priority: 3
+        conversion_reason: "家族糖尿病史，建议关注体重下降"
+        confidence: 0.6
+    建议筛查:
+      - "血糖"
+      - "糖化血红蛋白"
+    转换路径: "B"
+    转换说明: "家族糖尿病史，建议进入症状诊断路径，关注糖尿病相关症状"
+  
+  # 肿瘤家族史
+  家族史_肿瘤:
+    rule_id: "CONV_FAMILY_CANCER"
+    entry_type: "家族史"
+    entry_value: "肿瘤"
+    entry_description: "家族中有肿瘤史"
+    可能主诉:
+      - chief_complaint_id: "CC_WEIGHT_LOSS"
+        chief_complaint_name: "体重下降"
+        priority: 1
+        conversion_reason: "家族肿瘤史，建议关注不明原因体重下降"
+        confidence: 0.6
+      - chief_complaint_id: "CC_FATIGUE"
+        chief_complaint_name: "乏力"
+        priority: 2
+        conversion_reason: "家族肿瘤史，建议关注乏力症状"
+        confidence: 0.5
+    建议筛查:
+      - "肿瘤标志物"
+      - "影像学检查"
+    转换路径: "B"
+    转换说明: "家族肿瘤史，建议进入症状诊断路径，关注相关症状"
+
+# ============================================
+# 既往疾病 → 可能主诉映射表
+# ============================================
+# 将既往疾病转换为可能的主诉，用于生成问诊问题
+既往疾病转换规则:
+  # 高血压既往史
+  既往疾病_高血压:
+    rule_id: "CONV_PAST_HYPERTENSION"
+    entry_type: "既往疾病"
+    entry_value: "高血压"
+    entry_description: "既往有高血压病史"
+    可能主诉:
+      - chief_complaint_id: "CC_CHEST_PAIN"
+        chief_complaint_name: "胸痛"
+        priority: 1
+        conversion_reason: "高血压患者需关注心血管症状"
+        confidence: 0.7
+      - chief_complaint_id: "CC_HEADACHE"
+        chief_complaint_name: "头痛"
+        priority: 2
+        conversion_reason: "高血压患者需关注头痛症状"
+        confidence: 0.6
+      - chief_complaint_id: "CC_DIZZINESS"
+        chief_complaint_name: "头晕"
+        priority: 3
+        conversion_reason: "高血压患者需关注头晕症状"
+        confidence: 0.6
+    建议筛查:
+      - "心电图"
+      - "心脏彩超"
+      - "血压监测"
+    转换路径: "B"
+    转换说明: "高血压患者，建议进入症状诊断路径，关注心血管和神经系统症状"
+  
+  # 糖尿病既往史
+  既往疾病_糖尿病:
+    rule_id: "CONV_PAST_DIABETES"
+    entry_type: "既往疾病"
+    entry_value: "糖尿病"
+    entry_description: "既往有糖尿病病史"
+    可能主诉:
+      - chief_complaint_id: "CC_POLYURIA"
+        chief_complaint_name: "多尿"
+        priority: 1
+        conversion_reason: "糖尿病患者需关注多尿症状（血糖控制情况）"
+        confidence: 0.7
+      - chief_complaint_id: "CC_POLYDIPSIA"
+        chief_complaint_name: "多饮"
+        priority: 2
+        conversion_reason: "糖尿病患者需关注多饮症状"
+        confidence: 0.7
+      - chief_complaint_id: "CC_NUMBNESS"
+        chief_complaint_name: "肢体麻木"
+        priority: 3
+        conversion_reason: "糖尿病患者需关注糖尿病周围神经病变"
+        confidence: 0.6
+    建议筛查:
+      - "血糖"
+      - "糖化血红蛋白"
+      - "神经病变筛查"
+    转换路径: "B"
+    转换说明: "糖尿病患者，建议进入症状诊断路径，关注糖尿病相关症状和并发症"
+  
+  # 冠心病既往史
+  既往疾病_冠心病:
+    rule_id: "CONV_PAST_CAD"
+    entry_type: "既往疾病"
+    entry_value: "冠心病"
+    entry_description: "既往有冠心病病史"
+    可能主诉:
+      - chief_complaint_id: "CC_CHEST_PAIN"
+        chief_complaint_name: "胸痛"
+        priority: 1
+        conversion_reason: "冠心病患者需关注胸痛症状（心绞痛、心肌梗死）"
+        confidence: 0.9
+      - chief_complaint_id: "CC_DYSPNEA"
+        chief_complaint_name: "呼吸困难"
+        priority: 2
+        conversion_reason: "冠心病患者需关注呼吸困难症状"
+        confidence: 0.7
+    建议筛查:
+      - "心电图"
+      - "心肌酶"
+      - "心脏彩超"
+    转换路径: "B"
+    转换说明: "冠心病患者，建议进入症状诊断路径，重点关注心血管症状"
+
+# ============================================
+# 异常指标 → 可能主诉映射表
+# ============================================
+# 将异常指标转换为可能的主诉，用于生成问诊问题
+异常指标转换规则:
+  # 高血脂
+  异常指标_高血脂:
+    rule_id: "CONV_ABNORMAL_LIPID"
+    entry_type: "异常指标"
+    entry_value: "高血脂"
+    entry_description: "血脂检查结果异常（总胆固醇、甘油三酯、LDL-C升高）"
+    可能主诉:
+      - chief_complaint_id: "CC_CHEST_PAIN"
+        chief_complaint_name: "胸痛"
+        priority: 1
+        conversion_reason: "高血脂需关注心血管症状"
+        confidence: 0.6
+      - chief_complaint_id: "CC_DIZZINESS"
+        chief_complaint_name: "头晕"
+        priority: 2
+        conversion_reason: "高血脂需关注脑血管症状"
+        confidence: 0.5
+    建议筛查:
+      - "心电图"
+      - "心脏彩超"
+      - "颈动脉彩超"
+    转换路径: "B"
+    转换说明: "高血脂，建议进入症状诊断路径，关注心血管和脑血管症状"
+  
+  # 高血糖
+  异常指标_高血糖:
+    rule_id: "CONV_ABNORMAL_GLUCOSE"
+    entry_type: "异常指标"
+    entry_value: "高血糖"
+    entry_description: "血糖检查结果异常（空腹血糖、餐后血糖升高）"
+    可能主诉:
+      - chief_complaint_id: "CC_POLYURIA"
+        chief_complaint_name: "多尿"
+        priority: 1
+        conversion_reason: "高血糖需关注多尿症状"
+        confidence: 0.7
+      - chief_complaint_id: "CC_POLYDIPSIA"
+        chief_complaint_name: "多饮"
+        priority: 2
+        conversion_reason: "高血糖需关注多饮症状"
+        confidence: 0.7
+      - chief_complaint_id: "CC_WEIGHT_LOSS"
+        chief_complaint_name: "体重下降"
+        priority: 3
+        conversion_reason: "高血糖需关注体重下降"
+        confidence: 0.6
+    建议筛查:
+      - "糖化血红蛋白"
+      - "胰岛素"
+      - "C肽"
+    转换路径: "B"
+    转换说明: "高血糖，建议进入症状诊断路径，关注糖尿病相关症状"
+  
+  # 肝功能异常
+  异常指标_肝功能异常:
+    rule_id: "CONV_ABNORMAL_LIVER"
+    entry_type: "异常指标"
+    entry_value: "肝功能异常"
+    entry_description: "肝功能检查结果异常（转氨酶、胆红素等升高）"
+    可能主诉:
+      - chief_complaint_id: "CC_JAUNDICE"
+        chief_complaint_name: "黄疸"
+        priority: 1
+        conversion_reason: "肝功能异常需关注黄疸症状"
+        confidence: 0.7
+      - chief_complaint_id: "CC_ABDOMINAL_PAIN"
+        chief_complaint_name: "腹痛"
+        priority: 2
+        conversion_reason: "肝功能异常需关注腹痛症状"
+        confidence: 0.6
+      - chief_complaint_id: "CC_FATIGUE"
+        chief_complaint_name: "乏力"
+        priority: 3
+        conversion_reason: "肝功能异常需关注乏力症状"
+        confidence: 0.6
+    建议筛查:
+      - "肝功能"
+      - "肝脏彩超"
+      - "病毒性肝炎标志物"
+    转换路径: "B"
+    转换说明: "肝功能异常，建议进入症状诊断路径，关注肝脏相关症状"
+
+# ============================================
+# 生命体征异常 → 可能主诉映射表
+# ============================================
+# 将生命体征异常转换为可能的主诉，用于生成问诊问题
+生命体征异常转换规则:
+  # 高血压（生命体征）
+  生命体征异常_高血压:
+    rule_id: "CONV_VITAL_HYPERTENSION"
+    entry_type: "生命体征异常"
+    entry_value: "高血压"
+    entry_description: "血压测量结果异常（收缩压≥140mmHg或舒张压≥90mmHg）"
+    可能主诉:
+      - chief_complaint_id: "CC_HEADACHE"
+        chief_complaint_name: "头痛"
+        priority: 1
+        conversion_reason: "血压异常需关注头痛症状"
+        confidence: 0.7
+      - chief_complaint_id: "CC_DIZZINESS"
+        chief_complaint_name: "头晕"
+        priority: 2
+        conversion_reason: "血压异常需关注头晕症状"
+        confidence: 0.7
+      - chief_complaint_id: "CC_CHEST_PAIN"
+        chief_complaint_name: "胸痛"
+        priority: 3
+        conversion_reason: "血压异常需关注心血管症状"
+        confidence: 0.6
+    建议筛查:
+      - "心电图"
+      - "心脏彩超"
+      - "24小时动态血压"
+    转换路径: "B"
+    转换说明: "血压异常，建议进入症状诊断路径，关注心血管和神经系统症状"
+    转换优先级: "立即转换"  # 生命体征异常需要立即转换
+  
+  # 低血压（生命体征）
+  生命体征异常_低血压:
+    rule_id: "CONV_VITAL_HYPOTENSION"
+    entry_type: "生命体征异常"
+    entry_value: "低血压"
+    entry_description: "血压测量结果异常（收缩压<90mmHg或舒张压<60mmHg）"
+    可能主诉:
+      - chief_complaint_id: "CC_DIZZINESS"
+        chief_complaint_name: "头晕"
+        priority: 1
+        conversion_reason: "低血压需关注头晕症状"
+        confidence: 0.8
+      - chief_complaint_id: "CC_SYNCOPE"
+        chief_complaint_name: "晕厥"
+        priority: 2
+        conversion_reason: "低血压需关注晕厥症状"
+        confidence: 0.7
+      - chief_complaint_id: "CC_FATIGUE"
+        chief_complaint_name: "乏力"
+        priority: 3
+        conversion_reason: "低血压需关注乏力症状"
+        confidence: 0.6
+    建议筛查:
+      - "心电图"
+      - "心脏彩超"
+      - "24小时动态血压"
+    转换路径: "B"
+    转换说明: "低血压，建议进入症状诊断路径，关注心血管症状"
+    转换优先级: "立即转换"
+  
+  # 心率异常
+  生命体征异常_心率异常:
+    rule_id: "CONV_VITAL_ARRHYTHMIA"
+    entry_type: "生命体征异常"
+    entry_value: "心率异常"
+    entry_description: "心率测量结果异常（心动过速、心动过缓、心律不齐）"
+    可能主诉:
+      - chief_complaint_id: "CC_PALPITATION"
+        chief_complaint_name: "心悸"
+        priority: 1
+        conversion_reason: "心率异常需关注心悸症状"
+        confidence: 0.8
+      - chief_complaint_id: "CC_CHEST_PAIN"
+        chief_complaint_name: "胸痛"
+        priority: 2
+        conversion_reason: "心率异常需关注胸痛症状"
+        confidence: 0.6
+      - chief_complaint_id: "CC_DIZZINESS"
+        chief_complaint_name: "头晕"
+        priority: 3
+        conversion_reason: "心率异常需关注头晕症状"
+        confidence: 0.5
+    建议筛查:
+      - "心电图"
+      - "24小时动态心电图"
+      - "心脏彩超"
+    转换路径: "B"
+    转换说明: "心率异常，建议进入症状诊断路径，关注心血管症状"
+    转换优先级: "立即转换"
+
+# ============================================
+# 已诊断疾病咨询 → 可能主诉映射表
+# ============================================
+# 将已诊断疾病咨询转换为可能的主诉，用于生成问诊问题
+已诊断疾病转换规则:
+  # 已诊断疾病咨询（通用规则）
+  已诊断疾病_通用:
+    rule_id: "CONV_DIAGNOSED_DISEASE"
+    entry_type: "已诊断疾病"
+    entry_value: "通用"
+    entry_description: "用户咨询已诊断疾病的相关问题"
+    # 转换策略：根据已诊断疾病，转换为相关主诉
+    转换策略:
+      - "识别已诊断疾病名称"
+      - "查询疾病相关症状"
+      - "转换为可能主诉"
+      - "生成问诊问题"
+    # 示例：已诊断高血压
+    示例_高血压:
+      已诊断疾病: "高血压"
+      可能主诉:
+        - chief_complaint_id: "CC_HEADACHE"
+          chief_complaint_name: "头痛"
+          conversion_reason: "高血压患者咨询头痛，需关注血压控制情况"
+        - chief_complaint_id: "CC_DIZZINESS"
+          chief_complaint_name: "头晕"
+          conversion_reason: "高血压患者咨询头晕，需关注血压控制情况"
+      转换路径: "B"
+    转换说明: "已诊断疾病咨询，建议进入症状诊断路径，关注疾病相关症状和并发症"
+
+# ============================================
+# 追问策略库
+# ============================================
+# 针对不同入口类型的标准追问问题模板
+追问策略库:
+  # 家族史入口追问策略
+  家族史入口追问策略:
+    strategy_id: "QUEST_FAMILY_HISTORY"
+    entry_type: "家族史"
+    # 标准追问问题模板
+    追问问题:
+      # 问题1：确认家族史详情
+      - question_id: "Q_FAMILY_001"
+        question_content: "您家族中具体是哪位亲属有{疾病名称}？"
+        question_type: "确认详情"
+        priority: 1
+        answer_format:
+          type: "选择"
+          options:
+            - "父亲"
+            - "母亲"
+            - "兄弟姐妹"
+            - "祖父母"
+            - "其他"
+        next_action: "根据亲属关系评估风险"
+      
+      # 问题2：确认发病年龄
+      - question_id: "Q_FAMILY_002"
+        question_content: "您家族中{疾病名称}的发病年龄大概是多少？"
+        question_type: "评估风险"
+        priority: 2
+        answer_format:
+          type: "数值"
+          unit: "岁"
+        next_action: "根据发病年龄评估风险等级"
+      
+      # 问题3：询问相关症状
+      - question_id: "Q_FAMILY_003"
+        question_content: "您自己现在有没有{相关症状}？"
+        question_type: "症状筛查"
+        priority: 3
+        answer_format:
+          type: "布尔"
+          options:
+            - "有"
+            - "没有"
+            - "不确定"
+        next_action: "如有症状，进入症状诊断路径"
+    
+    # 追问流程
+    追问流程:
+      - step: 1
+        question: "Q_FAMILY_001"
+        purpose: "确认家族史详情"
+      - step: 2
+        question: "Q_FAMILY_002"
+        purpose: "评估风险等级"
+      - step: 3
+        question: "Q_FAMILY_003"
+        purpose: "症状筛查"
+        condition: "根据家族史类型选择相关症状"
+  
+  # 既往史入口追问策略
+  既往史入口追问策略:
+    strategy_id: "QUEST_PAST_HISTORY"
+    entry_type: "既往疾病"
+    # 标准追问问题模板
+    追问问题:
+      # 问题1：确认疾病诊断时间
+      - question_id: "Q_PAST_001"
+        question_content: "您{疾病名称}是什么时候诊断的？"
+        question_type: "确认详情"
+        priority: 1
+        answer_format:
+          type: "时间"
+          format: "YYYY-MM"
+        next_action: "了解疾病病程"
+      
+      # 问题2：询问治疗情况
+      - question_id: "Q_PAST_002"
+        question_content: "您目前{疾病名称}的治疗情况如何？是否规律服药？"
+        question_type: "评估控制情况"
+        priority: 2
+        answer_format:
+          type: "复合"
+          options:
+            - "规律服药，控制良好"
+            - "规律服药，控制一般"
+            - "不规律服药"
+            - "未服药"
+        next_action: "评估疾病控制情况"
+      
+      # 问题3：询问相关症状
+      - question_id: "Q_PAST_003"
+        question_content: "您最近有没有{相关症状}？"
+        question_type: "症状筛查"
+        priority: 3
+        answer_format:
+          type: "布尔"
+          options:
+            - "有"
+            - "没有"
+            - "不确定"
+        next_action: "如有症状，进入症状诊断路径"
+    
+    # 追问流程
+    追问流程:
+      - step: 1
+        question: "Q_PAST_001"
+        purpose: "确认疾病诊断时间"
+      - step: 2
+        question: "Q_PAST_002"
+        purpose: "评估疾病控制情况"
+      - step: 3
+        question: "Q_PAST_003"
+        purpose: "症状筛查"
+        condition: "根据既往疾病类型选择相关症状"
+  
+  # 体检异常入口追问策略
+  体检异常入口追问策略:
+    strategy_id: "QUEST_EXAM_ABNORMAL"
+    entry_type: "异常指标"
+    # 标准追问问题模板
+    追问问题:
+      # 问题1：确认异常指标详情
+      - question_id: "Q_EXAM_001"
+        question_content: "您体检报告中{指标名称}的具体数值是多少？"
+        question_type: "确认详情"
+        priority: 1
+        answer_format:
+          type: "数值"
+          unit: "根据指标类型"
+        next_action: "评估异常程度"
+      
+      # 问题2：询问检查时间
+      - question_id: "Q_EXAM_002"
+        question_content: "您是什么时候做的这个检查？"
+        question_type: "确认时间"
+        priority: 2
+        answer_format:
+          type: "时间"
+          format: "YYYY-MM-DD"
+        next_action: "了解检查时间"
+      
+      # 问题3：询问相关症状
+      - question_id: "Q_EXAM_003"
+        question_content: "您最近有没有{相关症状}？"
+        question_type: "症状筛查"
+        priority: 3
+        answer_format:
+          type: "布尔"
+          options:
+            - "有"
+            - "没有"
+            - "不确定"
+        next_action: "如有症状，进入症状诊断路径"
+      
+      # 问题4：询问既往史
+      - question_id: "Q_EXAM_004"
+        question_content: "您是否有{相关疾病}的病史？"
+        question_type: "既往史筛查"
+        priority: 4
+        answer_format:
+          type: "布尔"
+          options:
+            - "有"
+            - "没有"
+            - "不确定"
+        next_action: "了解相关疾病史"
+    
+    # 追问流程
+    追问流程:
+      - step: 1
+        question: "Q_EXAM_001"
+        purpose: "确认异常指标详情"
+      - step: 2
+        question: "Q_EXAM_002"
+        purpose: "确认检查时间"
+      - step: 3
+        question: "Q_EXAM_003"
+        purpose: "症状筛查"
+        condition: "根据异常指标类型选择相关症状"
+      - step: 4
+        question: "Q_EXAM_004"
+        purpose: "既往史筛查"
+        condition: "根据异常指标类型选择相关疾病"
+
+# ============================================
+# 转换优先级规则
+# ============================================
+# 定义不同入口类型的转换优先级
+转换优先级:
+  # 立即转换（最高优先级）
+  立即转换:
+    priority: 1
+    entry_types:
+      - "生命体征异常"
+      - "明显症状"
+    description: "生命体征异常或明显症状需要立即转换为主诉诊断流程"
+    action: "立即进入症状诊断路径（B路径）"
+  
+  # 建议转换（中等优先级）
+  建议转换:
+    priority: 2
+    entry_types:
+      - "异常指标"
+      - "既往疾病"
+    description: "异常指标或既往疾病建议转换为主诉诊断流程"
+    action: "建议进入症状诊断路径（B路径），先进行追问确认"
+  
+  # 可选转换（低优先级）
+  可选转换:
+    priority: 3
+    entry_types:
+      - "家族史"
+    description: "家族史可以转换为主诉诊断流程，但需要先进行风险评估"
+    action: "可选进入症状诊断路径（B路径），先进行家族史追问和风险评估"
+
+# ============================================
+# 转换执行流程
+# ============================================
+转换执行流程:
+  # 步骤1：识别入口类型
+  步骤1_识别入口类型:
+    description: "识别用户输入的入口类型（家族史/既往疾病/异常指标/生命体征异常）"
+    methods:
+      - "关键词匹配"
+      - "LLM辅助识别"
+      - "结构化数据识别"
+  
+  # 步骤2：加载转换规则
+  步骤2_加载转换规则:
+    description: "根据入口类型加载对应的转换规则"
+    methods:
+      - "查询家族史转换规则"
+      - "查询既往疾病转换规则"
+      - "查询异常指标转换规则"
+      - "查询生命体征异常转换规则"
+  
+  # 步骤3：执行转换
+  步骤3_执行转换:
+    description: "根据转换规则将入口转换为可能的主诉"
+    methods:
+      - "匹配可能主诉列表"
+      - "计算转换置信度"
+      - "生成转换原因"
+  
+  # 步骤4：应用追问策略
+  步骤4_应用追问策略:
+    description: "根据入口类型应用对应的追问策略"
+    methods:
+      - "加载追问问题模板"
+      - "根据转换规则填充问题内容"
+      - "生成追问问题列表"
+  
+  # 步骤5：路径选择
+  步骤5_路径选择:
+    description: "根据转换结果选择诊断路径"
+    methods:
+      - "根据转换优先级选择路径"
+      - "如有症状，进入B路径"
+      - "如无症状，可进入A路径进行筛查建议"
+
+# ============================================
+# 依赖项
+# ============================================
+依赖项:
+  主诉模板:
+    说明: "主诉模板（知识图谱）"
+    来源: "知识图谱_主诉节点"
+    用途: "用于查询主诉ID和主诉名称"
+  
+  归一化词表:
+    说明: "归一化词表"
+    来源: "临床解析服务_归一化词表"
+    用途: "用于识别和归一化疾病名称、症状名称"
+  
+  入口判定规则:
+    说明: "入口判定与工作态切换规则"
+    来源: "健康状态评估服务_入口判定规则"
+    用途: "用于确定最终进入的路径（A/B路径）"
+  
+  LLM服务:
+    说明: "LLM辅助识别服务"
+    来源: "LLM服务"
+    用途: "用于辅助识别入口类型和生成追问问题"
+
+# ============================================
+# 使用示例
+# ============================================
+使用示例:
+  # 示例1：家族史转换
+  示例1_家族史转换:
+    用户输入: "我父亲有糖尿病，我担心自己也会得"
+    识别结果:
+      entry_type: "家族史"
+      entry_value: "糖尿病"
+    转换结果:
+      - chief_complaint_id: "CC_POLYURIA"
+        chief_complaint_name: "多尿"
+        confidence: 0.7
+      - chief_complaint_id: "CC_POLYDIPSIA"
+        chief_complaint_name: "多饮"
+        confidence: 0.7
+    追问问题:
+      - "您家族中具体是哪位亲属有糖尿病？"
+      - "您家族中糖尿病的发病年龄大概是多少？"
+      - "您自己现在有没有多饮、多尿的症状？"
+    最终路径: "B"  # 进入症状诊断路径
+  
+  # 示例2：既往疾病转换
+  示例2_既往疾病转换:
+    用户输入: "我有高血压，最近有点头痛"
+    识别结果:
+      entry_type: "既往疾病"
+      entry_value: "高血压"
+    转换结果:
+      - chief_complaint_id: "CC_HEADACHE"
+        chief_complaint_name: "头痛"
+        confidence: 0.7
+    追问问题:
+      - "您高血压是什么时候诊断的？"
+      - "您目前高血压的治疗情况如何？是否规律服药？"
+      - "您最近头痛的具体情况如何？"
+    最终路径: "B"  # 进入症状诊断路径
+  
+  # 示例3：异常指标转换
+  示例3_异常指标转换:
+    用户输入: "我体检发现血脂有点高"
+    识别结果:
+      entry_type: "异常指标"
+      entry_value: "高血脂"
+    转换结果:
+      - chief_complaint_id: "CC_CHEST_PAIN"
+        chief_complaint_name: "胸痛"
+        confidence: 0.6
+    追问问题:
+      - "您体检报告中血脂的具体数值是多少？"
+      - "您是什么时候做的这个检查？"
+      - "您最近有没有胸痛、头晕等症状？"
+    最终路径: "B"  # 进入症状诊断路径
+  
+  # 示例4：生命体征异常转换
+  示例4_生命体征异常转换:
+    用户输入: "我量血压发现有点高"
+    识别结果:
+      entry_type: "生命体征异常"
+      entry_value: "高血压"
+    转换结果:
+      - chief_complaint_id: "CC_HEADACHE"
+        chief_complaint_name: "头痛"
+        confidence: 0.7
+      - chief_complaint_id: "CC_DIZZINESS"
+        chief_complaint_name: "头晕"
+        confidence: 0.7
+    追问问题:
+      - "您血压的具体数值是多少？"
+      - "您是什么时候量的血压？"
+      - "您最近有没有头痛、头晕等症状？"
+    最终路径: "B"  # 立即进入症状诊断路径（立即转换）
+

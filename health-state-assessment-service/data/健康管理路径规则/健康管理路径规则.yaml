@@ -1,0 +1,813 @@
+# ============================================
+# 健康管理路径规则
+# ============================================
+# 对应编号：15 - 健康管理路径规则
+# 说明：健康管理的流程规则，包括需求分类、健康档案、筛查建议、结果输出、随访等
+# 文件位置：健康状态评估服务/数据/健康管理路径规则/健康管理路径规则.yaml
+
+元数据:
+  配置名称: 健康管理路径规则
+  版本号: v1.0
+  更新时间: 2026-01-28
+  说明: "健康管理的完整流程规则，包括A1需求分类、A2健康档案、A3分支执行、A4结果输出、A5随访闭环"
+
+# ============================================
+# A1 需求分类规则
+# ============================================
+# 根据用户输入识别健康管理需求类型
+需求分类规则:
+  # 筛查建议
+  筛查建议:
+    rule_id: "DEMAND_SCREENING"
+    rule_name: "筛查建议"
+    # 触发条件（满足任一条件即可）
+    触发条件:
+      - "用户明确表示想做体检/筛查"
+      - "用户说'我想做个体检'"
+      - "用户说'我应该做什么检查'"
+      - "用户说'看看身体怎么样'"
+      - "用户描述为体检、筛查、检查等"
+    # 需求类型
+    需求类型: "筛查建议"
+    需求描述: "用户无症状，只想知道应该做哪些筛查"
+    # 处理流程
+    处理流程: "A3-1筛查建议分支"
+    # 下一步骤
+    下一步骤: "A2｜通用最小健康档案"
+    # 优先级
+    优先级: 1
+    # 说明
+    说明: "用户想做体检或筛查，需要推荐筛查项目"
+  
+  # 健康档案建立
+  健康档案建立:
+    rule_id: "DEMAND_PROFILE"
+    rule_name: "健康档案建立"
+    触发条件:
+      - "用户明确表示想建立健康档案"
+      - "用户说'我想记录我的健康信息'"
+      - "用户说'帮我建立健康档案'"
+      - "用户描述为健康档案、健康记录等"
+    需求类型: "健康档案建立"
+    需求描述: "用户想建立或更新健康档案"
+    处理流程: "A2通用最小健康档案"
+    下一步骤: "A3-2健康档案分支"
+    优先级: 2
+    说明: "用户想建立或更新健康档案"
+  
+  # 健康咨询
+  健康咨询:
+    rule_id: "DEMAND_CONSULTATION"
+    rule_name: "健康咨询"
+    触发条件:
+      - "用户想了解健康知识"
+      - "用户说'我想了解如何保持健康'"
+      - "用户说'我应该注意什么'"
+      - "用户描述为健康咨询、健康建议等"
+    需求类型: "健康咨询"
+    需求描述: "用户想了解健康知识和建议"
+    处理流程: "A3-2健康咨询分支"
+    下一步骤: "A2｜通用最小健康档案"
+    优先级: 3
+    说明: "用户想了解健康知识和建议"
+  
+  # 健康风险评估
+  健康风险评估:
+    rule_id: "DEMAND_RISK_ASSESSMENT"
+    rule_name: "健康风险评估"
+    触发条件:
+      - "用户想了解健康风险"
+      - "用户说'我想评估我的健康风险'"
+      - "用户说'我有什么健康风险'"
+      - "用户描述为风险评估、风险筛查等"
+    需求类型: "健康风险评估"
+    需求描述: "用户想了解自己的健康风险"
+    处理流程: "A3-3健康风险评估分支"
+    下一步骤: "A2｜通用最小健康档案"
+    优先级: 4
+    说明: "用户想了解自己的健康风险"
+  
+  # 不确定/默认
+  不确定:
+    rule_id: "DEMAND_UNKNOWN"
+    rule_name: "不确定"
+    触发条件:
+      - "用户需求不明确"
+      - "无法匹配到以上任何需求类型"
+    需求类型: "筛查建议"
+    需求描述: "默认进入筛查建议流程"
+    处理流程: "A3-1筛查建议分支"
+    下一步骤: "A2｜通用最小健康档案"
+    优先级: 99
+    说明: "用户需求不明确时，默认进入筛查建议流程"
+
+# ============================================
+# A2 通用最小健康档案字段清单
+# ============================================
+# 定义健康档案需要采集的字段
+健康档案字段清单:
+  # 基本信息（必填）
+  基本信息:
+    required_level: "必须"
+    fields:
+      - field_id: "AGE"
+        field_name: "年龄"
+        field_type: "数值"
+        unit: "岁"
+        required: true
+        standard_question: "请问您的年龄是？"
+        validation:
+          min: 0
+          max: 150
+        missing_action: "必须补齐"
+      
+      - field_id: "GENDER"
+        field_name: "性别"
+        field_type: "选择"
+        options: ["男", "女", "其他"]
+        required: true
+        standard_question: "请问您的性别是？"
+        missing_action: "必须补齐"
+      
+      - field_id: "HEIGHT"
+        field_name: "身高"
+        field_type: "数值"
+        unit: "cm"
+        required: false
+        standard_question: "请问您的身高是？（可选）"
+        validation:
+          min: 50
+          max: 250
+        missing_action: "可继续但降级"
+      
+      - field_id: "WEIGHT"
+        field_name: "体重"
+        field_type: "数值"
+        unit: "kg"
+        required: false
+        standard_question: "请问您的体重是？（可选）"
+        validation:
+          min: 1
+          max: 300
+        missing_action: "可继续但降级"
+      
+      - field_id: "BMI"
+        field_name: "BMI"
+        field_type: "计算值"
+        formula: "weight / (height / 100) ^ 2"
+        required: false
+        missing_action: "可计算"
+  
+  # 既往史（重要）
+  既往史:
+    required_level: "重要"
+    fields:
+      - field_id: "DISEASE_HISTORY"
+        field_name: "疾病史"
+        field_type: "多选"
+        options: "知识图谱_标准疾病列表"
+        required: false
+        standard_question: "是否有高血压、糖尿病等疾病史？"
+        missing_action: "可继续但降级"
+      
+      - field_id: "SURGERY_HISTORY"
+        field_name: "手术史"
+        field_type: "多选"
+        options: "知识图谱_标准手术列表"
+        required: false
+        standard_question: "是否有手术史？"
+        missing_action: "可继续但降级"
+      
+      - field_id: "ALLERGY_HISTORY"
+        field_name: "过敏史"
+        field_type: "多选"
+        options: "知识图谱_标准过敏原列表"
+        required: false
+        standard_question: "是否有过敏史？"
+        missing_action: "可继续但降级"
+  
+  # 家族史（重要）
+  家族史:
+    required_level: "重要"
+    fields:
+      - field_id: "FAMILY_DISEASE_HISTORY"
+        field_name: "遗传疾病史"
+        field_type: "多选"
+        options: "知识图谱_标准疾病列表"
+        required: false
+        standard_question: "家族是否有遗传疾病史？"
+        missing_action: "可继续但降级"
+      
+      - field_id: "FAMILY_COMMON_DISEASE"
+        field_name: "家族常见病"
+        field_type: "多选"
+        options: "知识图谱_标准疾病列表"
+        required: false
+        standard_question: "家族是否有常见疾病？"
+        missing_action: "可继续但降级"
+  
+  # 生活习惯（可选）
+  生活习惯:
+    required_level: "可选"
+    fields:
+      - field_id: "SMOKING"
+        field_name: "吸烟"
+        field_type: "复合"
+        required: false
+        standard_question: "是否吸烟？"
+        sub_fields:
+          - "是否吸烟（是/否）"
+          - "吸烟量（支/天）"
+          - "吸烟年限（年）"
+        missing_action: "可后续补充"
+      
+      - field_id: "DRINKING"
+        field_name: "饮酒"
+        field_type: "复合"
+        required: false
+        standard_question: "是否饮酒？"
+        sub_fields:
+          - "是否饮酒（是/否）"
+          - "饮酒频率（次/周）"
+          - "饮酒量（ml/次）"
+        missing_action: "可后续补充"
+      
+      - field_id: "EXERCISE"
+        field_name: "运动"
+        field_type: "复合"
+        required: false
+        standard_question: "运动习惯如何？"
+        sub_fields:
+          - "运动频率（次/周）"
+          - "运动类型"
+          - "运动时长（分钟/次）"
+        missing_action: "可后续补充"
+      
+      - field_id: "DIET"
+        field_name: "饮食"
+        field_type: "复合"
+        required: false
+        standard_question: "饮食习惯如何？"
+        sub_fields:
+          - "饮食习惯（清淡/油腻/均衡）"
+          - "饮食规律（规律/不规律）"
+        missing_action: "可后续补充"
+  
+  # 用药史（重要）
+  用药史:
+    required_level: "重要"
+    fields:
+      - field_id: "CURRENT_MEDICATION"
+        field_name: "当前用药"
+        field_type: "多选"
+        options: "知识图谱_标准药物列表"
+        required: false
+        standard_question: "正在使用什么药物？"
+        missing_action: "可继续但降级"
+      
+      - field_id: "PAST_MEDICATION"
+        field_name: "既往用药"
+        field_type: "多选"
+        options: "知识图谱_标准药物列表"
+        required: false
+        standard_question: "既往使用过什么药物？"
+        missing_action: "可继续但降级"
+  
+  # 采集优先级
+  采集优先级:
+    - "基本信息（必填）"
+    - "既往史（重要）"
+    - "家族史（重要）"
+    - "用药史（重要）"
+    - "生活习惯（可选）"
+  
+  # 信息完整度计算
+  信息完整度计算:
+    必填字段权重: 0.5
+    重要字段权重: 0.3
+    可选字段权重: 0.2
+    完整度阈值:
+      最低: 0.5
+      推荐: 0.8
+      完整: 0.9
+
+# ============================================
+# A3 进入对应分支执行
+# ============================================
+# 根据需求类型进入不同的分支执行流程
+分支执行规则:
+  # A3-1 筛查建议分支
+  A3_1_筛查建议:
+    branch_id: "BRANCH_SCREENING"
+    branch_name: "筛查建议分支"
+    # 适用需求类型
+    适用需求类型:
+      - "筛查建议"
+      - "不确定"
+    # 执行流程
+    执行流程:
+      - step: "加载筛查建议规则库"
+        description: "根据用户信息加载对应的筛查建议规则"
+      - step: "查询标准目录主数据"
+        description: "从知识图谱查询检验项目目录"
+      - step: "应用筛查建议规则"
+        description: "根据年龄、性别、既往史等推荐筛查项目"
+      - step: "生成筛查建议清单"
+        description: "生成推荐筛查清单和不建议筛查清单"
+    # 使用的知识内容
+    使用的知识内容:
+      - "健康管理路径规则（15）：筛查建议规则库"
+      - "标准目录主数据（3）：检验项目目录（从知识图谱查询）"
+  
+  # A3-2 健康咨询分支
+  A3_2_健康咨询:
+    branch_id: "BRANCH_CONSULTATION"
+    branch_name: "健康咨询分支"
+    适用需求类型:
+      - "健康咨询"
+    执行流程:
+      - step: "加载健康咨询规则库"
+        description: "根据用户信息加载对应的健康咨询规则"
+      - step: "生成健康建议"
+        description: "根据用户情况生成个性化健康建议"
+      - step: "生成健康知识"
+        description: "提供相关健康知识"
+    使用的知识内容:
+      - "健康管理路径规则（15）：健康咨询规则库"
+  
+  # A3-3 健康风险评估分支
+  A3_3_健康风险评估:
+    branch_id: "BRANCH_RISK_ASSESSMENT"
+    branch_name: "健康风险评估分支"
+    适用需求类型:
+      - "健康风险评估"
+    执行流程:
+      - step: "加载风险评估规则库"
+        description: "根据用户信息加载对应的风险评估规则"
+      - step: "计算健康风险"
+        description: "根据用户信息计算各项健康风险"
+      - step: "生成风险评估报告"
+        description: "生成个性化健康风险评估报告"
+    使用的知识内容:
+      - "健康管理路径规则（15）：健康风险评估规则库"
+      - "风险评估服务：风险评估规则"
+
+# ============================================
+# A3-1 筛查建议规则库
+# ============================================
+# 根据年龄、性别、既往史等推荐筛查项目
+筛查建议规则库:
+  # 按年龄性别推荐
+  按年龄性别推荐:
+    # 18-35岁女性
+    - age_range: [18, 35]
+      gender: "女性"
+      推荐筛查:
+        - examination_id: "EXAM_BLOOD_ROUTINE"
+          examination_name: "血常规"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "用于筛查贫血、感染等"
+          来源: "知识图谱_检验项目目录"
+        
+        - examination_id: "EXAM_LIVER_FUNCTION"
+          examination_name: "肝功能"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "用于筛查肝脏疾病"
+          来源: "知识图谱_检验项目目录"
+        
+        - examination_id: "EXAM_BREAST_ULTRASOUND"
+          examination_name: "乳腺彩超"
+          frequency: "每2年一次"
+          frequency_detail: "每2年"
+          priority: "中"
+          说明: "用于筛查乳腺疾病"
+          来源: "知识图谱_检验项目目录"
+      
+      不建议筛查:
+        - examination_id: "EXAM_CHEST_CT"
+          examination_name: "胸部CT"
+          原因: "35岁女性无高危因素，不建议常规筛查，避免不必要的辐射"
+          来源: "知识图谱_检验项目目录"
+    
+    # 18-35岁男性
+    - age_range: [18, 35]
+      gender: "男性"
+      推荐筛查:
+        - examination_id: "EXAM_BLOOD_ROUTINE"
+          examination_name: "血常规"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "用于筛查贫血、感染等"
+        
+        - examination_id: "EXAM_LIVER_FUNCTION"
+          examination_name: "肝功能"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "用于筛查肝脏疾病"
+      
+      不建议筛查:
+        - examination_id: "EXAM_CHEST_CT"
+          examination_name: "胸部CT"
+          原因: "35岁男性无高危因素，不建议常规筛查，避免不必要的辐射"
+    
+    # 36-50岁女性
+    - age_range: [36, 50]
+      gender: "女性"
+      推荐筛查:
+        - examination_id: "EXAM_BLOOD_ROUTINE"
+          examination_name: "血常规"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+        
+        - examination_id: "EXAM_LIVER_FUNCTION"
+          examination_name: "肝功能"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+        
+        - examination_id: "EXAM_BREAST_ULTRASOUND"
+          examination_name: "乳腺彩超"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+        
+        - examination_id: "EXAM_CERVICAL_CYTOLOGY"
+          examination_name: "宫颈细胞学检查"
+          frequency: "每3年一次"
+          frequency_detail: "每3年"
+          priority: "高"
+          说明: "用于筛查宫颈疾病"
+      
+      不建议筛查: []
+    
+    # 36-50岁男性
+    - age_range: [36, 50]
+      gender: "男性"
+      推荐筛查:
+        - examination_id: "EXAM_BLOOD_ROUTINE"
+          examination_name: "血常规"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+        
+        - examination_id: "EXAM_LIVER_FUNCTION"
+          examination_name: "肝功能"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+        
+        - examination_id: "EXAM_ECG"
+          examination_name: "心电图"
+          frequency: "每2年一次"
+          frequency_detail: "每2年"
+          priority: "中"
+          说明: "用于筛查心血管疾病"
+      
+      不建议筛查: []
+    
+    # 51岁以上女性
+    - age_range: [51, 999]
+      gender: "女性"
+      推荐筛查:
+        - examination_id: "EXAM_BLOOD_ROUTINE"
+          examination_name: "血常规"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+        
+        - examination_id: "EXAM_LIVER_FUNCTION"
+          examination_name: "肝功能"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+        
+        - examination_id: "EXAM_BREAST_ULTRASOUND"
+          examination_name: "乳腺彩超"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+        
+        - examination_id: "EXAM_CERVICAL_CYTOLOGY"
+          examination_name: "宫颈细胞学检查"
+          frequency: "每3年一次"
+          frequency_detail: "每3年"
+          priority: "高"
+        
+        - examination_id: "EXAM_ECG"
+          examination_name: "心电图"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "用于筛查心血管疾病"
+      
+      不建议筛查: []
+    
+    # 51岁以上男性
+    - age_range: [51, 999]
+      gender: "男性"
+      推荐筛查:
+        - examination_id: "EXAM_BLOOD_ROUTINE"
+          examination_name: "血常规"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+        
+        - examination_id: "EXAM_LIVER_FUNCTION"
+          examination_name: "肝功能"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+        
+        - examination_id: "EXAM_ECG"
+          examination_name: "心电图"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "用于筛查心血管疾病"
+        
+        - examination_id: "EXAM_PSA"
+          examination_name: "前列腺特异性抗原"
+          frequency: "每2年一次"
+          frequency_detail: "每2年"
+          priority: "中"
+          说明: "用于筛查前列腺疾病"
+      
+      不建议筛查: []
+  
+  # 按既往史推荐
+  按既往史推荐:
+    # 高血压史
+    - condition: "既往史_高血压"
+      推荐筛查:
+        - examination_id: "EXAM_ECG"
+          examination_name: "心电图"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "高血压患者需定期检查心电图"
+        
+        - examination_id: "EXAM_ECHOCARDIOGRAM"
+          examination_name: "心脏彩超"
+          frequency: "每2年一次"
+          frequency_detail: "每2年"
+          priority: "高"
+          说明: "高血压患者需定期检查心脏结构"
+        
+        - examination_id: "EXAM_KIDNEY_FUNCTION"
+          examination_name: "肾功能"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "高血压可能影响肾功能"
+    
+    # 糖尿病史
+    - condition: "既往史_糖尿病"
+      推荐筛查:
+        - examination_id: "EXAM_HBA1C"
+          examination_name: "糖化血红蛋白"
+          frequency: "每3个月一次"
+          frequency_detail: "每3个月"
+          priority: "高"
+          说明: "糖尿病患者需定期监测血糖控制情况"
+        
+        - examination_id: "EXAM_KIDNEY_FUNCTION"
+          examination_name: "肾功能"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "糖尿病可能影响肾功能"
+        
+        - examination_id: "EXAM_EYE_FUNDUS"
+          examination_name: "眼底检查"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "糖尿病可能影响眼底"
+  
+  # 按家族史推荐
+  按家族史推荐:
+    # 家族心血管疾病史
+    - condition: "家族史_心血管疾病"
+      推荐筛查:
+        - examination_id: "EXAM_ECG"
+          examination_name: "心电图"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "家族心血管疾病史，建议定期检查"
+        
+        - examination_id: "EXAM_LIPID"
+          examination_name: "血脂"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "家族心血管疾病史，建议定期检查血脂"
+    
+    # 家族肿瘤史
+    - condition: "家族史_肿瘤"
+      推荐筛查:
+        - examination_id: "EXAM_TUMOR_MARKERS"
+          examination_name: "肿瘤标志物"
+          frequency: "每年一次"
+          frequency_detail: "每年"
+          priority: "高"
+          说明: "家族肿瘤史，建议定期检查肿瘤标志物"
+
+# ============================================
+# A4 统一结果页模板库
+# ============================================
+# 定义各种结果页的输出模板
+统一结果页模板库:
+  # 筛查建议结果页
+  筛查建议结果页:
+    template_id: "RESULT_SCREENING"
+    template_name: "筛查建议结果页"
+    # 一句话总结
+    一句话总结:
+      template: "根据您的情况，建议{筛查项目频率说明}"
+      variables:
+        - "筛查项目频率说明"
+      example: "根据您的情况，建议每年做一次血常规和肝功能检查，每2年做一次乳腺彩超检查"
+    
+    # 现在建议做的事
+    现在建议做的事:
+      template: "现在建议做的事："
+      items:
+        - template: "预约{检查项目}检查"
+          variables:
+            - "检查项目"
+          priority: "高"
+        - template: "预约{检查项目}检查（如未做过）"
+          variables:
+            - "检查项目"
+          priority: "中"
+        - template: "保持健康的生活方式"
+          priority: "低"
+    
+    # 暂时不建议做的事
+    暂时不建议做的事:
+      template: "暂时不建议做的事："
+      items:
+        - template: "不需要做{检查项目}（{原因}）"
+          variables:
+            - "检查项目"
+            - "原因"
+    
+    # 下一次复查/更新时间点
+    下一次复查时间点:
+      template: "{时间}后复查{检查项目}"
+      variables:
+        - "时间"
+        - "检查项目"
+      example: "1年后复查血常规和肝功能"
+    
+    # 退出A路径条件提示
+    退出A路径条件提示:
+      template: "如果出现不适症状或检查异常，请及时就医"
+      fixed: true
+  
+  # 健康咨询结果页
+  健康咨询结果页:
+    template_id: "RESULT_CONSULTATION"
+    template_name: "健康咨询结果页"
+    一句话总结:
+      template: "根据您的情况，{健康建议总结}"
+      variables:
+        - "健康建议总结"
+    
+    现在建议做的事:
+      template: "现在建议做的事："
+      items:
+        - template: "{健康建议项}"
+          variables:
+            - "健康建议项"
+    
+    健康知识:
+      template: "相关健康知识："
+      items:
+        - template: "{健康知识点}"
+          variables:
+            - "健康知识点"
+  
+  # 健康风险评估结果页
+  健康风险评估结果页:
+    template_id: "RESULT_RISK_ASSESSMENT"
+    template_name: "健康风险评估结果页"
+    一句话总结:
+      template: "根据您的情况，您的{风险类型}风险为{风险等级}"
+      variables:
+        - "风险类型"
+        - "风险等级"
+    
+    风险评估结果:
+      template: "风险评估结果："
+      items:
+        - template: "{风险类型}：{风险等级}（{风险说明}）"
+          variables:
+            - "风险类型"
+            - "风险等级"
+            - "风险说明"
+    
+    风险控制建议:
+      template: "风险控制建议："
+      items:
+        - template: "{风险控制建议项}"
+          variables:
+            - "风险控制建议项"
+
+# ============================================
+# A5 随访节奏规则
+# ============================================
+# 定义各种随访的节奏和提醒话术
+随访节奏规则:
+  # 筛查建议随访
+  筛查建议随访:
+    followup_type: "筛查建议"
+    # 随访时间
+    随访时间:
+      default: "1年后"
+      calculation: "根据推荐筛查项目的最短复查周期计算"
+      min_interval: "3个月"
+      max_interval: "3年"
+    # 随访目的
+    随访目的: "提醒用户复查筛查项目"
+    # 随访提醒话术
+    随访提醒话术:
+      template: "您上次咨询的体检建议，现在应该复查了"
+      variables: []
+    # 随访内容
+    随访内容:
+      - "提醒复查筛查项目"
+      - "询问是否有新症状"
+      - "询问检查结果"
+  
+  # 健康咨询随访
+  健康咨询随访:
+    followup_type: "健康咨询"
+    随访时间:
+      default: "3个月后"
+      calculation: "根据健康建议的执行周期计算"
+    # 随访目的
+    随访目的: "跟进健康建议的执行情况"
+    # 随访提醒话术
+    随访提醒话术:
+      template: "您上次咨询的健康建议，现在执行得怎么样？"
+      variables: []
+    # 随访内容
+    随访内容:
+      - "询问健康建议执行情况"
+      - "提供进一步建议"
+  
+  # 健康风险评估随访
+  健康风险评估随访:
+    followup_type: "健康风险评估"
+    随访时间:
+      default: "6个月后"
+      calculation: "根据风险等级调整，高风险缩短随访周期"
+      risk_adjustment:
+        高风险: "3个月"
+        中风险: "6个月"
+        低风险: "1年"
+    # 随访目的
+    随访目的: "重新评估健康风险"
+    # 随访提醒话术
+    随访提醒话术:
+      template: "您上次的健康风险评估，现在应该重新评估了"
+      variables: []
+    # 随访内容
+    随访内容:
+      - "重新评估健康风险"
+      - "更新健康档案"
+      - "调整筛查建议"
+
+# ============================================
+# 依赖项
+# ============================================
+依赖项:
+  标准目录主数据:
+    说明: "检验项目目录，从知识图谱查询"
+    来源: "知识图谱_标准目录主数据（3）"
+    用途: "用于筛查建议规则库中的检查项目信息"
+  
+  基础标准配置:
+    说明: "人群字段标准等基础配置"
+    来源: "基础标准配置（2）"
+    用途: "用于健康档案字段清单的字段定义"
+  
+  输出规则:
+    说明: "结果页结构定义"
+    来源: "输出规则（13）"
+    用途: "用于统一结果页模板库的结构定义"
+  
+  收效与升级规则:
+    说明: "复评时间窗设置"
+    来源: "收效与升级规则（11）"
+    用途: "用于随访节奏规则的复评时间窗设置"
+

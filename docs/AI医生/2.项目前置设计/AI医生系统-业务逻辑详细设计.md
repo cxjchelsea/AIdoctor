@@ -1,93 +1,167 @@
 # AI医生系统 - 业务逻辑详细设计
 
-> **文档定位**：本文档详细设计AI医生系统的核心业务逻辑，包括八个脑区的工作流程、DR.KNOWS路径检索、智能追问算法、多引擎融合、CDP管理等。  
-> **参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》  
-> **设计基础**：基于DR.KNOWS论文的八个脑区架构设计
+> **文档定位**：本文档详细设计AI医生系统的核心业务逻辑，包括主Agent运行循环、工具调用流程、DR.KNOWS路径检索、智能追问算法、多引擎融合、CDP管理等。  
+> **参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计-核心架构.md》、《AI医生系统-技术架构设计-主Agent核心算法设计.md》  
+> **设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构，实现双通道推理架构
 
 ---
 
-## 一、AI医生系统八个脑区的业务逻辑设计
+## 一、AI医生系统单主Agent架构的业务逻辑设计
 
-根据系统设计方案，AI医生系统采用**八个脑区架构设计**，基于DR.KNOWS论文的方法。本节详细设计每个脑区的业务逻辑。
+根据系统设计方案，AI医生系统采用**单主Agent + 多工具Tools架构设计**，基于DR.KNOWS论文的方法。主Agent（Clinical Agent Brain）是唯一"最终结论提交者"，通过运行循环自主调用工具，完成诊断流程。本节详细设计主Agent运行循环和各个工具的业务逻辑。
 
-### 0.0 双通道推理架构（核心设计理念）
+### 0.0 单主Agent架构与双通道推理（核心设计理念）
 
-> **参考文档**：《AI医生系统-技术架构设计.md》  
+> **参考文档**：《AI医生系统-技术架构设计-核心架构.md》  
 > **核心原则**：让结构化通道决定"该往哪想"，让LLM决定"怎么说、怎么问、怎么组织方案"
+
+**单主Agent架构核心理念**：
+- **主Agent自主性**：主Agent（Clinical Agent Brain）具备自主感知、推理、决策和执行能力，是唯一"最终结论提交者"
+- **工具无状态性**：工具无独立目标、无长期策略状态，只按主Agent调用执行并返回结构化结果与证据引用
+- **CDP唯一事实源**：CDP是病例事实的唯一事实源，所有工具从CDP读取，建议写回CDP
+- **证据融合与冲突解决**：主Agent内部进行evidence fusion和conflict resolution，而非自治agent协商
+- **审计可追溯**：所有工具调用、证据、写回字段、版本、时间必须记录到AuditTrail
+
+**双通道推理架构**：
 
 AI医生系统采用**双通道推理架构**，将临床推理分为两个通道：
 
 **通道1：结构化推理通道**（决定"该往哪想" - 临床逻辑）
-- 医学概念标准化（CUI/ICD/SNOMED）
-- 知识图谱路径检索与排序（DR.KNOWS方法）
-- 规则/概率/贝叶斯/评分量表（可插拔）
-- 多引擎融合诊断
-- **输出**：DDx候选 + 证据结构 + 推理路径
+- **主要工具**：tool_1（病例理解）、tool_3（鉴别诊断）、tool_4（检查建议）、tool_5（治疗建议）、tool_6（风险评估）、tool_0（健康状态判定）
+- **技术实现**：
+  - 医学概念标准化（CUI/ICD/SNOMED）
+  - 知识图谱路径检索与排序（DR.KNOWS方法）
+  - 规则/概率/贝叶斯/评分量表（可插拔）
+  - 多引擎融合诊断
+- **输出**：DDx候选 + 证据结构 + 推理路径（写入CDP）
 
 **通道2：语言与策略通道**（决定"怎么说、怎么问" - 医生表达）
-- 问诊对话生成（问什么、怎么问）
-- 解释与沟通（把结构化结果讲成人话）
-- 生成处置方案草案（在受控证据基础上）
-- 自然语言生成（NLG）
+- **主要工具**：tool_2（主动问诊）、tool_7（证据链）
+- **技术实现**：
+  - 问诊对话生成（问什么、怎么问）
+  - 解释与沟通（把结构化结果讲成人话）
+  - 生成处置方案草案（在受控证据基础上）
+  - 自然语言生成（NLG）
 - **输出**：自然语言问诊、解释、建议
 
 **两个通道通过CDP（Clinical Decision Package）连接**：
 - 结构化通道的输出写入CDP
 - 语言通道基于CDP生成自然语言表达
+- 主Agent在运行循环中协调两个通道的工作
 - 确保推理过程可追溯、可审计
 
 ### 1.0 核心工作流程概述
 
+**主Agent运行循环**（Observe→Plan→Act→Update→Evaluate→Stop/Escalate）：
+
 ```
 用户发起咨询
     ↓
-【脑区0：健康状态判定】
+主Agent创建CDP，初始化AgentState
+    ↓
+【主Agent运行循环开始】
+    ↓
+Observe（观察）：读取CDP状态、识别信息缺口
+    ↓
+Plan（规划）：决定调用 tool_0（健康状态判定工具）
+    ↓
+Act（执行）：调用 tool_0
     ├─ 症状严重程度评估
     ├─ 风险早筛
     ├─ 红旗信号识别
     └─ 工作态判定（健康管理态/临床诊疗态）
-        ↓
-    【健康管理态】                    【临床诊疗态】
-        ↓                                  ↓
-    （生成健康管理计划）                【脑区A：病例理解】
-        └─ 健康管理态结束                       ├─ 医学概念识别
-                                                 ├─ 概念归一化
-                                                 └─ 结构化提取
-                                                  ↓
-                                                 【脑区B：主动问诊】
-                                                 ├─ 信息缺口识别
-                                                 ├─ 智能追问生成
-                                                 └─ 信息完整度计算
-                                                  ↓
-                                                 【脑区C：鉴别诊断（DR.KNOWS核心）】
-                                                 ├─ 知识图谱路径检索（Neo4j）
-                                                 ├─ 路径评分排序（SGIN + 注意力）
-                                                 ├─ 路径注入LLM
-                                                 ├─ 多引擎融合（规则/KG/统计/LLM/鉴别）
-                                                 └─ 三层排序（首要假设/主要备选/必须排除）
-                                                  ↓
-                                                 【脑区D：检查建议】
-                                                 ├─ 检查价值评估
-                                                 └─ 验证计划生成
-                                                  ↓
-                                                 【脑区E：治疗建议】
-                                                 ├─ 治疗方案推理
-                                                 └─ 药物推荐
-                                                  ↓
-                                                 【脑区F：风险评估】
-                                                 ├─ 高危识别
-                                                 └─ 紧急程度分级
-                                                  ↓
-                                                 【脑区G：可解释性】
-                                                 ├─ 证据链构建
-                                                 └─ 终点结论包生成
-                                                  ↓
-                                                 CDP生成（版本控制）
+    ↓
+Update（更新）：写回 cdp.health_state_assessment
+    ↓
+Evaluate（评估）：判断工作态
+    ↓
+    ├─ 【健康管理态】                    ├─ 【临床诊疗态】
+    │   ↓                                  │   ↓
+    │   主Agent调用工具生成健康管理计划      │   【主Agent运行循环继续】
+    │   └─ 健康管理态结束                   │       ↓
+    │                                       │   Observe：读取CDP状态
+    │                                       │       ↓
+    │                                       │   Plan：决定调用 tool_1（病例理解工具）
+    │                                       │       ↓
+    │                                       │   Act：调用 tool_1
+    │                                       │       ├─ 医学概念识别
+    │                                       │       ├─ 概念归一化
+    │                                       │       └─ 结构化提取
+    │                                       │       ↓
+    │                                       │   Update：写回 cdp.patient_state
+    │                                       │       ↓
+    │                                       │   Plan：决定调用 tool_2（主动问诊工具）
+    │                                       │       ↓
+    │                                       │   Act：调用 tool_2
+    │                                       │       ├─ 信息缺口识别
+    │                                       │       ├─ 智能追问生成
+    │                                       │       └─ 信息完整度计算
+    │                                       │       ↓
+    │                                       │   Update：写回 cdp.uncertainty.missing_critical_info
+    │                                       │       ↓
+    │                                       │   Plan：决定调用 tool_3（鉴别诊断工具）
+    │                                       │       ↓
+    │                                       │   Act：调用 tool_3（DR.KNOWS核心）
+    │                                       │       ├─ 知识图谱路径检索（Neo4j）
+    │                                       │       ├─ 路径评分排序（SGIN + 注意力）
+    │                                       │       ├─ 路径注入LLM
+    │                                       │       ├─ 多引擎融合（规则/KG/统计/LLM/鉴别）
+    │                                       │       └─ 三层排序（首要假设/主要备选/必须排除）
+    │                                       │       ↓
+    │                                       │   Update：写回 cdp.ddx
+    │                                       │       ↓
+    │                                       │   Plan：决定调用 tool_4（检查建议工具）
+    │                                       │       ↓
+    │                                       │   Act：调用 tool_4
+    │                                       │       ├─ 检查价值评估
+    │                                       │       └─ 验证计划生成
+    │                                       │       ↓
+    │                                       │   Update：写回 cdp.workup_plan
+    │                                       │       ↓
+    │                                       │   Plan：决定调用 tool_5（治疗建议工具）
+    │                                       │       ↓
+    │                                       │   Act：调用 tool_5
+    │                                       │       ├─ 治疗方案推理
+    │                                       │       └─ 药物推荐
+    │                                       │       ↓
+    │                                       │   Update：写回 cdp.management_plan
+    │                                       │       ↓
+    │                                       │   Plan：决定调用 tool_6（风险评估工具）
+    │                                       │       ↓
+    │                                       │   Act：调用 tool_6
+    │                                       │       ├─ 高危识别
+    │                                       │       └─ 紧急程度分级
+    │                                       │       ↓
+    │                                       │   Update：写回 cdp.triage
+    │                                       │       ↓
+    │                                       │   Plan：决定调用 tool_7（证据链工具）
+    │                                       │       ↓
+    │                                       │   Act：调用 tool_7
+    │                                       │       ├─ 证据链构建
+    │                                       │       └─ 终点结论包生成
+    │                                       │       ↓
+    │                                       │   Update：写回 cdp.evidence_graph、cdp.final_conclusion
+    │                                       │       ↓
+    │                                       │   Evaluate：评估停止条件
+    │                                       │       ↓
+    │                                       │   Stop：输出终点结论包
+    │                                       │       ↓
+    │                                       │   CDP生成（版本控制）
 ```
+
+**关键说明**：
+- 主Agent通过运行循环（Observe→Plan→Act→Update→Evaluate）自主决定调用哪些工具
+- 每个工具调用都遵循ToolContext输入和ToolResult输出的协议
+- 主Agent根据工具返回的suggestedWrites决定是否写回CDP
+- 主Agent进行证据融合和冲突解决，确保诊断结论的一致性
 
 ---
 
-### 1.1 脑区0：健康状态判定服务（Health State Assessment Service）
+### 1.1 工具0：健康状态判定工具（tool_0）
+
+> **对应服务**：health-state-assessment-service  
+> **工具类型**：Deterministic  
+> **参考文档**：《AI医生系统-技术架构设计-智能体详细设计.md》4.0节
 
 #### 1.1.1 业务目标
 
@@ -286,7 +360,7 @@ public PathResult step5PathSelection(
 
 ```java
 /**
- * 健康状态判定服务（脑区0）
+ * 健康状态判定服务（tool_0）
  */
 @Service
 public class HealthStateAssessmentService {
@@ -772,7 +846,11 @@ public class FollowUpSetupService {
 
 ---
 
-### 1.2 脑区A：病例理解与结构化服务（Clinical Parsing Service）
+### 1.2 工具1：病例理解工具（tool_1）
+
+> **对应服务**：clinical-parsing-service  
+> **工具类型**：Deterministic  
+> **参考文档**：《AI医生系统-技术架构设计-智能体详细设计.md》4.1节
 
 #### 1.2.1 业务目标
 
@@ -782,7 +860,7 @@ public class FollowUpSetupService {
 
 ```java
 /**
- * 病例理解服务（脑区A）
+ * 病例理解工具（tool_1）
  */
 @Service
 public class ClinicalParsingService {
@@ -845,7 +923,11 @@ public class ClinicalParsingService {
 
 ---
 
-### 1.3 脑区B：主动问诊与信息补全服务（Interview / Gap-Filling Service）
+### 1.3 工具2：主动问诊工具（tool_2）
+
+> **对应服务**：dialog-service  
+> **工具类型**：Generative（但问诊策略基于临床决策分析，属于Deterministic）  
+> **参考文档**：《AI医生系统-技术架构设计-智能体详细设计.md》4.2节
 
 #### 1.3.1 业务目标
 
@@ -1249,7 +1331,11 @@ public double calculateWeightedCompleteness(DiagnosisRecord record, HealthProfil
 
 ---
 
-### 1.4 脑区C：鉴别诊断引擎（Differential Diagnosis Engine - DR.KNOWS核心）
+### 1.4 工具3：鉴别诊断工具（tool_3）
+
+> **对应服务**：diagnosis-engine-service  
+> **工具类型**：Retrieval（知识库优先）+ Generative（路径约束推理）  
+> **参考文档**：《AI医生系统-技术架构设计-智能体详细设计.md》4.3节、《DR.KNOWS与5步诊断流程整合方案.md》
 
 #### 1.4.1 业务目标
 
@@ -1364,7 +1450,7 @@ public class KGReasoningEngine {
 
 ```java
 /**
- * 多引擎融合诊断系统（脑区C）
+ * 鉴别诊断工具（tool_3）- 多引擎融合诊断系统
  */
 @Service
 public class MultiEngineFusionService {
@@ -1424,7 +1510,11 @@ public class MultiEngineFusionService {
 
 ---
 
-### 1.5 脑区D：检查建议引擎（Workup Planner Service）
+### 1.5 工具4：检查建议工具（tool_4）
+
+> **对应服务**：workup-planner-service  
+> **工具类型**：Deterministic  
+> **参考文档**：《AI医生系统-技术架构设计-智能体详细设计.md》4.4节
 
 #### 1.5.1 业务目标
 
@@ -1434,7 +1524,7 @@ public class MultiEngineFusionService {
 
 ```java
 /**
- * 检查建议引擎（脑区D）
+ * 检查建议工具（tool_4）
  */
 @Service
 public class WorkupPlannerService {
@@ -1466,7 +1556,11 @@ public class WorkupPlannerService {
 
 ---
 
-### 1.6 脑区E：治疗推理引擎（Management Planner Service）
+### 1.6 工具5：治疗建议工具（tool_5）
+
+> **对应服务**：treatment-engine-service  
+> **工具类型**：Generative（但治疗方案推理基于临床指南，属于Deterministic）  
+> **参考文档**：《AI医生系统-技术架构设计-智能体详细设计.md》4.5节
 
 #### 1.6.1 业务目标
 
@@ -1476,7 +1570,7 @@ public class WorkupPlannerService {
 
 ```java
 /**
- * 治疗推理引擎（脑区E）
+ * 治疗建议工具（tool_5）
  */
 @Service
 public class TreatmentEngineService {
@@ -1501,7 +1595,11 @@ public class TreatmentEngineService {
 
 ---
 
-### 1.7 脑区F：风险评估引擎（Risk Assessment Service）
+### 1.7 工具6：风险评估工具（tool_6）
+
+> **对应服务**：risk-assessment-service  
+> **工具类型**：Deterministic  
+> **参考文档**：《AI医生系统-技术架构设计-智能体详细设计.md》4.6节
 
 #### 1.7.1 业务目标
 
@@ -1511,7 +1609,7 @@ public class TreatmentEngineService {
 
 ```java
 /**
- * 风险评估引擎（脑区F）
+ * 风险评估工具（tool_6）
  */
 @Service
 public class RiskAssessmentService {
@@ -1555,7 +1653,11 @@ public class RiskAssessmentService {
 
 ---
 
-### 1.8 脑区G：可解释性与证据链服务（Evidence & Rationale Service）
+### 1.8 工具7：证据链工具（tool_7）
+
+> **对应服务**：explanation-service  
+> **工具类型**：Generative  
+> **参考文档**：《AI医生系统-技术架构设计-智能体详细设计.md》4.7节
 
 #### 1.8.1 业务目标
 
@@ -1565,7 +1667,7 @@ public class RiskAssessmentService {
 
 ```java
 /**
- * 可解释性服务（脑区G）
+ * 证据链工具（tool_7）
  */
 @Service
 public class ExplanationService {
@@ -1665,11 +1767,235 @@ public class CDPManager {
 
 ---
 
-### 1.10 完整诊断流程编排（基于八个脑区）
+### 1.10 主Agent运行循环与工具调用流程
+
+> **参考文档**：《AI医生系统-技术架构设计-核心架构.md》第四章 主Agent运行循环与默认诊断路径
+
+**主Agent运行循环**是系统的核心，主Agent通过运行循环自主调用工具，完成诊断流程。
 
 ```java
 /**
- * 诊断流程编排服务（基于八个脑区）
+ * 主Agent运行循环服务
+ */
+@Service
+public class ClinicalAgentBrain {
+    
+    /**
+     * 主Agent运行循环
+     */
+    public DiagnosisResult runAgentLoop(UserInput input) {
+        String sessionId = generateSessionId();
+        
+        // 1. 创建CDP，初始化AgentState
+        CDP cdp = cdpManager.createCDP(input.getPatientId(), sessionId);
+        AgentState agentState = agentStateManager.createAgentState(sessionId, cdp.getId());
+        
+        // 2. 开始运行循环
+        while (true) {
+            // Observe（观察）
+            CDPState cdpState = observe(cdp, agentState);
+            
+            // Plan（规划）
+            ToolCallPlan plan = plan(cdpState, agentState);
+            
+            // Act（执行）
+            ToolResult result = act(plan, cdp, agentState);
+            
+            // Update（更新）
+            update(cdp, agentState, result);
+            
+            // Evaluate（评估）
+            Decision decision = evaluate(cdp, agentState);
+            
+            // Stop/Escalate/Continue
+            if (decision.getType() == DecisionType.STOP) {
+                return generateFinalConclusion(cdp, agentState);
+            } else if (decision.getType() == DecisionType.ESCALATE) {
+                return escalate(cdp, agentState, decision);
+            } else if (decision.getType() == DecisionType.REFUSE) {
+                return refuse(cdp, agentState, decision);
+            }
+            // Continue：继续循环
+        }
+    }
+    
+    /**
+     * Observe（观察）：读取CDP状态、识别信息缺口
+     */
+    private CDPState observe(CDP cdp, AgentState agentState) {
+        // 读取当前CDP状态
+        CDPState state = CDPState.builder()
+            .cdpId(cdp.getId())
+            .version(cdp.getVersion())
+            .healthStateAssessment(cdp.getHealthStateAssessment())
+            .patientState(cdp.getPatientState())
+            .ddx(cdp.getDdx())
+            .workupPlan(cdp.getWorkupPlan())
+            .managementPlan(cdp.getManagementPlan())
+            .triage(cdp.getTriage())
+            .uncertainty(cdp.getUncertainty())
+            .build();
+        
+        // 识别信息缺口
+        state.setInformationGaps(identifyInformationGaps(state));
+        
+        // 识别证据冲突
+        state.setEvidenceConflicts(identifyEvidenceConflicts(state));
+        
+        // 识别风险信号
+        state.setRiskSignals(identifyRiskSignals(state));
+        
+        return state;
+    }
+    
+    /**
+     * Plan（规划）：决定调用哪些工具
+     */
+    private ToolCallPlan plan(CDPState cdpState, AgentState agentState) {
+        // 根据当前CDP状态和AgentState规划工具调用
+        // 1. 如果健康状态未判定 → 调用 tool_0
+        if (cdpState.getHealthStateAssessment() == null) {
+            return ToolCallPlan.builder()
+                .toolId("tool_0")
+                .toolName("健康状态判定工具")
+                .priority(1)
+                .build();
+        }
+        
+        // 2. 如果工作态为临床诊疗态，且患者状态未结构化 → 调用 tool_1
+        if (cdpState.getWorkMode() == WorkMode.CLINICAL_MODE 
+            && cdpState.getPatientState() == null) {
+            return ToolCallPlan.builder()
+                .toolId("tool_1")
+                .toolName("病例理解工具")
+                .priority(1)
+                .build();
+        }
+        
+        // 3. 如果信息缺口存在 → 调用 tool_2
+        if (!cdpState.getInformationGaps().isEmpty()) {
+            return ToolCallPlan.builder()
+                .toolId("tool_2")
+                .toolName("主动问诊工具")
+                .priority(1)
+                .build();
+        }
+        
+        // 4. 如果DDx未生成 → 调用 tool_3
+        if (cdpState.getDdx() == null || cdpState.getDdx().isEmpty()) {
+            return ToolCallPlan.builder()
+                .toolId("tool_3")
+                .toolName("鉴别诊断工具")
+                .priority(1)
+                .build();
+        }
+        
+        // ... 其他规划逻辑
+        
+        return null;
+    }
+    
+    /**
+     * Act（执行）：调用工具
+     */
+    private ToolResult act(ToolCallPlan plan, CDP cdp, AgentState agentState) {
+        // 生成ToolContext
+        ToolContext context = ToolContext.builder()
+            .traceId(generateTraceId())
+            .cdpReference(CDPReference.builder()
+                .cdpId(cdp.getId())
+                .version(cdp.getVersion())
+                .readFields(plan.getReadFields())
+                .build())
+            .agentStateSummary(AgentStateSummary.builder()
+                .currentStep(agentState.getCurrentStep())
+                .workMode(agentState.getWorkMode())
+                .build())
+            .constraints(agentState.getConstraints())
+            .callParams(plan.getCallParams())
+            .build();
+        
+        // 调用工具服务
+        ToolResult result = toolCaller.invoke(plan.getToolId(), context);
+        
+        // 记录到AuditTrail
+        auditTrailManager.recordToolCall(cdp.getId(), context, result);
+        
+        return result;
+    }
+    
+    /**
+     * Update（更新）：更新CDP和AgentState
+     */
+    private void update(CDP cdp, AgentState agentState, ToolResult result) {
+        // 评估ToolResult的quality和evidence
+        if (result.getStatus() == ToolStatus.SUCCESS 
+            && result.getQuality().getConfidence() >= agentState.getThresholds().getConfidenceThreshold()) {
+            
+            // 进行evidence fusion和conflict resolution
+            EvidenceFusionResult fusionResult = evidenceFusion.fuse(cdp, result);
+            
+            // 决定是否写回CDP（根据suggested_writes）
+            for (SuggestedWrite write : result.getSuggestedWrites()) {
+                cdpManager.updateCDP(cdp.getId(), Map.of(write.getFieldPath(), write.getValue()));
+            }
+            
+            // 更新AgentState
+            agentStateManager.updateAgentState(agentState.getId(), Map.of(
+                "tried_tools", updateTriedTools(agentState.getTriedTools(), result.getToolId()),
+                "current_step", determineCurrentStep(cdp, result)
+            ));
+        }
+        
+        // 记录到AuditTrail
+        auditTrailManager.recordCDPUpdate(cdp.getId(), result);
+    }
+    
+    /**
+     * Evaluate（评估）：评估停止条件
+     */
+    private Decision evaluate(CDP cdp, AgentState agentState) {
+        // 评估停止条件
+        StopConditionEvaluation evaluation = stopConditionEvaluator.evaluate(cdp, agentState);
+        
+        if (evaluation.isStopConditionMet()) {
+            return Decision.builder()
+                .type(DecisionType.STOP)
+                .reason("所有停止条件满足")
+                .build();
+        }
+        
+        // 评估升级条件
+        EscalationEvaluation escalation = escalationHandler.evaluate(cdp, agentState);
+        if (escalation.isEscalationNeeded()) {
+            return Decision.builder()
+                .type(DecisionType.ESCALATE)
+                .reason(escalation.getReason())
+                .build();
+        }
+        
+        // 评估拒答条件
+        RefusalEvaluation refusal = refusalHandler.evaluate(cdp, agentState);
+        if (refusal.isRefusalNeeded()) {
+            return Decision.builder()
+                .type(DecisionType.REFUSE)
+                .reason(refusal.getReason())
+                .build();
+        }
+        
+        // 继续循环
+        return Decision.builder()
+            .type(DecisionType.CONTINUE)
+            .build();
+    }
+}
+```
+
+**完整诊断流程示例**（基于主Agent运行循环）：
+
+```java
+/**
+ * 诊断流程编排服务（基于主Agent运行循环）
  */
 @Service
 public class DiagnosisOrchestrationService {
@@ -1680,44 +2006,48 @@ public class DiagnosisOrchestrationService {
     public DiagnosisResult diagnose(UserInput input) {
         String sessionId = generateSessionId();
         
-        // 【脑区0：健康状态判定】
-        HealthStateAssessmentResult assessment = healthStateAssessmentService.assess(input, getBasicInfo(input.getUserId()));
+        // 主Agent运行循环
+        ClinicalAgentBrain agent = new ClinicalAgentBrain();
+        DiagnosisResult result = agent.runAgentLoop(input);
         
-        if (!assessment.getNeedsClinicalMode()) {
+        // 【工具0：健康状态判定】
+        // 主Agent在运行循环中调用 tool_0
+        // - 输入：用户输入、基本信息
+        // - 输出：工作态判定、风险等级
+        // - 写回：cdp.health_state_assessment
+        
+        if (result.getWorkMode() == WorkMode.WELLNESS_MODE) {
             // 健康管理态：生成健康管理计划并返回
-            return DiagnosisResult.builder()
-                .workMode(WorkMode.WELLNESS_MODE)
-                .wellnessPlan(assessment.getWellnessPlan())
-                .cdpId(assessment.getCdpId())
-                .build();
+            return result;
         }
         
         // 【临床诊疗态流程】
-        CDP cdp = cdpManager.getCDP(assessment.getCdpId());
+        // 主Agent继续运行循环，依次调用各个工具
+        CDP cdp = cdpManager.getCDP(result.getCdpId());
         
-        // 【脑区A：病例理解】
+        // 【工具1：病例理解工具】
         ClinicalParsingResult parsingResult = clinicalParsingService.parse(input, cdp);
         
-        // 【脑区B：主动问诊】
+        // 【工具2：主动问诊工具】
         while (needsMoreInformation(cdp)) {
             InterviewResult interviewResult = dialogService.interview(cdp);
             // 等待用户回答
             // ...
         }
         
-        // 【脑区C：鉴别诊断（DR.KNOWS核心）】
+        // 【工具3：鉴别诊断工具（DR.KNOWS核心）】
         DifferentialDiagnosisResult diagnosisResult = diagnosisEngineService.diagnose(cdp);
         
-        // 【脑区D：检查建议】
+        // 【tool_4：检查建议】
         WorkupPlanResult workupResult = workupPlannerService.planWorkup(cdp);
         
-        // 【脑区E：治疗建议】
+        // 【tool_5：治疗建议】
         TreatmentPlanResult treatmentResult = treatmentEngineService.planTreatment(cdp);
         
-        // 【脑区F：风险评估】
+        // 【tool_6：风险评估】
         RiskAssessmentResult riskResult = riskAssessmentService.assessRisk(cdp);
         
-        // 【脑区G：可解释性】
+        // 【tool_7：可解释性】
         EvidenceChainResult explanationResult = explanationService.explain(cdp);
         
         // 生成诊断结果
@@ -1783,16 +2113,16 @@ public class Step1IdentifyProblemService {
      * Step 1：识别问题
      */
     public StructuredQuestionList identifyProblem(CDP cdp, String userInput) {
-        // 1. 概念归一化（脑区A）
+        // 1. 概念归一化（tool_1）
         List<NormalizedConcept> normalizedConcepts = clinicalParsingService.normalizeConcepts(userInput);
         
-        // 2. 形成完整问题清单（脑区A）
+        // 2. 形成完整问题清单（tool_1）
         StructuredQuestionList questionList = clinicalParsingService.buildProblemList(
             normalizedConcepts,
             cdp.getPatientState()
         );
         
-        // 3. 标记信息缺口（脑区B）
+        // 3. 标记信息缺口（tool_2）
         InformationGaps informationGaps = dialogService.identifyGaps(questionList, cdp);
         
         // 4. 更新CDP
@@ -1827,10 +2157,10 @@ public class Step2BuildDDxCandidatesService {
      * Step 2：构建鉴别诊断候选集并分层
      */
     public ThreeLayerResult buildDDxCandidates(CDP cdp, StructuredQuestionList questionList) {
-        // 1. 生成鉴别诊断全集（脑区C - DR.KNOWS核心）
+        // 1. 生成鉴别诊断全集（tool_3 - DR.KNOWS核心）
         List<Diagnosis> ddxCandidates = diagnosisEngineService.generateDDxCandidates(questionList);
         
-        // 2. 三层分层（脑区C + 脑区F）
+        // 2. 三层分层（tool_3 + tool_6）
         ThreeLayerResult threeLayerResult = threeLayerClassifier.classify(
             ddxCandidates,
             cdp.getPatientState(),
@@ -1869,16 +2199,16 @@ public class Step3OrganizeRoutingPathService {
      * Step 3：组织候选集并建立分流路径
      */
     public RoutingPath organizeRoutingPath(CDP cdp, ThreeLayerResult threeLayerResult) {
-        // 1. 组织成推理子组（脑区C）
+        // 1. 组织成推理子组（tool_3）
         List<ReasoningSubgroup> subgroups = reasoningOrganizer.organizeSubgroups(
             threeLayerResult,
             cdp.getPatientState()
         );
         
-        // 2. 提炼关键差异点（脑区C）
+        // 2. 提炼关键差异点（tool_3）
         List<KeyDifference> keyDifferences = reasoningOrganizer.extractKeyDifferences(subgroups);
         
-        // 3. 形成分流路径清单（脑区B）
+        // 3. 形成分流路径清单（tool_2）
         RoutingPath routingPath = dialogService.designRoutingPath(
             subgroups,
             keyDifferences,
@@ -1916,19 +2246,19 @@ public class Step4CollectEvidenceAndPlanService {
      * Step 4：采集关键证据并形成排序与验证计划
      */
     public VerificationPlan collectEvidenceAndPlan(CDP cdp, RoutingPath routingPath) {
-        // 1. 采集关键证据（脑区B）
+        // 1. 采集关键证据（tool_2）
         List<Evidence> evidenceList = dialogService.collectKeyEvidence(
             routingPath,
             cdp
         );
         
-        // 2. 固化三层排序（脑区C）
+        // 2. 固化三层排序（tool_3）
         ThreeLayerResult solidifiedRanking = threeLayerClassifier.solidifyRanking(
             evidenceList,
             cdp.getDdx()
         );
         
-        // 3. 制定验证计划（脑区D）
+        // 3. 制定验证计划（tool_4）
         VerificationPlan verificationPlan = verificationPlanBuilder.generateVerificationPlan(
             solidifiedRanking,
             cdp
@@ -1968,19 +2298,19 @@ public class Step5BackfillAndConcludeService {
      * Step 5：回填证据并输出终点结论包
      */
     public ConclusionPackage backfillAndConclude(CDP cdp, VerificationPlan verificationPlan) {
-        // 1. 证据回填（脑区A）
+        // 1. 证据回填（tool_1）
         List<Evidence> backfilledEvidence = clinicalParsingService.backfillEvidence(
             verificationPlan,
             cdp
         );
         
-        // 2. 更新三层排序（脑区C）
+        // 2. 更新三层排序（tool_3）
         ThreeLayerResult updatedRanking = threeLayerClassifier.updateRanking(
             backfilledEvidence,
             cdp.getDdx()
         );
         
-        // 3. 生成终点结论包（脑区G + 脑区E + 脑区F）
+        // 3. 生成终点结论包（tool_7 + tool_5 + tool_6）
         ConclusionPackage conclusionPackage = conclusionPackageBuilder.generateConclusionPackage(
             updatedRanking,
             backfilledEvidence,
@@ -2012,7 +2342,7 @@ public class Step5BackfillAndConcludeService {
 
 ### 1.12 阶段5：结果输出（证据回填 + 更新排序 + 输出终点结论包）
 
-**注意**：此部分已整合到脑区G（可解释性服务）中，不再作为独立阶段。
+**注意**：此部分已整合到tool_7（证据链工具）中，不再作为独立阶段。
 
 #### 1.4.1 三层分层业务逻辑
 
@@ -3740,11 +4070,11 @@ public class DiseaseJudgmentService {
 
 ---
 
-**文档版本**：v3.0（基于DR.KNOWS的八个脑区架构）  
+**文档版本**：v3.0（基于DR.KNOWS的单主Agent + 多工具Tools架构）  
 **创建日期**：2025年1月  
 **更新日期**：2025年1月  
-**文档定位**：AI医生系统的业务逻辑详细设计（八个脑区的工作流程、DR.KNOWS核心方法、CDP管理等）  
+**文档定位**：AI医生系统的业务逻辑详细设计（工具的工作流程、DR.KNOWS核心方法、CDP管理等）  
 **参考文档**：《AI医生系统-系统功能设计.md》、《AI医生系统-技术架构设计.md》  
-**设计基础**：基于DR.KNOWS论文的八个脑区架构设计  
-**更新说明**：根据DR.KNOWS设计，更新为八个脑区的工作流程，添加DR.KNOWS核心方法（知识图谱路径检索、路径评分排序、路径注入LLM），添加CDP管理业务逻辑，整合健康管理态和临床诊疗态两种工作态。
+**设计基础**：基于DR.KNOWS论文，采用单主Agent + 多工具Tools架构设计  
+**更新说明**：根据DR.KNOWS设计，更新为工具的工作流程，添加DR.KNOWS核心方法（知识图谱路径检索、路径评分排序、路径注入LLM），添加CDP管理业务逻辑，整合健康管理态和临床诊疗态两种工作态。
 
