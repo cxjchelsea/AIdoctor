@@ -1,7 +1,7 @@
 """
 诊断引擎服务具体异常类
 按照《AI医生系统-错误处理规范.md》定义
-脑区C：鉴别诊断引擎错误码（3000-3999）
+tool_3：鉴别诊断引擎错误码（3000-3999）
 """
 from app.utils.exceptions import BusinessException
 

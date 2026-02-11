@@ -18,7 +18,7 @@
 
 ### 1.1 服务定位
 
-- **对应脑区**：脑区C（鉴别诊断引擎）
+- **对应工具**：tool_3（鉴别诊断工具）
 - **在双通道推理架构中的位置**：通道1（结构化推理通道）的核心组件
 - **服务职责**：
   1. **知识图谱推理引擎（kg-reasoning-engine）**：实现DR.KNOWS路径检索与评分，生成推理路径
@@ -32,7 +32,7 @@
 #### 1.2.1 输入数据格式和来源
 
 **输入来源**：
-- **上游服务**：`clinical-parsing-service`（脑区A）提供结构化病例数据
+- **上游服务**：`clinical-parsing-service`（tool_1）提供结构化病例数据
 - **数据格式**：CDP中的`patient_state`字段，包含：
   - `symptoms`：症状列表（CUI编码）
   - `signs`：体征信息
@@ -83,13 +83,13 @@
 
 **数据流转**（参考《AI医生系统-技术架构设计-CDP数据与状态管理.md》）：
 ```
-clinical-parsing-service（脑区A）
+clinical-parsing-service（tool_1）
     ↓ 输出：结构化病例数据（写入CDP.patient_state）
-diagnosis-engine-service（脑区C）
+diagnosis-engine-service（tool_3）
     ↓ 读取：CDP.patient_state
     ↓ 处理：知识图谱推理、多引擎融合、三层分层
     ↓ 输出：鉴别诊断候选集（写入CDP.ddx）
-workup-planner-service（脑区D）、treatment-engine-service（脑区E）、risk-assessment-service（脑区F）
+workup-planner-service（tool_4）、treatment-engine-service（tool_5）、risk-assessment-service（tool_6）
     ↓ 读取：CDP.ddx
 ```
 
@@ -384,7 +384,92 @@ def classify_ddx(candidates, risk_assessment):
 
 ### 3.1 API端点定义
 
-#### 3.1.1 五引擎融合诊断接口
+#### 3.1.1 统一工具调用接口（新增）
+
+**接口路径**：`POST /api/v1/tools/tool_3/invoke`
+
+**接口描述**：统一的工具调用接口，符合《工具调用协议.md》规范。主Agent通过此接口调用工具。
+
+**请求方法**：POST
+
+**请求头**：
+```
+Content-Type: application/json
+```
+
+**请求体**（ToolContext格式）：
+```json
+{
+  "trace_id": "string",
+  "cdp_reference": {
+    "cdp_id": "string",
+    "version": 0,
+    "read_fields": ["cdp.patient_state", "cdp.ddx"]
+  },
+  "agent_state_summary": {
+    "current_step": 0,
+    "work_mode": "string"
+  },
+  "constraints": {
+    "max_time_seconds": 0,
+    "max_cost": 0.0,
+    "risk_level_limit": "string"
+  },
+  "call_params": {}
+}
+```
+
+**响应体**（ToolResult格式）：
+```json
+{
+  "trace_id": "string",
+  "tool_id": "tool_3",
+  "status": "success",
+  "payload": {},
+  "evidence": [
+    {
+      "source": "kg_path",
+      "reference": "string",
+      "strength": "medium",
+      "evidence_name": "知识图谱推理路径"
+    }
+  ],
+  "quality": {
+    "confidence": 0.85,
+    "completeness": 0.90,
+    "accuracy": 0.80
+  },
+  "suggested_writes": [
+    {
+      "field_path": "cdp.ddx",
+      "value": {},
+      "reason": "更新鉴别诊断列表"
+    }
+  ],
+  "errors": [],
+  "duration_ms": 0,
+  "metadata": {}
+}
+```
+
+**实现方式**：
+1. 从ToolContext中提取CDP引用信息
+2. 通过HTTP调用diagnosis-service的CDP查询接口获取数据
+3. 根据read_fields提取指定字段的数据
+4. 构建现有服务的请求格式（DiagnosisEngineRequest）
+5. 调用现有业务逻辑服务（DiagnosisService）
+6. 将业务结果转换为ToolResult格式
+7. 构建evidence引用和suggested_writes建议
+
+**代码位置**：
+- 接口实现：`app/api/routes.py` 的 `invoke_tool_3()` 函数
+- 数据模型：`app/models/tool_context.py`、`app/models/tool_result.py`
+- CDP读取工具：`app/utils/cdp_reader.py`
+
+**参考文档**：
+- 《7.接口规范/工具调用协议.md》- 工具调用协议详细规范
+
+#### 3.1.2 五引擎融合诊断接口（原有接口，保持向后兼容）
 
 **接口路径**：`POST /api/v1/engine/diagnose`
 
@@ -643,7 +728,7 @@ class DiagnosisEngineResult(BaseModel):
 
 #### 4.1.1 上游服务
 
-- **clinical-parsing-service**（脑区A）：
+- **clinical-parsing-service**（tool_1）：
   - 提供结构化病例数据
   - 数据格式：CDP中的`patient_state`字段
 

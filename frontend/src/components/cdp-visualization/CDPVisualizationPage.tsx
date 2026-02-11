@@ -2,7 +2,7 @@ import React from 'react'
 import { Layout, Card, Tabs, Button } from 'antd'
 import ReasoningPathsVisualization from './ReasoningPathsVisualization'
 import EvidenceChainVisualization from './EvidenceChainVisualization'
-import BrainResultsVisualization from './BrainResultsVisualization'
+import ToolResultsVisualization from './BrainResultsVisualization'
 import CDPVersionHistory from './CDPVersionHistory'
 
 const { Content } = Layout
@@ -36,9 +36,9 @@ const CDPVisualizationPage: React.FC<CDPVisualizationPageProps> = ({ cdpId }) =>
               <EvidenceChainVisualization cdpId={cdpId} />
             </TabPane>
 
-            {/* 八个脑区执行结果 */}
-            <TabPane tab="脑区执行结果" key="brain-results">
-              <BrainResultsVisualization cdpId={cdpId} />
+            {/* 八个工具执行结果 */}
+            <TabPane tab="工具执行结果" key="tool-results">
+              <ToolResultsVisualization cdpId={cdpId} />
             </TabPane>
 
             {/* CDP版本历史 */}

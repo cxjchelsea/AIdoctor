@@ -18,7 +18,7 @@
 
 ### 1.1 服务定位
 
-- **对应脑区**：协调器/编排器（非独立脑区，负责协调所有脑区）
+- **对应工具**：协调器/编排器（非独立工具，负责协调所有工具）
 - **在架构中的位置**：双通道推理架构的协调中心，位于所有AI服务的上层，负责流程编排和CDP管理
 - **服务职责**：
   1. **CDP管理**：创建、更新、版本控制、回放、回退
@@ -174,39 +174,39 @@
 
 #### 2.2.1 5步AI循证诊断流程编排算法
 
-**算法描述**：按照5步AI循证诊断流程，协调各个脑区完成诊断任务
+**算法描述**：按照5步AI循证诊断流程，协调各个工具完成诊断任务
 
 **实现思路**：
 1. **Step 1：识别问题**
-   - 调用 `clinical-parsing-service`（脑区A）进行概念归一化
-   - 调用 `dialog-service`（脑区B）识别信息缺口
+   - 调用 `clinical-parsing-service`（工具1）进行概念归一化
+   - 调用 `dialog-service`（工具2）识别信息缺口
    - 构建结构化问题清单
    - 更新CDP的`patient_state`字段
 
 2. **Step 2：构建鉴别诊断候选集并分层**
-   - 调用 `diagnosis-engine-service`（脑区C）生成鉴别诊断候选集
-   - 调用 `risk-assessment-service`（脑区F）进行风险评估
+   - 调用 `diagnosis-engine-service`（工具3）生成鉴别诊断候选集
+   - 调用 `risk-assessment-service`（工具6）进行风险评估
    - 执行三层分层（首要假设/主要备选/必须排除）
    - 更新CDP的`ddx`字段
 
 3. **Step 3：组织候选集并建立分流路径**
-   - 调用 `diagnosis-engine-service`（脑区C）组织推理子组
-   - 调用 `dialog-service`（脑区B）设计分流路径
+   - 调用 `diagnosis-engine-service`（工具3）组织推理子组
+   - 调用 `dialog-service`（工具2）设计分流路径
    - 生成结构化分流问题清单
    - 更新CDP的`ddx`字段
 
 4. **Step 4：采集关键证据并形成排序与验证计划**
-   - 调用 `dialog-service`（脑区B）采集关键证据
-   - 调用 `diagnosis-engine-service`（脑区C）分析证据
-   - 调用 `workup-planner-service`（脑区D）构建验证计划
+   - 调用 `dialog-service`（工具2）采集关键证据
+   - 调用 `diagnosis-engine-service`（工具3）分析证据
+   - 调用 `workup-planner-service`（工具4）构建验证计划
    - 更新CDP的`evidence_graph`和`workup_plan`字段
 
 5. **Step 5：回填证据并输出终点结论包**
-   - 调用 `clinical-parsing-service`（脑区A）回填证据
-   - 调用 `diagnosis-engine-service`（脑区C）更新三层排序
-   - 调用 `treatment-engine-service`（脑区E）生成治疗方案
-   - 调用 `risk-assessment-service`（脑区F）进行最终风险评估
-   - 调用 `explanation-service`（脑区G）生成终点结论包
+   - 调用 `clinical-parsing-service`（工具1）回填证据
+   - 调用 `diagnosis-engine-service`（工具3）更新三层排序
+   - 调用 `treatment-engine-service`（工具5）生成治疗方案
+   - 调用 `risk-assessment-service`（工具6）进行最终风险评估
+   - 调用 `explanation-service`（工具7）生成终点结论包
    - 更新CDP的`management_plan`、`triage`、`evidence_graph`字段
 
 **算法复杂度**：O(n)，n为诊断步骤数（固定为5步）
@@ -679,37 +679,37 @@ follow_up
 
 #### 5.1.2 下游服务（5步AI循证诊断流程）
 
-- **clinical-parsing-service**（病例理解服务 - 脑区A）
+- **clinical-parsing-service**（病例理解服务 - 工具1）
   - **依赖关系**：必须依赖
   - **调用方式**：同步HTTP调用（Feign）
   - **调用场景**：Step 1（识别问题）、Step 5（回填证据）
 
-- **dialog-service**（对话管理服务 - 脑区B）
+- **dialog-service**（对话管理服务 - 工具2）
   - **依赖关系**：必须依赖
   - **调用方式**：同步HTTP调用（Feign）
   - **调用场景**：Step 1（信息缺口识别）、Step 3（分流路径设计）、Step 4（关键证据采集）
 
-- **diagnosis-engine-service**（诊断引擎服务 - 脑区C）
+- **diagnosis-engine-service**（诊断引擎服务 - 工具3）
   - **依赖关系**：必须依赖
   - **调用方式**：同步HTTP调用（Feign）
   - **调用场景**：Step 2（构建鉴别诊断候选集）、Step 3（组织候选集）、Step 4（证据分析）、Step 5（更新三层排序）
 
-- **workup-planner-service**（检查建议服务 - 脑区D）
+- **workup-planner-service**（检查建议服务 - 工具4）
   - **依赖关系**：必须依赖
   - **调用方式**：同步HTTP调用（Feign）
   - **调用场景**：Step 4（构建验证计划）
 
-- **treatment-engine-service**（治疗推理服务 - 脑区E）
+- **treatment-engine-service**（治疗推理服务 - 工具5）
   - **依赖关系**：必须依赖
   - **调用方式**：同步HTTP调用（Feign）
   - **调用场景**：Step 5（生成治疗方案）
 
-- **risk-assessment-service**（风险评估服务 - 脑区F）
+- **risk-assessment-service**（风险评估服务 - 工具6）
   - **依赖关系**：必须依赖
   - **调用方式**：同步HTTP调用（Feign）
   - **调用场景**：Step 2（风险评估）、Step 5（最终风险评估）
 
-- **explanation-service**（解释生成服务 - 脑区G）
+- **explanation-service**（解释生成服务 - 工具7）
   - **依赖关系**：必须依赖
   - **调用方式**：同步HTTP调用（Feign）
   - **调用场景**：Step 5（生成终点结论包）

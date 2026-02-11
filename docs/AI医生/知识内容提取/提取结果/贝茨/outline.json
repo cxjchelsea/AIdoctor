@@ -1,0 +1,729 @@
+{
+  "book": {
+    "title_en": "Bates’ Guide to Physical Examination and History Taking",
+    "title_zh": "贝茨体格检查和病史采集指南",
+    "edition": "21st",
+    "page_type": "print_page",
+    "units": [
+      {
+        "unit_id": "U1",
+        "title_en": "Foundations of Health Assessment",
+        "title_zh": "健康评估基础",
+        "start_page": 1,
+        "chapters": [
+          {
+            "chapter_id": "C1",
+            "title_en": "Foundations for Clinical Proficiency",
+            "title_zh": "临床能力基础",
+            "start_page": 3,
+            "sections": [
+              {
+                "title_en": "Patient Assessment: Comprehensive or Focused",
+                "title_zh": "患者评估：全面评估与重点评估",
+                "start_page": 5
+              },
+              {
+                "title_en": "Subjective Versus Objective Data",
+                "title_zh": "主观资料与客观资料",
+                "start_page": 6
+              },
+              {
+                "title_en": "The Comprehensive Adult Health History",
+                "title_zh": "成人全面健康史",
+                "start_page": 7
+              },
+              {
+                "title_en": "The Comprehensive Physical Examination",
+                "title_zh": "全面体格检查",
+                "start_page": 14
+              },
+              {
+                "title_en": "Clinical Reasoning, Assessment, and Plan",
+                "title_zh": "临床推理、评估与诊疗计划",
+                "start_page": 24
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录临床发现",
+                "start_page": 38
+              }
+            ]
+          },
+          {
+            "chapter_id": "C2",
+            "title_en": "Evaluating Clinical Evidence",
+            "title_zh": "临床证据的评估",
+            "start_page": 45,
+            "sections": [
+              {
+                "title_en": "History and Physical Exam as Diagnostic Tests",
+                "title_zh": "病史与体检作为诊断工具",
+                "start_page": 46
+              },
+              {
+                "title_en": "Evaluating Diagnostic Tests",
+                "title_zh": "诊断试验评估（效度、重复性）",
+                "start_page": 47
+              },
+              {
+                "title_en": "Health Promotion",
+                "title_zh": "健康促进",
+                "start_page": 55
+              }
+            ]
+          },
+          {
+            "chapter_id": "C3",
+            "title_en": "Interviewing and the Health History",
+            "title_zh": "医患访谈与健康史采集",
+            "start_page": 65,
+            "sections": [
+              {
+                "title_en": "Fundamentals of Skilled Interviewing",
+                "title_zh": "医学访谈基本技能",
+                "start_page": 68
+              },
+              {
+                "title_en": "Cultural Context of the Interview",
+                "title_zh": "医学访谈中的文化背景",
+                "start_page": 82
+              },
+              {
+                "title_en": "Advanced Interviewing",
+                "title_zh": "高级访谈技巧",
+                "start_page": 86
+              },
+              {
+                "title_en": "Ethics and Professionalism",
+                "title_zh": "医学伦理与职业素养",
+                "start_page": 100
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "unit_id": "U2",
+        "title_en": "Regional Examinations",
+        "title_zh": "系统体格检查",
+        "start_page": 109,
+        "chapters": [
+          {
+            "chapter_id": "C4",
+            "title_en": "Beginning the Physical Examination: General Survey, Vital Signs, and Pain",
+            "title_zh": "一般状态、生命体征与疼痛评估",
+            "start_page": 111,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 112
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 114
+              },
+              {
+                "title_en": "The General Survey",
+                "title_zh": "一般状况评估",
+                "start_page": 120
+              },
+              {
+                "title_en": "The Vital Signs",
+                "title_zh": "生命体征",
+                "start_page": 123
+              },
+              {
+                "title_en": "Acute and Chronic Pain",
+                "title_zh": "急性与慢性疼痛",
+                "start_page": 134
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 138
+              }
+            ]
+          },
+          {
+            "chapter_id": "C5",
+            "title_en": "Behavior and Mental Status",
+            "title_zh": "行为与精神状态检查",
+            "start_page": 147,
+            "sections": [
+              {
+                "title_en": "Symptoms and Behavior",
+                "title_zh": "症状与行为",
+                "start_page": 148
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 153
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 156
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 158
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 168
+              }
+            ]
+          },
+          {
+            "chapter_id": "C6",
+            "title_en": "The Skin, Hair, and Nails",
+            "title_zh": "皮肤、毛发与指甲",
+            "start_page": 173,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 173
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 175
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 176
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 180
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 189
+              }
+            ]
+          },
+          {
+            "chapter_id": "C7",
+            "title_en": "The Head and Neck",
+            "title_zh": "头部与颈部",
+            "start_page": 215,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 215
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 222
+              },
+              {
+                "title_en": "Anatomy and Physiology and Techniques of Examination",
+                "title_zh": "解剖与生理及检查技术",
+                "start_page": 224
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 266
+              }
+            ]
+          },
+          {
+            "chapter_id": "C8",
+            "title_en": "The Thorax and Lungs",
+            "title_zh": "胸廓与肺",
+            "start_page": 303,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 303
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 310
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 313
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 317
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 329
+              }
+            ]
+          },
+          {
+            "chapter_id": "C9",
+            "title_en": "The Cardiovascular System",
+            "title_zh": "心血管系统",
+            "start_page": 343,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 343
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 355
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 358
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 373
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 399
+              }
+            ]
+          },
+          {
+            "chapter_id": "C10",
+            "title_en": "The Breasts and Axillae",
+            "title_zh": "乳房与腋窝",
+            "start_page": 419,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 419
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 422
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 423
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 434
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 443
+              }
+            ]
+          },
+          {
+            "chapter_id": "C11",
+            "title_en": "The Abdomen",
+            "title_zh": "腹部",
+            "start_page": 449,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 449
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 453
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 464
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 470
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 487
+              }
+            ]
+          },
+          {
+            "chapter_id": "C12",
+            "title_en": "The Peripheral Vascular System",
+            "title_zh": "外周血管系统",
+            "start_page": 509,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 510
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 517
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 519
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 521
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 532
+              }
+            ]
+          },
+          {
+            "chapter_id": "C13",
+            "title_en": "Male Genitalia and Hernias",
+            "title_zh": "男性生殖器与疝",
+            "start_page": 541,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 541
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 544
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 547
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 550
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 556
+              }
+            ]
+          },
+          {
+            "chapter_id": "C14",
+            "title_en": "Female Genitalia",
+            "title_zh": "女性生殖器",
+            "start_page": 565,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 565
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 569
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 575
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 583
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 595
+              }
+            ]
+          },
+          {
+            "chapter_id": "C15",
+            "title_en": "The Anus, Rectum, and Prostate",
+            "title_zh": "肛门、直肠与前列腺",
+            "start_page": 607,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 607
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 609
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 610
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 616
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 619
+              }
+            ]
+          },
+          {
+            "chapter_id": "C16",
+            "title_en": "The Musculoskeletal System",
+            "title_zh": "肌肉骨骼系统",
+            "start_page": 625,
+            "sections": [
+              {
+                "title_en": "Approach to Musculoskeletal Disorders",
+                "title_zh": "肌肉骨骼疾病的评估方法",
+                "start_page": 626
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 630
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 636
+              },
+              {
+                "title_en": "Examination of Specific Joints",
+                "title_zh": "各关节的检查",
+                "start_page": 642
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 695
+              }
+            ]
+          },
+          {
+            "chapter_id": "C17",
+            "title_en": "The Nervous System",
+            "title_zh": "神经系统",
+            "start_page": 711,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 713
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 721
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 726
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 733
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 773
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "unit_id": "U3",
+        "title_en": "Special Populations",
+        "title_zh": "特殊人群评估",
+        "start_page": 797,
+        "chapters": [
+          {
+            "chapter_id": "C18",
+            "title_en": "Assessing Children: Infancy through Adolescence",
+            "title_zh": "儿童评估（新生儿至青少年）",
+            "start_page": 799,
+            "sections": [
+              {
+                "title_en": "General Principles of Child Development",
+                "title_zh": "儿童生长发育的一般原则",
+                "start_page": 800
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Key Components",
+                "title_zh": "健康促进与咨询：关键组成部分",
+                "start_page": 801
+              },
+              {
+                "title_en": "Assessing the Newborn",
+                "title_zh": "新生儿评估",
+                "start_page": 803
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 812
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 813
+              },
+              {
+                "title_en": "Assessing Young and School-Aged Children",
+                "title_zh": "幼儿及学龄期儿童评估",
+                "start_page": 853
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 855
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 860
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 862
+              },
+              {
+                "title_en": "Assessing Adolescents",
+                "title_zh": "青少年评估",
+                "start_page": 890
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 891
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 893
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 894
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 906
+              }
+            ]
+          },
+          {
+            "chapter_id": "C19",
+            "title_en": "The Pregnant Woman",
+            "title_zh": "孕妇评估",
+            "start_page": 927,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 927
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 932
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 935
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 940
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 951
+              }
+            ]
+          },
+          {
+            "chapter_id": "C20",
+            "title_en": "The Older Adult",
+            "title_zh": "老年人评估",
+            "start_page": 955,
+            "sections": [
+              {
+                "title_en": "Anatomy and Physiology",
+                "title_zh": "解剖与生理",
+                "start_page": 957
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 965
+              },
+              {
+                "title_en": "Health Promotion and Counseling: Evidence and Recommendations",
+                "title_zh": "健康促进与咨询：循证依据与建议",
+                "start_page": 976
+              },
+              {
+                "title_en": "Techniques of Examination",
+                "title_zh": "检查技术",
+                "start_page": 985
+              },
+              {
+                "title_en": "Recording Your Findings",
+                "title_zh": "记录检查结果",
+                "start_page": 998
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

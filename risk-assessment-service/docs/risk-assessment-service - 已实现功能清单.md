@@ -1,6 +1,6 @@
 # risk-assessment-service - 已实现功能清单
 
-本文档记录了 `risk-assessment-service`（风险评估服务，脑区F）的已实现功能。
+本文档记录了 `risk-assessment-service`（风险评估服务，tool_6）的已实现功能。
 
 **文档版本**: v1.0  
 **最后更新**: 2025-01-24  

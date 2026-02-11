@@ -184,7 +184,7 @@ export interface PaginatedResponse<T> {
   totalPages: number
 }
 
-// 健康状态判定结果（脑区0）
+// 健康状态判定结果（tool_0）
 export interface HealthStateAssessmentResult {
   needsClinicalMode: boolean
   workMode: WorkMode

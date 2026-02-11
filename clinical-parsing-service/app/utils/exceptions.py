@@ -21,7 +21,7 @@ class BusinessException(Exception):
 
 def get_http_status_code(code: int) -> int:
     """根据错误码获取HTTP状态码"""
-    # 脑区A：病例理解服务错误码（1100-1199）
+    # tool_1：病例理解服务错误码（1100-1199）
     if 1100 <= code < 1200:
         return status.HTTP_500_INTERNAL_SERVER_ERROR
     # 通用错误码（5000-5999）
@@ -49,6 +49,22 @@ def setup_exception_handlers(app):
         import uuid
         trace_id = str(uuid.uuid4())[:16]
         
+        # 从请求头获取requestId
+        request_id = request.headers.get("x-request-id") or request.headers.get("X-Request-Id")
+        
+        # 从请求中提取cdpId（如果存在）
+        cdp_id = None
+        try:
+            # 尝试从请求体或查询参数中获取cdpId
+            if hasattr(request.state, 'cdp_id'):
+                cdp_id = request.state.cdp_id
+        except:
+            pass
+        
+        # 根据错误类型判断是否可重试
+        # tool_1错误码（1100-1199）中的业务错误通常可重试
+        retryable = (1100 <= exc.code < 1200) and exc.code not in (1105, 1106)  # 歧义判定和OCR失败可能不可重试
+        
         return JSONResponse(
             status_code=http_status,
             content={
@@ -57,6 +73,11 @@ def setup_exception_handlers(app):
                 "data": None,
                 "timestamp": int(time.time() * 1000),
                 "traceId": trace_id,
+                "requestId": request_id,
+                "service": "clinical-parsing-service",
+                "agentId": "tool_1",
+                "cdpId": cdp_id,
+                "retryable": retryable,
                 "path": str(request.url.path)
             }
         )
@@ -74,6 +95,13 @@ def setup_exception_handlers(app):
                 "message": error["msg"]
             })
         
+        # 生成traceId
+        import uuid
+        trace_id = str(uuid.uuid4())[:16]
+        
+        # 从请求头获取requestId
+        request_id = request.headers.get("x-request-id") or request.headers.get("X-Request-Id")
+        
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
@@ -82,6 +110,12 @@ def setup_exception_handlers(app):
                 "data": None,
                 "errors": errors,
                 "timestamp": int(time.time() * 1000),
+                "traceId": trace_id,
+                "requestId": request_id,
+                "service": "clinical-parsing-service",
+                "agentId": "tool_1",
+                "cdpId": None,
+                "retryable": False,
                 "path": str(request.url.path)
             }
         )
@@ -95,6 +129,9 @@ def setup_exception_handlers(app):
         import uuid
         trace_id = str(uuid.uuid4())[:16]
         
+        # 从请求头获取requestId
+        request_id = request.headers.get("x-request-id") or request.headers.get("X-Request-Id")
+        
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
@@ -103,6 +140,11 @@ def setup_exception_handlers(app):
                 "data": None,
                 "timestamp": int(time.time() * 1000),
                 "traceId": trace_id,
+                "requestId": request_id,
+                "service": "clinical-parsing-service",
+                "agentId": "tool_1",
+                "cdpId": None,
+                "retryable": False,
                 "path": str(request.url.path)
             }
         )

@@ -1,0 +1,19 @@
+# HPO数据提取脚本依赖
+# 使用Python标准库，无需额外依赖
+# 如果需要更好的性能，可以安装lxml:
+# lxml>=4.9.0
+
+# PDF粗解析脚本依赖
+pdfplumber>=0.9.0
+
+# PDF OCR支持（可选，用于处理扫描版PDF）
+# 注意：需要系统安装以下软件：
+# 1. Tesseract OCR: https://github.com/tesseract-ocr/tesseract
+# 2. Poppler: https://poppler.freedesktop.org/
+#    Windows: https://github.com/oschwartz10612/poppler-windows/releases
+pytesseract>=0.3.10
+pdf2image>=1.16.3
+pillow>=10.0.0
+
+# 环境变量加载（用于读取.env文件）
+python-dotenv>=1.0.0

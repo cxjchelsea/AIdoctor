@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * 终点结论包构建器
- * Step 5：回填证据并输出终点结论包 - 构建终点结论包（脑区G + 脑区E + 脑区F）
+ * Step 5：回填证据并输出终点结论包 - 构建终点结论包（tool_7 + tool_5 + tool_6）
  */
 @Slf4j
 @Service

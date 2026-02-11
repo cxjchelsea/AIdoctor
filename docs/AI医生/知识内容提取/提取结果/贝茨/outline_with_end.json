@@ -1,0 +1,313 @@
+{
+  "book": {
+    "title_en": "Bates’ Guide to Physical Examination and History Taking",
+    "title_zh": "贝茨体格检查和病史采集指南",
+    "edition": "21st",
+    "page_type": "print_page",
+    "units": [
+      {
+        "unit_id": "U1",
+        "title_en": "Foundations of Health Assessment",
+        "title_zh": "健康评估基础",
+        "start_page": 1,
+        "end_page": 110,
+        "chapters": [
+          {
+            "chapter_id": "C1",
+            "title_en": "Foundations for Clinical Proficiency",
+            "title_zh": "临床能力基础",
+            "start_page": 3,
+            "end_page": 110,
+            "sections": [
+              {
+                "title_en": "The Comprehensive Adult Health History",
+                "title_zh": "成人全面健康史",
+                "start_page": 7,
+                "end_page": 110
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "unit_id": "U2",
+        "title_en": "Regional Examinations",
+        "title_zh": "系统体格检查",
+        "start_page": 111,
+        "end_page": 833,
+        "chapters": [
+          {
+            "chapter_id": "C4",
+            "title_en": "Beginning the Physical Examination: General Survey, Vital Signs, and Pain",
+            "title_zh": "体格检查开始：一般情况、生命体征与疼痛",
+            "start_page": 111,
+            "end_page": 152,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 112,
+                "end_page": 152
+              }
+            ]
+          },
+          {
+            "chapter_id": "C5",
+            "title_en": "Behavior and Mental Status",
+            "title_zh": "行为与精神状态",
+            "start_page": 153,
+            "end_page": 174,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 153,
+                "end_page": 174
+              }
+            ]
+          },
+          {
+            "chapter_id": "C6",
+            "title_en": "The Skin, Hair, and Nails",
+            "title_zh": "皮肤、毛发与指（趾）甲",
+            "start_page": 175,
+            "end_page": 223,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 175,
+                "end_page": 223
+              }
+            ]
+          },
+          {
+            "chapter_id": "C7",
+            "title_en": "The Head and Neck",
+            "title_zh": "头部与颈部",
+            "start_page": 224,
+            "end_page": 309,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 224,
+                "end_page": 309
+              }
+            ]
+          },
+          {
+            "chapter_id": "C8",
+            "title_en": "The Thorax and Lungs",
+            "title_zh": "胸廓与肺",
+            "start_page": 310,
+            "end_page": 354,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 310,
+                "end_page": 354
+              }
+            ]
+          },
+          {
+            "chapter_id": "C9",
+            "title_en": "The Cardiovascular System",
+            "title_zh": "心血管系统",
+            "start_page": 355,
+            "end_page": 421,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 355,
+                "end_page": 421
+              }
+            ]
+          },
+          {
+            "chapter_id": "C10",
+            "title_en": "The Breasts and Axillae",
+            "title_zh": "乳房与腋窝",
+            "start_page": 422,
+            "end_page": 452,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 422,
+                "end_page": 452
+              }
+            ]
+          },
+          {
+            "chapter_id": "C11",
+            "title_en": "The Abdomen",
+            "title_zh": "腹部",
+            "start_page": 453,
+            "end_page": 516,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 453,
+                "end_page": 516
+              }
+            ]
+          },
+          {
+            "chapter_id": "C12",
+            "title_en": "The Peripheral Vascular System",
+            "title_zh": "外周血管系统",
+            "start_page": 517,
+            "end_page": 543,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 517,
+                "end_page": 543
+              }
+            ]
+          },
+          {
+            "chapter_id": "C13",
+            "title_en": "Male Genitalia and Hernias",
+            "title_zh": "男性生殖器与疝",
+            "start_page": 544,
+            "end_page": 568,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 544,
+                "end_page": 568
+              }
+            ]
+          },
+          {
+            "chapter_id": "C14",
+            "title_en": "Female Genitalia",
+            "title_zh": "女性生殖器",
+            "start_page": 569,
+            "end_page": 608,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 569,
+                "end_page": 608
+              }
+            ]
+          },
+          {
+            "chapter_id": "C15",
+            "title_en": "The Anus, Rectum, and Prostate",
+            "title_zh": "肛门、直肠与前列腺",
+            "start_page": 609,
+            "end_page": 629,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 609,
+                "end_page": 629
+              }
+            ]
+          },
+          {
+            "chapter_id": "C16",
+            "title_en": "The Musculoskeletal System",
+            "title_zh": "肌肉骨骼系统",
+            "start_page": 630,
+            "end_page": 710,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 630,
+                "end_page": 710
+              }
+            ]
+          },
+          {
+            "chapter_id": "C17",
+            "title_en": "The Nervous System",
+            "title_zh": "神经系统",
+            "start_page": 711,
+            "end_page": 833,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 711,
+                "end_page": 833
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "unit_id": "U3",
+        "title_en": "Special Populations",
+        "title_zh": "特殊人群",
+        "start_page": 834,
+        "end_page": 1578,
+        "chapters": [
+          {
+            "chapter_id": "C18",
+            "title_en": "Infants, Children, and Adolescents",
+            "title_zh": "婴幼儿、儿童与青少年",
+            "start_page": 835,
+            "end_page": 915,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 855,
+                "end_page": 890
+              },
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 891,
+                "end_page": 915
+              }
+            ]
+          },
+          {
+            "chapter_id": "C19",
+            "title_en": "The Pregnant Woman",
+            "title_zh": "孕妇",
+            "start_page": 916,
+            "end_page": 964,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 932,
+                "end_page": 964
+              }
+            ]
+          },
+          {
+            "chapter_id": "C20",
+            "title_en": "The Older Adult",
+            "title_zh": "老年人",
+            "start_page": 965,
+            "end_page": 1578,
+            "sections": [
+              {
+                "title_en": "The Health History",
+                "title_zh": "健康史采集",
+                "start_page": 965,
+                "end_page": 1578
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

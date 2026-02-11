@@ -1,5 +1,5 @@
 """
-解释生成服务（脑区G）
+解释生成服务（tool_7）
 """
 import logging
 import httpx

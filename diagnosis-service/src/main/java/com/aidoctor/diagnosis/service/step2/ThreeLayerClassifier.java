@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 /**
  * 三层分层分类器
- * Step 2：构建鉴别诊断候选集并分层 - 将候选疾病分为三层（脑区C + 脑区F）
+ * Step 2：构建鉴别诊断候选集并分层 - 将候选疾病分为三层（tool_3 + tool_6）
  */
 @Slf4j
 @Service

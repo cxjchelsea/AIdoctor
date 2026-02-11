@@ -10,6 +10,7 @@ from app.services.table_import_service import TableImportService
 from app.services.config_import_service import ConfigImportService
 from app.services.validation_service import ValidationService
 from app.services.schema_service import SchemaService
+from app.services.book_service import BookService
 
 router = APIRouter()
 
@@ -19,6 +20,7 @@ table_import_service = TableImportService()
 config_import_service = ConfigImportService()
 validation_service = ValidationService()
 schema_service = SchemaService()
+book_service = BookService()
 
 
 @router.post("/import/kg/coding-standards", response_model=ImportResult)
@@ -250,6 +252,66 @@ async def get_complete_schema():
             "status": "success",
             "result": schema
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 书籍管理API ====================
+
+@router.get("/books/registry")
+async def get_book_registry():
+    """获取所有已注册的书籍列表"""
+    try:
+        registry = book_service.get_book_registry()
+        return registry
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/books/registry/{book_id}")
+async def get_book_by_id(book_id: str):
+    """根据book_id获取书籍信息"""
+    try:
+        book = book_service.get_book_by_id(book_id)
+        if book is None:
+            raise HTTPException(status_code=404, detail=f"书籍不存在: {book_id}")
+        return book
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/books/structure/{book_id}")
+async def get_book_structure(book_id: str):
+    """获取书籍的结构解析结果"""
+    try:
+        structure = book_service.get_book_structure(book_id)
+        if structure is None:
+            raise HTTPException(status_code=404, detail=f"未找到书籍结构解析结果: {book_id}")
+        return structure
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/books/registry/{book_id}/status")
+async def update_book_status(book_id: str, status: dict):
+    """更新书籍状态"""
+    try:
+        new_status = status.get("status")
+        if not new_status:
+            raise HTTPException(status_code=400, detail="缺少status字段")
+        success = book_service.update_book_status(book_id, new_status)
+        return {
+            "status": "success",
+            "message": "状态更新成功",
+            "book_id": book_id,
+            "new_status": new_status
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

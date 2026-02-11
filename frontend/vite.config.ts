@@ -13,19 +13,19 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // 健康状态判定服务（脑区0）- 端口8081
+      // 健康状态判定服务（tool_0）- 端口8081
       '/api/v1/health-state-assessment': {
         target: 'http://localhost:8081',
         changeOrigin: true,
         rewrite: (path) => path, // 不重写路径
       },
-      // 病例理解服务（脑区A）- 端口8082
+      // 病例理解服务（tool_1）- 端口8082
       '/api/v1/parsing': {
         target: 'http://localhost:8082',
         changeOrigin: true,
         rewrite: (path) => path, // 不重写路径
       },
-      // 对话服务（脑区B）- 端口8088
+      // 对话服务（tool_2）- 端口8088
       '/api/v1/dialog': {
         target: 'http://localhost:8088',
         changeOrigin: true,

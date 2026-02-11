@@ -18,7 +18,7 @@
 
 ### 1.1 服务定位
 
-- **对应脑区**：脑区0（健康状态判定）
+- **对应工具**：tool_0（健康状态判定工具）
 - **在架构中的位置**：系统入口服务，所有用户请求的第一站，位于双通道推理架构的入口
 - **服务职责**：
   1. 执行入口判定流程（P0模块，Step 1-5）
@@ -294,11 +294,96 @@ python-multipart==0.0.6  # 文件上传支持
 
 ### 3.1 API端点定义
 
-#### 3.1.1 健康状态判定接口
+#### 3.1.1 统一工具调用接口（新增）
+
+**接口路径**：`POST /api/v1/tools/tool_0/invoke`
+
+**接口描述**：统一的工具调用接口，符合《工具调用协议.md》规范。主Agent通过此接口调用工具。
+
+**请求方法**：POST
+
+**请求头**：
+```
+Content-Type: application/json
+```
+
+**请求体**（ToolContext格式）：
+```json
+{
+  "trace_id": "string",
+  "cdp_reference": {
+    "cdp_id": "string",
+    "version": 0,
+    "read_fields": ["cdp.patient_state"]
+  },
+  "agent_state_summary": {
+    "current_step": 0,
+    "work_mode": "string"
+  },
+  "constraints": {
+    "max_time_seconds": 0,
+    "max_cost": 0.0,
+    "risk_level_limit": "string"
+  },
+  "call_params": {}
+}
+```
+
+**响应体**（ToolResult格式）：
+```json
+{
+  "trace_id": "string",
+  "tool_id": "tool_0",
+  "status": "success",
+  "payload": {},
+  "evidence": [
+    {
+      "source": "rule",
+      "reference": "work_mode_determination_rule",
+      "strength": "strong",
+      "evidence_name": "工作态判定规则"
+    }
+  ],
+  "quality": {
+    "confidence": 0.9,
+    "completeness": 0.85,
+    "accuracy": 0.88
+  },
+  "suggested_writes": [
+    {
+      "field_path": "cdp.health_state_assessment",
+      "value": {},
+      "reason": "更新健康状态判定结果"
+    }
+  ],
+  "errors": [],
+  "duration_ms": 0,
+  "metadata": {}
+}
+```
+
+**实现方式**：
+1. 从ToolContext中提取CDP引用信息
+2. 通过HTTP调用diagnosis-service的CDP查询接口获取数据
+3. 根据read_fields提取指定字段的数据
+4. 构建现有服务的请求格式（HealthStateAssessmentRequest）
+5. 调用现有业务逻辑服务（HealthStateAssessmentService）
+6. 将业务结果转换为ToolResult格式
+7. 构建evidence引用和suggested_writes建议
+
+**代码位置**：
+- 接口实现：`app/api/routes.py` 的 `invoke_tool_0()` 函数
+- 数据模型：`app/models/tool_context.py`、`app/models/tool_result.py`
+- CDP读取工具：`app/utils/cdp_reader.py`
+
+**参考文档**：
+- 《7.接口规范/工具调用协议.md》- 工具调用协议详细规范
+
+#### 3.1.2 健康状态判定接口（原有接口，保持向后兼容）
 
 **接口路径**：`POST /api/v1/health-state-assessment/assess`
 
-**接口描述**：健康状态判定（脑区0），整合入口判定流程（P0模块，Step 1-5）和工作态判定。
+**接口描述**：健康状态判定（tool_0），整合入口判定流程（P0模块，Step 1-5）和工作态判定。
 
 **请求方法**：POST
 

@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * 鉴别诊断候选集生成服务
- * Step 2：构建鉴别诊断候选集并分层 - 生成鉴别诊断候选集（脑区C - DR.KNOWS核心）
+ * Step 2：构建鉴别诊断候选集并分层 - 生成鉴别诊断候选集（tool_3 - DR.KNOWS核心）
  */
 @Slf4j
 @Service

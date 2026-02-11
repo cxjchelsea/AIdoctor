@@ -21,7 +21,7 @@ class BusinessException(Exception):
 
 def get_http_status_code(code: int) -> int:
     """根据错误码获取HTTP状态码"""
-    # 脑区0：健康状态判定服务错误码（1000-1099）
+    # 工具0：健康状态判定服务错误码（1000-1099）
     if 1000 <= code < 1100:
         return status.HTTP_500_INTERNAL_SERVER_ERROR
     # 通用错误码（5000-5999）

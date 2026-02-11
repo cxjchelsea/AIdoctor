@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * 信息缺口识别与分级服务
- * Step 1：识别问题 - 识别信息缺口并按等级分类（脑区B）
+ * Step 1：识别问题 - 识别信息缺口并按等级分类（tool_2）
  */
 @Slf4j
 @Service

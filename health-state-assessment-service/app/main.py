@@ -1,5 +1,5 @@
 """
-健康状态判定服务主入口（脑区0）
+健康状态判定服务主入口（tool_0）
 """
 import time
 import asyncio
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="健康状态判定服务",
     version="1.0.0",
-    description="AI医生系统的健康状态判定服务（脑区0：健康状态判定）",
+    description="AI医生系统的健康状态判定服务（tool_0：健康状态判定）",
     lifespan=lifespan
 )
 

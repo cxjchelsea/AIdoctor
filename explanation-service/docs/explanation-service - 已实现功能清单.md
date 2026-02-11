@@ -1,6 +1,6 @@
 # explanation-service - 已实现功能清单
 
-本文档记录了 `explanation-service`（解释生成服务，脑区G）的已实现功能。
+本文档记录了 `explanation-service`（解释生成服务，tool_7）的已实现功能。
 
 **文档版本**: v1.0  
 **最后更新**: 2025-01  

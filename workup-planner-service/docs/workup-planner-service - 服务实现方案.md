@@ -17,7 +17,7 @@
 
 ### 1.1 服务定位
 
-- **对应脑区**：脑区D（检查建议引擎）
+- **对应工具**：tool_4（检查建议工具）
 - **在架构中的位置**：诊断流程中的检查建议环节，位于诊断引擎服务之后，治疗推理服务之前
 - **服务职责**：
   1. 检查价值评估（评估各项检查对诊断的价值和必要性）
@@ -343,7 +343,92 @@ numpy==1.24.3  # 数值计算（信息增益计算）
 
 ### 3.1 API端点定义
 
-#### 3.1.1 生成检查建议接口
+#### 3.1.1 统一工具调用接口（新增）
+
+**接口路径**：`POST /api/v1/tools/tool_4/invoke`
+
+**接口描述**：统一的工具调用接口，符合《工具调用协议.md》规范。主Agent通过此接口调用工具。
+
+**请求方法**：POST
+
+**请求头**：
+```
+Content-Type: application/json
+```
+
+**请求体**（ToolContext格式）：
+```json
+{
+  "trace_id": "string",
+  "cdp_reference": {
+    "cdp_id": "string",
+    "version": 0,
+    "read_fields": ["cdp.ddx", "cdp.triage"]
+  },
+  "agent_state_summary": {
+    "current_step": 0,
+    "work_mode": "string"
+  },
+  "constraints": {
+    "max_time_seconds": 0,
+    "max_cost": 0.0,
+    "risk_level_limit": "string"
+  },
+  "call_params": {}
+}
+```
+
+**响应体**（ToolResult格式）：
+```json
+{
+  "trace_id": "string",
+  "tool_id": "tool_4",
+  "status": "success",
+  "payload": {},
+  "evidence": [
+    {
+      "source": "rule",
+      "reference": "workup_planning_rule",
+      "strength": "medium",
+      "evidence_name": "检查建议生成规则"
+    }
+  ],
+  "quality": {
+    "confidence": 0.85,
+    "completeness": 0.80,
+    "accuracy": 0.82
+  },
+  "suggested_writes": [
+    {
+      "field_path": "cdp.workup_plan",
+      "value": {},
+      "reason": "更新检查计划"
+    }
+  ],
+  "errors": [],
+  "duration_ms": 0,
+  "metadata": {}
+}
+```
+
+**实现方式**：
+1. 从ToolContext中提取CDP引用信息
+2. 通过HTTP调用diagnosis-service的CDP查询接口获取数据
+3. 根据read_fields提取指定字段的数据
+4. 构建现有服务的请求格式（WorkupPlanRequest）
+5. 调用现有业务逻辑服务（WorkupPlanner）
+6. 将业务结果转换为ToolResult格式
+7. 构建evidence引用和suggested_writes建议
+
+**代码位置**：
+- 接口实现：`app/api/routes.py` 的 `invoke_tool_4()` 函数
+- 数据模型：`app/models/tool_context.py`、`app/models/tool_result.py`
+- CDP读取工具：`app/utils/cdp_reader.py`
+
+**参考文档**：
+- 《7.接口规范/工具调用协议.md》- 工具调用协议详细规范
+
+#### 3.1.2 生成检查建议接口（原有接口，保持向后兼容）
 
 **接口路径**：`POST /api/v1/workup/plan`
 

@@ -1,6 +1,6 @@
 # treatment-engine-service - 已实现功能清单
 
-本文档记录了 `treatment-engine-service`（治疗推理服务，脑区E）的已实现功能。
+本文档记录了 `treatment-engine-service`（治疗推理服务，tool_5）的已实现功能。
 
 **文档版本**: v1.0  
 **最后更新**: 2025-01-24  

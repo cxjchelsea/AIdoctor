@@ -104,32 +104,32 @@ public class GlobalExceptionHandler {
      * 按照《AI医生系统-错误处理规范.md》定义
      */
     private HttpStatus getHttpStatus(Integer code) {
-        // 脑区0：健康状态判定服务错误码（1000-1099）
+        // tool_0：健康状态判定服务错误码（1000-1099）
         if (code >= 1000 && code < 1100) {
             return HttpStatus.INTERNAL_SERVER_ERROR;
         }
-        // 脑区A：病例理解服务错误码（1100-1199）
+        // tool_1：病例理解服务错误码（1100-1199）
         else if (code >= 1100 && code < 1200) {
             return HttpStatus.INTERNAL_SERVER_ERROR;
         }
-        // 脑区B：主动问诊服务错误码（1200-1299）
+        // tool_2：主动问诊服务错误码（1200-1299）
         else if (code >= 1200 && code < 1300) {
             if (code == 1206) return HttpStatus.BAD_REQUEST; // 追问次数超限
             return HttpStatus.INTERNAL_SERVER_ERROR;
         }
-        // 脑区D：检查建议引擎错误码（1300-1399）
+        // tool_4：检查建议引擎错误码（1300-1399）
         else if (code >= 1300 && code < 1400) {
             return HttpStatus.INTERNAL_SERVER_ERROR;
         }
-        // 脑区E：治疗推理引擎错误码（1400-1499）
+        // tool_5：治疗推理引擎错误码（1400-1499）
         else if (code >= 1400 && code < 1500) {
             return HttpStatus.INTERNAL_SERVER_ERROR;
         }
-        // 脑区F：风险评估引擎错误码（1500-1599）
+        // tool_6：风险评估引擎错误码（1500-1599）
         else if (code >= 1500 && code < 1600) {
             return HttpStatus.INTERNAL_SERVER_ERROR;
         }
-        // 脑区G：可解释性服务错误码（1600-1699）
+        // tool_7：可解释性服务错误码（1600-1699）
         else if (code >= 1600 && code < 1700) {
             return HttpStatus.INTERNAL_SERVER_ERROR;
         }
@@ -152,7 +152,7 @@ public class GlobalExceptionHandler {
             if (code == 2012) return HttpStatus.INTERNAL_SERVER_ERROR; // CDP关联失败
             return HttpStatus.BAD_REQUEST;
         }
-        // 脑区C：鉴别诊断引擎错误码（3000-3999）
+        // tool_3：鉴别诊断引擎错误码（3000-3999）
         else if (code >= 3000 && code < 4000) {
             if (code == 3001) return HttpStatus.SERVICE_UNAVAILABLE; // 诊断引擎服务不可用
             if (code == 3002) return HttpStatus.GATEWAY_TIMEOUT; // 诊断引擎调用超时

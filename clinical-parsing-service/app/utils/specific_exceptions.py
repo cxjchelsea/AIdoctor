@@ -1,7 +1,7 @@
 """
 病例理解服务具体异常类
 按照《AI医生系统-错误处理规范.md》定义
-脑区A：病例理解服务错误码（1100-1199）
+tool_1：病例理解服务错误码（1100-1199）
 """
 from app.utils.exceptions import BusinessException
 
@@ -36,8 +36,8 @@ class AmbiguityDeterminationFailedException(BusinessException):
         super().__init__(1105, f"歧义表达判定失败: {reason}")
 
 
-class OcrRecognitionFailedBrainAException(BusinessException):
-    """OCR识别失败异常（脑区A调用）"""
+class OcrRecognitionFailedTool1Exception(BusinessException):
+    """OCR识别失败异常（工具1调用）"""
     def __init__(self, reason: str = ""):
-        super().__init__(1106, f"OCR识别失败（脑区A调用）: {reason}")
+        super().__init__(1106, f"OCR识别失败（工具1调用）: {reason}")
 

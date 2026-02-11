@@ -1,6 +1,6 @@
 # explanation-service - 服务实现方案
 
-> **文档定位**：本文档定义explanation-service（解释生成服务，脑区G）的技术实现方案，包括技术选型、接口设计、数据流、实现步骤等。  
+> **文档定位**：本文档定义explanation-service（解释生成服务，tool_7）的技术实现方案，包括技术选型、接口设计、数据流、实现步骤等。  
 > **参考文档**：
 > - 《AI医生系统-业务逻辑详细设计.md》- 业务逻辑（核心参考）
 > - 《AI医生系统-技术架构设计.md》及相关子文档- 技术架构
@@ -19,7 +19,7 @@
 
 ### 1.1 服务定位
 
-- **对应脑区**：脑区G（可解释性与证据链服务）
+- **对应工具**：tool_7（解释生成工具）
 - **在双通道推理架构中的位置**：通道1 + 通道2（结构化推理通道 + 语言与策略通道）
 - **服务职责**：
   1. **证据链构建**：构建完整的证据链，让系统的"结论"能被复核
@@ -32,7 +32,7 @@
 #### 1.2.1 输入数据格式和来源
 
 **输入来源**：
-- **上游服务**：`diagnosis-engine-service`（脑区C）提供诊断结果
+- **上游服务**：`diagnosis-engine-service`（tool_3）提供诊断结果
 - **数据格式**：CDP中的相关字段，包含：
   - `ddx`：鉴别诊断候选集（三层分层）
   - `evidence_graph`：证据图结构
@@ -117,9 +117,9 @@
 
 **数据流转**（参考《AI医生系统-技术架构设计-CDP数据与状态管理.md》）：
 ```
-diagnosis-engine-service（脑区C）
+diagnosis-engine-service（tool_3）
     ↓ 输出：诊断结果（写入CDP.ddx、CDP.reasoning_paths）
-explanation-service（脑区G）
+explanation-service（tool_7）
     ↓ 读取：CDP.ddx、CDP.reasoning_paths、CDP.evidence_graph
     ↓ 处理：证据链构建、推理路径可视化、终点结论包生成、自然语言解释生成
     ↓ 输出：证据链、终点结论包、自然语言解释（写入CDP.evidence_graph、CDP.conclusion_package）
@@ -391,7 +391,92 @@ formatted_explanation = post_process_explanation(explanation)
 
 ### 3.1 API端点定义
 
-#### 3.1.1 生成解释接口
+#### 3.1.1 统一工具调用接口（新增）
+
+**接口路径**：`POST /api/v1/tools/tool_7/invoke`
+
+**接口描述**：统一的工具调用接口，符合《工具调用协议.md》规范。主Agent通过此接口调用工具。
+
+**请求方法**：POST
+
+**请求头**：
+```
+Content-Type: application/json
+```
+
+**请求体**（ToolContext格式）：
+```json
+{
+  "trace_id": "string",
+  "cdp_reference": {
+    "cdp_id": "string",
+    "version": 0,
+    "read_fields": ["cdp.ddx", "cdp.evidence_graph", "cdp.workup_plan", "cdp.management_plan"]
+  },
+  "agent_state_summary": {
+    "current_step": 0,
+    "work_mode": "string"
+  },
+  "constraints": {
+    "max_time_seconds": 0,
+    "max_cost": 0.0,
+    "risk_level_limit": "string"
+  },
+  "call_params": {}
+}
+```
+
+**响应体**（ToolResult格式）：
+```json
+{
+  "trace_id": "string",
+  "tool_id": "tool_7",
+  "status": "success",
+  "payload": {},
+  "evidence": [
+    {
+      "source": "kg_path",
+      "reference": "evidence_chain",
+      "strength": "strong",
+      "evidence_name": "证据链"
+    }
+  ],
+  "quality": {
+    "confidence": 0.85,
+    "completeness": 0.90,
+    "accuracy": 0.80
+  },
+  "suggested_writes": [
+    {
+      "field_path": "cdp.evidence_graph",
+      "value": {},
+      "reason": "更新证据图"
+    }
+  ],
+  "errors": [],
+  "duration_ms": 0,
+  "metadata": {}
+}
+```
+
+**实现方式**：
+1. 从ToolContext中提取CDP引用信息
+2. 通过HTTP调用diagnosis-service的CDP查询接口获取数据
+3. 根据read_fields提取指定字段的数据
+4. 构建现有服务的请求格式（ExplanationRequest）
+5. 调用现有业务逻辑服务（ExplanationService）
+6. 将业务结果转换为ToolResult格式
+7. 构建evidence引用和suggested_writes建议
+
+**代码位置**：
+- 接口实现：`app/api/routes.py` 的 `invoke_tool_7()` 函数
+- 数据模型：`app/models/tool_context.py`、`app/models/tool_result.py`
+- CDP读取工具：`app/utils/cdp_reader.py`
+
+**参考文档**：
+- 《7.接口规范/工具调用协议.md》- 工具调用协议详细规范
+
+#### 3.1.2 生成解释接口（原有接口，保持向后兼容）
 
 **接口路径**：`POST /api/v1/explain`
 
@@ -549,7 +634,7 @@ class ExplanationResponse(BaseModel):
 
 #### 4.1.1 上游服务
 
-- **diagnosis-engine-service**（脑区C）：
+- **diagnosis-engine-service**（tool_3）：
   - 提供诊断结果（DDx、推理路径）
 
 #### 4.1.2 数据格式

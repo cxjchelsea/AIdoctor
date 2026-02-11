@@ -1,5 +1,5 @@
 """
-病例理解服务主入口（脑区A）
+病例理解服务主入口（tool_1）
 """
 import time
 import logging
@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="病例理解服务",
     version=settings.app_version,
-    description="AI医生系统的病例理解服务（脑区A：病例理解与结构化）",
+    description="AI医生系统的病例理解服务（tool_1：病例理解与结构化）",
     lifespan=lifespan
 )
 

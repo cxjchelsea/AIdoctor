@@ -1,0 +1,82 @@
+{
+  "description": "AIdoctor项目服务配置文件",
+  "python_services": {
+    "clinical-parsing-service": {
+      "name": "临床解析服务",
+      "port": 8082,
+      "conda_env": "aidiagnose",
+      "description": "如果conda_env为null，将自动检测或使用系统Python"
+    },
+    "dialog-service": {
+      "name": "对话服务",
+      "port": 8088,
+      "conda_env": "aidiagnose"
+    },
+    "diagnosis-engine-service": {
+      "name": "诊断引擎服务",
+      "port": 8086,
+      "conda_env": "aidiagnose"
+    },
+    "explanation-service": {
+      "name": "解释服务",
+      "port": 8089,
+      "conda_env": "aidiagnose"
+    },
+    "health-state-assessment-service": {
+      "name": "健康状态评估服务",
+      "port": 8093,
+      "conda_env": "aidiagnose"
+    },
+    "ocr-service": {
+      "name": "OCR服务",
+      "port": 8087,
+      "conda_env": "aidiagnose"
+    },
+    "risk-assessment-service": {
+      "name": "风险评估服务",
+      "port": 8092,
+      "conda_env": "aidiagnose"
+    },
+    "treatment-engine-service": {
+      "name": "治疗推理服务",
+      "port": 8091,
+      "conda_env": "aidiagnose"
+    },
+    "workup-planner-service": {
+      "name": "检查建议服务",
+      "port": 8090,
+      "conda_env": "aidiagnose"
+    }
+  },
+  "java_services": {
+    "diagnosis-service": {
+      "name": "诊断服务",
+      "port": 8084
+    },
+    "examination-service": {
+      "name": "检查服务",
+      "port": 8085
+    },
+    "execution-trace-service": {
+      "name": "执行追踪服务",
+      "port": 8083
+    }
+  },
+  "frontend_services": {
+    "frontend": {
+      "name": "前端服务",
+      "port": 5173
+    },
+    "frontend-admin": {
+      "name": "管理后台",
+      "port": 5174
+    }
+  },
+  "usage": {
+    "description": "使用说明",
+    "windows": "双击 start_services.bat 或运行 python start_services.py",
+    "linux_mac": "运行 ./start_services.sh 或运行 python3 start_services.py",
+    "conda_support": "脚本会自动检测conda环境，也可以手动指定"
+  }
+}
+

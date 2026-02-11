@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * 结构化问题清单构建器
- * Step 1：识别问题 - 构建结构化问题清单（脑区A）
+ * Step 1：识别问题 - 构建结构化问题清单（tool_1）
  */
 @Slf4j
 @Service

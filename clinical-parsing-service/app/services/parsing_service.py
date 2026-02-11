@@ -1,5 +1,5 @@
 """
-病例理解服务（脑区A）
+病例理解服务（tool_1）
 """
 import logging
 from app.models.request import ClinicalParsingRequest

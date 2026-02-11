@@ -1,7 +1,7 @@
 """
 主动问诊服务具体异常类
 按照《AI医生系统-错误处理规范.md》定义
-脑区B：主动问诊服务错误码（1200-1299）
+tool_2：主动问诊服务错误码（1200-1299）
 """
 from app.utils.exceptions import BusinessException
 

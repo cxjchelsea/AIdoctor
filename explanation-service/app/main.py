@@ -1,5 +1,5 @@
 """
-解释生成服务主入口（脑区G）
+解释生成服务主入口（tool_7）
 """
 import time
 import logging
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="解释生成服务",
     version="1.0.0",
-    description="AI医生系统的解释生成服务（脑区G：可解释性与证据链）",
+    description="AI医生系统的解释生成服务（tool_7：可解释性与证据链）",
     lifespan=lifespan
 )
 

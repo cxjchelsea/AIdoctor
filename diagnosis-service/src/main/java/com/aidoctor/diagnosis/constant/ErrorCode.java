@@ -73,7 +73,7 @@ public class ErrorCode {
     /** 检查结果解读失败 */
     public static final int INTERPRETATION_FAILED = 2008;
     
-    // ========== 脑区0：健康状态判定服务错误码（1000-1099） ==========
+    // ========== tool_0：健康状态判定服务错误码（1000-1099） ==========
     
     /** 健康状态判定失败 */
     public static final int HEALTH_STATE_ASSESSMENT_FAILED = 1001;
@@ -93,7 +93,7 @@ public class ErrorCode {
     /** 健康管理计划生成失败 */
     public static final int WELLNESS_PLAN_GENERATION_FAILED = 1006;
     
-    // ========== 脑区A：病例理解服务错误码（1100-1199） ==========
+    // ========== tool_1：病例理解服务错误码（1100-1199） ==========
     
     /** 医学概念识别失败 */
     public static final int MEDICAL_CONCEPT_RECOGNITION_FAILED = 1101;
@@ -110,10 +110,10 @@ public class ErrorCode {
     /** 歧义表达判定失败 */
     public static final int AMBIGUITY_DETERMINATION_FAILED = 1105;
     
-    /** OCR识别失败（脑区A调用） */
-    public static final int OCR_RECOGNITION_FAILED_BRAIN_A = 1106;
+    /** OCR识别失败（tool_1调用） */
+    public static final int OCR_RECOGNITION_FAILED_TOOL_1 = 1106;
     
-    // ========== 脑区B：主动问诊服务错误码（1200-1299） ==========
+    // ========== tool_2：主动问诊服务错误码（1200-1299） ==========
     
     /** 信息缺口识别失败 */
     public static final int INFORMATION_GAP_IDENTIFICATION_FAILED = 1201;
@@ -133,7 +133,7 @@ public class ErrorCode {
     /** 追问次数超限 */
     public static final int QUESTIONING_COUNT_EXCEEDED = 1206;
     
-    // ========== 脑区C：鉴别诊断引擎错误码（3000-3999） ==========
+    // ========== tool_3：鉴别诊断引擎错误码（3000-3999） ==========
     
     /** 诊断引擎服务不可用 */
     public static final int ENGINE_UNAVAILABLE = 3001;
@@ -177,7 +177,7 @@ public class ErrorCode {
     /** 证据分析失败 */
     public static final int EVIDENCE_ANALYSIS_FAILED = 3014;
     
-    // ========== 脑区D：检查建议引擎错误码（1300-1399） ==========
+    // ========== tool_4：检查建议引擎错误码（1300-1399） ==========
     
     /** 检查价值评估失败 */
     public static final int EXAMINATION_VALUE_ASSESSMENT_FAILED = 1301;
@@ -191,7 +191,7 @@ public class ErrorCode {
     /** 验证计划生成失败 */
     public static final int VERIFICATION_PLAN_GENERATION_FAILED = 1304;
     
-    // ========== 脑区E：治疗推理引擎错误码（1400-1499） ==========
+    // ========== tool_5：治疗推理引擎错误码（1400-1499） ==========
     
     /** 治疗方案推理失败 */
     public static final int TREATMENT_PLAN_REASONING_FAILED = 1401;
@@ -202,7 +202,7 @@ public class ErrorCode {
     /** 非药物治疗建议生成失败 */
     public static final int NON_DRUG_TREATMENT_ADVICE_GENERATION_FAILED = 1403;
     
-    // ========== 脑区F：风险评估引擎错误码（1500-1599） ==========
+    // ========== tool_6：风险评估引擎错误码（1500-1599） ==========
     
     /** 高危识别失败 */
     public static final int HIGH_RISK_IDENTIFICATION_FAILED = 1501;
@@ -216,7 +216,7 @@ public class ErrorCode {
     /** 复评与升级规则执行失败 */
     public static final int RE_EVALUATION_UPGRADE_RULE_EXECUTION_FAILED = 1504;
     
-    // ========== 脑区G：可解释性服务错误码（1600-1699） ==========
+    // ========== tool_7：可解释性服务错误码（1600-1699） ==========
     
     /** 证据链构建失败 */
     public static final int EVIDENCE_CHAIN_CONSTRUCTION_FAILED = 1601;

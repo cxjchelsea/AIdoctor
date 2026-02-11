@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * 概念归一化服务
- * Step 1：识别问题 - 将用户的自然语言描述归一化为标准医学术语（脑区A）
+ * Step 1：识别问题 - 将用户的自然语言描述归一化为标准医学术语（tool_1）
  */
 @Slf4j
 @Service

@@ -21,7 +21,7 @@ class BusinessException(Exception):
 
 def get_http_status_code(code: int) -> int:
     """根据错误码获取HTTP状态码"""
-    # 脑区C：鉴别诊断引擎错误码（3000-3999）
+    # 工具3：鉴别诊断引擎错误码（3000-3999）
     if 3000 <= code < 4000:
         if code == 3001:
             return status.HTTP_503_SERVICE_UNAVAILABLE  # 诊断引擎服务不可用

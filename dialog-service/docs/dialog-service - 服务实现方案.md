@@ -1,6 +1,6 @@
 # dialog-service - 服务实现方案
 
-> **文档定位**：本文档定义dialog-service（对话管理服务，脑区B）的技术实现方案，包括技术选型、接口设计、数据流、实现步骤等。  
+> **文档定位**：本文档定义dialog-service（对话管理服务，tool_2）的技术实现方案，包括技术选型、接口设计、数据流、实现步骤等。  
 > **参考文档**：
 > - 《AI医生系统-业务逻辑详细设计.md》- 业务逻辑（核心参考）
 > - 《AI医生系统-技术架构设计.md》及相关子文档- 技术架构
@@ -18,7 +18,7 @@
 
 ### 1.1 服务定位
 
-- **对应脑区**：脑区B（主动问诊与信息补全服务）
+- **对应工具**：tool_2（主动问诊工具）
 - **在双通道推理架构中的位置**：通道1 + 通道2（结构化推理通道 + 语言与策略通道）
 - **服务职责**：
   1. **信息缺口识别**：识别诊断所需的关键信息缺口
@@ -32,7 +32,7 @@
 #### 1.2.1 输入数据格式和来源
 
 **输入来源**：
-- **上游服务**：`clinical-parsing-service`（脑区A）提供结构化病例数据
+- **上游服务**：`clinical-parsing-service`（tool_1）提供结构化病例数据
 - **数据格式**：CDP中的`patient_state`字段，包含：
   - `symptoms`：症状列表（CUI编码）
   - `signs`：体征信息
@@ -106,15 +106,15 @@
 
 **数据流转**（参考《AI医生系统-技术架构设计-CDP数据与状态管理.md》）：
 ```
-clinical-parsing-service（脑区A）
+clinical-parsing-service（tool_1）
     ↓ 输出：结构化病例数据（写入CDP.patient_state）
-dialog-service（脑区B）
+dialog-service（tool_2）
     ↓ 读取：CDP.patient_state
     ↓ 处理：信息缺口识别、智能追问生成、NLU/NLG
     ↓ 输出：追问问题、信息缺口（更新CDP.problem_list）
 用户
     ↓ 回答：自然语言回答
-dialog-service（脑区B）
+dialog-service（tool_2）
     ↓ 处理：NLU理解用户输入
     ↓ 输出：结构化信息（更新CDP.patient_state）
 ```
@@ -375,7 +375,97 @@ formatted_question = post_process_question(question)
 
 ### 3.1 API端点定义
 
-#### 3.1.1 生成追问问题接口
+#### 3.1.1 统一工具调用接口（新增）
+
+**接口路径**：`POST /api/v1/tools/tool_2/invoke`
+
+**接口描述**：统一的工具调用接口，符合《工具调用协议.md》规范。主Agent通过此接口调用工具。
+
+**请求方法**：POST
+
+**请求头**：
+```
+Content-Type: application/json
+```
+
+**请求体**（ToolContext格式）：
+```json
+{
+  "trace_id": "string",
+  "cdp_reference": {
+    "cdp_id": "string",
+    "version": 0,
+    "read_fields": ["cdp.patient_state", "cdp.ddx", "cdp.uncertainty.missing_critical_info"]
+  },
+  "agent_state_summary": {
+    "current_step": 0,
+    "work_mode": "string"
+  },
+  "constraints": {
+    "max_time_seconds": 0,
+    "max_cost": 0.0,
+    "risk_level_limit": "string"
+  },
+  "call_params": {}
+}
+```
+
+**响应体**（ToolResult格式）：
+```json
+{
+  "trace_id": "string",
+  "tool_id": "tool_2",
+  "status": "success",
+  "payload": {
+    "question": "string",
+    "question_type": "string",
+    "reasoning": "string",
+    "extracted_info": {}
+  },
+  "evidence": [
+    {
+      "source": "llm",
+      "reference": "question_generation_prompt",
+      "strength": "medium",
+      "evidence_name": "智能追问生成"
+    }
+  ],
+  "quality": {
+    "confidence": 0.85,
+    "completeness": 0.80,
+    "accuracy": 0.82
+  },
+  "suggested_writes": [
+    {
+      "field_path": "cdp.patient_state",
+      "value": {},
+      "reason": "更新从追问中提取的患者信息"
+    }
+  ],
+  "errors": [],
+  "duration_ms": 0,
+  "metadata": {}
+}
+```
+
+**实现方式**：
+1. 从ToolContext中提取CDP引用信息
+2. 通过HTTP调用diagnosis-service的CDP查询接口获取数据
+3. 根据read_fields提取指定字段的数据
+4. 构建现有服务的请求格式（QuestionRequest）
+5. 调用现有业务逻辑服务（DialogService）
+6. 将业务结果转换为ToolResult格式
+7. 构建evidence引用和suggested_writes建议
+
+**代码位置**：
+- 接口实现：`app/api/routes.py` 的 `invoke_tool_2()` 函数
+- 数据模型：`app/models/tool_context.py`、`app/models/tool_result.py`
+- CDP读取工具：`app/utils/cdp_reader.py`
+
+**参考文档**：
+- 《7.接口规范/工具调用协议.md》- 工具调用协议详细规范
+
+#### 3.1.2 生成追问问题接口（原有接口，保持向后兼容）
 
 **接口路径**：`POST /api/v1/dialog/generate-question`
 
@@ -578,7 +668,7 @@ class UnderstandingResponse(BaseModel):
 
 #### 4.1.1 上游服务
 
-- **clinical-parsing-service**（脑区A）：
+- **clinical-parsing-service**（tool_1）：
   - 提供结构化病例数据
 
 #### 4.1.2 数据格式

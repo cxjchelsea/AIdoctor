@@ -1,6 +1,6 @@
 # clinical-parsing-service - 服务实现方案
 
-> **文档定位**：本文档定义clinical-parsing-service（病例理解服务，脑区A）的技术实现方案，包括技术选型、接口设计、数据流、实现步骤等。  
+> **文档定位**：本文档定义clinical-parsing-service（病例理解服务，tool_1）的技术实现方案，包括技术选型、接口设计、数据流、实现步骤等。  
 > **参考文档**：
 > - 《AI医生系统-业务逻辑详细设计.md》- 业务逻辑（核心参考）
 > - 《AI医生系统-技术架构设计.md》及相关子文档- 技术架构
@@ -18,7 +18,7 @@
 
 ### 1.1 服务定位
 
-- **对应脑区**：脑区A（病例理解与结构化）
+- **对应工具**：tool_1（病例理解工具）
 - **在双通道推理架构中的位置**：通道1（结构化推理通道）的起点，为后续诊断提供标准化输入
 - **服务职责**：将非结构化的患者信息转换为结构化的临床要素
 
@@ -397,6 +397,98 @@
 
 **接口路径**：`POST /api/v1/parsing/parse`
 
+**说明**：这是原有的业务接口，保持向后兼容。
+
+#### 3.1.1.1 统一工具调用接口（新增）
+
+**接口路径**：`POST /api/v1/tools/tool_1/invoke`
+
+**接口描述**：统一的工具调用接口，符合《工具调用协议.md》规范。主Agent通过此接口调用工具。
+
+**请求方法**：POST
+
+**请求头**：
+```
+Content-Type: application/json
+```
+
+**请求体**（ToolContext格式）：
+```json
+{
+  "trace_id": "string",  // 必填：追踪ID
+  "cdp_reference": {
+    "cdp_id": "string",  // 必填：CDP ID
+    "version": 0,  // 必填：CDP版本号
+    "read_fields": ["string"]  // 必填：需要读取的CDP字段路径列表
+  },
+  "agent_state_summary": {
+    "current_step": 0,  // 必填：当前诊断步骤（1-5）
+    "work_mode": "string"  // 必填：工作态（wellness_mode/clinical_mode）
+  },
+  "constraints": {
+    "max_time_seconds": 0,  // 必填：最大执行时间（秒）
+    "max_cost": 0.0,  // 必填：最大成本
+    "risk_level_limit": "string"  // 可选：风险等级限制（L1/L2/L3/L4）
+  },
+  "call_params": {}  // 可选：工具调用参数（工具特定）
+}
+```
+
+**响应体**（ToolResult格式）：
+```json
+{
+  "trace_id": "string",  // 追踪ID（与请求中的trace_id一致）
+  "tool_id": "tool_1",  // 工具ID
+  "status": "string",  // 执行状态（success/partial_success/failure/timeout）
+  "payload": {},  // 输出payload（工具特定结构）
+  "evidence": [
+    {
+      "source": "string",  // 证据来源（knowledge_base/kg_path/rule/llm）
+      "reference": "string",  // 证据引用（CUI/路径ID/规则ID/LLM prompt）
+      "strength": "string",  // 证据强度（strong/medium/weak）
+      "affected_direction": "string",  // 可选：受影响方向
+      "evidence_direction": "string",  // 可选：证据方向
+      "evidence_name": "string"  // 可选：证据名称
+    }
+  ],
+  "quality": {
+    "confidence": 0.0,  // 置信度（0.0-1.0）
+    "completeness": 0.0,  // 完整度（0.0-1.0）
+    "accuracy": 0.0  // 可选：准确度（0.0-1.0）
+  },
+  "suggested_writes": [
+    {
+      "field_path": "string",  // 字段路径（如：cdp.patient_state.parsed_concepts）
+      "value": {},  // 字段值
+      "reason": "string"  // 写回原因
+    }
+  ],
+  "errors": [
+    {
+      "error_type": "string",  // 错误类型（timeout/validation_error/runtime_error）
+      "error_message": "string",  // 错误消息
+      "error_details": {}  // 错误详情
+    }
+  ],
+  "duration_ms": 0,  // 执行时间（毫秒）
+  "metadata": {}  // 可选：元数据（工具特定）
+}
+```
+
+**实现方式**：
+1. 从ToolContext中提取CDP引用信息
+2. 通过HTTP调用diagnosis-service的CDP查询接口获取数据
+3. 根据read_fields提取指定字段的数据
+4. 构建现有服务的请求格式（ClinicalParsingRequest）
+5. 调用现有业务逻辑服务（ClinicalParsingService）
+6. 将业务结果转换为ToolResult格式
+7. 构建evidence引用和suggested_writes建议
+
+**代码位置**：
+- 接口实现：`app/api/routes.py` 的 `invoke_tool_1()` 函数
+- 数据模型：`app/models/tool_context.py`、`app/models/tool_result.py`
+- CDP读取工具：`app/utils/cdp_reader.py`
+
 **接口描述**：将非结构化的患者信息转换为结构化的临床要素
 
 **请求方法**：POST
@@ -587,7 +679,7 @@ Content-Type: application/json
 
 > **参考文档**：《AI医生系统-错误处理规范.md》
 
-**错误码范围**：1100-1199（脑区A：病例理解服务）
+**错误码范围**：1100-1199（tool_1：病例理解服务）
 
 | 错误码 | 说明 | HTTP状态码 | 使用场景 |
 |--------|------|------------|----------|
@@ -596,7 +688,7 @@ Content-Type: application/json
 | 1103 | 多模态理解失败 | 500 | 多模态处理过程中发生错误 |
 | 1104 | 结构化提取失败 | 500 | 结构化提取过程中发生错误 |
 | 1105 | 歧义表达判定失败 | 500 | 歧义判定过程中发生错误 |
-| 1106 | OCR识别失败（脑区A调用） | 500 | 调用OCR服务失败 |
+| 1106 | OCR识别失败（tool_1调用） | 500 | 调用OCR服务失败 |
 
 **错误处理策略**：
 1. **统一异常处理**：使用全局异常处理器捕获所有异常

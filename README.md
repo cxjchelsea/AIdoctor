@@ -24,7 +24,7 @@
 
 ## ✨ 功能特性
 
-- 🧠 **多脑区协同**：基于"五脑思想"架构，实现健康状态判定、病例理解、主动问诊、鉴别诊断等核心功能
+- 🧠 **多工具协同**：基于"五脑思想"架构，实现健康状态判定、病例理解、主动问诊、鉴别诊断等核心功能
 - 🔍 **智能诊断**：集成规则引擎、知识图谱推理、统计模型和大语言模型，提供多引擎融合诊断
 - 💬 **对话交互**：支持自然语言对话，主动问诊收集患者信息
 - 📊 **检查建议**：基于患者症状智能推荐检查方案
@@ -35,7 +35,7 @@
 
 ## 🏗️ 系统架构
 
-本系统采用微服务架构，基于"五脑思想"设计理念，将诊断流程分解为多个独立的脑区服务：
+本系统采用微服务架构，基于"五脑思想"设计理念，将诊断流程分解为多个独立的工具服务：
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -51,13 +51,13 @@
         ┌───────────────────┼───────────────────┐
         │                   │                   │
 ┌───────▼──────┐  ┌─────────▼────────┐  ┌──────▼──────┐
-│ 脑区0: 健康  │  │ 脑区A: 病例理解   │  │ 脑区B: 对话  │
+│ tool_0: 健康  │  │ tool_1: 病例理解   │  │ tool_2: 对话  │
 │ 状态判定     │  │ (临床解析服务)    │  │ (对话服务)   │
 │   :8081      │  │    :8082          │  │   :8088      │
 └──────────────┘  └──────────────────┘  └─────────────┘
                             │
                     ┌───────▼────────┐
-                    │ 脑区C: 诊断引擎 │
+                    │ tool_3: 诊断引擎 │
                     │ (多引擎融合)    │
                     │    :8086       │
                     └───────┬────────┘
@@ -65,27 +65,27 @@
         ┌───────────────────┼───────────────────┐
         │                   │                   │
 ┌───────▼──────┐  ┌─────────▼────────┐  ┌──────▼──────┐
-│ 脑区D: 检查  │  │ 脑区E: 治疗推理   │  │ 脑区F: 风险  │
+│ tool_4: 检查  │  │ tool_5: 治疗推理   │  │ tool_6: 风险  │
 │ 建议         │  │                  │  │ 评估        │
 │   :8090      │  │    :8091          │  │   :8092     │
 └──────────────┘  └──────────────────┘  └─────────────┘
                             │
                     ┌───────▼────────┐
-                    │ 脑区G: 解释生成 │
+                    │ tool_7: 解释生成 │
                     │    :8089       │
                     └────────────────┘
 ```
 
 ### 核心服务说明
 
-- **脑区0（健康状态判定）**：评估患者整体健康状态，判断是否需要进一步诊断
-- **脑区A（病例理解）**：解析和理解患者提供的病历、症状等信息
-- **脑区B（主动问诊）**：通过对话主动收集患者信息，补充诊断所需数据
-- **脑区C（鉴别诊断）**：多引擎融合，提供诊断建议和鉴别诊断
-- **脑区D（检查建议）**：基于诊断结果推荐合适的检查方案
-- **脑区E（治疗推理）**：提供个性化治疗建议
-- **脑区F（风险评估）**：评估疾病风险和预后
-- **脑区G（解释生成）**：生成诊断结果的详细解释，提高可解释性
+- **tool_0（健康状态判定）**：评估患者整体健康状态，判断是否需要进一步诊断
+- **tool_1（病例理解）**：解析和理解患者提供的病历、症状等信息
+- **tool_2（主动问诊）**：通过对话主动收集患者信息，补充诊断所需数据
+- **tool_3（鉴别诊断）**：多引擎融合，提供诊断建议和鉴别诊断
+- **tool_4（检查建议）**：基于诊断结果推荐合适的检查方案
+- **tool_5（治疗推理）**：提供个性化治疗建议
+- **tool_6（风险评估）**：评估疾病风险和预后
+- **tool_7（解释生成）**：生成诊断结果的详细解释，提高可解释性
 
 ## 🛠️ 技术栈
 
@@ -200,27 +200,27 @@ mvn spring-boot:run
 
 **方式二：使用命令行**
 ```bash
-# 健康状态判定服务（脑区0）
+# 健康状态判定服务（tool_0）
 cd health-state-assessment-service
 pip install -r requirements.txt
 python run.py
 
-# 病例理解服务（脑区A）
+# 病例理解服务（tool_1）
 cd clinical-parsing-service
 pip install -r requirements.txt
 python run.py
 
-# 对话服务（脑区B）
+# 对话服务（tool_2）
 cd dialog-service
 pip install -r requirements.txt
 python run.py
 
-# 诊断引擎服务（脑区C）
+# 诊断引擎服务（tool_3）
 cd diagnosis-engine-service
 pip install -r requirements.txt
 python run.py
 
-# 解释生成服务（脑区G）
+# 解释生成服务（tool_7）
 cd explanation-service
 pip install -r requirements.txt
 python run.py
@@ -230,17 +230,17 @@ cd ocr-service
 pip install -r requirements.txt
 python run.py
 
-# 检查建议服务（脑区D）
+# 检查建议服务（tool_4）
 cd workup-planner-service
 pip install -r requirements.txt
 python run.py
 
-# 治疗推理服务（脑区E）
+# 治疗推理服务（tool_5）
 cd treatment-engine-service
 pip install -r requirements.txt
 python run.py
 
-# 风险评估服务（脑区F）
+# 风险评估服务（tool_6）
 cd risk-assessment-service
 pip install -r requirements.txt
 python run.py
@@ -270,18 +270,18 @@ docker-compose up -d mysql redis neo4j nacos
 AIdoctor/
 ├── diagnosis-service/              # 诊断服务（Java）- CDP管理、诊断流程编排
 ├── examination-service/            # 检查服务（Java）- 检查方案、报告识别
-├── health-state-assessment-service/  # 健康状态判定服务（Python）- 脑区0
-├── clinical-parsing-service/       # 病例理解服务（Python）- 脑区A
-├── dialog-service/                 # 对话管理服务（Python）- 脑区B（主动问诊）
-├── diagnosis-engine-service/       # 诊断引擎服务（Python）- 脑区C（鉴别诊断）
+├── health-state-assessment-service/  # 健康状态判定服务（Python）- tool_0
+├── clinical-parsing-service/       # 病例理解服务（Python）- tool_1
+├── dialog-service/                 # 对话管理服务（Python）- tool_2（主动问诊）
+├── diagnosis-engine-service/       # 诊断引擎服务（Python）- tool_3（鉴别诊断）
 │   ├── kg-reasoning-engine/        # 知识图谱推理引擎（DR.KNOWS核心）
 │   ├── multi-engine-fusion/        # 多引擎融合（规则/知识图谱/统计/大模型/鉴别）
 │   └── ...
-├── explanation-service/            # 解释生成服务（Python）- 脑区G（可解释性）
+├── explanation-service/            # 解释生成服务（Python）- tool_7（可解释性）
 ├── ocr-service/                    # OCR服务（Python）- 多模态理解
-├── workup-planner-service/         # 检查建议服务（Python）- 脑区D
-├── treatment-engine-service/       # 治疗推理服务（Python）- 脑区E
-├── risk-assessment-service/        # 风险评估服务（Python）- 脑区F
+├── workup-planner-service/         # 检查建议服务（Python）- tool_4
+├── treatment-engine-service/       # 治疗推理服务（Python）- tool_5
+├── risk-assessment-service/        # 风险评估服务（Python）- tool_6
 ├── frontend/                       # 前端应用（React + TypeScript）
 ├── common/                         # 公共模块
 │   └── aidoctor_llm/              # LLM客户端封装
@@ -299,15 +299,15 @@ AIdoctor/
 - `examination-service`: **8085**
 
 ### Python服务
-- `health-state-assessment-service`: **8081**（脑区0：健康状态判定）
-- `clinical-parsing-service`: **8082**（脑区A：病例理解）
-- `dialog-service`: **8088**（脑区B：主动问诊）
-- `diagnosis-engine-service`: **8086**（脑区C：鉴别诊断）
-- `explanation-service`: **8089**（脑区G：可解释性）
+- `health-state-assessment-service`: **8081**（tool_0：健康状态判定）
+- `clinical-parsing-service`: **8082**（tool_1：病例理解）
+- `dialog-service`: **8088**（tool_2：主动问诊）
+- `diagnosis-engine-service`: **8086**（tool_3：鉴别诊断）
+- `explanation-service`: **8089**（tool_7：可解释性）
 - `ocr-service`: **8087**（多模态理解）
-- `workup-planner-service`: **8090**（脑区D：检查建议）
-- `treatment-engine-service`: **8091**（脑区E：治疗推理）
-- `risk-assessment-service`: **8092**（脑区F：风险评估）
+- `workup-planner-service`: **8090**（tool_4：检查建议）
+- `treatment-engine-service`: **8091**（tool_5：治疗推理）
+- `risk-assessment-service`: **8092**（tool_6：风险评估）
 
 ### 管理服务
 - `execution-trace-service`: **8093**（执行追踪服务）
@@ -350,17 +350,17 @@ AIdoctor/
 
 ### 核心服务实现状态
 
-| 服务名称 | 脑区 | 端口 | 实现状态 | 核心功能 |
+| 服务名称 | 工具 | 端口 | 实现状态 | 核心功能 |
 |---------|------|------|---------|---------|
 | **diagnosis-service** | 流程编排 | 8084 | ✅ 完整实现 | CDP管理、诊断流程编排、健康筛查流程编排 |
-| **health-state-assessment-service** | 脑区0 | 8081 | ✅ 完整实现 | 入口判定、健康状态判定、工作态判定、健康筛查流程（A1-A5） |
-| **clinical-parsing-service** | 脑区A | 8082 | ✅ 完整实现 | 医学概念识别、概念归一化、结构化提取、歧义表达判定 |
-| **dialog-service** | 脑区B | 8088 | ✅ 完整实现 | 信息缺口识别、智能追问生成、NLU/NLG、对话上下文管理 |
-| **diagnosis-engine-service** | 脑区C | 8086 | ✅ 完整实现 | 知识图谱推理（DR.KNOWS）、五引擎融合诊断、三层分层分类 |
-| **workup-planner-service** | 脑区D | 8090 | ✅ 基础实现 | 检查建议生成、验证计划构建 |
-| **treatment-engine-service** | 脑区E | 8091 | ✅ 基础实现 | 治疗建议生成、药物推荐 |
-| **risk-assessment-service** | 脑区F | 8092 | ✅ 基础实现 | 风险评估、分诊评估、升级规则、终点结论包构建 |
-| **explanation-service** | 脑区G | 8089 | ✅ 完整实现 | 证据链构建、推理路径可视化、终点结论包生成、自然语言解释 |
+| **health-state-assessment-service** | tool_0 | 8081 | ✅ 完整实现 | 入口判定、健康状态判定、工作态判定、健康筛查流程（A1-A5） |
+| **clinical-parsing-service** | tool_1 | 8082 | ✅ 完整实现 | 医学概念识别、概念归一化、结构化提取、歧义表达判定 |
+| **dialog-service** | tool_2 | 8088 | ✅ 完整实现 | 信息缺口识别、智能追问生成、NLU/NLG、对话上下文管理 |
+| **diagnosis-engine-service** | tool_3 | 8086 | ✅ 完整实现 | 知识图谱推理（DR.KNOWS）、五引擎融合诊断、三层分层分类 |
+| **workup-planner-service** | tool_4 | 8090 | ✅ 基础实现 | 检查建议生成、验证计划构建 |
+| **treatment-engine-service** | tool_5 | 8091 | ✅ 基础实现 | 治疗建议生成、药物推荐 |
+| **risk-assessment-service** | tool_6 | 8092 | ✅ 基础实现 | 风险评估、分诊评估、升级规则、终点结论包构建 |
+| **explanation-service** | tool_7 | 8089 | ✅ 完整实现 | 证据链构建、推理路径可视化、终点结论包生成、自然语言解释 |
 | **ocr-service** | 多模态 | 8087 | ✅ 基础实现 | OCR识别、报告解析 |
 | **examination-service** | 检查业务 | 8085 | 🟡 框架搭建 | 检查报告上传、OCR编排（待完善） |
 
@@ -388,7 +388,7 @@ AIdoctor/
 
 ---
 
-#### 2. health-state-assessment-service（健康状态判定服务 - 脑区0）
+#### 2. health-state-assessment-service（健康状态判定服务 - tool_0）
 
 **实现状态**: ✅ 核心功能完整实现
 
@@ -410,7 +410,7 @@ AIdoctor/
 
 ---
 
-#### 3. clinical-parsing-service（病例理解服务 - 脑区A）
+#### 3. clinical-parsing-service（病例理解服务 - tool_1）
 
 **实现状态**: ✅ 核心功能完整实现
 
@@ -428,7 +428,7 @@ AIdoctor/
 
 ---
 
-#### 4. dialog-service（对话管理服务 - 脑区B）
+#### 4. dialog-service（对话管理服务 - tool_2）
 
 **实现状态**: ✅ 核心功能完整实现
 
@@ -451,7 +451,7 @@ AIdoctor/
 
 ---
 
-#### 5. diagnosis-engine-service（诊断引擎服务 - 脑区C）
+#### 5. diagnosis-engine-service（诊断引擎服务 - tool_3）
 
 **实现状态**: ✅ 核心功能完整实现
 
@@ -483,7 +483,7 @@ AIdoctor/
 
 ---
 
-#### 6. workup-planner-service（检查建议服务 - 脑区D）
+#### 6. workup-planner-service（检查建议服务 - tool_4）
 
 **实现状态**: ✅ 基础实现
 
@@ -497,7 +497,7 @@ AIdoctor/
 
 ---
 
-#### 7. treatment-engine-service（治疗推理服务 - 脑区E）
+#### 7. treatment-engine-service（治疗推理服务 - tool_5）
 
 **实现状态**: ✅ 基础实现
 
@@ -511,7 +511,7 @@ AIdoctor/
 
 ---
 
-#### 8. risk-assessment-service（风险评估服务 - 脑区F）
+#### 8. risk-assessment-service（风险评估服务 - tool_6）
 
 **实现状态**: ✅ 基础实现
 
@@ -529,7 +529,7 @@ AIdoctor/
 
 ---
 
-#### 9. explanation-service（解释生成服务 - 脑区G）
+#### 9. explanation-service（解释生成服务 - tool_7）
 
 **实现状态**: ✅ 核心功能完整实现
 

@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * 健康状态判定服务代理
- * 调用Python健康状态判定服务（脑区0）
+ * 调用Python健康状态判定服务（tool_0）
  */
 @Service
 public class HealthStateAssessmentService {

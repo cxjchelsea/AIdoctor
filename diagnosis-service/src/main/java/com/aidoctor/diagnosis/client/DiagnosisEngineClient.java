@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 /**
- * 诊断引擎服务客户端（脑区C）
+ * 诊断引擎服务客户端（tool_3）
  */
 @FeignClient(name = "diagnosis-engine-service", url = "${diagnosis-engine.service-url:http://localhost:8086}")
 public interface DiagnosisEngineClient {
@@ -41,5 +41,13 @@ public interface DiagnosisEngineClient {
      */
     @PostMapping("/api/v1/engine/update-ranking")
     Object updateRanking(@RequestBody Object request);
+    
+    /**
+     * 统一的工具调用接口（tool_3）
+     * 
+     * 参考文档：《7.接口规范/工具调用协议.md》
+     */
+    @PostMapping("/api/v1/tools/tool_3/invoke")
+    com.aidoctor.diagnosis.dto.tool.ToolResult invokeTool(com.aidoctor.diagnosis.dto.tool.ToolContext toolContext);
 }
 

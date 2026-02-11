@@ -39,7 +39,8 @@ async def perform_entry_assessment_async(user_input: dict) -> dict:
     symptom_data = identify_symptom(input_data)
     
     # Step 3: 方向澄清（仅对"情况C"触发）
-    direction_data = clarify_direction(symptom_data)
+    # 传递nlu_result以便更好地利用上下文信息
+    direction_data = clarify_direction(symptom_data, nlu_result=input_data)
     
     # Step 4: 危险信号检查（所有用户都要过一次）
     red_flag_data = check_red_flags(symptom_data)
@@ -111,7 +112,8 @@ def perform_entry_assessment(user_input: dict) -> dict:
     symptom_data = identify_symptom(input_data)
     
     # Step 3: 方向澄清（仅对"情况C"触发）
-    direction_data = clarify_direction(symptom_data)
+    # 传递nlu_result以便更好地利用上下文信息
+    direction_data = clarify_direction(symptom_data, nlu_result=input_data)
     
     # Step 4: 危险信号检查（所有用户都要过一次）
     red_flag_data = check_red_flags(symptom_data)

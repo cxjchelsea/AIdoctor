@@ -1,6 +1,6 @@
 # workup-planner-service - 已实现功能清单
 
-本文档记录了 `workup-planner-service`（检查建议服务，脑区D）的已实现功能。
+本文档记录了 `workup-planner-service`（检查建议服务，tool_4）的已实现功能。
 
 **文档版本**: v1.0  
 **最后更新**: 2025-01-24  

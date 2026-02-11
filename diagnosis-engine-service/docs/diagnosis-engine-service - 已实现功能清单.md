@@ -1,6 +1,6 @@
 # diagnosis-engine-service - 已实现功能清单
 
-本文档记录了 `diagnosis-engine-service`（诊断引擎服务，脑区C）的已实现功能。
+本文档记录了 `diagnosis-engine-service`（诊断引擎服务，tool_3）的已实现功能。
 
 **文档版本**: v1.0  
 **最后更新**: 2026-01-23  

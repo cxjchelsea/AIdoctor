@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="检查建议服务",
     version="1.0.0",
-    description="AI医生系统的检查建议服务（脑区D：检查/检验建议与价值评估）",
+    description="AI医生系统的检查建议服务（tool_4：检查/检验建议与价值评估）",
     lifespan=lifespan
 )
 

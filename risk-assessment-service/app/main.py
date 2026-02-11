@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="风险评估服务",
     version="1.0.0",
-    description="AI医生系统的风险评估服务（脑区F：风险与急症识别）",
+    description="AI医生系统的风险评估服务（tool_6：风险与急症识别）",
     lifespan=lifespan
 )
 

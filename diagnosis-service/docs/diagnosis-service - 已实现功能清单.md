@@ -89,14 +89,14 @@
 - Feign客户端: `src/main/java/com/aidoctor/diagnosis/client/` 目录
 
 **已实现的Feign客户端**:
-- ✅ **ClinicalParsingClient**（脑区A - 病例理解服务）
-- ✅ **DialogServiceClient**（脑区B - 对话管理服务）
-- ✅ **DiagnosisEngineClient**（脑区C - 诊断引擎服务）
-- ✅ **WorkupPlannerClient**（脑区D - 检查建议服务）
-- ✅ **TreatmentEngineClient**（脑区E - 治疗推理服务）
-- ✅ **RiskAssessmentClient**（脑区F - 风险评估服务）
-- ✅ **ExplanationServiceClient**（脑区G - 解释生成服务）
-- ✅ **HealthStateAssessmentClient**（脑区0 - 健康状态判定服务）
+- ✅ **ClinicalParsingClient**（tool_1 - 病例理解服务）
+- ✅ **DialogServiceClient**（tool_2 - 对话管理服务）
+- ✅ **DiagnosisEngineClient**（tool_3 - 诊断引擎服务）
+- ✅ **WorkupPlannerClient**（tool_4 - 检查建议服务）
+- ✅ **TreatmentEngineClient**（tool_5 - 治疗推理服务）
+- ✅ **RiskAssessmentClient**（tool_6 - 风险评估服务）
+- ✅ **ExplanationServiceClient**（tool_7 - 解释生成服务）
+- ✅ **HealthStateAssessmentClient**（tool_0 - 健康状态判定服务）
 - ✅ **OcrServiceClient**（OCR识别服务）
 - ✅ **ProfileServiceClient**（用户画像服务）
 - ✅ **WellnessServiceClient**（健康筛查服务）

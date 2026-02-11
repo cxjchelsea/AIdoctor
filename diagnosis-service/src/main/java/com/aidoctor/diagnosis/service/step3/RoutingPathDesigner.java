@@ -11,7 +11,7 @@ import java.util.Map;
 
 /**
  * 分流路径设计器
- * Step 3：组织候选集并建立分流路径 - 设计分流路径（脑区B）
+ * Step 3：组织候选集并建立分流路径 - 设计分流路径（tool_2）
  */
 @Slf4j
 @Service

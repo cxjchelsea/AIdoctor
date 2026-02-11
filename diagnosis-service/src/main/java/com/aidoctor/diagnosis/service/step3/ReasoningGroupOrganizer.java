@@ -11,7 +11,7 @@ import java.util.Map;
 
 /**
  * 推理子组组织器
- * Step 3：组织候选集并建立分流路径 - 组织推理子组（脑区C）
+ * Step 3：组织候选集并建立分流路径 - 组织推理子组（tool_3）
  */
 @Slf4j
 @Service

@@ -1,0 +1,15 @@
+{
+  "贝茨体格检查和病史采集指南_第12版": {
+    "book_id": "贝茨体格检查和病史采集指南_第12版",
+    "name": "贝茨体格检查和病史采集指南",
+    "version": "第12版",
+    "isbn": null,
+    "field": "全科",
+    "status": "启用",
+    "pdf_path": "E:\\pycharmProject\\AIdoctor\\docs\\AI医生\\知识内容提取\\提取脚本\\book_extraction\\..\\..\\源数据\\贝茨体格检查和病史采集指南.pdf",
+    "file_name": "贝茨体格检查和病史采集指南.pdf",
+    "file_size": 25415620,
+    "registered_at": "2026-02-09T09:31:20.458258",
+    "updated_at": "2026-02-09T09:31:20.478741"
+  }
+}

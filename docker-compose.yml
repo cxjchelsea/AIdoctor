@@ -57,7 +57,7 @@ services:
       - aidoctor-network
     restart: unless-stopped
 
-  # 检查建议服务（脑区D）
+  # 检查建议服务（tool_4）
   workup-planner-service:
     build: ./workup-planner-service
     container_name: workup-planner-service
@@ -67,7 +67,7 @@ services:
       - aidoctor-network
     restart: unless-stopped
 
-  # 治疗推理服务（脑区E）
+  # 治疗推理服务（tool_5）
   treatment-engine-service:
     build: ./treatment-engine-service
     container_name: treatment-engine-service
@@ -77,7 +77,7 @@ services:
       - aidoctor-network
     restart: unless-stopped
 
-  # 风险评估服务（脑区F）
+  # 风险评估服务（tool_6）
   risk-assessment-service:
     build: ./risk-assessment-service
     container_name: risk-assessment-service

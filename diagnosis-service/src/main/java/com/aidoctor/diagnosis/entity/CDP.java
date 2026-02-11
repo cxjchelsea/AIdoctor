@@ -82,7 +82,7 @@ public class CDP {
     
     /**
      * 健康状态判定结果（JSON格式，存储为CLOB字符串）
-     * 脑区0的输出
+     * tool_0的输出
      * 包含：工作态判定（wellness_mode/clinical_mode）、风险等级、入口判定流程结果等
      * 对应功能设计文档：2.0节 健康状态判定
      * 注意：在应用层使用Jackson进行序列化/反序列化
@@ -131,7 +131,7 @@ public class CDP {
     
     /**
      * 检查计划（JSON格式，存储为CLOB字符串）
-     * 脑区D的输出
+     * tool_4的输出
      * 注意：在应用层使用Jackson进行序列化/反序列化
      */
     @Lob
@@ -140,7 +140,7 @@ public class CDP {
     
     /**
      * 治疗计划（JSON格式，存储为CLOB字符串）
-     * 脑区E的输出
+     * tool_5的输出
      * 注意：在应用层使用Jackson进行序列化/反序列化
      */
     @Lob
@@ -149,7 +149,7 @@ public class CDP {
     
     /**
      * 风险评估（JSON格式，存储为CLOB字符串）
-     * 脑区F的输出
+     * tool_6的输出
      * 注意：在应用层使用Jackson进行序列化/反序列化
      */
     @Lob

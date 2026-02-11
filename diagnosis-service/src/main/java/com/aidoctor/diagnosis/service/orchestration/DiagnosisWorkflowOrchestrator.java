@@ -133,7 +133,7 @@ public class DiagnosisWorkflowOrchestrator {
     
     /**
      * Step 1: 识别问题
-     * 调用脑区A（病例理解）和脑区B（主动问诊）
+     * 调用tool_1（病例理解）和tool_2（主动问诊）
      */
     @TraceExecution(service = "diagnosis-service", module = "orchestration")
     @Transactional
@@ -256,7 +256,7 @@ public class DiagnosisWorkflowOrchestrator {
     
     /**
      * Step 2: 构建鉴别诊断候选集并分层
-     * 调用脑区C（鉴别诊断）和脑区F（风险评估）
+     * 调用tool_3（鉴别诊断）和tool_6（风险评估）
      */
     private CDP step2BuildDDxCandidates(CDP cdp) {
         log.info("Step 2: 构建鉴别诊断候选集并分层 - cdpId={}", cdp.getId());
@@ -311,7 +311,7 @@ public class DiagnosisWorkflowOrchestrator {
     
     /**
      * Step 3: 组织候选集并建立分流路径
-     * 调用脑区C（鉴别诊断）和脑区B（主动问诊）
+     * 调用tool_3（鉴别诊断）和tool_2（主动问诊）
      */
     private CDP step3OrganizeRoutingPath(CDP cdp) {
         log.info("Step 3: 组织候选集并建立分流路径 - cdpId={}", cdp.getId());
@@ -354,7 +354,7 @@ public class DiagnosisWorkflowOrchestrator {
     
     /**
      * Step 4: 采集关键证据并形成排序与验证计划
-     * 调用脑区B（主动问诊）、脑区C（证据分析）、脑区D（检查建议）
+     * 调用tool_2（主动问诊）、tool_3（证据分析）、tool_4（检查建议）
      */
     private CDP step4CollectEvidenceAndPlan(CDP cdp) {
         log.info("Step 4: 采集关键证据并形成排序与验证计划 - cdpId={}", cdp.getId());

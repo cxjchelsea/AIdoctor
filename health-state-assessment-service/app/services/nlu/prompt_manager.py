@@ -119,4 +119,153 @@ class PromptManager:
             user_input=user_input,
             intent=intent
         )
+    
+    # 症状/困扰识别Prompt模板
+    SYMPTOM_CONCERN_IDENTIFICATION_PROMPT = """你是一个医疗AI助手，需要从用户输入中识别症状和困扰。
+
+用户输入：{user_input}
+NLU结果：
+- 意图：{intent}
+- 症状实体：{symptoms}
+- 上下文信息：{context}
+
+请分析：
+1. **症状识别**：
+   - 识别所有症状（包括轻微症状）
+   - 提取症状的时间、程度、频率等信息
+   - 识别症状的位置和性质
+
+2. **困扰识别**：
+   - 识别心理困扰（担心、焦虑、害怕等）
+   - 识别功能变化（如"走几步就喘"）
+   - 识别异常感觉（如"感觉不对劲"）
+
+3. **情况判断**：
+   - 情况A：明确无症状（纯筛查/体检规划）
+   - 情况B：存在症状/困扰（不论轻重）
+   - 情况C：不确定/模糊/混合诉求
+
+请以JSON格式返回结果：
+{{
+    "status": "no_symptom|has_symptom|uncertain",
+    "symptoms": [
+        {{
+            "original_text": "原始文本",
+            "standard_term": "标准术语",
+            "temporal_info": {{"start_time": "...", "duration": "...", "frequency": "..."}},
+            "severity": "轻度|中度|重度",
+            "location": "位置",
+            "context": {{}}
+        }}
+    ],
+    "concerns": [
+        {{
+            "type": "心理|功能变化|异常感觉",
+            "description": "困扰描述",
+            "severity": "轻度|中度|重度"
+        }}
+    ],
+    "confidence": 0.0-1.0,
+    "reasoning": "识别理由"
+}}"""
+
+    # 情况判断Prompt模板
+    SITUATION_JUDGMENT_PROMPT = """你是一个医疗AI助手，需要判断用户的健康状态情况。
+
+用户输入：{user_input}
+NLU结果：
+- 意图：{intent}
+- 意图置信度：{intent_confidence}
+
+症状/困扰识别结果：
+- 状态：{symptom_status}
+- 症状：{symptoms}
+- 困扰：{concerns}
+- 识别置信度：{symptom_confidence}
+
+请综合判断用户属于以下哪种情况：
+1. **情况A（no_symptom）**：明确无症状（纯筛查/体检规划）
+   - 意图为"screening"且无症状
+   - 明确表达无症状（如"我想做个体检"）
+   - 置信度 ≥ 0.8
+
+2. **情况B（has_symptom）**：存在症状/困扰（不论轻重）
+   - 意图为"diagnosis"且有症状
+   - 存在明确的症状或困扰
+   - 置信度 ≥ 0.8
+
+3. **情况C（uncertain）**：不确定/模糊/混合诉求
+   - 意图为"mixed"或"unknown"
+   - 症状存在但不明确
+   - 混合诉求（既有筛查又有症状）
+   - 置信度 < 0.8
+
+请以JSON格式返回结果：
+{{
+    "status": "no_symptom|has_symptom|uncertain",
+    "confidence": 0.0-1.0,
+    "reasoning": "判断理由"
+}}"""
+
+    @classmethod
+    def get_symptom_concern_identification_prompt(cls, nlu_result: Dict[str, Any]) -> str:
+        """
+        获取症状/困扰识别Prompt
+        
+        Args:
+            nlu_result: Step 1的NLU结果
+        
+        Returns:
+            填充后的Prompt
+        """
+        import json
+        user_input = nlu_result.get("original_input", "")
+        intent = nlu_result.get("intent", "unknown")
+        symptoms = nlu_result.get("symptoms", [])
+        context = {
+            "temporal_info": nlu_result.get("temporal_info", {}),
+            "basic_info": nlu_result.get("basic_info", {})
+        }
+        
+        return cls.SYMPTOM_CONCERN_IDENTIFICATION_PROMPT.format(
+            user_input=user_input,
+            intent=intent,
+            symptoms=json.dumps(symptoms, ensure_ascii=False),
+            context=json.dumps(context, ensure_ascii=False)
+        )
+    
+    @classmethod
+    def get_situation_judgment_prompt(
+        cls,
+        symptom_result: Any,
+        nlu_result: Dict[str, Any]
+    ) -> str:
+        """
+        获取情况判断Prompt
+        
+        Args:
+            symptom_result: 症状/困扰识别结果
+            nlu_result: Step 1的NLU结果
+        
+        Returns:
+            填充后的Prompt
+        """
+        import json
+        user_input = nlu_result.get("original_input", "")
+        intent = nlu_result.get("intent", "unknown")
+        intent_confidence = nlu_result.get("intent_confidence", 0.5)
+        symptom_status = symptom_result.status
+        symptoms = [s.original_text for s in symptom_result.symptoms]
+        concerns = [c.description for c in symptom_result.concerns]
+        symptom_confidence = symptom_result.confidence
+        
+        return cls.SITUATION_JUDGMENT_PROMPT.format(
+            user_input=user_input,
+            intent=intent,
+            intent_confidence=intent_confidence,
+            symptom_status=symptom_status,
+            symptoms=json.dumps(symptoms, ensure_ascii=False),
+            concerns=json.dumps(concerns, ensure_ascii=False),
+            symptom_confidence=symptom_confidence
+        )
 

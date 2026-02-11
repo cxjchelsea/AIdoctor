@@ -1,6 +1,6 @@
 # clinical-parsing-service - 已实现功能清单
 
-本文档记录了 `clinical-parsing-service`（病例理解服务，脑区A）的已实现功能。
+本文档记录了 `clinical-parsing-service`（病例理解服务，tool_1）的已实现功能。
 
 **文档版本**: v1.2  
 **最后更新**: 2026-01-24  
@@ -193,9 +193,84 @@
 
 **核心接口路径**: `POST /api/v1/parsing/parse`
 
+**统一工具调用接口**: `POST /api/v1/tools/tool_1/invoke` ✅ **新增**
+
 **其他接口**:
 - `GET /api/v1/parsing/health` - 健康检查接口（通过路由）
 - `GET /health` - 健康检查接口（根路径，在main.py中定义）
+
+### 统一工具调用接口（tool_1）
+
+**接口路径**: `POST /api/v1/tools/tool_1/invoke`
+
+**接口描述**: 统一的工具调用接口，符合《工具调用协议.md》规范
+
+**请求格式**:
+```json
+{
+  "trace_id": "trace_1234567890",
+  "cdp_reference": {
+    "cdp_id": "cdp_001",
+    "version": 2,
+    "read_fields": ["cdp.patient_state"]
+  },
+  "agent_state_summary": {
+    "current_step": 1,
+    "work_mode": "clinical_mode"
+  },
+  "constraints": {
+    "max_time_seconds": 30,
+    "max_cost": 10.0,
+    "risk_level_limit": null
+  },
+  "call_params": {}
+}
+```
+
+**响应格式**:
+```json
+{
+  "trace_id": "trace_1234567890",
+  "tool_id": "tool_1",
+  "status": "success",
+  "payload": {
+    "parsed_concepts": [...],
+    "structured_data": {...},
+    "ambiguous_expressions": [...]
+  },
+  "evidence": [
+    {
+      "source": "knowledge_base",
+      "reference": "UMLS_CUI_xxx",
+      "strength": "strong",
+      "evidence_name": "概念归一化结果"
+    }
+  ],
+  "quality": {
+    "confidence": 0.9,
+    "completeness": 0.85,
+    "accuracy": 0.88
+  },
+  "suggested_writes": [
+    {
+      "field_path": "cdp.patient_state.parsed_concepts",
+      "value": [...],
+      "reason": "更新解析后的概念列表"
+    }
+  ],
+  "errors": [],
+  "duration_ms": 2500,
+  "metadata": {}
+}
+```
+
+**功能特性**:
+- ✅ 接收ToolContext格式的请求
+- ✅ 从CDP读取指定字段的数据
+- ✅ 调用现有业务逻辑服务
+- ✅ 返回ToolResult格式的响应
+- ✅ 提供evidence引用和suggested_writes建议
+- ✅ 完整的错误处理
 
 **请求格式**:
 ```json
@@ -479,6 +554,7 @@
 | 结构化提取 | 🟡 部分实现 | 85% |
 | 歧义表达判定 | ✅ 完整实现 | 100% |
 | API接口 | ✅ 完整实现 | 100% |
+| 统一工具调用接口 | ✅ 完整实现 | 100% |
 | 多模态理解 | ❌ 未实现 | 0% |
 
 ### 简化实现统计
@@ -516,6 +592,12 @@
 ### 2026-01-24 (v1.2)
 - 根据最新代码更新文档
 - 确认所有功能状态准确无误
+
+### 2026-01-28 (v1.3)
+- 添加统一工具调用接口 `/api/v1/tools/tool_1/invoke`
+- 实现ToolContext和ToolResult数据模型
+- 实现CDP数据读取功能
+- 适配现有业务逻辑到统一接口
 
 ---
 

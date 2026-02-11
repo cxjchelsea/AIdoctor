@@ -1,8 +1,9 @@
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { Layout, Menu } from 'antd'
-import { DatabaseOutlined, BugOutlined } from '@ant-design/icons'
+import { DatabaseOutlined, BugOutlined, BookOutlined } from '@ant-design/icons'
 import TraceManagementPage from './pages/TraceManagementPage'
 import KnowledgeSchemaPage from './pages/KnowledgeSchemaPage'
+import BookManagementPage from './pages/BookManagementPage'
 import './App.css'
 
 const { Sider, Content } = Layout
@@ -21,6 +22,11 @@ function AppContent() {
       key: '/knowledge/schema',
       icon: <DatabaseOutlined />,
       label: '知识图谱结构',
+    },
+    {
+      key: '/books',
+      icon: <BookOutlined />,
+      label: '书籍管理',
     },
   ]
 
@@ -44,6 +50,7 @@ function AppContent() {
             <Route path="/" element={<TraceManagementPage />} />
             <Route path="/trace" element={<TraceManagementPage />} />
             <Route path="/knowledge/schema" element={<KnowledgeSchemaPage />} />
+            <Route path="/books" element={<BookManagementPage />} />
           </Routes>
         </Content>
       </Layout>

@@ -1,7 +1,7 @@
 """
 可解释性服务具体异常类
 按照《AI医生系统-错误处理规范.md》定义
-脑区G：可解释性服务错误码（1600-1699）
+tool_7：可解释性服务错误码（1600-1699）
 """
 from app.utils.exceptions import BusinessException
 

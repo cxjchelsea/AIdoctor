@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * 完整度计算服务
- * Step 1：识别问题 - 基于结构化问题清单计算信息完整度（脑区B）
+ * Step 1：识别问题 - 基于结构化问题清单计算信息完整度（tool_2）
  */
 @Slf4j
 @Service

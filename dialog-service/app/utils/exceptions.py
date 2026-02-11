@@ -21,7 +21,7 @@ class BusinessException(Exception):
 
 def get_http_status_code(code: int) -> int:
     """根据错误码获取HTTP状态码"""
-    # 脑区B：主动问诊服务错误码（1200-1299）
+    # 工具2：主动问诊服务错误码（1200-1299）
     if 1200 <= code < 1300:
         if code == 1206:  # 追问次数超限
             return status.HTTP_400_BAD_REQUEST

@@ -3,90 +3,90 @@ import { Card, Row, Col, Descriptions, Tag, Progress, Typography } from 'antd'
 
 const { Title, Text } = Typography
 
-interface BrainResults {
-  brain0?: {
+interface ToolResults {
+  tool0?: {
     workMode: 'wellness_mode' | 'clinical_mode'
     riskLevel: string
   }
-  brainA?: {
+  tool1?: {
     concepts: any[]
   }
-  brainB?: {
+  tool2?: {
     completeness: number
   }
-  brainC?: {
+  tool3?: {
     reasoningPaths: any[]
     ddx: any[]
   }
-  // 其他脑区...
+  // 其他工具...
 }
 
-interface BrainResultsVisualizationProps {
+interface ToolResultsVisualizationProps {
   cdpId: string
 }
 
-const BrainResultsVisualization: React.FC<BrainResultsVisualizationProps> = ({
+const ToolResultsVisualization: React.FC<ToolResultsVisualizationProps> = ({
   cdpId,
 }) => {
-  // TODO: 从API获取八个脑区执行结果数据
-  const brainResults: BrainResults = {}
+  // TODO: 从API获取八个工具执行结果数据
+  const toolResults: ToolResults = {}
 
   return (
     <Card>
-      <Title level={4}>八个脑区执行结果</Title>
+      <Title level={4}>八个工具执行结果</Title>
       <Row gutter={16}>
-        {/* 脑区0：健康状态判定 */}
-        {brainResults.brain0 && (
+        {/* tool_0：健康状态判定 */}
+        {toolResults.tool0 && (
           <Col span={12}>
-            <Card size="small" title="脑区0：健康状态判定">
+            <Card size="small" title="tool_0：健康状态判定">
               <Descriptions size="small" column={1}>
                 <Descriptions.Item label="工作态">
                   <Tag
                     color={
-                      brainResults.brain0.workMode === 'clinical_mode' ? 'red' : 'green'
+                      toolResults.tool0.workMode === 'clinical_mode' ? 'red' : 'green'
                     }
                   >
-                    {brainResults.brain0.workMode === 'clinical_mode'
+                    {toolResults.tool0.workMode === 'clinical_mode'
                       ? '临床诊疗态'
                       : '健康管理态'}
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="风险等级">
-                  {brainResults.brain0.riskLevel}
+                  {toolResults.tool0.riskLevel}
                 </Descriptions.Item>
               </Descriptions>
             </Card>
           </Col>
         )}
 
-        {/* 脑区A：病例理解 */}
-        {brainResults.brainA && (
+        {/* tool_1：病例理解 */}
+        {toolResults.tool1 && (
           <Col span={12}>
-            <Card size="small" title="脑区A：病例理解">
-              <Text>识别概念数：{brainResults.brainA.concepts.length}</Text>
+            <Card size="small" title="tool_1：病例理解">
+              <Text>识别概念数：{toolResults.tool1.concepts.length}</Text>
             </Card>
           </Col>
         )}
 
-        {/* 脑区B：主动问诊 */}
-        {brainResults.brainB && (
+        {/* tool_2：主动问诊 */}
+        {toolResults.tool2 && (
           <Col span={12}>
-            <Card size="small" title="脑区B：主动问诊">
+            <Card size="small" title="tool_2：主动问诊">
               <Progress
-                percent={brainResults.brainB.completeness * 100}
+                percent={toolResults.tool2.completeness * 100}
                 format={(percent) => `${percent}%`}
               />
             </Card>
           </Col>
         )}
 
-        {/* 脑区C：鉴别诊断（DR.KNOWS核心） */}
-        {brainResults.brainC && (
+        {/* tool_3：鉴别诊断（DR.KNOWS核心） */}
+        {toolResults.tool3 && (
           <Col span={12}>
-            <Card size="small" title="脑区C：鉴别诊断（DR.KNOWS核心）">
-              <Text>推理路径数：{brainResults.brainC.reasoningPaths.length}</Text>
+            <Card size="small" title="tool_3：鉴别诊断（DR.KNOWS核心）">
+              <Text>推理路径数：{toolResults.tool3.reasoningPaths.length}</Text>
               <br />
-              <Text>鉴别诊断数：{brainResults.brainC.ddx.length}</Text>
+              <Text>鉴别诊断数：{toolResults.tool3.ddx.length}</Text>
             </Card>
           </Col>
         )}
@@ -95,5 +95,5 @@ const BrainResultsVisualization: React.FC<BrainResultsVisualizationProps> = ({
   )
 }
 
-export default BrainResultsVisualization
+export default ToolResultsVisualization
 

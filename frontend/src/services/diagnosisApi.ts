@@ -234,7 +234,7 @@ function convertDiagnosisResult(rawResult: any): DiagnosisResult {
 }
 
 export const diagnosisApi = {
-  // 健康状态判定（脑区0）
+  // 健康状态判定（tool_0）
   assessHealthState: async (request: {
     userId: string
     userInput?: string
