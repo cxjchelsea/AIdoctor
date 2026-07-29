@@ -1,9 +1,10 @@
 # AIdoctor 代码与资产迁移矩阵
 
-> 文档状态：Draft v2.5 Migration Matrix  
+> 文档状态：Draft v2.6 Migration Matrix  
 > 更新时间：2026-07-29  
 > 输入：[当前系统资产盘点](./current-system-inventory.md)  
-> 目标：[总体架构与模块设计](./overall-architecture-and-module-design.md)
+> 目标：[总体架构与模块设计](./overall-architecture-and-module-design.md)  
+> 扩展规范：[Capability Package](./capability-package-specification.md) · [呼吸道 RAG V1](./adult-respiratory-medical-rag-v1-design.md) · [Model Runtime](./prompt-and-model-runtime-design.md)
 
 ---
 
@@ -12,22 +13,17 @@
 | 类型 | 定义 |
 |---|---|
 | KEEP | 职责和契约基本符合目标，可原位保留 |
-| ADAPT | 核心逻辑有价值，需改接口、类型、权限或依赖 |
+| ADAPT | 核心逻辑有价值，需修改接口、类型、权限、版本或依赖 |
 | WRAP | 暂时通过 Adapter 接入，待新实现稳定后迁移 |
 | REWRITE | 职责、状态所有权或安全边界根本不符合，需要按新设计实现 |
 | ARCHIVE | 不进入目标生产主链路，但保留历史、研究或参考价值 |
 | REMOVE | 已确认无引用、无数据和无回滚价值后删除 |
 | SPLIT | 当前资产跨越多个目标模块，需要拆分迁移 |
 | MERGE | 多个当前资产职责重叠，合并为一个目标模块 |
+| EXTRACT | 从现有代码、配置或数据中抽出为独立治理资产 |
+| EVALUATE | 保留候选能力，但必须通过基准和收益评估后才能进入生产 |
 
-任何 `REMOVE` 必须满足：
-
-- 新路径已上线；
-- 数据和流量已迁移；
-- 无运行时引用；
-- 回滚窗口结束；
-- 归档或备份完成；
-- Owner 批准。
+任何 `REMOVE` 必须满足：替代路径上线、数据和流量迁移、全仓引用为空、回滚窗口结束、归档完成、Owner 批准。
 
 ---
 
@@ -36,356 +32,250 @@
 采用 Strangler Migration：
 
 ```text
-建立新 Contracts
+建立 Shared Contracts
+→ 建立 Capability / Prompt / Model / Knowledge 版本资产
 → Adapter 包装旧能力
 → 第一条新纵向切片
-→ 新旧双跑和差异比较
+→ 新旧双跑与差异比较
 → 分模块切换流量
 → 旧路径只读或 fallback
 → 达到下线门禁
 → Archive / Remove
 ```
 
-不采用：
+禁止：
 
-- 一次性重写所有服务；
-- 先移动所有目录再修代码；
-- 用服务改名代替职责重构；
-- 未验证便删除旧 Workflow；
-- 新旧代码同时直接写同一临床状态而无版本控制。
+- 一次性重写全部服务；
+- 用目录改名代替职责重构；
+- 未验证便删除固定 Workflow；
+- 业务模块直接调用模型供应商 SDK；
+- 未注册的 Prompt、模型、知识来源进入生产；
+- 新旧代码无版本控制地直接写同一临床状态；
+- 把 Neo4j 中已有关系直接当作循证结论。
 
 ---
 
 ## 3. 顶层资产迁移矩阵
 
-| 当前资产 | 目标模块 | 决策 | 主要保留 | 主要改造 | 阶段 | 下线/完成条件 |
+| 当前资产 | 目标模块 | 决策 | 主要保留 | 主要改造 | 阶段 | 完成条件 |
 |---|---|---|---|---|---|---|
-| `diagnosis-service` | Business、Clinical State | SPLIT + ADAPT | API、Encounter/CDP经验、版本历史、固定 Workflow | 移除 Agent 编排职责；引入 Encounter、StatePatch、State Committer；旧 API Adapter | A-E | 新 Business API 和 State Committer 稳定，固定 Workflow 成为 fallback |
-| `examination-service` | Business、Evidence Intake | REWRITE/ARCHIVE | 上传业务需求、API 草案 | 按 SourceArtifact、Consent、质量门和对象存储重写 | D/E | 新报告接入 E2E 通过 |
-| `health-state-assessment-service` | Safety、后续 Wellness Capability | SPLIT + MERGE | 红旗、风险、输入校验、健康流程样例 | 红旗并入 Safety；健康管理拆为独立 Capability | B/E | Safety 规则回归通过，旧入口无流量 |
-| `clinical-parsing-service` | Clinical Intelligence | ADAPT | 词表、归一化、抽取算法 | 输出 ObservationCandidate；去掉 CDP 直读写；真实质量指标 | B/C | 新抽取合同回归达到阈值 |
-| `dialog-service` | Intelligence、Context、Runtime、Business | SPLIT + REWRITE | 信息缺口、问题模板、NLU/NLG、WS经验 | 拆分职责；QuestionDecision；ContextEnvelope；删除 CDP 直写 | C/D | 新 LangGraph 和通信层覆盖旧接口 |
-| `diagnosis-engine-service` | Clinical Intelligence、Evidence | ADAPT + WRAP | KG、规则、模型 Adapter、候选分层 | 统一 DiagnosticHypothesis；证据方向；版本；禁止直接确诊 | D/F | 双跑差异通过临床评审 |
-| `workup-planner-service` | Tool Governance、Clinical Intelligence | ARCHIVE + WRAP | 检查建议算法和验证计划 | 作为受控 Tool，增加证据、权限、医生审核 | E+ | 专项评估和审核链完成 |
-| `treatment-engine-service` | 高风险 Tool | ARCHIVE | 数据、原型和术语 | 不进入首个主链路；未来按医生审核和证据重新设计 | 后续 | 高风险能力单独立项 |
-| `risk-assessment-service` | Safety、Delivery | SPLIT + MERGE | 分诊、升级规则、reason code | 与 health 风险规则合并；Conclusion 移出 Safety | B/E | 单一 Safety Engine 上线 |
-| `explanation-service` | Delivery、Decision Record | SPLIT + ADAPT | NLG、证据路径展示、可视化 | Evidence/Decision/Presentation 分责；受控 Context | D/E | 三类 Delivery 回归通过 |
+| `diagnosis-service` | Business、Clinical State | SPLIT + ADAPT | API 语义、CDP 历史、固定 Workflow | Encounter、StatePatch、State Committer、v1 兼容 Adapter | A-E | 新 Business API 和 State Committer 稳定，旧 Workflow 仅 fallback |
+| `examination-service` | Business、Evidence Intake | REWRITE/ARCHIVE | 上传需求和接口草案 | SourceArtifact、Consent、质量门、对象存储 | D/E | 新资料接入 E2E 通过 |
+| `health-state-assessment-service` | Safety、后续 Wellness Capability | SPLIT + MERGE | 红旗、风险、输入校验 | 红旗合并 Safety；健康管理抽为独立 Capability | B/E | 单一 Safety Engine 回归通过 |
+| `clinical-parsing-service` | Clinical Intelligence | ADAPT | 词表、归一化、抽取算法 | ObservationCandidate、统一 Model Route、去除 CDP 直写 | B/C | 新抽取合同与 Eval 达标 |
+| `dialog-service` | Intelligence、Context、Runtime、Business | SPLIT + REWRITE | 信息缺口、问题模板、通信经验 | QuestionDecision、ContextEnvelope、Prompt Registry、统一事件流 | C/D | 新 Runtime 和通信层覆盖旧接口 |
+| `diagnosis-engine-service` | Clinical Intelligence、Evidence | ADAPT + WRAP | KG、规则、统计和模型 Adapter | DiagnosticHypothesis、证据方向、版本、Model Route | D/F | 双跑结果通过临床评审 |
+| `workup-planner-service` | Tool Governance、Clinical Intelligence | ARCHIVE + WRAP | 检查建议原型 | 受控 Tool、证据、权限、审核 | E+ | 专项评估和审核链完成 |
+| `treatment-engine-service` | 高风险 Tool | ARCHIVE | 原型、术语和历史数据 | 不进入首个 Capability；未来单独立项 | 后续 | 高风险能力独立批准 |
+| `risk-assessment-service` | Safety、Delivery | SPLIT + MERGE | 分诊、升级规则、reason code | 与 health 规则合并；表达移出 Safety | B/E | 单一 Triage 输出上线 |
+| `explanation-service` | Delivery、Decision Record | SPLIT + ADAPT | NLG 和展示逻辑 | Patient/Clinician Delivery、统一 Prompt Route、证据边界 | D/E | 三类 Delivery 回归通过 |
 | `ocr-service` | Tool、Evidence Intake | KEEP + ADAPT | OCR Adapter | SourceArtifact、质量状态、幂等、人工确认 | D | 报告链路 E2E 通过 |
-| `execution-trace-service` | Observability | SPLIT + ADAPT | 时间线、调用树、AgentEvent UI | 技术 Trace 改 OTel；CDP Trace 分离；PHI 过滤 | C/F | OTel + AgentEvent Dashboard 完成 |
-| `frontend` | Patient/Clinician/Admin UI | ADAPT | React、组件、流程页面、ReactFlow | 新 API、Interrupt/Resume、ReviewTask、角色拆分、测试 | C-E | 新页面覆盖目标场景 |
-| `common/aidoctor_llm` | Model Governance | ADAPT | Provider Adapter | Model Registry、结构化输出、策略、PHI、版本、成本 | C/F | 所有模型调用经 Router |
+| `execution-trace-service` | Observability | SPLIT + ADAPT | 时间线、调用图和 AgentEvent UI | 技术 Trace 迁 OTel；增加版本链字段；PHI 过滤 | C/F | OTel 与 AgentEvent Dashboard 完成 |
+| `frontend` | Patient/Clinician/Admin UI | ADAPT | React、组件、ReactFlow | Thread、Interrupt、Review、Evidence、Release 管理 | C-F | 新页面覆盖目标场景 |
+| `common/aidoctor_llm` | Model Governance | ADAPT | 供应商客户端与基础调用封装 | ProviderAdapter、Model Gateway、统一错误和指标 | A/C | 所有调用只经 Gateway |
 | `science/` | Research | ARCHIVE | 研究代码和 Demo | 与生产依赖隔离、补数据声明 | A/F | 生产构建无依赖 |
-| `scripts/` | Tooling | SPLIT | 有效批处理和迁移脚本 | 分类、参数校验、幂等、测试、危险操作保护 | A-F | 每个脚本有 Owner 和类别 |
-| `docs/` 历史内容 | Documentation | SPLIT + ARCHIVE | 历史设计和知识 | 当前真值与历史归档分离 | A | README 只指向当前基线 |
-| `docker-compose.yml` | Platform | REWRITE | 本地依赖和端口信息 | 完整 profile、无硬编码密码、Postgres/OTel、健康检查 | A-C | 新开发环境一键启动 |
+| `scripts/` | Tooling | SPLIT | 有效批处理与迁移脚本 | 分类、幂等、参数校验和测试 | A-F | 每个脚本有 Owner |
+| `docs/` 历史内容 | Documentation | SPLIT + ARCHIVE | 历史设计 | 当前真值与归档分离 | A | README 只指向当前基线 |
+| `docker-compose.yml` | Platform | REWRITE | 端口和依赖经验 | Postgres、Redis、OTel、健康检查、无硬编码密钥 | A-C | 开发环境一键启动 |
 
 ---
 
-## 4. diagnosis-service 详细迁移
+## 4. v2.6 新增资产迁移矩阵
 
-### 4.1 保留
+### 4.1 Prompt 与模型资产
 
-- 当前 `/start`、`/continue`、`/status`、`/result` 业务语义；
-- 旧 API 兼容能力；
-- JPA、Flyway 和基础异常处理；
-- CDP 历史版本和回放数据作为迁移输入；
-- 固定 Workflow 中经过验证的流程场景；
-- 对外系统和前端已依赖的 DTO 字段映射。
+| 当前资产形态 | 决策 | 目标资产 | 必须盘点 |
+|---|---|---|---|
+| Python/Java 字符串中的 Prompt | EXTRACT + ADAPT | `PromptSpec` / `PromptRelease` | 文件、调用者、输入、输出、风险、语言 |
+| YAML/JSON 中的零散 Prompt | ADAPT | Git 管理 Prompt Registry | 版本、Owner、Reviewer、Eval |
+| 服务内直接调用供应商 SDK | REWRITE | `ModelGateway.invoke()` | Provider、模型、超时、重试、PHI |
+| 各服务独立模型配置 | MERGE | `ModelSpec` / `ModelRoutePolicy` | 模型能力、地区、成本、Fallback |
+| 自行解析模型 JSON | REWRITE | Structured Output Validator | Schema、修复次数、失败策略 |
+| 自行记录 Token/Cost | MERGE | ModelInvocationRecord / OTel | token、成本、延迟、route、版本 |
+| 固定写死模型名称 | REWRITE | 稳定 `route_id` | 任务、风险、Capability、允许模型 |
 
-### 4.2 拆分
+### 4.2 Capability 资产
+
+| 当前资产 | 决策 | 目标位置 |
+|---|---|---|
+| 呼吸道规则和问诊步骤 | EXTRACT + ADAPT | `adult_respiratory_v1/safety`、`question_policy` |
+| 术语词典和编码映射 | EXTRACT + ADAPT | Terminology Pack |
+| 字段、症状和体征定义 | EXTRACT + ADAPT | Observation Profile |
+| 候选疾病和 must-not-miss 列表 | REVIEW + ADAPT | Hypothesis Pack |
+| 允许的 Tool/Prompt/Model | NEW | Runtime Allowlist |
+| 红旗病例和对话样例 | EXTRACT | Capability Eval Suite |
+| 健康管理 A1-A5 | ARCHIVE / NEW CAPABILITY | 后续 Wellness Capability |
+
+### 4.3 知识与 RAG 资产
+
+| 当前资产 | 决策 | 目标位置 |
+|---|---|---|
+| 现有指南、论文和参考文档 | REVIEW | Source Registry |
+| 无来源或无法确认许可的知识 | ARCHIVE | 禁止进入生产 Knowledge Release |
+| 现有向量数据 | EVALUATE / REBUILD | pgvector Knowledge Index |
+| 现有检索 Prompt | EXTRACT + ADAPT | Evidence Query / Claim Route |
+| 现有 Neo4j 节点和关系 | EVALUATE + ADAPT | Knowledge Graph Enhancement |
+| 现有症状—疾病关系 | REVIEW | Terminology/Graph Pack，必须保留来源 |
+| 患者历史向量数据 | REWRITE | Patient RAG 独立索引和权限域 |
+| 公共医学知识向量数据 | REWRITE | Medical RAG 独立 Knowledge Release |
+
+知识图谱生产启用条件：来源可追踪、版本可回滚、患者数据隔离、对照实验显示净收益、无 Citation 替代行为。
+
+---
+
+## 5. diagnosis-service 迁移
 
 ```text
 DiagnosisController
 → Business & Care Delivery API
 
 DiagnosisOrchestrationService
-→ 业务入口部分保留
-→ Agent 路由迁往 Python Agent Runtime
-→ 固定路径转为 FallbackWorkflowAdapter
+→ 业务入口保留
+→ Agent 路由迁 Python Runtime
+→ 固定路径变为 FallbackWorkflowAdapter
 
 CDPManager
-→ 迁为 State Committer + Repository
+→ State Committer + Repository
 
 CDP Entity
-→ EncounterCDP + Observation/Evidence/Decision 等合同
+→ EncounterCDP + Observation/Evidence/Decision Contracts
 
 TraceContext / executionTrace
 → OTel Context + AgentEvent
 ```
 
-### 4.3 重写点
+重写点：
 
-- `Map<String,Object>` 更新改为 `StatePatch`；
-- `expected_cdp_version` 代替仅依赖悲观锁；
-- 远程模型/工具调用不得在临床状态事务中执行；
-- 旧 `cdpStatus` 映射到 EncounterStatus、ThreadStatus 和 DeliveryStatus；
-- `conclusionPackage` 不再写入 patient_state；
-- audit、trace 从 CDP 拆出；
-- 默认继续流程的降级必须由 Safety Policy 审批。
-
-### 4.4 迁移方式
-
-```text
-旧 Diagnosis API
-→ Compatibility Controller
-→ 新 Business Command
-→ Python Runtime 或 Fixed Workflow Adapter
-→ StatePatch
-→ State Committer
-→ 旧响应 DTO Mapper
-```
+- `Map<String,Object>` 改为 `StatePatch`；
+- 使用 `expected_cdp_version`；
+- 远程模型和 Tool 调用不得处于临床状态事务中；
+- Audit、Trace、Delivery 从 CDP 拆出；
+- 旧响应通过 DTO Mapper 兼容；
+- 固定 Workflow 使用同一 Capability、Prompt、Knowledge 和 Safety 版本快照。
 
 ---
 
-## 5. Python 工具服务迁移
+## 6. Python 运行形态与旧服务 Adapter
 
-### 5.1 目标物理形态
-
-第一阶段不继续维持每个步骤一个生产服务，建议：
+目标首版：
 
 ```text
 apps/agent-runtime/
 └── FastAPI + LangGraph
 
 packages/
-├── clinical-intelligence/
-├── safety-policy/
-├── evidence-intelligence/
-├── context-memory/
-├── tool-skill-model-governance/
-├── durable-execution/
+├── clinical_intelligence/
+├── safety_policy/
+├── evidence_intelligence/
+├── context_memory/
+├── model_runtime/
+├── tool_skill_governance/
+├── durable_execution/
 └── observability/
 ```
 
-旧服务暂时保留独立进程，通过 Tool Adapter 接入。
-
-### 5.2 Adapter 协议
-
-旧服务包装必须统一：
+旧服务可暂时独立运行，但必须通过：
 
 ```text
-ToolExecutionRequest
-→ 限定 Context
-→ Legacy Service Adapter
-→ ToolResultV2
-→ Result Validator
-→ StatePatch Candidate
+Versioned Request
+→ Limited Context
+→ Legacy Adapter
+→ Versioned Result
+→ Validator
+→ Candidate / StatePatch
 ```
 
-Adapter 必须补充：
-
-- `tool_release_id`；
-- `contract_version`；
-- `capability_id`；
-- `idempotency_key`；
-- `source_ids`；
-- `reason_codes`；
-- `retryability`；
-- `data_classification`；
-- `trace_id/span_id`。
-
-### 5.3 禁止
-
-- 旧 Tool 自行读取完整 CDP；
-- 旧 Tool 直接写数据库；
-- ToolResult 的 suggested write 自动提交；
-- 固定 confidence 常量作为验收质量；
-- Tool 内部自行选择未批准模型；
-- Tool 返回自然语言失败后 Runtime 继续推理。
+旧服务不得自行读取完整 CDP、写数据库、选择未批准模型、加载未发布 Prompt 或访问未授权知识索引。
 
 ---
 
-## 6. Safety 合并矩阵
-
-| 当前能力 | 当前位置 | 目标位置 | 决策 |
-|---|---|---|---|
-| 入口危险信号 | health-state | Safety Engine | ADAPT |
-| 红旗识别 | health-state | Safety Engine | ADAPT |
-| 风险等级 | health-state/risk | Safety Engine | MERGE |
-| 分诊 | risk-assessment | Safety Engine | ADAPT |
-| 升级规则 | risk-assessment | Safety Policy | ADAPT |
-| 工作态选择 | health-state/Java | Capability Router | REWRITE |
-| 健康管理 A1-A5 | health-state/Java | Wellness Capability | ARCHIVE/后续 |
-| Conclusion Package | risk/explanation/Java | Delivery Builder | MERGE + REWRITE |
-| 高风险医生审核 | 缺失/不完整 | Business + Runtime | NEW |
-
-Safety 合并完成前，不允许同时让两个旧服务独立决定最终分诊。
-
----
-
-## 7. Clinical Intelligence 迁移矩阵
-
-| 能力 | 旧资产 | 目标合同 | 决策 |
-|---|---|---|---|
-| 临床概念抽取 | clinical-parsing | ObservationCandidate | ADAPT |
-| 标准编码归一化 | clinical-parsing | ConceptReference | KEEP/ADAPT |
-| 输入理解 | dialog | ObservationCandidate | SPLIT |
-| 信息缺口 | dialog | InformationGap | ADAPT |
-| 下一问题 | dialog | QuestionDecision | REWRITE 接口 |
-| 诊断候选 | diagnosis-engine | DiagnosticHypothesis | ADAPT |
-| KG 路径 | diagnosis-engine | EvidenceClaim/ReasoningPath | WRAP |
-| 多引擎融合 | diagnosis-engine | InferenceEnsembleResult | ADAPT |
-| 检查建议 | workup | ToolResult/ClinicalPlanCandidate | WRAP |
-| 风险分诊 | health/risk | TriageAssessment | MERGE |
-| 自然语言解释 | explanation/dialog | DeliverySection | ADAPT |
-
----
-
-## 8. CDP 数据迁移矩阵
+## 7. CDP 数据迁移矩阵
 
 | 旧字段 | 新目标 | 处理 |
 |---|---|---|
 | `patient_id` | Encounter.patient_id | 映射 |
 | `session_id` | Encounter + Thread | 拆分 |
 | `version_no` | EncounterCDP.version | 映射并校验历史 |
-| `cdp_status` | EncounterStatus/ThreadStatus | 状态映射 |
-| `health_state_assessment` | TriageAssessment + Decision Record | 解析迁移 |
-| `wellness_plan` | 独立 Wellness Capability 数据 | 延后迁移 |
+| `cdp_status` | EncounterStatus / ThreadStatus | 状态映射 |
+| `health_state_assessment` | TriageAssessment + DecisionRecord | 解析迁移 |
+| `wellness_plan` | 独立 Wellness Capability | 延后迁移 |
 | `patient_state` | ClinicalObservation + SourceArtifact | 逐字段解析 |
 | `ddx` | DiagnosticHypothesis | 解析迁移 |
-| `evidence_graph` | Evidence Ledger/EvidencePack | 解析并保留来源 |
-| `workup_plan` | ClinicalPlan/ToolResult | 解析迁移 |
-| `management_plan` | 高风险历史记录 | 只读迁移，不自动激活 |
+| `evidence_graph` | Evidence Ledger / Legacy Graph Archive | 保留来源，不自动转 EvidenceClaim |
+| `workup_plan` | ClinicalPlanCandidate / ToolResult | 解析迁移 |
+| `management_plan` | 高风险历史记录 | 只读迁移 |
 | `triage` | TriageAssessment | 解析迁移 |
 | `uncertainty` | InformationGap + Conflict | 解析迁移 |
-| `audit_info` | Compliance Audit | 从临床主表拆出 |
-| `execution_trace` | AgentEvent/Legacy Trace Archive | 从临床主表拆出 |
-| `conclusion_package` in patient_state | DeliveryPackage | 拆出 |
+| `audit_info` | Compliance Audit | 拆出 |
+| `execution_trace` | AgentEvent / Legacy Trace Archive | 拆出 |
+| `conclusion_package` | DeliveryPackage | 拆出 |
 
-旧 JSON 迁移必须保留：
-
-- 原始 blob；
-- checksum；
-- 旧 schema version；
-- migration version；
-- parse error；
-- unmapped fields；
-- source record ID。
+旧 JSON 必须保留原始 blob、checksum、旧 schema、migration version、parse error、unmapped fields 和 source record ID。
 
 ---
 
-## 9. 前端迁移矩阵
+## 8. 前端迁移矩阵
 
-| 当前页面/能力 | 决策 | 目标 |
+| 当前能力 | 决策 | 目标 |
 |---|---|---|
 | 患者问诊页 | ADAPT | Encounter/Thread/Interrupt 状态驱动 |
-| WebSocket 对话 | WRAP | 统一 Event Stream，支持 Resume Token |
+| WebSocket 对话 | WRAP | 统一 Event Stream + Resume Token |
 | 诊断状态页 | ADAPT | DeliveryPackage + Timeline |
-| Trace 管理页 | SPLIT | Technical Trace 与 AgentEvent 分视图 |
-| ReactFlow 调用图 | KEEP/ADAPT | Agent Graph/Trace 可视化 |
+| Trace 管理页 | SPLIT | Technical Trace、AgentEvent、Decision 分视图 |
+| ReactFlow 调用图 | KEEP/ADAPT | Graph/Trace 可视化 |
 | 医生页面 | NEW | ReviewTask、Evidence、Edit/Approve/Reject |
-| 管理页面 | NEW/ADAPT | Capability、Release、Eval、Audit |
-| Zustand Store | ADAPT | 按 Encounter/Thread/Review 分域 |
-| Axios API Client | REWRITE | 版本化 API Client 和错误模型 |
-| 前端测试 | NEW | Unit/Component/E2E/Accessibility |
+| 管理页面 | NEW/ADAPT | Capability、Prompt、Model、Knowledge Release、Eval |
+| Zustand Store | ADAPT | Encounter/Thread/Review/Release 分域 |
+| Axios Client | REWRITE | 版本化 API 和统一错误模型 |
+| 前端测试 | NEW | Unit、Component、E2E、Accessibility |
 
 ---
 
-## 10. 文档迁移矩阵
+## 9. 验证门禁
 
-### 当前真值
+### KEEP / ADAPT / WRAP
 
-以下目录作为当前设计真值：
-
-- `docs/refactoring/`；
-- 后续 `docs/modules/`；
-- 后续 `docs/contracts/`；
-- 后续 `docs/adr/`。
-
-### 历史归档
-
-以下内容在完成分类后移动到 `docs/archive/`：
-
-- 五脑/脑区旧架构；
-- 与当前状态所有权冲突的设计；
-- 已被 v2.5 替代的阶段路线；
-- 给特定展示或汇报使用的非实施方案；
-- 已完成且不再适用的开发过程文档。
-
-归档文件顶部必须增加：
-
-```text
-ARCHIVED
-Replaced by: <current document>
-Archived at: <date>
-Do not use as implementation source of truth.
-```
-
----
-
-## 11. 决策验证门禁
-
-### KEEP
-
-- [ ] 编译通过；
-- [ ] 测试通过；
-- [ ] 职责符合目标模块；
-- [ ] 无绕过状态和安全门禁；
-- [ ] 契约兼容。
-
-### ADAPT/WRAP
-
-- [ ] Adapter 契约；
-- [ ] 输入字段最小化；
-- [ ] 超时、重试、错误和幂等；
-- [ ] 结构化结果校验；
-- [ ] 新旧输出对比；
-- [ ] 移除直接状态写入。
+- 编译和测试通过；
+- 职责符合目标模块；
+- 无绕过 State、Safety、Model Gateway 和 Knowledge Policy；
+- 新旧输出可比较；
+- 版本链和回滚明确。
 
 ### REWRITE
 
-- [ ] 旧功能和测试清单完整；
-- [ ] 新实现有 E2E；
-- [ ] 双跑窗口；
-- [ ] 数据迁移和回滚；
-- [ ] Owner 签字。
+- 旧功能、Prompt、数据和测试清单完整；
+- 新实现有 E2E；
+- 双跑窗口和数据迁移完成；
+- Owner 与 Reviewer 批准。
 
-### ARCHIVE
+### ARCHIVE / REMOVE
 
-- [ ] 无生产流量；
-- [ ] 无生产依赖；
-- [ ] 相关数据已保留；
-- [ ] 当前文档已替代；
-- [ ] 安全密钥已移除。
-
-### REMOVE
-
-- [ ] Archive 条件全部满足；
-- [ ] 回滚期结束；
-- [ ] 全仓引用扫描为空；
-- [ ] CI 通过；
-- [ ] 删除 PR 单独提交。
+- 无流量、无依赖；
+- 数据和密钥已处理；
+- 当前文档已替代；
+- 全仓引用为空；
+- 回滚期结束。
 
 ---
 
-## 12. 初始迁移顺序
+## 10. 初始迁移顺序
 
 ```text
-M1 统一 Contracts
-→ M2 State Committer 和 CDP Adapter
-→ M3 合并 Safety
-→ M4 包装 Parsing / Dialog 核心能力
-→ M5 最小 Python LangGraph Runtime
-→ M6 Checkpoint / Resume
-→ M7 新前端主链路
-→ M8 Diagnosis Engine / Evidence 接入
-→ M9 Doctor Review / Delivery
-→ M10 OTel 和 Trace 迁移
+M1 运行基线与全量 Inventory
+→ M2 Shared Contracts + Capability/Prompt/Model/Knowledge Schemas
+→ M3 State Committer 与 CDP Adapter
+→ M4 合并 Safety 和抽取 adult_respiratory_v1
+→ M5 ProviderAdapter + Prompt Loader + Model Gateway
+→ M6 包装 Parsing/Dialog 核心能力
+→ M7 最小 LangGraph + Checkpoint/Resume
+→ M8 呼吸道 Knowledge Release + Evidence 接入
+→ M9 新前端与医生审核
+→ M10 OTel、发布治理与双跑
 → M11 旧服务下线
 ```
 
 ---
 
-## 13. 当前结论
+## 11. 当前结论
 
-当前不建议把任何核心旧服务立即标记为 `REMOVE`。
-
-当前最合理的策略是：
-
-- `diagnosis-service`：拆分和适配；
-- parsing、dialog、diagnosis engine：保留领域逻辑，重写边界；
-- health/risk：合并安全规则；
-- workup/treatment：首阶段归档或包装；
-- explanation/trace/frontend：保留展示资产，重构数据源；
-- CDP：保留历史和版本，重构为新状态合同；
-- Python 多服务：逐步收拢为一个 Runtime 内的模块包。
+当前没有核心服务可立即 `REMOVE`。迁移原则是：保留可验证的领域逻辑，重写状态、安全、模型、知识和发布边界；将场景资产抽为 Capability Package；将散落的大模型调用收敛为统一 Model Runtime；将现有知识和知识图谱先治理、评估，再决定生产启用。
