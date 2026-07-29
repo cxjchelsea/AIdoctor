@@ -1,172 +1,178 @@
 # AIdoctor 重构方案导航
 
-> 当前整合版本：Draft v2.5 Freeze Candidate  
+> 当前整合版本：Draft v2.6 Freeze Candidate  
 > 更新时间：2026-07-29  
 > 适用分支：`agent/enterprise-agent-refactoring-plan`
 
----
-
 ## 1. 当前状态
-
-AIdoctor 的目标架构已经完成总体设计，并进入冻结前收口阶段。
 
 ```text
 v2.4
-完成总体架构、主流程、11个模块、共享契约和Phase A-F
+总体架构、完整主流程、11个模块、共享契约、状态所有权和Phase A-F
 
 v2.5
-补充代码结构评估、覆盖检查、迁移方案、工程发布和可执行路线
+代码结构评估、迁移矩阵、覆盖矩阵、数据/前端/工程迁移与冻结基线
+
+v2.6
+Capability扩展规范、成人呼吸道RAG V1、模型调用矩阵、Prompt与Model Runtime
 ```
 
 当前状态：
 
-> **Freeze Candidate：总体目标完整，正在通过真实代码、数据和运行基线验证迁移结论。**
-
----
+> **Freeze Candidate：总体架构和关键详细设计已完整，仍需通过 Phase A 的真实编译、运行、数据和契约验证进入 Frozen Baseline。**
 
 ## 2. 开发入口阅读顺序
 
 ### 第一步：理解最终系统
 
 1. [总体架构与模块设计](./overall-architecture-and-module-design.md)
-   - 当前是 Workflow 还是 Agent；
-   - 完整主流程；
+   - Workflow 与 Agent 的关系；
+   - 完整正常、高风险、工具失败、医生审核和恢复流程；
    - 十一个一级模块；
    - 共享数据契约；
    - 状态所有权；
    - 依赖方向；
    - 第一条纵向切片。
 
-### 第二步：理解冻结规则
-
 2. [架构冻结基线](./architecture-freeze-baseline.md)
-   - 哪些决策冻结；
-   - 哪些细节允许更新；
-   - 哪些变化需要 ADR；
-   - 总体架构进入 Frozen Baseline 的门禁。
+   - 长期稳定决策；
+   - 变更控制和 ADR；
+   - Frozen Baseline 门禁。
 
-### 第三步：理解当前代码
+### 第二步：理解场景如何扩展
 
-3. [当前系统资产盘点](./current-system-inventory.md)
-   - 当前 Java/Python/Frontend/Storage 真实结构；
-   - 代码抽样发现；
-   - CDP、Workflow、Tool、Trace 和基础设施现状；
-   - 需要进一步编译、运行和数据验证的内容。
+3. [Capability Package 规范](./capability-package-specification.md)
+   - 稳定平台与场景包边界；
+   - Manifest、Terminology、Observation、Safety、Question、Hypothesis、Knowledge、Runtime 和 Eval Pack；
+   - `adult_respiratory_v1` 的范围和非目标；
+   - 新增消化、心血管等场景的标准步骤；
+   - Capability 版本、发布和回滚。
 
-4. [代码与资产迁移矩阵](./migration-matrix.md)
-   - KEEP / ADAPT / WRAP / REWRITE / ARCHIVE / REMOVE；
-   - 每个现有服务的目标归属；
-   - 下线门禁；
-   - 迁移顺序。
+核心扩展方式：
 
-### 第四步：确认没有遗漏
+```text
+Stable Platform
++ Versioned Capability Package
+= New Supported Clinical Scenario
+```
 
-5. [目标能力覆盖矩阵](./coverage-matrix.md)
-   - 每项能力的 Owner Module；
-   - 所属 Phase；
-   - 核心 Contract；
-   - 实现产物；
-   - 测试和完成标准。
+扩场景不是只换 Prompt 或知识库，而是新增完整、可评估、可回滚的 Capability Package。
 
-### 第五步：按执行路线开发
+### 第三步：理解知识库和模型基础设施
 
-6. [可执行实施路线](./implementation-roadmap.md)
-   - Phase A：现状基线与架构冻结；
-   - Phase B：临床状态和 Safety；
-   - Phase C：Agent Runtime 和 Resume；
-   - Phase D：推理、历史和循证；
-   - Phase E：医生审核和业务闭环；
-   - Phase F：治理、生产放量和旧系统下线。
+4. [成人呼吸道 Medical RAG V1 详细设计](./adult-respiratory-medical-rag-v1-design.md)
+   - Patient RAG 与 Medical Knowledge RAG 隔离；
+   - 安全分诊、信息采集、有限鉴别、检查和患者教育知识域；
+   - Source Registry、Ingestion、Chunk、PostgreSQL、pgvector、BM25、Reranker；
+   - EvidencePack、Citation Validation、Knowledge Release；
+   - 知识图谱 Schema、适用范围和启用门禁；
+   - RAG 评估和上线标准。
 
-### 第六步：查看专项迁移
+5. [模型调用与路由矩阵](./model-call-and-routing-matrix.md)
+   - 哪些任务调用 LLM；
+   - 哪些任务必须确定性实现；
+   - 首个 Capability 启用哪些模型路线；
+   - RoutePolicy、Model Registry、Fallback 和专项评估；
+   - 高风险任务禁止静默降级。
 
-7. [数据与基础设施迁移](./data-and-infrastructure-migration.md)
-   - MySQL/Oracle/PostgreSQL；
-   - Redis、Neo4j、Milvus、Nacos；
-   - Object Storage；
-   - OTel；
-   - CDP 数据迁移和对账。
+6. [Prompt 与模型运行时设计](./prompt-and-model-runtime-design.md)
+   - Model Runtime Client；
+   - Prompt Registry / Loader / Builder；
+   - Model Registry / Router / Gateway；
+   - Provider Adapter；
+   - Structured Output Validator；
+   - Prompt/Model 发布、兼容、追踪和回滚；
+   - `common/aidoctor_llm` 的迁移方式。
 
-8. [前端与业务迁移](./frontend-and-business-migration.md)
-   - v1/v2 API；
-   - 患者端；
-   - 医生端；
-   - 管理端；
-   - Interrupt/Resume；
-   - Trace 页面迁移。
+统一模型调用链：
 
-9. [工程、发布、回滚与下线](./engineering-release-and-decommission-plan.md)
-   - CI/CD；
-   - 测试；
-   - 数据库 Migration；
-   - 发布和灰度；
-   - 备份恢复；
-   - 回滚；
-   - 老服务下线。
+```text
+Graph Node / Domain Module
+→ Context Assembly
+→ Prompt Registry / Loader
+→ Prompt Builder
+→ Model Router
+→ Model Gateway
+→ Provider Adapter
+→ Structured Output Validator
+→ Safety / Capability Validation
+→ Candidate / Decision / Draft
+```
 
----
+业务模块不得直接调用模型供应商 SDK。
+
+### 第四步：理解当前代码与迁移
+
+7. [当前系统资产盘点](./current-system-inventory.md)
+   - Java、Python、Frontend、Storage 当前结构；
+   - CDP、固定 Workflow、Tool、Trace 和基础设施现状；
+   - 静态代码证据和仍需运行验证的内容。
+
+8. [代码与资产迁移矩阵](./migration-matrix.md)
+   - KEEP / ADAPT / WRAP / REWRITE / ARCHIVE / REMOVE / SPLIT / MERGE；
+   - 现有服务的目标归属和下线门禁。
+
+9. [目标能力覆盖矩阵](./coverage-matrix.md)
+   - Owner Module；
+   - Phase；
+   - Contract；
+   - Implementation；
+   - Test；
+   - Completion Gate。
+
+### 第五步：按路线实施
+
+10. [可执行实施路线](./implementation-roadmap.md)
+    - Phase A：现状基线、契约和冻结；
+    - Phase B：Clinical State 与 Safety；
+    - Phase C：Agent Runtime、Model Runtime 基础和 Resume；
+    - Phase D：有限推理、Patient History、呼吸道 RAG 和 Evidence；
+    - Phase E：医生审核和业务闭环；
+    - Phase F：治理、评估、生产放量和下线。
+
+### 第六步：专项迁移
+
+11. [数据与基础设施迁移](./data-and-infrastructure-migration.md)
+12. [前端与业务迁移](./frontend-and-business-migration.md)
+13. [工程、发布、回滚与下线](./engineering-release-and-decommission-plan.md)
 
 ## 3. 专题架构方案
 
-以下四份文档定义最终系统不同关注面的完整边界。日常开发不从这里选择实施顺序，而是在总体蓝图和 Implementation Roadmap 中执行，需要深入设计时再查阅。
+以下四份长文定义完整边界，日常实施以总体蓝图、详细设计和 Implementation Roadmap 为入口。
 
 1. [企业级临床 Agent 重构主方案](./enterprise-agent-refactoring-plan.md)
-   - 临床主流程；
-   - Safety Loop；
-   - Diagnostic Loop；
-   - 医生接管；
-   - Delivery、Care Navigation 和 Follow-up。
-
 2. [临床数据与循证智能扩展](./clinical-data-and-evidence-intelligence-extension.md)
-   - Encounter 与长期患者记录；
-   - Observation、SourceArtifact 和 Evidence Ledger；
-   - Evidence Intelligence；
-   - PICO、引用、适用性和冲突；
-   - 研究数据治理。
-
 3. [Agent Runtime Foundations 扩展](./agent-runtime-foundations-extension.md)
-   - Context Assembly；
-   - Memory；
-   - Patient/Medical RAG；
-   - Skill Registry；
-   - Model Router；
-   - Runtime Security；
-   - Agent Evaluation。
-
 4. [Durable Execution 与可观测性扩展](./durable-execution-and-observability-extension.md)
-   - Thread、Run、Checkpoint、Interrupt、Resume；
-   - 并发、Outbox/Inbox 和幂等；
-   - Checkpoint Migration 和 Reconciliation；
-   - OpenTelemetry；
-   - Trace、Log、AgentEvent、ClinicalDecisionRecord 和 Audit。
-
----
 
 ## 4. 系统形态
 
-### 当前实现
+当前：
 
 ```text
 固定诊断 Workflow
-+
-实验性 Agent / Tool 骨架
++ 实验性 Agent / Tool 骨架
 ```
 
-### 重构目标
+目标：
 
 ```text
 确定性的安全和生命周期 Workflow
-+
-受约束的 Agent 下一动作决策
++ 受约束的 Agent 下一动作决策
 ```
 
-也就是：
+即 **Constrained Agentic Workflow**。
 
-> **Constrained Agentic Workflow**
+不可绕过：
 
-只有下一动作在批准范围内动态选择。Capability、输入质量、State Committer、Mandatory Safety、医生审核、Checkpoint、幂等和输出安全不可绕过。
-
----
+- Capability、Consent 和权限；
+- 输入质量；
+- State Committer；
+- Mandatory Safety；
+- 高风险医生审核；
+- Checkpoint、Resume 和幂等；
+- 输出安全；
+- 固定 Workflow Fallback。
 
 ## 5. 十一个一级模块
 
@@ -180,13 +186,11 @@ v2.5
 | 6 | Evidence Intelligence & RAG | 患者历史、医学证据、引用、适用性和冲突 |
 | 7 | Agent Runtime | LangGraph、节点、路由、暂停、恢复、重试和降级 |
 | 8 | Context & Memory | Context、摘要、Token、Memory Write/Recall |
-| 9 | Tool, Skill & Model Governance | Tool、Skill、Prompt、Model 和发布治理 |
+| 9 | Tool, Skill & Model Governance | Tool、Skill、Prompt、Model Runtime 和发布治理 |
 | 10 | Durable Execution | Thread、Checkpoint、Resume、Lease、Outbox 和幂等 |
 | 11 | Observability, Audit & Evaluation | OTel、Log、AgentEvent、Decision、Audit、Replay 和 Eval |
 
-这些模块不是十一个必须独立部署的微服务。
-
----
+这些是职责边界，不要求立即部署为十一个微服务。
 
 ## 6. 完整主流程
 
@@ -197,6 +201,7 @@ v2.5
 → 输入质量和范围检查
 → Context Assembly
 → Clinical Understanding
+→ Model Runtime（需要模型时）
 → State Committer 写入 Observation
 → Mandatory Safety Check
 → 更新 Hypothesis、InformationGap 和 Triage
@@ -211,9 +216,62 @@ v2.5
 → Care Navigation / Follow-up
 ```
 
----
+## 7. 首个 Capability
 
-## 7. 当前代码迁移总判断
+首个生产级能力：
+
+> 成人常见呼吸道症状的风险分层、结构化信息采集、有限鉴别、白名单循证展示、医生交接和就医导航。
+
+它是场景坍缩，不是平台永久边界。
+
+首版不包括：
+
+- 通用所有疾病自动诊断；
+- 儿童和孕产完整自动路径；
+- 自动处方和治疗调整；
+- 影像自动确诊；
+- 自由自治多 Agent。
+
+## 8. 知识库技术基线
+
+```text
+Structured Safety Rules
++ Source Registry / PostgreSQL Metadata
++ BM25
++ pgvector
++ Reranker
++ EvidencePack / Citation Validation
++ optional Neo4j enhancement
+```
+
+Neo4j 用于术语关系、候选扩展和多跳查询；只有通过净收益评估后进入生产，不能替代指南、推荐强度、适用性和引用。
+
+## 9. 模型基础设施基线
+
+统一建设 Model Runtime：
+
+```text
+Prompt Registry
+Prompt Loader
+Prompt Builder
+Model Registry
+Model Router
+Model Gateway
+Provider Adapter
+Structured Output Validator
+```
+
+首个纵向切片优先启用：
+
+- Observation Extraction；
+- Question Wording；
+- 可选 Red Flag Candidate Extraction；
+- 较长对话后的 Structured Summary；
+- Patient Delivery Wording。
+
+红旗和分诊最终判断、State Commit、Checkpoint、权限、幂等和 Audit 不由 LLM 执行。
+
+## 10. 当前代码迁移总判断
 
 | 当前资产 | 初步方向 |
 |---|---|
@@ -229,130 +287,99 @@ v2.5
 | ocr-service | 保留 Tool，增加 SourceArtifact 和质量门 |
 | execution trace | UI/AgentEvent 可复用，技术 Trace 迁 OTel |
 | frontend | 保留 React 资产，重写 API、状态和审核流程 |
-| common/aidoctor_llm | 迁为 Model Provider Adapter |
+| common/aidoctor_llm | ADAPT 为 Model Runtime Provider Adapter |
 
 当前没有核心服务被直接标记为立即删除。
 
----
-
-## 8. Phase A-F 一览
+## 11. Phase A-F 一览
 
 ### Phase A：现状基线与冻结
 
 - 编译、启动和测试基线；
 - 全量资产盘点；
 - Contracts v1；
-- 数据库/Runtime ADR；
+- 数据库、Runtime 和框架 ADR；
 - CI 和开发环境；
 - 固定 Workflow 基线；
-- 冻结评审。
+- 确认 Capability、RAG、Model Runtime 详细设计；
+- Freeze Review。
 
-### Phase B：临床状态与 Safety
+### Phase B：Clinical State 与 Safety
 
-- EncounterCDP；
-- ClinicalObservation；
-- SourceArtifact；
-- StatePatch/CommitResult；
-- State Committer；
+- EncounterCDP、Observation、SourceArtifact；
+- StatePatch、CommitResult、State Committer；
 - Legacy CDP Adapter；
 - 呼吸道红旗和分诊；
-- Business API v2 基础。
+- Capability Registry 基础。
 
-### Phase C：Agent Runtime 与 Resume
+### Phase C：Agent Runtime、Model Runtime 与 Resume
 
-- Python FastAPI + LangGraph；
-- InformationGap/QuestionDecision；
+- FastAPI + LangGraph；
 - ContextEnvelope；
-- PostgreSQL Checkpointer；
+- InformationGap、QuestionDecision；
+- Prompt Loader/Builder、Model Gateway；
+- Extraction 与 Question Wording Route；
+- PostgreSQL Checkpoint；
 - Interrupt/Resume；
-- 重复提交去重；
-- 前端跨轮和刷新恢复；
 - OTel v1。
 
-### Phase D：推理、历史和循证
+### Phase D：推理、历史和呼吸道 RAG
 
 - DiagnosticHypothesis；
 - Diagnosis Engine Adapter；
-- Patient History Retrieval；
-- Memory Write Gate；
-- 白名单 RAG；
-- EvidencePack/Citation；
-- Summary/Critical Pin；
+- Patient History 与 Memory Gate；
+- Source Registry 和 Knowledge Release；
+- BM25 + pgvector + Reranker；
+- EvidencePack 与 Citation；
+- 可选知识图谱对照实验；
 - OCR/Artifact。
 
-### Phase E：医生审核与业务闭环
+### Phase E：医生审核和业务闭环
 
-- ReviewTask；
-- Clinician Resume；
-- 医生端；
+- ReviewTask、Clinician Resume 和医生端；
 - 三类 Delivery；
-- Care Navigation；
-- Follow-up；
-- Outbox/Inbox；
-- 模拟外部动作幂等。
+- Care Navigation、Follow-up；
+- Outbox/Inbox 和幂等模拟动作。
 
-### Phase F：治理、生产放量和下线
+### Phase F：治理、评估、放量和下线
 
-- Tool/Skill/Model Governance；
-- Thread Lease、Migration、Reconciliation；
+- Tool/Skill/Prompt/Model 完整治理；
+- Durable Hardening；
 - OTel Stack；
-- Eval/Replay；
-- Secret、Backup、DR、Performance；
-- Shadow/Clinician Assist/Restricted Rollout；
+- Eval、Replay、Shadow、Clinician Assist；
+- Restricted Patient Rollout；
 - 旧服务归档和下线。
 
----
+## 12. 防止遗漏与变更控制
 
-## 9. 开工规则
-
-当前不要直接从 Phase B 写业务代码。
-
-先执行 Phase A：
-
-1. 真实编译和启动；
-2. 补全类、API、表、Prompt 和规则级 Inventory；
-3. 将 Migration Matrix 初步结论升级为验证后结论；
-4. 完成 Contracts v1；
-5. 批准数据库和 Runtime ADR；
-6. 冻结第一条纵向切片；
-7. 总体架构进入 Frozen Baseline。
-
----
-
-## 10. 防止遗漏的方法
-
-任何新增需求必须进入 [Coverage Matrix](./coverage-matrix.md)，并填写：
+任何目标能力必须进入 [Coverage Matrix](./coverage-matrix.md)：
 
 ```text
 Owner Module
-Phase
-Contract
-Implementation
-Test
-Completion Gate
+→ Phase
+→ Contract
+→ Implementation
+→ Test
+→ Completion Gate
 ```
 
-任何现有代码变化必须更新 [Migration Matrix](./migration-matrix.md)。
+任何现有代码处理变化必须更新 [Migration Matrix](./migration-matrix.md)。
 
-任何偏离总体架构的决定必须提交 ADR。
+普通实现变化更新 Roadmap、Matrix 或详细设计；修改状态所有权、安全骨架、模块边界或 Java/Python 主职责时必须提交 ADR。
 
-因此后续发现实现细节变化时，主要更新矩阵、路线和 ADR，不反复推翻总体蓝图。
+## 13. 当前推荐下一步
 
----
-
-## 11. 当前推荐下一步
-
-立即开始 Implementation Roadmap 的 Phase A：
+执行 Implementation Roadmap 的 Phase A：
 
 ```text
-A1 代码运行基线
+A1 真实代码运行基线
 → A2 全量资产盘点
 → A3 Shared Contracts v1
-→ A4 架构 ADR
-→ A5 CI/开发环境
-→ A6 固定 Workflow 基线
-→ A7 前端业务基线
+→ A4 数据库/Runtime/框架 ADR
+→ A5 Capability与Model Runtime配置骨架
+→ A6 CI和开发环境
+→ A7 固定Workflow与前端基线
 → A8 Freeze Review
 ```
 
-完成 A8 后再进入正式模块实现。
+完成 Phase A 后进入正式模块实现。
