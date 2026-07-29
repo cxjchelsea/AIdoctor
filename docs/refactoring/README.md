@@ -11,10 +11,21 @@
 ```text
 v2.4：总体架构、主流程、11个模块、共享契约、Phase A-F
 v2.5：现状盘点、迁移矩阵、生产工程、冻结流程
-v2.6：Capability 扩场景、呼吸道 RAG V1、统一 Prompt/Model Runtime、跨文档一致性
+v2.6：Capability 扩场景、呼吸道 RAG V1、统一 Prompt/Model Runtime、跨文档一致性、旧设计资产继承
 ```
 
-当前仍为 **Freeze Candidate**。目标架构和执行体系已完整，最终 Frozen Baseline 还需要 Phase A 的真实编译、启动、数据库、资产和 E2E 验证。
+当前仍为 **Freeze Candidate**。目标架构和执行体系已经完整；最终 Frozen Baseline 还需要 Phase A 的真实编译、启动、数据库、旧资产、Prompt、模型、知识和 E2E 验证。
+
+本次重构遵循：
+
+```text
+目标架构重构
+≠ 旧设计全部废弃
+
+目标架构重构
+= 旧设计资产验证与继承
++ 状态、安全、治理和工程边界修正
+```
 
 ---
 
@@ -45,34 +56,64 @@ v2.6：Capability 扩场景、呼吸道 RAG V1、统一 Prompt/Model Runtime、�
 7. [Prompt 与 Model Runtime](./prompt-and-model-runtime-design.md)  
    Prompt Registry/Loader/Builder、Model Registry/Router/Gateway、Provider Adapter 和 Validator。
 
-### 第三步：理解当前代码和迁移方式
+### 第三步：理解旧资产如何继承和迁移
 
-8. [当前系统资产盘点](./current-system-inventory.md)  
+8. [原设计资产保留、改造与目标架构映射](./legacy-design-asset-retention-and-mapping.md)  
+   对 `docs/AI医生/项目文档` 中双通道、Tool Contract、CDP、AgentState、AuditTrail、AOP、错误处理、评估集、知识演化和临床流程进行 KEEP/ADAPT/EXTRACT/EVALUATE 映射。
+
+9. [当前系统资产盘点](./current-system-inventory.md)  
    Java/Python/Frontend/Storage，以及 Capability、Prompt、Model Call、Knowledge 和 Neo4j 专项 Inventory。
 
-9. [代码与资产迁移矩阵](./migration-matrix.md)  
-   KEEP、ADAPT、WRAP、REWRITE、ARCHIVE、REMOVE、SPLIT、MERGE、EXTRACT、EVALUATE。
+10. [代码与资产迁移矩阵](./migration-matrix.md)  
+    KEEP、ADAPT、WRAP、REWRITE、ARCHIVE、REMOVE、SPLIT、MERGE、EXTRACT、EVALUATE。
 
-10. [目标能力覆盖矩阵](./coverage-matrix.md)  
-    每项能力的 Owner、Phase、Contract、实现、测试和完成门禁。
+11. [目标能力覆盖矩阵](./coverage-matrix.md)  
+    每项能力和保留资产的 Owner、Phase、Contract、实现、测试和完成门禁。
 
 ### 第四步：照路线实施
 
-11. [可执行实施路线](./implementation-roadmap.md)  
-    Phase A-F 的代码、数据、前端、RAG、Model Runtime、评估、发布和下线任务。
+12. [可执行实施路线](./implementation-roadmap.md)  
+    Phase A-F 的代码、旧资产验证、数据、前端、RAG、Model Runtime、评估、发布和下线任务。
 
-12. [数据与基础设施迁移](./data-and-infrastructure-migration.md)  
+13. [数据与基础设施迁移](./data-and-infrastructure-migration.md)  
     PostgreSQL、旧 CDP、Checkpoint、Capability/Prompt/Model/Knowledge Schema、pgvector、BM25、Neo4j、OTel 和回滚。
 
-13. [前端与业务迁移](./frontend-and-business-migration.md)  
+14. [前端与业务迁移](./frontend-and-business-migration.md)  
     v1/v2 API、患者端、医生端、管理端、Evidence、Release 管理和实时通信。
 
-14. [工程、发布、回滚与下线](./engineering-release-and-decommission-plan.md)  
-    CI、测试、Prompt/Model/Knowledge/Capability Release Gate、灰度、回滚、备份和旧服务下线。
+15. [工程、发布、回滚与下线](./engineering-release-and-decommission-plan.md)  
+    CI、测试、Prompt/Model/Knowledge/Capability Release Gate、旧资产替代验证、灰度、回滚、备份和旧服务下线。
 
 ---
 
-## 3. 四份专题长文
+## 3. 权威补充与文档优先级
+
+当前文档优先级：
+
+```text
+Architecture Freeze Baseline
+→ v2.6 Cross-document Consistency Addendum
+→ Legacy Design Asset Retention and Mapping
+→ Overall Architecture
+→ Capability / RAG / Model 详细设计
+→ Inventory / Migration / Coverage / Roadmap / Engineering
+→ 四份专题长文
+→ docs/AI医生/项目文档 等历史设计
+```
+
+`legacy-design-asset-retention-and-mapping.md` 是以下文档的权威补充：
+
+- `current-system-inventory.md`：增加 Legacy Design Asset Inventory；
+- `migration-matrix.md`：增加设计原则、协议、状态、AOP、评估和知识治理资产；
+- `coverage-matrix.md`：要求保留资产绑定 Contract、Phase、Test 和 Gate；
+- `implementation-roadmap.md`：增加 Legacy Design Asset Validation；
+- `engineering-release-and-decommission-plan.md`：增加旧设计资产替代和下线门禁。
+
+涉及旧资产保留结论时，不以旧文档中的“已完成”描述代替代码、测试和运行证据。
+
+---
+
+## 4. 四份专题长文
 
 以下文档用于深入设计，不作为日常任务顺序来源：
 
@@ -88,11 +129,11 @@ v2.6：Capability 扩场景、呼吸道 RAG V1、统一 Prompt/Model Runtime、�
 4. [Durable Execution 与可观测性扩展](./durable-execution-and-observability-extension.md)  
    Thread、Checkpoint、Interrupt/Resume、Lease、Outbox/Inbox、Replay、OTel、Audit。
 
-四份长文未逐字复制 v2.6 新设计；涉及 Capability、RAG、Knowledge Graph、Prompt/Model Runtime 和版本链时，以 [v2.6 跨文档一致性补充](./v2.6-cross-document-consistency-addendum.md) 及对应详细设计为准。
+四份长文未逐字复制 v2.6 新设计；涉及 Capability、RAG、Knowledge Graph、Prompt/Model Runtime、版本链和旧设计资产继承时，以两个权威补充及对应详细设计为准。
 
 ---
 
-## 4. 系统定位
+## 5. 系统定位
 
 ```text
 目标系统
@@ -106,7 +147,7 @@ v2.6：Capability 扩场景、呼吸道 RAG V1、统一 Prompt/Model Runtime、�
 
 ---
 
-## 5. 场景扩展方式
+## 6. 场景扩展方式
 
 ```text
 Stable Platform
@@ -118,9 +159,76 @@ Stable Platform
 
 新增场景必须增加：Scope、Terminology、Observation、Safety、Question、Hypothesis、Knowledge、Prompt、Model Route、Tool/Skill、Delivery 和 Eval，不允许只更换 Prompt。
 
+旧设计中的问题清单、红旗、三层候选、验证计划和结论包必须先经过资产验证，再抽取进入 Capability Package。
+
 ---
 
-## 6. 统一 Model Runtime
+## 7. 原设计资产继承原则
+
+```text
+Legacy Design Evidence
+→ Inventory
+→ Retention Decision
+→ Target Mapping
+→ Migration
+→ Validation
+→ Shadow / Rollback
+→ Decommission
+```
+
+重点保留并改造：
+
+- 双通道推理；
+- 单一编排责任链；
+- 无状态工具；
+- ToolContext / ToolResult；
+- CDP 聚合视图和 Copy-on-Write；
+- AgentState 的预算、尝试、回退和停止条件；
+- AuditTrail 追加写；
+- AOP 横切追踪；
+- 分层错误处理；
+- Static / Interactive / Trajectory 三类评估集；
+- Knowledge Sandbox/Staging/Publish Gate；
+- 五步循证策略和终点结论包。
+
+不原样继承：
+
+- Tool 直接读取或写完整 CDP；
+- Agent、LLM、规则或检索直接提交最终临床状态；
+- Audit、Trace、Delivery 全放进大 JSON；
+- Redis 作为唯一恢复事实源；
+- 自定义 Header/UUID 替代标准 Trace；
+- 图谱路径替代 Citation；
+- 高风险治疗自动进入首个 Capability。
+
+---
+
+## 8. AOP 与 Trace 的目标形态
+
+```text
+@TraceExecution
+→ 保留领域语义或迁移为 @WithSpan / @Observed
+
+ExecutionTraceAspect
+→ OpenTelemetry Span Adapter
+
+TraceContext
+→ OTel Context + MDC
+
+Feign Trace Interceptor
+→ W3C traceparent / tracestate
+
+execution-trace-service
+→ AgentEvent Store/UI + OTel Backend
+```
+
+AOP 可处理 Trace、Metric、Logging 和 PHI-safe 遥测元数据；不得隐藏执行红旗、分诊、状态提交、模型路由和医生审核等临床决策。
+
+Trace 失败不得阻断临床主流程。
+
+---
+
+## 9. 统一 Model Runtime
 
 ```text
 Graph Node / Clinical Module
@@ -136,7 +244,7 @@ Graph Node / Clinical Module
 
 ---
 
-## 7. RAG V1 基线
+## 10. RAG V1 基线
 
 ```text
 Source Registry
@@ -152,9 +260,11 @@ Source Registry
 
 Patient RAG 与 Medical RAG 必须隔离。Knowledge Graph 是术语、多跳和 Query Expansion 增强，只有在来源治理和净收益评估通过后才能进入生产。
 
+原知识演化设计中的 Sandbox、Staging、Publish Gate 和 Rollback 思想保留；自动知识演化 Agent 集群延后。
+
 ---
 
-## 8. 11 个一级模块
+## 11. 11 个一级模块
 
 | 编号 | 模块 | 核心职责 |
 |---|---|---|
@@ -170,16 +280,17 @@ Patient RAG 与 Medical RAG 必须隔离。Knowledge Graph 是术语、多跳和
 | 10 | Durable Execution | Thread、Checkpoint、Lease、Outbox 和幂等 |
 | 11 | Observability, Audit & Evaluation | OTel、AgentEvent、Decision、Audit、Replay、Eval |
 
-Capability、Prompt/Model Runtime 和 Knowledge Release 是现有模块内部能力，不新增第十二个一级模块。
+Capability、Prompt/Model Runtime、Knowledge Release 和 Legacy Asset Mapping 是现有模块内部能力，不新增第十二个一级模块。
 
 ---
 
-## 9. 实施路线一览
+## 12. 实施路线一览
 
-### Phase A：现状与冻结
+### Phase A：真实基线、资产继承与冻结
 
-- 三端编译、启动和测试；
+- Java/Python/Frontend 编译、启动和测试；
 - 全量 Service/API/Table/Prompt/Model/Knowledge/Rule Inventory；
+- Legacy Design Asset Inventory 与代码证据映射；
 - Shared Contracts；
 - Capability/Prompt/Model/Knowledge Schema；
 - 数据库、Runtime、RAG、Graph 和框架 ADR；
@@ -201,7 +312,7 @@ Capability、Prompt/Model Runtime 和 Knowledge Release 是现有模块内部能
 - Prompt Loader/Builder、Model Gateway、ProviderAdapter；
 - extraction/question wording routes；
 - Checkpoint、Interrupt/Resume；
-- OTel v1 和 Crash Matrix。
+- OTel v1、AOP 迁移和 Crash Matrix。
 
 ### Phase D：有限推理和 RAG
 
@@ -228,40 +339,84 @@ Capability、Prompt/Model Runtime 和 Knowledge Release 是现有模块内部能
 - OTel Stack、Eval、Replay；
 - Shadow/Canary；
 - Backup/DR；
-- 旧服务、旧库和旧索引下线。
+- 旧服务、旧库、旧索引和旧 Trace 链路下线。
 
 ---
 
-## 10. 防遗漏规则
-
-所有新增能力必须先进入 Coverage Matrix：
+## 13. Phase A 正式执行顺序
 
 ```text
-Owner Module
+A1 Java/Python/Frontend/Docker 真实运行基线
+→ A2 数据、接口、Prompt、Model、Knowledge、Rule 全量盘点
+→ A3 Legacy Design Asset Validation
+→ A4 Shared Contracts 与 Registry Schemas
+→ A5 数据库、Runtime、RAG、Graph、框架 ADR
+→ A6 CI、开发环境与测试基线
+→ A7 固定 Workflow、AOP/Trace 和旧链路基线
+→ A8 adult_respiratory_v1 与首批 Prompt/Model 配置骨架
+→ A9 Freeze Review
+```
+
+A3 必须输出：
+
+```text
+legacy-design-asset-inventory.csv
+legacy-design-code-evidence.csv
+legacy-contract-extraction.md
+legacy-clinical-policy-extraction.md
+legacy-eval-asset-inventory.csv
+legacy-observability-migration.md
+legacy-asset-decommission-register.csv
+```
+
+在 A9 前，不应直接建设完整 LangGraph、完整医学知识库、大规模知识图谱，也不允许未经验证删除旧服务、规则、Prompt、评估集或 AOP/Trace 资产。
+
+---
+
+## 14. 防遗漏和下线规则
+
+所有新增能力和保留资产必须进入 Coverage Matrix：
+
+```text
+Legacy Asset / Target Capability
+→ Owner Module
 → Phase
 → Contract
 → Implementation
-→ Test
+→ Validation Suite
 → Completion Gate
 ```
 
 所有旧资产变化更新 Migration Matrix；所有架构偏离提交 ADR；所有生产变化绑定 Release Manifest。
 
----
-
-## 11. 当前下一步
-
-立即执行 Phase A：
+旧资产不能因为新目录已创建就下线，必须满足：
 
 ```text
-A1 真实运行基线
-→ A2 全量资产盘点
-→ A3 Shared Contracts 和 Registry Schemas
-→ A4 ADR
-→ A5 CI/开发环境
-→ A6 固定 Workflow 基线
-→ A7 adult_respiratory_v1 与首批 Prompt/Model 配置骨架
-→ A8 Freeze Review
+替代实现完成
++ 契约兼容验证
++ 回归通过
++ Shadow对比通过
++ 数据迁移或归档
++ Fallback可用
++ Rollback测试通过
++ 全仓引用为空
++ Owner批准
++ 回滚窗口结束
 ```
 
-在 A8 前，不应直接建设完整 LangGraph、完整医学知识库或大规模知识图谱。
+---
+
+## 15. 当前下一步
+
+文档体系已能够支撑开发，下一步停止继续扩展总体概念，正式执行 Phase A：
+
+```text
+真实运行
+→ 全量盘点
+→ 旧设计资产验证
+→ 契约和Schema
+→ ADR
+→ CI和固定Workflow基线
+→ Capability/Model骨架
+→ Frozen Baseline Review
+```
