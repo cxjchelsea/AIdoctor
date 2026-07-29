@@ -27,6 +27,33 @@
 11. **新增影子模式、医生辅助模式、小流量患者模式等分阶段验证策略。**
 12. **将最终目标从“智能诊断 Demo”调整为“受约束临床决策支持与医疗服务交付平台”。**
 
+### 0.1 与 v1.0 相比需要重新理解的架构关系
+
+```text
+v1.0 容易被理解为：
+LangGraph Agent → 规划并调用医疗工具 → 得出临床结果
+
+v2.0 明确调整为：
+LangGraph Agent Runtime → 管理执行、恢复和工具治理
+Clinical Intelligence → 管理证据、问题策略、诊断候选和分诊
+Safety Engine → 管理不可绕过的风险边界
+LLM → 负责理解、总结和表达
+Clinician → 承担高风险和受监管医疗决策
+```
+
+### 0.2 v2.0 的首要建设顺序
+
+```text
+可信基线
+→ Clinical Domain / Evidence Ledger
+→ Clinical Intelligence
+→ LangGraph Runtime
+→ 医生接管与交付
+→ 评估、治理与分阶段放量
+```
+
+不得反向从“先搭复杂 Agent 图”开始。
+
 ---
 
 ## 1. 文档目的
@@ -84,6 +111,31 @@ AIdoctor 应定位为：
 - 不默认自主修改药物剂量；
 - 不默认替代急诊和线下检查；
 - 高风险、超范围和低质量输入必须进入拒答、升级或人工审核路径。
+
+### 2.4 目标用户与价值
+
+#### 患者
+
+- 用自然语言描述问题；
+- 更快完成结构化病史采集；
+- 获得风险等级和下一步行动；
+- 知道何时需要医生或急诊；
+- 在后续症状变化时获得重新评估。
+
+#### 医生
+
+- 获得完整而非仅摘要化的临床证据；
+- 获得 SOAP、DDx、支持/反对证据和缺失信息；
+- 减少重复问诊和文书负担；
+- 对高风险动作保留最终控制；
+- 能查看 Agent 的数据来源、失败和不确定性。
+
+#### 医疗机构或平台
+
+- 将患者路由到合适的科室和渠道；
+- 提高 Intake、分诊和随访效率；
+- 对能力、模型、规则和知识版本进行治理；
+- 获得可观测、可审计和可逐步放量的系统。
 
 ---
 
@@ -169,6 +221,18 @@ CDP、AgentState、审计、版本、执行轨迹、工具结果之间职责边�
 #### 3.2.7 实现状态与文档承诺不一致
 
 重构前必须建立可信基线，所有“完整实现”都需要有端到端测试、异常测试和可复现运行结果支撑。
+
+#### 3.2.8 缺少可度量的临床智能
+
+当前“智能化”主要由动态工具调用和模型生成体现，但尚未明确：
+
+- 下一问题为什么最有价值；
+- 信息增益如何计算；
+- 诊断候选如何被支持或反驳；
+- 何时应停止问诊；
+- 分诊为何升级；
+- 多 Agent 或新模型是否真实优于基线；
+- 患者体验改进是否以安全性为代价。
 
 ---
 
@@ -337,6 +401,29 @@ AMIE 公开研究的重要内容包括：
 - 纵向随访和多模态不能只是一次性工具调用；
 - 早期可以采用“AI 采集 + 医生决策”的保守模式。
 
+### 4.11 外部经验的组合方式
+
+AIdoctor 不直接复制某一产品，而采用组合策略：
+
+```text
+Infermedica → 证据与推理 API 骨架
+Ada         → 混合临床推理和决策权分配
+K Health    → 医疗系统集成与医生工作流
+Ubie        → 问诊效率和用户成本
+Buoy        → 就医导航与持续行动
+Doctronic   → 医生接管、SOAP 和渐进放权
+Luminetics  → 能力边界与输入质量门
+AMIE        → 患者模拟、纵向推理和多维评估
+```
+
+不采用：
+
+- 未经证实的内部技术细节；
+- 以 Agent 数量为目标；
+- 以模型自评代替临床评价；
+- 将商业宣传指标直接作为项目验收指标；
+- 在没有适应证和验证的情况下扩大能力。
+
 ---
 
 ## 5. 重构原则
@@ -416,6 +503,13 @@ Safety Loop 每轮必跑，不是 Planner 可选工具。
 
 任何动态路由、多 Agent 或新模型设计，都必须通过固定评估集和消融实验证明收益。
 
+### 5.8 患者沟通和临床决策使用不同质量标准
+
+- 自然、共情和易理解属于沟通质量；
+- 正确、完整、可解释和安全属于临床质量；
+- 沟通高分不能抵消临床错误；
+- 临床正确但表达难以理解也不能视为完整交付。
+
 ---
 
 ## 6. 目标总体架构
@@ -457,6 +551,37 @@ Safety Loop 每轮必跑，不是 Planner 可选工具。
 │ Knowledge Version | Prompt Version | Model Registry | Evals    │
 └───────────────────────────────────────────────────────────────┘
 ```
+
+### 6.1 架构请求流
+
+```text
+Patient Web
+→ Spring Boot 创建 encounter/thread
+→ Agent Runtime 加载 Capability 与 CDP
+→ Safety + Clinical Intelligence 生成下一动作
+→ Governed Tool 执行并返回 proposed_writes
+→ State Committer 更新 Evidence Ledger
+→ LangGraph checkpoint
+→ 患者继续回答或医生审核
+→ Delivery Layer 创建结果、导航和随访任务
+```
+
+### 6.2 架构依赖方向
+
+允许：
+
+```text
+UI → Business API → Agent Runtime → Clinical Intelligence → Tool/Data
+```
+
+不允许：
+
+- Tool 直接控制 Graph；
+- LLM 直接写数据库；
+- 临床推理引擎直接创建预约；
+- 前端直接调用内部临床工具；
+- Safety Engine 依赖 Response Composer 才能工作；
+- ReviewTask 只存在内存中。
 
 ---
 
@@ -525,6 +650,20 @@ Safety Loop 每轮必跑，不是 Planner 可选工具。
 | multimodal-processing | OCR、报告解析、图像质量检查 |
 | knowledge-service | RAG、指南、文献和版本管理 |
 
+### 7.5 Evaluation Platform
+
+负责：
+
+- 数据集管理；
+- Patient Simulator；
+- 自动病例运行；
+- 指标计算；
+- 模型/Prompt 对比；
+- 子群分析；
+- 医生盲评任务；
+- 评估报告归档；
+- CI 质量门禁。
+
 ---
 
 ## 8. 决策权矩阵
@@ -541,6 +680,22 @@ Safety Loop 每轮必跑，不是 Planner 可选工具。
 | 治疗和用药变更 | 医生 | 只能草拟 | 默认不可 |
 | 最终患者表达 | Response Composer | 主负责 | 经输出安全门后 |
 | 人工审核结果 | 持证人员 | 不可覆盖 | 是 |
+
+### 8.1 冲突裁决顺序
+
+当不同模块意见冲突时，按以下顺序裁决：
+
+```text
+监管/Capability 禁止项
+> 确定性安全规则
+> 医生审核结论
+> 临床推理引擎
+> 经验证的工具结果
+> LLM 建议
+> 通用生成结果
+```
+
+高优先级结论可以阻止低优先级动作，但必须保留冲突记录。
 
 ---
 
@@ -716,6 +871,24 @@ class ReviewTask(BaseModel):
 
 Checkpoint 不代替 CDP 版本，也不代替合规审计。
 
+### 9.8 原始叙述与结构化事实分离
+
+除 Evidence Ledger 外保留原始叙述：
+
+```python
+class SourceArtifact(BaseModel):
+    artifact_id: str
+    artifact_type: Literal["message", "document", "image", "audio", "ehr_record"]
+    raw_content_location: str
+    normalized_text: str | None
+    owner_id: str
+    captured_at: datetime
+    quality_status: str
+    hash: str
+```
+
+ClinicalObservation 通过 `provenance_id` 指向 SourceArtifact，保证可以追溯到原始输入。
+
 ---
 
 ## 10. 双循环问诊架构
@@ -785,6 +958,20 @@ Safety Loop：
 - 分诊可以提前停止诊断问诊；
 - 诊断候选稳定不代表分诊安全；
 - 高风险场景无需为了提高 Top-1 准确率继续提问。
+
+### 10.4 模式切换
+
+系统至少支持：
+
+| 模式 | 目标 | 特点 |
+|---|---|---|
+| emergency_screen | 快速识别紧急风险 | 问题少，Safety 优先 |
+| short_triage | 给出安全分诊和渠道 | 不追求完整 DDx |
+| full_assessment | 完成较完整问诊与 DDx | 信息增益和体验平衡 |
+| clinician_intake | 为医生采集完整病史 | 医生最终决策 |
+| follow_up | 评估症状和治疗响应变化 | 使用纵向证据 |
+
+模式由入口场景和 Capability 决定，不能仅由 LLM 自由切换。
 
 ---
 
@@ -857,6 +1044,33 @@ create_follow_up_plan
 END
 ```
 
+### 11.1 节点实现规则
+
+每个节点必须定义：
+
+- 输入 State 字段；
+- 输出 State 字段；
+- 可调用工具；
+- 允许写入的 CDP 字段；
+- 超时；
+- 重试策略；
+- 错误类型；
+- 可观测事件；
+- 测试用例；
+- 是否允许 interrupt；
+- 是否可能执行不可逆动作。
+
+### 11.2 不可逆动作规则
+
+创建处方、预约、转诊、发送紧急通知或修改正式病历等动作必须：
+
+1. 在独立 action node 中执行；
+2. 使用幂等键；
+3. 在执行前保存 checkpoint；
+4. 满足权限和人工审核要求；
+5. 记录外部系统返回值；
+6. 不因 Graph 重放而重复执行。
+
 ---
 
 ## 12. 问题策略模块
@@ -924,6 +1138,17 @@ QuestionScore =
 10. 已满足短分诊模式目标。
 
 不得继续使用单一“完整度 60%”作为主停止条件。
+
+### 12.5 问题去重
+
+问题去重不能只比较文本相似度，还要比较：
+
+- 医学 concept_id；
+- 时间范围；
+- 属性；
+- 否定与未知状态；
+- 上一次答案是否充分；
+- 当前是否因为状态变化需要重新确认。
 
 ---
 
@@ -1040,6 +1265,21 @@ class StatePatch(BaseModel):
 
 工具不能直接访问数据库任意写入 CDP。
 
+### 13.6 Tool Registry
+
+Tool Registry 至少维护：
+
+- ToolSpec；
+- 启用状态；
+- Endpoint 或本地实现；
+- 适用 Capability；
+- 风险等级；
+- 当前版本；
+- 健康状态；
+- 降级工具；
+- 发布和下线时间；
+- 最近评估结果。
+
 ---
 
 ## 14. 结果评估与重新规划
@@ -1115,6 +1355,21 @@ InformationGain =
 - 用户拒绝；
 - 输入质量差但用户未重新提供。
 
+### 14.4 重新规划输入
+
+Replanner 只能接收经过压缩的结构化信息：
+
+- 当前 phase；
+- 缺失信息；
+- 工具失败类型；
+- 已尝试工具；
+- 预算；
+- Capability；
+- Safety 结果；
+- 可选动作白名单。
+
+不得将全部数据库内容和敏感原文无差别发送给规划模型。
+
 ---
 
 ## 15. 诊断与分诊解耦
@@ -1147,6 +1402,22 @@ InformationGain =
 - 多个症状组合可以提升分诊；
 - 无法诊断时仍可给出安全分诊；
 - 高危分诊后不为追求诊断准确率继续长问诊。
+
+### 15.4 TriageAssessment 建议结构
+
+```python
+class TriageAssessment(BaseModel):
+    level: Literal[
+        "emergency", "urgent", "soon", "routine", "self_care", "unknown"
+    ]
+    reason_codes: list[str]
+    red_flag_observation_ids: list[str]
+    tuple_rule_ids: list[str]
+    recommended_channel: str
+    max_wait_time_minutes: int | None
+    requires_human_review: bool
+    rule_version: str
+```
 
 ---
 
@@ -1196,6 +1467,17 @@ InformationGain =
 - 知识来源不可用：禁止生成新增治疗建议；
 - 结果无法校验：不提交临床状态；
 - Checkpoint 失败：不继续执行不可逆动作。
+
+### 16.5 Prompt Injection 防护
+
+患者输入、报告文本和检索文档一律视为不可信数据：
+
+- 与系统指令分隔；
+- 不允许文本修改 ToolSpec；
+- 不允许文本扩大 Capability；
+- 不允许检索结果决定权限；
+- 工具参数必须重新构造并校验；
+- 记录注入检测事件，但不向患者暴露内部防御细节。
 
 ---
 
@@ -1249,6 +1531,19 @@ LangGraph resume
 - 模型、Prompt、知识版本；
 - 患者原话和模型推断区分；
 - 批准、修改、拒绝和补充信息按钮。
+
+### 17.4 审核 SLA
+
+ReviewTask 应按风险定义：
+
+- 优先级；
+- 响应时限；
+- 超时动作；
+- 可转交范围；
+- 需要的执业或专业资格；
+- 用户等待提示。
+
+审核超时不能自动批准高风险动作。
 
 ---
 
@@ -1305,6 +1600,15 @@ SystemAction 示例：
 - 发送紧急提示；
 - 生成医生草稿。
 
+### 18.4 结果一致性
+
+三类结果可以表达不同，但必须基于同一 CDP 版本：
+
+- 患者版不能出现医生版没有依据的新增医学事实；
+- 医生版可以包含更完整的不确定性和证据；
+- 系统版动作必须通过权限与幂等校验；
+- 任何结果更新需要重新生成一致性校验记录。
+
 ---
 
 ## 19. Care Navigation 与 Follow-up
@@ -1353,6 +1657,19 @@ class CarePath(BaseModel):
 - 复诊记录；
 - 旧假设的保留、降级或排除。
 
+### 19.4 随访不是定时重复问卷
+
+Follow-up Policy 应根据：
+
+- 当前风险；
+- 预期疾病进程；
+- 已执行的治疗或检查；
+- 患者偏好；
+- 上次状态变化；
+- 医生要求；
+
+选择随访时间与内容。
+
 ---
 
 ## 20. 多 Agent 设计原则
@@ -1380,6 +1697,30 @@ class CarePath(BaseModel):
 - 能独立测试；
 - 能解释共识失败时的裁决方式。
 
+### 20.1 多 Agent 评估要求
+
+新增 Agent 前至少比较：
+
+```text
+单模型基线
+vs.
+单模型 + 结构化工具
+vs.
+单模型 + 独立 Safety
+vs.
+多 Agent
+```
+
+报告：
+
+- 临床质量变化；
+- 安全变化；
+- 延迟；
+- 成本；
+- Token；
+- 失败模式；
+- 可解释性。
+
 ---
 
 ## 21. 数据与存储
@@ -1406,6 +1747,17 @@ class CarePath(BaseModel):
 - 不同时承诺 MySQL、PostgreSQL、Oracle 三套同等生产支持；
 - 数据库迁移统一使用 Flyway/Alembic；
 - 所有临床状态表必须有版本和审计字段。
+
+### 21.1 数据最小化
+
+每个节点和工具只能读取完成任务所需字段：
+
+- 使用 read projection；
+- 默认不传患者完整身份；
+- 日志使用 patient_id_hash；
+- 临床原文与遥测分离；
+- 外部模型调用前执行脱敏策略；
+- 敏感字段访问记录审计。
 
 ---
 
@@ -1465,6 +1817,20 @@ capability_id
 - P50/P95/P99 延迟；
 - 随访完成率；
 - 症状恶化升级成功率。
+
+### 22.3 业务与安全事件
+
+除技术 trace 外，定义结构化事件：
+
+- `capability_rejected`；
+- `red_flag_detected`；
+- `triage_upgraded`；
+- `review_created`；
+- `review_modified`；
+- `fallback_activated`；
+- `unsafe_output_blocked`；
+- `knowledge_source_missing`；
+- `follow_up_escalated`。
 
 ---
 
@@ -1626,6 +1992,14 @@ Patient Persona
 - 数据完整度；
 - 多模态质量。
 
+### 23.6 自动评估限制
+
+- LLM Judge 只能作为辅助；
+- 高风险病例必须有规则或临床专家评价；
+- Judge 使用的模型和 Prompt 必须版本化；
+- 不允许用被评估模型无约束地评价自身；
+- 临床准确性、沟通和格式指标分开计算。
+
 ---
 
 ## 24. 模型、Prompt 和知识治理
@@ -1680,6 +2054,14 @@ Prompt 必须：
 5. 影子模式；
 6. 灰度发布；
 7. 监控和回滚。
+
+### 24.5 Prompt 与知识职责分离
+
+- Prompt 定义任务和输出方式；
+- Knowledge 定义可引用的医学内容；
+- Safety Rule 定义禁止和升级边界；
+- Capability 定义系统允许做什么；
+- 不将长篇医学知识硬编码进系统 Prompt。
 
 ---
 
@@ -1759,6 +2141,20 @@ AIdoctor/
 ```
 
 迁移期间允许旧目录存在，但新代码不得继续复制 ToolContext、ToolResult、异常类和 CDP Reader。
+
+### 25.1 迁移映射
+
+| 现有目录 | 目标位置/处理 |
+|---|---|
+| diagnosis-service | `apps/business-api`，移除 Agent 编排职责 |
+| clinical-parsing-service | `packages/clinical-understanding` |
+| dialog-service | Interview Agent + `question-policy` |
+| diagnosis-engine-service | `diagnostic-inference` 与知识模块 |
+| workup-planner-service | `care-planning` |
+| risk-assessment-service | `triage-safety` |
+| explanation-service | `clinical-summary` / Response Composer |
+| execution-trace-service | 业务事件保留，技术 trace 迁移 OTel |
+| ocr-service | `multimodal-processing`，增加质量门 |
 
 ---
 
@@ -2056,6 +2452,18 @@ AIdoctor/
 
 任何能力扩大都需要新的 Capability 版本和评估报告。
 
+### Phase 6 验收证据
+
+每个 Stage 至少保存：
+
+- 使用的 Capability 版本；
+- 病例数量和分布；
+- 安全指标；
+- 欠分诊和过度分诊；
+- 医生修改率；
+- 严重事件；
+- 进入下一阶段的审批结论。
+
 ---
 
 ## 27. 初始 Capability 建议
@@ -2090,6 +2498,18 @@ AIdoctor/
 - 必须有清晰的线下升级路径；
 - 必须可以定义真实验收指标。
 
+### 27.1 初始 Capability 验收重点
+
+不以覆盖疾病数量为主要指标，优先验证：
+
+- 红旗不遗漏；
+- 能识别输入不足；
+- 能正确停止；
+- 能解释为什么继续问；
+- 能输出安全就医路径；
+- 能被医生快速审核；
+- 能在故障时降级。
+
 ---
 
 ## 28. 现有代码处理建议
@@ -2123,6 +2543,17 @@ AIdoctor/
 - 多数据库同等生产承诺；
 - 未经验证的“完整实现”描述。
 
+### 28.1 Strangler 迁移策略
+
+1. 保持旧 API 可用；
+2. 新建 Agent Runtime；
+3. Spring Boot 按 feature flag 路由到新旧路径；
+4. 首先仅影子调用新 Runtime；
+5. 比较输出和安全指标；
+6. 按 Capability 切换流量；
+7. 新路径稳定后下线旧 AgentLoop；
+8. 固定 Workflow 长期保留为降级，不作为默认主链路。
+
 ---
 
 ## 29. CI/CD 建议
@@ -2149,6 +2580,19 @@ AIdoctor/
 - 模型和 Prompt 可独立回滚；
 - Agent Runtime 与工具版本兼容矩阵；
 - 发布后自动观察关键安全指标。
+
+### 29.1 Feature Flags
+
+至少支持：
+
+- 新 Runtime 是否启用；
+- 指定 Capability 是否开放；
+- 是否只运行影子模式；
+- 是否要求全部人工审核；
+- 新模型/Prompt 百分比；
+- 新 Question Policy；
+- 新 Triage 规则版本；
+- 自动 Follow-up 是否启用。
 
 ---
 
@@ -2296,6 +2740,29 @@ AIdoctor/
 - Subgroup analysis；
 - CI metric gate。
 
+### 32.1 推荐的前三个实现 PR
+
+#### PR A：Phase 0 基线修复
+
+- 只修复编译、接口和空解析；
+- 不引入 LangGraph；
+- 增加一条 E2E；
+- 更新 README 状态。
+
+#### PR B：Clinical Contracts
+
+- 新增 JSON Schema；
+- 新增 ClinicalObservation/ToolResult/StatePatch；
+- Java/Python 契约测试；
+- 不改变默认业务路径。
+
+#### PR C：Evidence Ledger 兼容写入
+
+- 新表和迁移；
+- 将旧 CDP 数据同步为 Observation；
+- 保持旧读取接口；
+- 增加 provenance 与版本测试。
+
 ---
 
 ## 33. 主要风险与缓解措施
@@ -2353,6 +2820,16 @@ AIdoctor/
 4. 多模态状态感知；
 5. 纵向管理；
 6. 经评估证明有效的多 Agent。
+
+### 34.1 不应该优先做的事项
+
+- 继续新增独立微服务；
+- 继续扩充 Java AgentLoop；
+- 同时接入大量模型；
+- 建设大量专家 Agent；
+- 在无评估集时优化 Prompt；
+- 在无 Capability 时宣传通用诊断；
+- 在无审核工作台时实现高风险自动动作。
 
 ---
 
@@ -2452,3 +2929,23 @@ AIdoctor/
 - 外部产品信息应定期核验；
 - 临床能力边界变化必须更新 Capability Envelope；
 - 任何真实患者模式上线前必须经过临床、安全和隐私审核。
+
+---
+
+## 38. 下一步执行建议
+
+本方案通过后，不应立刻开始 Phase 3。建议按以下顺序创建工作：
+
+1. 创建 Phase 0 Epic；
+2. 修复当前编译与接口问题；
+3. 建立一条真实 E2E；
+4. 创建第一版临床病例回归集；
+5. 创建 ClinicalObservation、ToolResult 和 StatePatch Schema；
+6. 选择第一个 Capability，并由临床顾问审核边界；
+7. 完成 Evidence Ledger 兼容迁移；
+8. 再开始 Clinical Intelligence MVP；
+9. Clinical Intelligence 有稳定接口和测试后，再接入 LangGraph。
+
+第一阶段的成功标准不是“界面看起来更智能”，而是：
+
+> 系统能够诚实描述自己的能力，稳定完成一条问诊链路，在证据不足和风险场景下正确停止，并且所有临床信息都可追溯。
