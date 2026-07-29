@@ -1,12 +1,14 @@
-# AIdoctor 目标能力覆盖矩阵
+# AIdoctor 目标能力与旧设计资产覆盖矩阵
 
 > 文档状态：Draft v2.6 Coverage Matrix  
 > 更新时间：2026-07-29  
-> 目的：证明目标系统、场景扩展、RAG、模型运行时、迁移和生产治理均有唯一归属。
+> 目的：证明目标系统、场景扩展、RAG、模型运行时、旧资产继承、迁移和生产治理均有唯一归属。
+
+---
 
 ## 1. 使用规则
 
-每项能力必须具有：
+每项目标能力必须具有：
 
 ```text
 Capability
@@ -18,6 +20,19 @@ Capability
 → Completion Gate
 ```
 
+每项旧设计资产必须具有：
+
+```text
+Legacy Asset
+→ Evidence Level
+→ Retention Decision
+→ Owner Module
+→ Target Contract
+→ Migration Artifact
+→ Validation Suite
+→ Decommission Gate
+```
+
 状态：
 
 - `PLANNED`：已进入路线；
@@ -27,7 +42,9 @@ Capability
 - `DEFERRED`：明确不属于当前范围；
 - `BLOCKED`：缺少 ADR、数据或外部条件。
 
-任何新能力必须先进入本矩阵，不能只写在专题长文中。
+任何新能力或有价值旧资产必须先进入本矩阵，不能只写在专题长文或历史文档中。
+
+---
 
 ## 2. Capability 与场景扩展
 
@@ -43,11 +60,14 @@ Capability
 | Hypothesis Pack | Intelligence | A/D | HypothesisSpec | 批准候选、must-not-miss | DESIGNED |
 | Knowledge Pack | Evidence | A/D | KnowledgePolicy/Release | 非批准来源拒绝 | DESIGNED |
 | Runtime Pack | Runtime/Governance | A-C | Tool/Skill/Prompt/Route Allowlist | 越权调用拒绝 | DESIGNED |
+| Delivery Pack | Business/Safety | A/E | DeliveryPolicy | 患者/医生/系统输出 | DESIGNED |
 | Capability Eval Pack | Evaluation | A-F | EvalSuite/ReleaseReport | 安全、RAG、模型、E2E | DESIGNED |
 | Capability 发布生命周期 | Governance | F | CapabilityRelease | Shadow、Assist、Restricted、Active | DESIGNED |
 | Capability 版本绑定 | Business/Runtime | B/C | CapabilitySnapshot | 运行中不静默升级 | DESIGNED |
-| adult_respiratory_v1 | All | A-F | 首个 Capability Package | 咳嗽+喘、红旗、Resume、Delivery | DESIGNED |
+| `adult_respiratory_v1` | All | A-F | 首个 Capability Package | 咳嗽+喘、红旗、Resume、Delivery | DESIGNED |
 | 后续场景扩展 | Governance | F+ | 新 Capability Package | 不修改通用安全骨架 | PLANNED |
+
+---
 
 ## 3. 核心流程
 
@@ -65,13 +85,14 @@ Capability
 | 信息缺口更新 | Intelligence | C/D | InformationGap | Question Policy | 排序、重复问题 | DESIGNED |
 | 下一动作选择 | Runtime/Intelligence | C | NextAction/QuestionDecision | LangGraph Router | ask/tool/review/stop | DESIGNED |
 | Tool 执行 | Governance/Runtime | C/D | ToolExecutionRequest/ToolResult | Tool Runtime | 超时、失败、降级 | DESIGNED |
-| Skill 执行 | Governance/Runtime | F | ClinicalSkill/SkillRun | Skill Runtime | 版本、权限、中断 | PLANNED |
 | Checkpoint | Durable | C | CheckpointMetadata | PostgreSQL Checkpointer | 保存失败、重启 | DESIGNED |
 | Interrupt/Resume | Durable | C/E | InterruptRecord/ResumeRequest | Runtime | 重复、并发、过期 | DESIGNED |
 | 停止条件 | Runtime/Intelligence | C/D | StopDecision | Graph Node | 足够、无收益、风险 | DESIGNED |
 | Delivery | Business | C/E | DeliveryPackage | Delivery Builder | 三类输出一致 | DESIGNED |
 | Care Navigation | Business/Intelligence | E | CarePath | Care Delivery | 紧急度、地点不足 | PLANNED |
 | Follow-up | Business | E | FollowUpPlan | Follow-up Worker | 到期、取消、恶化 | PLANNED |
+
+---
 
 ## 4. 临床数据与事实治理
 
@@ -90,6 +111,8 @@ Capability
 | Tenant/Patient 隔离 | Business/State/RAG | A-F | TenantContext/PatientScope | 跨租户/患者为零 | DESIGNED |
 | 数据保留与删除 | State/Compliance | F | RetentionPolicy | 删除、legal hold | PLANNED |
 
+---
+
 ## 5. Safety 与 Policy
 
 | 能力 | Owner | Phase | 契约/规则 | 必测场景 | 状态 |
@@ -106,6 +129,8 @@ Capability
 | Planner 不可覆盖 Safety | Safety | B/C | SafetyOverride | 绕过尝试 | DESIGNED |
 | 安全策略版本 | Safety | F | SafetyPolicyVersion | Resume 版本变化 | PLANNED |
 
+---
+
 ## 6. Clinical Intelligence
 
 | 能力 | Owner | Phase | 契约 | 必测场景 | 状态 |
@@ -120,6 +145,8 @@ Capability
 | 重复问题避免 | Intelligence/Context | C | AskedQuestionRecord | 多轮回归 | DESIGNED |
 | 停止判断 | Intelligence | C/D | StopDecision | 足够、超范围、不安全 | DESIGNED |
 | Care/Follow-up Reasoning | Intelligence | E | CarePathDecision/FollowUpDecision | 分诊一致、恶化升级 | PLANNED |
+
+---
 
 ## 7. Evidence Intelligence 与 RAG
 
@@ -148,105 +175,97 @@ Capability
 | Knowledge Graph Schema | Evidence | A/D | Graph Schema/Release | 来源链、关系有效期 | DESIGNED |
 | Knowledge Graph 生产启用 | Evidence/Evaluation | D/F | Graph Benefit Report | 净收益、错误扩展 | BLOCKED |
 
-## 8. Context 与 Memory
+---
 
-| 能力 | Owner | Phase | 契约 | 必测场景 | 状态 |
-|---|---|---|---|---|---|
-| ContextEnvelope | Context | C | ContextEnvelope | 字段授权、可复现 | DESIGNED |
-| Context Policy/Token Budget | Context | C/F | ContextPolicy/TokenBudget | 越权、截断、降级 | DESIGNED |
-| Recent Window/Summary | Context | C/D | ConversationWindow/Summary | 顺序、事实保真 | DESIGNED |
-| Critical Context Pin | Context | C/D | CriticalContextItem | 红旗不丢失 | DESIGNED |
-| PHI Redaction | Context/Security | C/F | RedactionDecision | 泄露扫描 | DESIGNED |
-| Working/Episodic/Semantic Memory | Context | C-F | MemoryItem | 来源、过期、污染 | PLANNED |
-| Memory Write Gate | Context | D | MemoryWriteDecision | 不安全候选拒绝 | DESIGNED |
-| Memory Recall | Context | D | MemoryRecallResult | reason、patient scope | DESIGNED |
-| 更正/过期/删除 | Context | F | MemoryLifecycle | 撤销和冲突 | PLANNED |
-
-## 9. Prompt、Model、Tool 与 Skill Governance
+## 8. Context、Model Runtime 与 Durable Execution
 
 | 能力 | Owner | Phase | 契约/产物 | 必测场景 | 状态 |
 |---|---|---|---|---|---|
-| Tool Registry/Context/Result | Governance | C/D | ToolSpec/ToolResult | 注册、权限、错误 | DESIGNED |
-| Tool Timeout/Circuit/Idempotency | Governance/Durable | C-F | Retry/Health/Idempotency | 超时、连续失败、重复 | DESIGNED |
-| Skill Registry/Selection | Governance | F | ClinicalSkill/Selection | 版本、范围、fallback | DESIGNED |
-| Prompt Registry | Governance | A/C | PromptSpec | 版本、状态、回滚 | DESIGNED |
-| Prompt Loader | Governance | C | PromptLoadRequest/Bundle | 缺失、过期、Capability 不匹配 | DESIGNED |
-| Prompt Builder | Governance/Context | C | RenderedModelRequest | 指令/数据隔离、token | DESIGNED |
-| Prompt 发布流程 | Governance/Evaluation | C/F | PromptRelease | review、eval、shadow | DESIGNED |
-| Model Registry | Governance | A/C | ModelSpec | 能力、PHI、版本、健康 | DESIGNED |
-| Model Router | Governance | C/F | ModelRoutePolicy/Decision | 风险、成本、地区、无模型 | DESIGNED |
-| Model Gateway | Governance | C | ModelInvocationRequest/Result | timeout、rate limit、provider failure | DESIGNED |
-| Provider Adapter | Governance | C | ProviderAdapter | 协议、usage、错误映射 | DESIGNED |
-| Structured Output Validator | Governance | C | ValidationResult | 非法 JSON、越界内容 | DESIGNED |
-| Prompt/Model Compatibility | Governance | C/F | CompatibilityRecord | 未评估组合拒绝 | DESIGNED |
-| 模型 Retry/Fallback | Governance/Safety | C/F | FallbackDecision | 高风险静默降级为零 | DESIGNED |
-| Token/Cost/Latency | Governance/Observability | C/F | UsageRecord | 统计、预算、限额 | DESIGNED |
-| Prompt Injection | Security | C/F | InjectionDecision | 患者/RAG/Tool 对抗集 | DESIGNED |
-| common/aidoctor_llm Adapter | Governance | A/C | LegacyProviderAdapter | 旧调用迁移 | DESIGNED |
+| ContextEnvelope | Context | C | ContextEnvelope | 字段授权、可复现 | DESIGNED |
+| Token Budget | Context | C/F | ContextPolicy/TokenBudget | 越权、截断、降级 | DESIGNED |
+| Recent Window/Summary | Context | C/D | ConversationWindow/Summary | 顺序、事实保真 | DESIGNED |
+| Critical Context Pin | Context | C/D | CriticalContextItem | 红旗不丢失 | DESIGNED |
+| PHI Redaction | Context/Security | C/F | RedactionDecision | 泄露扫描 | DESIGNED |
+| Prompt Registry/Loader/Builder | Governance | A/C | PromptSpec/PromptRelease | 版本、回滚、注入 | DESIGNED |
+| Model Registry/Router/Gateway | Governance | A/C | ModelSpec/RoutePolicy | 路由、禁用、Fallback | DESIGNED |
+| Provider Adapter | Governance | A/C | ProviderAdapter | 超时、错误、指标 | DESIGNED |
+| Structured Output Validator | Governance | C | OutputSchema/ValidationResult | 非法 JSON、越界值 | DESIGNED |
+| Thread/Run | Durable | C | ThreadRecord/RunRecord | 重启、取消、并发 | DESIGNED |
+| PostgreSQL Checkpoint | Durable | C | CheckpointMetadata | crash、恢复、版本 | DESIGNED |
+| Lease/Idempotency | Durable | C/F | Lease/IdempotencyRecord | 重复执行为零 | DESIGNED |
+| Outbox/Inbox | Durable/Business | E/F | OutboxEvent/InboxRecord | 外部副作用一次 | DESIGNED |
+| Replay | Durable/Evaluation | F | ReplayRequest/Result | 原版本快照 | DESIGNED |
 
-## 10. 模型调用路线
+---
 
-| 路线 | Phase | 风险 | 输出 | Fallback | 状态 |
+## 9. Observability、Audit 与 Evaluation
+
+| 能力 | Owner | Phase | 契约/产物 | 必测场景 | 状态 |
 |---|---|---|---|---|---|
-| Observation Extraction | C | 中 | ObservationCandidate | 规则/澄清 | DESIGNED |
-| Terminology Normalization | C | 中 | NormalizationCandidate | 原文+未归一化 | DESIGNED |
-| Red Flag Candidate Extraction | C | 高辅助 | RedFlagCandidate | 确定性 Safety | DESIGNED |
-| Information Gap Candidate | C | 中 | InformationGapCandidate | Capability 必问清单 | DESIGNED |
-| Question Wording | C | 低 | QuestionWordingResult | 固定模板 | DESIGNED |
-| Encounter Summary | C/D | 中 | SummaryCandidate | 最近窗口 | DESIGNED |
-| Limited Hypothesis Assistance | D | 高辅助 | HypothesisCandidate | 规则/KG/统计 | DESIGNED |
-| Evidence Query/Claim | D | 中 | RetrievalPlan/ClaimCandidate | 固定模板/无 Claim | DESIGNED |
-| Citation Validation | D | 高 | CitationValidation | unsupported/review | DESIGNED |
-| Patient Rewrite | C/E | 低 | PatientDeliveryDraft | 模板 | DESIGNED |
-| Clinician Summary | E | 高 | ClinicianSummaryDraft | 结构化直出+审核 | DESIGNED |
-| 自动治疗/处方 | F+ | 高 | N/A | 禁止 | DEFERRED |
+| OpenTelemetry | Observability | A/C/F | W3C Trace Context | Java-Python 跨服务 | DESIGNED |
+| Technical Trace | Observability | C/F | Span/Metric/Log | Exporter 失败 | DESIGNED |
+| AgentEvent | Observability | C-F | AgentEvent | 节点、工具、Interrupt | DESIGNED |
+| ClinicalDecisionRecord | Audit/Clinical | B-E | DecisionRecord | 分诊、停止、审核 | DESIGNED |
+| ComplianceAudit | Audit | A-F | AuditRecord | 追加写、查询、保留 | DESIGNED |
+| Static Case Eval | Evaluation | A-F | EvalSuite | DDx、Safety、Evidence | DESIGNED |
+| Interactive Interview Eval | Evaluation | A-F | ConversationEval | 信息增益、轮次、重复 | DESIGNED |
+| Trajectory Replay Eval | Evaluation | A-F | ReplayEval | 状态修正、Resume | DESIGNED |
+| Crash Matrix | Evaluation | C/F | CrashSuite | 节点前后、提交前后 | DESIGNED |
+| RAG/Citation Eval | Evaluation | D/F | RetrievalEval | recall、citation、stale | DESIGNED |
+| Prompt/Model Route Eval | Evaluation | C/F | RouteEval | schema、质量、成本 | DESIGNED |
+| Capability Boundary Eval | Evaluation | B-F | BoundarySuite | 超范围和特殊人群 | DESIGNED |
 
-## 11. Durable Execution
+---
 
-| 能力 | Owner | Phase | 契约 | 必测场景 | 状态 |
-|---|---|---|---|---|---|
-| Thread/Run Lifecycle | Durable | C | ThreadStatus/RunRecord | 全状态转换 | DESIGNED |
-| PostgreSQL Checkpointer | Durable | C | CheckpointMetadata | 重启恢复 | DESIGNED |
-| Interrupt/Resume Auth/Inbox | Durable | C/E | Interrupt/Resume/Inbox | 重复、并发、过期 | DESIGNED |
-| Thread Lease | Durable | F | ThreadLease | 接管和心跳 | DESIGNED |
-| CDP 乐观锁 | State/Durable | B/C | expected_cdp_version | 冲突 | DESIGNED |
-| Outbox/External Action/Idempotency | Durable | E/F | OutboxEvent/ActionRecord | timeout unknown、重复 | DESIGNED |
-| Checkpoint Migration/Reconciliation | Durable | F | Migration/Finding | 旧 Graph、卡死 | DESIGNED |
-| Replay Sandbox | Durable/Eval | F | ReplayRequest | 无真实副作用 | DESIGNED |
+## 10. Legacy Design Asset Coverage
 
-## 12. Observability、Audit 与 Evaluation
+| Legacy Asset | Evidence | Decision | Owner | Target Contract/Artifact | Phase | Validation | 状态 |
+|---|---|---|---|---|---|---|---|
+| 双通道推理 | 文档+代码待核 | KEEP+ADAPT | Intelligence/Safety/Model | Clinical Candidate + Wording Route | A6.5-D | 消融和轨迹评估 | DESIGNED |
+| 单主 Agent 责任链 | 文档+代码待核 | ADAPT | Runtime/State/Safety | NextAction + State Committer | A6.5-C | 权限绕过测试 | DESIGNED |
+| 无状态工具 | 文档+代码待核 | KEEP+ADAPT | Tool Governance | ToolExecutionRequest/ToolResult | A6.5-C | Contract/permission | DESIGNED |
+| ToolContext | 文档+代码待核 | ADAPT | Contracts | ToolExecutionRequest | A5-C | 三语言合同测试 | DESIGNED |
+| ToolResult/suggestedWrites | 文档+代码待核 | ADAPT | Contracts/State | ToolResult + ProposedStatePatch | A5-B | 无直写测试 | DESIGNED |
+| CDP 聚合与版本 | 文档+数据待核 | KEEP+SPLIT | Clinical State | EncounterCDP/Version Ledger | A4-B | 迁移对账 | DESIGNED |
+| AgentState | 文档+代码待核 | ADAPT | Runtime/Durable | GraphState/Checkpoint | A6.5-C | Crash/Resume | DESIGNED |
+| AuditTrail | 文档+代码待核 | KEEP+SPLIT | Observability/Audit | Span/Event/Decision/Audit | A6.5-C | Replay/append-only | DESIGNED |
+| `@TraceExecution` | 代码待运行 | KEEP/ADAPT | Observability | Semantic Annotation/Span | A1-A10 | 切点和故障测试 | DESIGNED |
+| `ExecutionTraceAspect` | 代码待运行 | ADAPT | Observability | OTel Span Adapter | A1-C | Trace failure isolation | DESIGNED |
+| TraceContext/Feign Trace | 代码待运行 | REWRITE/ADAPT | Observability | OTel Context/W3C | A1-C | async/cross-service | DESIGNED |
+| 错误分类与 fallback | 文档+代码待核 | KEEP+ADAPT | Runtime/Safety | ErrorPolicy | A6.5-C | Failure Matrix | DESIGNED |
+| 五步循证流程 | 文档 | ADAPT | Capability/Intelligence | Clinical Policy | A6-D | Trajectory replay | DESIGNED |
+| 三层候选 | 文档+规则待核 | ADAPT | Intelligence | Hypothesis Pack | A6-D | Clinical Eval | DESIGNED |
+| Conclusion Package | 文档+前端待核 | ADAPT | Delivery | DeliveryPackage | A6-E | Safety/UX Eval | DESIGNED |
+| 静态病例集 | 文档/数据待核 | KEEP+EXTEND | Evaluation | Static Eval Suite | A6.5-F | Regression | DESIGNED |
+| 交互问诊集 | 文档/数据待核 | KEEP+EXTEND | Evaluation | Interactive Eval | A6.5-F | Multi-turn | DESIGNED |
+| 轨迹回放集 | 文档/数据待核 | KEEP+EXTEND | Evaluation | Replay Eval | A6.5-F | Resume/trajectory | DESIGNED |
+| Knowledge Publish Gate | 文档 | KEEP+ADAPT | Evidence/Governance | Knowledge Release Gate | A6.5-D | Gate/Rollback | DESIGNED |
+| Neo4j/DR.KNOWS | 文档+数据待核 | EVALUATE+ADAPT | Evidence | Graph Enhancement | A4-D | Graph Benefit Report | BLOCKED |
+| 路径注入 LLM | 文档+代码待核 | EVALUATE+ADAPT | Evidence/Model | Path-constrained Route | A6.5-D | Path outside/failure | BLOCKED |
+| ReactFlow Trace UI | 前端代码待运行 | KEEP+ADAPT | Frontend/Observability | Timeline/Trace View | A3-E | UI E2E | DESIGNED |
 
-| 能力 | Owner | Phase | 契约/工具 | 必测场景 | 状态 |
-|---|---|---|---|---|---|
-| OTel Context/Trace/Metric/Log | Observability | C/F | OTel/Prometheus | Java-Python、错误关联 | DESIGNED |
-| PHI Telemetry Filter | Security | C/F | TelemetryPolicy | 敏感字段 | DESIGNED |
-| AgentEvent | Observability | C | AgentEvent | 路由、重试、恢复 | DESIGNED |
-| ClinicalDecisionRecord | Clinical/Audit | E/F | DecisionRecord | 证据和规则链 | DESIGNED |
-| Compliance Audit | Audit | E/F | AuditEvent | 访问、修改、批准 | DESIGNED |
-| Clinical/Safety/RAG/Context/Resume/Security Eval | Evaluation | B-F | EvalReport | 各专项门禁 | DESIGNED |
-| Model/Prompt Eval | Evaluation | C-F | RouteEval/PromptEval | 升级回归、schema、安全 | DESIGNED |
-| Capability Release Report | Evaluation | F | ReleaseReport | 每版本必带 | DESIGNED |
-| Patient Simulator | Evaluation | F | SimulatedPatient | OSCE | PLANNED |
+Legacy Asset 行只有在 A6.5 取得代码、运行、数据或测试证据后，才能从 `DESIGNED` 升级为 `VALIDATED`。
 
-## 13. Business、Frontend、数据与工程
+---
 
-| 能力 | Phase | 验收 | 状态 |
+## 11. 数据、工程与发布覆盖
+
+| 能力 | Phase | 验证 | 状态 |
 |---|---|---|---|
-| Identity/Tenant/Consent | A-E | 角色、租户和授权测试 | PLANNED |
-| ReviewTask/Clinician Console | E | approve/edit/reject、多医生并发 | DESIGNED |
-| Patient/Clinician/System Delivery | C/E | 同一事实基础、不同披露 | DESIGNED |
-| Follow-up/Notification | E | 到期、取消、重复发送 | PLANNED |
-| 数据库目标 ADR | A | 决策批准 | BLOCKED |
 | 旧 CDP 迁移 | A-E | 对账、双写、回滚 | PLANNED |
 | PostgreSQL/Redis/Object Storage | B-F | migration、TTL、加密、恢复 | PLANNED |
 | Neo4j/Milvus 去留 | A/D | benchmark/ADR | BLOCKED |
 | Java/Python/Frontend Build | A | CI 可复现 | PLANNED |
 | Contract Test | A-F | Java/Python/TS parity | DESIGNED |
 | Unit/Integration/E2E/Security | A-F | 每阶段门禁 | DESIGNED |
+| Legacy Asset Inventory | A6.5 | P0/P1 全覆盖 | DESIGNED |
+| Legacy Asset Decommission Register | A6.5-F | Owner/依赖/回滚 | DESIGNED |
 | Shadow/Canary/Rollback | F | 报告和演练 | DESIGNED |
 | Decommission | E/F | 无流量、无引用、可恢复 | DESIGNED |
 
-## 14. 明确延期
+---
+
+## 12. 明确延期
 
 以下不是遗漏：
 
@@ -254,14 +273,17 @@ Capability
 - 儿童、孕产完整自动路径；
 - 自动治疗与处方修改；
 - 自由自治多 Agent；
-- Agent 自动修改 Prompt、Skill 或 Policy；
+- Agent 自动修改 Prompt、Skill、Policy 或生产知识；
 - 全互联网医学搜索；
 - 未经许可的全文抓取；
 - 无限制长期记忆；
 - 首阶段真实预约和转诊；
-- 未通过净收益评估的知识图谱生产依赖。
+- 未通过净收益评估的知识图谱生产依赖；
+- 自治知识演化 Agent 集群生产化。
 
-## 15. 覆盖结论
+---
+
+## 13. 覆盖结论
 
 当前路线已经覆盖：
 
@@ -278,6 +300,7 @@ Prompt / Model Runtime
 Tool / Skill Governance
 Durable Execution
 Observability / Audit / Evaluation
+Legacy Design Asset Inheritance
 Business / Frontend
 Data / Infrastructure
 Engineering / Release / Decommission
@@ -286,6 +309,7 @@ Engineering / Release / Decommission
 尚未完成但已显式进入路线的主要事项：
 
 - 真实编译、启动和 E2E 基线；
+- Legacy Design Asset 的代码、运行、数据和测试证据；
 - 数据库与框架 ADR；
 - 首批 JSON Schema；
 - 白名单来源的具体版本和许可审核；
@@ -295,4 +319,4 @@ Engineering / Release / Decommission
 - 旧服务双跑、迁移和下线；
 - 备份、恢复和生产运维。
 
-这些属于计划项，不再属于架构遗漏。
+这些属于计划和验证项，不再属于架构遗漏。只有 Coverage Matrix 同时无未归属目标能力和未归属 P0/P1 旧资产时，才能通过 A11 Freeze Review。
