@@ -6,7 +6,7 @@
 
 ## 1. 阅读顺序
 
-AIdoctor 的企业级重构方案由以下四份文档共同组成：
+AIdoctor 的企业级重构方案由以下四份主题文档与一份导航共同组成：
 
 1. [企业级临床 Agent 重构主方案](./enterprise-agent-refactoring-plan.md)
    - 项目定位与能力边界；
