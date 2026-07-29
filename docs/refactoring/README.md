@@ -16,8 +16,6 @@ v2.6：Capability 扩场景、呼吸道 RAG V1、统一 Prompt/Model Runtime、�
 
 当前仍为 **Freeze Candidate**。目标架构和执行体系已经完整；最终 Frozen Baseline 还需要 Phase A 的真实编译、启动、数据库、旧资产、Prompt、模型、知识和 E2E 验证。
 
-本次重构遵循：
-
 ```text
 目标架构重构
 ≠ 旧设计全部废弃
@@ -40,7 +38,7 @@ v2.6：Capability 扩场景、呼吸道 RAG V1、统一 Prompt/Model Runtime、�
    冻结内容、ADR 规则、冻结门禁和文档优先级。
 
 3. [v2.6 跨文档一致性补充](./v2.6-cross-document-consistency-addendum.md)  
-   对总体蓝图和四份专题长文统一补充 Capability、RAG、知识图谱、Prompt/Model Runtime 和版本链。
+   对总体蓝图和专题长文统一补充 Capability、RAG、知识图谱、Prompt/Model Runtime 和版本链。
 
 ### 第二步：理解如何扩展临床场景
 
@@ -86,9 +84,7 @@ v2.6：Capability 扩场景、呼吸道 RAG V1、统一 Prompt/Model Runtime、�
 
 ---
 
-## 3. 权威补充与文档优先级
-
-当前文档优先级：
+## 3. 文档优先级
 
 ```text
 Architecture Freeze Baseline
@@ -106,16 +102,14 @@ Architecture Freeze Baseline
 - `current-system-inventory.md`：增加 Legacy Design Asset Inventory；
 - `migration-matrix.md`：增加设计原则、协议、状态、AOP、评估和知识治理资产；
 - `coverage-matrix.md`：要求保留资产绑定 Contract、Phase、Test 和 Gate；
-- `implementation-roadmap.md`：增加 Legacy Design Asset Validation；
-- `engineering-release-and-decommission-plan.md`：增加旧设计资产替代和下线门禁。
+- `implementation-roadmap.md`：在 A6 与 A7 之间增加 A6.5 Legacy Design Asset Validation；
+- `engineering-release-and-decommission-plan.md`：增加旧资产替代和下线门禁。
 
-涉及旧资产保留结论时，不以旧文档中的“已完成”描述代替代码、测试和运行证据。
+旧文档中的“已完成”描述不能代替代码、测试和运行证据。
 
 ---
 
 ## 4. 四份专题长文
-
-以下文档用于深入设计，不作为日常任务顺序来源：
 
 1. [企业级临床 Agent 重构主方案](./enterprise-agent-refactoring-plan.md)  
    Clinical Intelligence、Safety Loop、Diagnostic Loop、医生接管、Delivery、Care Navigation 和 Follow-up。
@@ -129,7 +123,7 @@ Architecture Freeze Baseline
 4. [Durable Execution 与可观测性扩展](./durable-execution-and-observability-extension.md)  
    Thread、Checkpoint、Interrupt/Resume、Lease、Outbox/Inbox、Replay、OTel、Audit。
 
-四份长文未逐字复制 v2.6 新设计；涉及 Capability、RAG、Knowledge Graph、Prompt/Model Runtime、版本链和旧设计资产继承时，以两个权威补充及对应详细设计为准。
+专题长文未逐字复制 v2.6 新设计；涉及 Capability、RAG、Knowledge Graph、Prompt/Model Runtime、版本链和旧设计资产继承时，以权威补充及对应详细设计为准。
 
 ---
 
@@ -157,7 +151,7 @@ Stable Platform
 
 首个 Capability 为 `adult_respiratory_v1`。它用于验证通用平台，不是永久限制到呼吸道。
 
-新增场景必须增加：Scope、Terminology、Observation、Safety、Question、Hypothesis、Knowledge、Prompt、Model Route、Tool/Skill、Delivery 和 Eval，不允许只更换 Prompt。
+新增场景必须增加 Scope、Terminology、Observation、Safety、Question、Hypothesis、Knowledge、Prompt、Model Route、Tool/Skill、Delivery 和 Eval，不允许只更换 Prompt。
 
 旧设计中的问题清单、红旗、三层候选、验证计划和结论包必须先经过资产验证，再抽取进入 Capability Package。
 
@@ -346,18 +340,21 @@ Capability、Prompt/Model Runtime、Knowledge Release 和 Legacy Asset Mapping �
 ## 13. Phase A 正式执行顺序
 
 ```text
-A1 Java/Python/Frontend/Docker 真实运行基线
-→ A2 数据、接口、Prompt、Model、Knowledge、Rule 全量盘点
-→ A3 Legacy Design Asset Validation
-→ A4 Shared Contracts 与 Registry Schemas
-→ A5 数据库、Runtime、RAG、Graph、框架 ADR
-→ A6 CI、开发环境与测试基线
-→ A7 固定 Workflow、AOP/Trace 和旧链路基线
-→ A8 adult_respiratory_v1 与首批 Prompt/Model 配置骨架
-→ A9 Freeze Review
+A1 Java 基线
+→ A2 Python 基线
+→ A3 Frontend 与 Docker 基线
+→ A4 数据资产盘点
+→ A5 Shared Contracts v1
+→ A6 adult_respiratory_v1 Capability Package 骨架
+→ A6.5 Legacy Design Asset Validation
+→ A7 Model Runtime 骨架
+→ A8 ADR
+→ A9 CI 与开发环境
+→ A10 固定 Workflow、AOP/Trace 基线
+→ A11 Freeze Review
 ```
 
-A3 必须输出：
+A6.5 必须输出：
 
 ```text
 legacy-design-asset-inventory.csv
@@ -369,7 +366,7 @@ legacy-observability-migration.md
 legacy-asset-decommission-register.csv
 ```
 
-在 A9 前，不应直接建设完整 LangGraph、完整医学知识库、大规模知识图谱，也不允许未经验证删除旧服务、规则、Prompt、评估集或 AOP/Trace 资产。
+在 A11 前，不应直接建设完整 LangGraph、完整医学知识库或大规模知识图谱，也不允许未经验证删除旧服务、规则、Prompt、评估集或 AOP/Trace 资产。
 
 ---
 
@@ -413,10 +410,10 @@ Legacy Asset / Target Capability
 ```text
 真实运行
 → 全量盘点
+→ Capability骨架
 → 旧设计资产验证
 → 契约和Schema
 → ADR
 → CI和固定Workflow基线
-→ Capability/Model骨架
 → Frozen Baseline Review
 ```
