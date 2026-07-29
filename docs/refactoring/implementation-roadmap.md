@@ -1,616 +1,716 @@
 # AIdoctor 可执行实施路线
 
-> 文档状态：Draft v2.5 Executable Roadmap  
+> 文档状态：Draft v2.6 Executable Roadmap  
 > 更新时间：2026-07-29  
-> 目标：作为总体架构冻结后的主要执行文件，覆盖代码改造、数据迁移、前端、工程、评估、发布和旧系统下线。
-
----
+> 目标：覆盖代码改造、Capability、Model Runtime、RAG、数据迁移、前端、工程、评估、发布和旧系统下线。
 
 ## 1. 路线定位
 
-本文件是执行路线，不替代总体架构。
-
 ```text
 总体架构
-定义系统最终是什么
+定义最终系统是什么
 
-实施路线
+Architecture Freeze Baseline
+定义哪些决策稳定、如何变更
+
+Implementation Roadmap
 定义按什么顺序做、交付什么、如何验收
 
 Migration Matrix
 定义旧资产如何处理
 
 Coverage Matrix
-检查有没有遗漏
+检查目标能力是否遗漏
 ```
 
-路线可更新任务状态、依赖和排期，但不得绕过 Architecture Freeze Baseline。
-
----
+本路线可以更新任务状态和实现细节，但不得绕过冻结的状态所有权、安全骨架和依赖方向。
 
 ## 2. 执行原则
 
-1. 按纵向闭环推进，不按模块分别大而全开发；
-2. 每个 Phase 必须有运行场景；
-3. 先稳定 Contracts 和状态所有权，再引入 LangGraph；
-4. 先保留旧能力，通过 Adapter 迁移；
-5. 每个阶段包含后端、前端、数据、测试和运维；
-6. 每个临床能力必须有 Safety 和 Eval；
-7. 每个数据库变化必须有 Migration 和 Rollback；
-8. 每个旧服务下线必须有替代能力和流量证据；
-9. 每个发布绑定 Capability/Prompt/Model/Knowledge 版本；
-10. 未满足 Exit Gate 不进入下一阶段生产范围。
+1. 按纵向闭环推进，不按十一个模块分别大而全开发；
+2. 每个 Phase 必须有可运行场景和 Exit Gate；
+3. 先稳定 Contracts、Capability 和状态所有权，再引入 LangGraph；
+4. 保留旧 Workflow，通过 Adapter、双跑和流量切换迁移；
+5. 每阶段包含后端、前端、数据、测试、可观测性和发布；
+6. LLM 只通过 Model Runtime 调用；
+7. 每个临床场景以 Capability Package 发布；
+8. 红旗和分诊不依赖 LLM 单点执行；
+9. 每个数据库变化都有 Migration、Reconciliation 和 Rollback；
+10. 旧服务只有满足 Decommission Gate 后才能归档或删除。
+
+## 3. 目标纵向切片
+
+```text
+成人患者：“咳嗽三天，有点喘”
+→ 创建 Encounter / Thread
+→ 加载 adult_respiratory_v1
+→ Observation Extraction
+→ State Committer
+→ Mandatory Safety
+→ InformationGap / QuestionDecision
+→ Question Wording
+→ Checkpoint / Interrupt
+→ 服务重启
+→ Resume
+→ 更新 Observation / Triage
+→ Phase D 增加有限 Hypothesis 和白名单 Evidence
+→ Phase E 增加医生审核和 Delivery
+```
+
+该切片贯穿 Phase B-E，每个阶段在前一阶段闭环基础上增加能力。
 
 ---
 
-## 3. 工作流
-
-并行工作流：
-
-| Track | 内容 |
-|---|---|
-| T1 Architecture & Contracts | 架构、ADR、Schema、兼容性 |
-| T2 Clinical State & Data | CDP、Observation、Migration |
-| T3 Safety & Clinical Intelligence | 红旗、分诊、抽取、问题、推理 |
-| T4 Agent Runtime & Durable | LangGraph、Checkpoint、Resume、Outbox |
-| T5 Evidence, Context & Governance | RAG、Memory、Tool、Skill、Model |
-| T6 Business & Frontend | API、患者端、医生端、Delivery |
-| T7 Observability & Evaluation | OTel、AgentEvent、Audit、Eval |
-| T8 Platform & Release | CI/CD、环境、备份、灰度、下线 |
-
-每个 Phase 从多个 Track 选取形成完整闭环。
-
----
-
-# Phase A：现状基线与架构冻结
+# Phase A：真实基线、Contracts、Capability 与架构冻结
 
 ## A0 目标
 
-把“设计正确”转换为“知道旧系统真实状态，并能安全开工”。
+- 证明当前项目真实能否编译、启动和运行；
+- 完成代码、数据、Prompt、规则和接口级 Inventory；
+- 形成 Shared Contracts v1；
+- 建立 Capability 和 Model Runtime 配置骨架；
+- 完成关键 ADR；
+- 将 Freeze Candidate 升级为 Frozen Baseline。
 
-## A1 代码运行基线
+## A1 Java 基线
 
-### Tasks
+- `diagnosis-service` Maven compile/test；
+- `examination-service` Maven compile/test；
+- 盘点 JDK、Spring Boot、Oracle/MySQL、Flyway 和 Nacos 依赖；
+- 记录编译错误、测试缺口和运行前置条件；
+- 识别所有 CDP 写入点；
+- 识别固定 Workflow 入口和 fallback 能力；
+- 输出 Java API、Entity、Repository、Client、Prompt/LLM 调用清单。
 
-- A1.1 Java diagnosis-service `mvn clean verify`；
-- A1.2 Java examination-service `mvn clean verify`；
-- A1.3 所有 Python 服务建立可复现依赖安装；
-- A1.4 所有 Python 服务 health check；
-- A1.5 frontend `npm ci/lint/build`；
-- A1.6 补 frontend test framework；
-- A1.7 Docker Compose 现状启动；
-- A1.8 记录所有编译、启动和接口错误；
-- A1.9 扫描 TODO/stub/hard-coded response；
-- A1.10 扫描 secret 和 PHI 日志风险。
+交付：
 
-### Outputs
+- `java-build-baseline.md`；
+- 可复现 Maven 命令；
+- Java 资产更新到 Inventory/Migration Matrix。
 
-- `baseline-build-report.md`；
-- `runtime-smoke-report.md`；
-- `known-blockers.md`；
-- 修复基线 PR。
+## A2 Python 基线
 
-## A2 代码和数据资产盘点
+- 为每个 Python 服务创建可复现依赖环境；
+- 统一记录 Python、FastAPI、Pydantic、LLM SDK 版本；
+- 启动 Parsing、Dialog、Safety、Diagnosis Engine、OCR 和 Trace 候选服务；
+- 盘点所有模型直接调用点；
+- 盘点 Prompt 文件、字符串和环境变量；
+- 盘点 ToolContext/ToolResult 变体；
+- 盘点 Redis、Neo4j、Milvus 等依赖。
 
-### Tasks
+交付：
 
-- A2.1 所有服务、包、类、API；
-- A2.2 所有 CDP 读写位置；
-- A2.3 所有数据库表和 Flyway；
-- A2.4 Redis keys；
-- A2.5 Neo4j schema/规模；
-- A2.6 Prompt、模型、词表和规则；
-- A2.7 ToolContext/ToolResult 复制点；
-- A2.8 Trace/Log/Audit 写入点；
-- A2.9 前端页面、路由、Store、API；
-- A2.10 science/scripts/docs 分类。
+- `python-runtime-baseline.md`；
+- dependency lock strategy；
+- Prompt/Model Call Inventory。
 
-### Outputs
+## A3 Frontend 与 Docker 基线
 
-- 更新 `current-system-inventory.md`；
-- 更新 `migration-matrix.md`；
-- 代码到 11 模块映射；
-- Owner 列表。
+- Frontend build/lint；
+- 增加最小 test runner 决策；
+- 运行现有患者流程；
+- 盘点 WebSocket/STOMP/API 状态；
+- 校验 Docker Compose 服务缺失和环境变量不一致；
+- 形成当前部署拓扑。
 
-## A3 Shared Contracts v1
+## A4 数据资产盘点
 
-### Tasks
+- 导出现有数据库表和索引；
+- 抽样 CDP CLOB/JSON 字段；
+- 统计隐藏字段、空字段、非法 JSON 和版本分布；
+- 盘点 Redis Key；
+- 盘点 Neo4j Schema 和数据来源；
+- 盘点 Milvus 是否真实使用；
+- 识别 PHI、Consent 和 Tenant 缺口。
 
-定义并评审：
+## A5 Shared Contracts v1
 
-- Encounter；
-- EncounterCDP；
-- ClinicalObservation；
-- ObservationCandidate；
-- SourceArtifact；
-- StatePatch；
-- CommitResult；
-- TriageAssessment；
-- InformationGap；
-- QuestionDecision；
-- CapabilityEnvelope；
-- ContextEnvelope；
-- AgentState；
-- ToolExecutionRequest；
-- ToolResult；
-- Thread/Run；
-- CheckpointMetadata；
-- InterruptRecord；
-- ResumeRequest；
-- AgentEvent；
-- ErrorResponse。
+首批必须落地为 JSON Schema：
+
+```text
+Encounter
+EncounterCDP
+ClinicalObservation
+ObservationCandidate
+SourceArtifact
+StatePatch
+CommitResult
+TriageAssessment
+InformationGap
+QuestionDecision
+CapabilityManifest
+ContextEnvelope
+ToolResult
+ModelInvocationRequest
+ModelInvocationResult
+CheckpointMetadata
+InterruptRecord
+ResumeRequest
+AgentEvent
+```
+
+任务：
+
+- JSON Schema 作为源；
+- 生成 Pydantic；
+- 生成 Java DTO；
+- 生成 TypeScript 类型；
+- Schema Version；
+- backward compatibility policy；
+- contract fixtures；
+- Java/Python/TS contract tests。
+
+## A6 Capability Package 骨架
 
 建立：
 
-- JSON Schema source；
-- Java/Python/TypeScript generated models；
-- contract version；
-- compatibility policy；
-- contract test。
+```text
+capabilities/adult_respiratory_v1/
+```
 
-## A4 架构 ADR
+至少创建：
+
+- manifest；
+- population/scope；
+- terminology；
+- observation profile；
+- safety；
+- question；
+- hypothesis；
+- knowledge policy；
+- runtime allowlist；
+- eval fixtures。
+
+A 阶段只要求骨架、Schema 和临床待评审内容，不要求全部临床规则完成。
+
+## A7 Model Runtime 骨架
+
+- ModelSpec；
+- ModelRoutePolicy；
+- PromptSpec；
+- Output Schema Registry；
+- ProviderAdapter 接口；
+- `common/aidoctor_llm` Legacy Adapter 设计；
+- Prompt YAML 规范；
+- 禁止新代码直接调用 Provider SDK 的 lint/architecture rule。
+
+## A8 ADR
 
 必须完成：
 
-- ADR-051 Clinical Database Target；
-- ADR-052 Java/Python Runtime Boundary；
-- ADR-053 Contract Source and Code Generation；
-- ADR-054 Legacy Workflow Fallback；
-- ADR-055 Nacos/Service Discovery Transition；
-- ADR-056 Vector Store: pgvector vs Milvus；
-- ADR-057 OTel and Legacy Trace Transition。
+1. 临床主库 PostgreSQL 还是阶段性 MySQL/Oracle；
+2. Checkpoint 与临床库部署边界；
+3. Java/Python 通信协议；
+4. Python 首版单 Runtime package 模式；
+5. LangGraph 使用方式；
+6. pgvector 与 Milvus；
+7. BM25 实现；
+8. Neo4j 保留和生产启用门禁；
+9. Secret Manager；
+10. OTel Backend。
 
-## A5 开发环境与 CI
+## A9 CI 与开发环境
 
-### Tasks
+Pipeline 至少包含：
 
-- 统一 Python/Pydantic；
-- 建立 lock file；
-- CI 基线；
-- Contract generation；
-- secret scan；
-- dependency scan；
-- container build；
-- compose profiles；
-- test fixtures；
-- synthetic patient data。
+- Java compile/test；
+- Python install/lint/type/test；
+- Frontend build/lint/test；
+- Contract generation/diff；
+- Schema compatibility；
+- secret/dependency scan；
+- docs link check；
+- migration dry-run。
 
-## A6 固定 Workflow 基线
+## A10 固定 Workflow 基线
 
-### Scenario
+- 跑通或明确无法跑通原因；
+- 记录正常、服务失败和默认降级行为；
+- 建立输入输出 fixture；
+- 确定新旧双跑对比字段；
+- 保留为 Phase C/F fallback。
 
-使用一个合成呼吸道病例跑通当前路径。
+## A11 Freeze Review
 
-记录：
+Exit Gate：
 
-- 输入；
-- 调用服务；
-- CDP 前后状态；
-- 问题；
-- 风险；
-- 输出；
-- 耗时；
--失败和降级。
-
-若无法运行，必须记录根因和修复/替代决策。
-
-## A7 前端和业务基线
-
-- 旧 API 调用图；
-- 页面截图；
-- WebSocket/STOMP 行为；
-- Trace 页面数据源；
-- 前端状态模型；
-- v1 兼容范围。
-
-## A8 Freeze Review
-
-更新：
-
-- Architecture Freeze Baseline；
-- Coverage Matrix；
-- Migration Matrix；
-- Implementation Roadmap。
-
-### Phase A Exit Gate
-
-- [ ] 核心服务状态有真实报告；
-- [ ] 每个资产有目标归属和处理类型；
-- [ ] Shared Contracts v1 生成成功；
-- [ ] 数据库和 Runtime ADR 批准；
-- [ ] CI 基线可运行；
-- [ ] 固定 Workflow 有基准或明确替代；
-- [ ] 第一条纵向切片输入/输出冻结；
-- [ ] 总体架构进入 Frozen Baseline。
+- [ ] Java/Python/Frontend 基线完成；
+- [ ] 所有生产候选目录已进入 Inventory；
+- [ ] 每个现有服务有 Migration Decision；
+- [ ] Contracts v1 可生成三种语言类型；
+- [ ] Capability Package 骨架完成；
+- [ ] Model Runtime 接口和 Prompt 格式完成；
+- [ ] 关键 ADR 批准；
+- [ ] 固定 Workflow 有运行证据或明确失败原因；
+- [ ] 第一条 E2E 测试设计完成；
+- [ ] Coverage Matrix 无未归属能力；
+- [ ] 总体状态升级为 Frozen Baseline。
 
 ---
 
-# Phase B：最小临床状态与不可绕过 Safety
+# Phase B：Clinical State、State Committer 与呼吸道 Safety
 
 ## B0 运行场景
 
-```text
-“咳嗽三天，有点喘”
-→ 创建 Encounter
-→ 抽取 ObservationCandidate
-→ State Committer
-→ Mandatory Safety
-→ 返回结构化安全结果
-```
+患者输入后，系统创建有来源的 Observation，经过唯一 State Committer 写入 CDP，并执行不可绕过的呼吸道 Safety。
 
-暂不使用动态多轮 Agent。
+## B1 新 Clinical State
 
-## B1 新 Clinical State Schema
-
-- Encounter；
-- EncounterCDP；
-- ClinicalObservation；
-- SourceArtifact metadata；
-- TriageAssessment；
-- StateCommitLog；
-- optimistic version；
-- migration metadata。
+- Encounter/EncounterCDP Repository；
+- Observation/Event-style Evidence Ledger；
+- SourceArtifact；
+- CDP Version；
+- Expected Version；
+- Snapshot；
+- Patient/Tenant Scope。
 
 ## B2 State Committer
 
-实现：
+公开接口：
 
-```text
-validate schema
-validate capability
-validate field permission
-validate source
-validate consent
-validate expected version
-resolve conflict
-commit
-emit outbox/event
+```python
+def commit_state_patch(patch: StatePatch) -> CommitResult: ...
 ```
 
-状态：
+校验：
 
-- committed；
-- partially_committed；
-- rejected；
-- version_conflict；
-- consent_denied；
-- invalid_source。
+- Schema；
+- Capability；
+- 字段权限；
+- 来源；
+- Consent；
+- expected version；
+- conflict；
+- operation type；
+- Audit/AgentEvent。
 
 ## B3 Legacy CDP Adapter
 
-- read old CDP；
-- map legacy patient_state；
-- raw payload archive；
-- contract response mapper；
-- no direct new Agent write to old CLOB。
+- 读取旧 CLOB/JSON；
+- 转换为新 Contract；
+- 新状态映射回旧响应；
+- 不允许新模块直接更新旧 Map；
+- 双写只在 ADR 批准后启用；
+- 迁移和对账记录。
 
-## B4 Parsing Adapter
+## B4 adult_respiratory_v1 Safety Pack
 
-改造 clinical-parsing：
+- 主诉和范围识别；
+- 红旗规则；
+- 生命体征规则；
+- 组合风险；
+- 输入不足保守升级；
+- 特殊人群排除；
+- Emergency Guidance；
+- 固定安全输出。
 
-- 输入 SourceArtifact/TextSource；
-- 输出 ObservationCandidate；
-- negation/uncertainty；
-- source span；
-- confidence calibration；
-- remove direct CDP read/write；
-- regression tests。
+Safety 最终判断使用确定性规则，模型只可提供 Candidate。
 
-## B5 Safety Engine v1
+## B5 Clinical Parsing Adapter
 
-合并 health/risk：
-
-- 成人呼吸道红旗；
-- 基础分诊；
-- 输入不足；
-- special risk hooks；
-- reason code；
-- emergency guidance；
-- deterministic rules；
-- no Planner bypass。
+- 旧 Parsing 输出适配到 ObservationCandidate；
+- 保存原始 Span；
+- 否定、时间、程度；
+- 概念归一化；
+- 不直接写 CDP；
+- 规则抽取 fallback。
 
 ## B6 Business API v2 基础
 
-- create Encounter；
-- submit initial message；
-- get Encounter state；
-- error model；
-- v1 Compatibility Adapter。
+- Create Encounter；
+- Submit Input；
+- Get Encounter State；
+- v1 Compatibility Adapter；
+- correlation id；
+- Tenant/Consent 占位门禁。
 
-## B7 Frontend v2 基础
+## B7 Frontend
 
-- API client generated；
-- Encounter Store；
-- initial input；
-- Safety result；
-- risk banner；
-- feature flag。
+- 新 Encounter ID；
+- 输入提交状态；
+- 红旗/升级 UI；
+- 错误和 correlation id；
+- v1/v2 feature flag。
 
-## B8 Observability 基础
+## B8 测试
 
-- trace/correlation IDs；
-- State Commit span；
-- Safety span；
-- structured logs；
-- AgentEvent-like business event；
-- PHI filter v1。
+- StatePatch 正常、部分、拒绝、冲突；
+- 无来源写入；
+- 旧 CDP 转换；
+- 红旗病例集；
+- 输入不足；
+- out-of-scope；
+- Planner 绕过 Safety 尝试；
+- 并发版本冲突。
 
-## B9 Tests
-
-- normal；
-- red flag；
-- no source；
-- candidate not confirmed；
-- version conflict；
-- invalid consent；
-- legacy mapping；
-- frontend E2E。
-
-### Phase B Exit Gate
+Exit Gate：
 
 - [ ] 所有新临床写入经过 State Committer；
-- [ ] 模型/Tool 不直接写状态；
-- [ ] 红旗回归通过；
-- [ ] 旧 CDP 可只读映射；
-- [ ] v1/v2 API 共存；
-- [ ] 临床和技术事件可关联；
-- [ ] 第一阶段数据库 Migration 可回滚。
+- [ ] Candidate 不自动成为 Fact；
+- [ ] 呼吸道 Safety 可独立于 LLM 运行；
+- [ ] v1 旧 API 仍可用；
+- [ ] 状态版本和来源可追溯；
+- [ ] 红旗测试达到批准阈值。
 
 ---
 
-# Phase C：最小 Agentic Workflow 与 Durable Resume
+# Phase C：最小 Agent Runtime、Model Runtime 与跨轮恢复
 
 ## C0 运行场景
 
-```text
-患者初始输入
-→ Safety
-→ 识别 Information Gap
-→ 选择一个 QuestionDecision
-→ 输出问题
-→ Checkpoint + Interrupt
-→ Runtime 重启
-→ Resume
-→ 提交新 Observation
-→ 再次 Safety
-→ 简单 Delivery
-```
+系统能够动态选择下一问题，调用统一 Model Runtime 生成结构化抽取和问题表达，保存 Checkpoint，服务重启后恢复且不重复写入。
 
 ## C1 Python Agent Runtime
 
-- 一个 FastAPI App；
-- LangGraph；
-- explicit graph nodes；
-- approved NextAction enum；
-- fixed safety skeleton；
-- fixed Workflow fallback adapter；
-- no generic autonomous planner。
-
-## C2 Graph Nodes v1
+初始 package：
 
 ```text
-load_runtime_context
-validate_input
-understand_input
-commit_observations
-mandatory_safety_check
-evaluate_information_gap
-select_question
-compose_question
-checkpoint
-interrupt
-resume
-prepare_basic_delivery
-complete
+agent_runtime/
+├── graph/
+├── clinical_state/
+├── safety/
+├── clinical_intelligence/
+├── context/
+├── model_runtime/
+├── durable/
+├── tools/
+└── observability/
 ```
 
-## C3 Question Policy v1
+不继续为每个临床步骤创建独立微服务。
 
-从 dialog-service 迁移：
+## C2 最小 LangGraph
 
-- 必须/重要/可选缺口；
-- 单问题输出；
-- 避免重复；
-- 不知道/跳过；
-- 问题理由；
-- stop decision。
+节点：
 
-## C4 ContextEnvelope v1
+```text
+validate_input
+→ assemble_context
+→ understand_input
+→ commit_observations
+→ mandatory_safety
+→ identify_information_gap
+→ choose_next_question
+→ word_question
+→ checkpoint_interrupt
+→ resume
+→ prepare_basic_delivery
+```
 
-- 最近 6-10 轮；
-- 当前 CDP 摘要；
-- Critical Pin；
+只有 Question/NextAction 在批准范围内动态。
+
+## C3 ContextEnvelope v1
+
+- System Policy；
+- Capability Snapshot；
+- Critical Clinical Context；
+- selected observations；
+- recent messages；
+- asked questions；
 - token budget；
-- actor/capability scope；
-- context_hash；
-- no full CDP by default。
+- redaction manifest；
+- context hash。
 
-## C5 PostgreSQL Checkpointer
+## C4 Model Runtime v1
+
+必须实现：
+
+- Prompt Registry（Git YAML）；
+- Prompt Loader；
+- Prompt Builder；
+- Model Registry；
+- Model Router；
+- Model Gateway；
+- ProviderAdapter；
+- Structured Output Validator；
+- Timeout/Retry/Fallback；
+- Token/Cost/Trace。
+
+首批 Route：
+
+```text
+clinical.extract_observations.medium.v1
+clinical.question_wording.low.v1
+```
+
+可选 Route：
+
+```text
+safety.extract_red_flags.high.v1
+```
+
+但 Safety 最终结论仍为确定性。
+
+## C5 Prompt v1
+
+至少发布：
+
+- respiratory clinical understanding；
+- respiratory question wording；
+- basic patient delivery wording。
+
+每个 Prompt 有：
+
+- ID/version；
+- input/output Schema；
+- Capability；
+- Route；
+- Owner/Reviewer；
+- Eval；
+- rollback version。
+
+## C6 InformationGap 与 QuestionDecision
+
+- 必问清单；
+- 红旗优先；
+- 已问问题；
+- 信息价值；
+- 用户负担；
+- 停止和升级；
+- 模型只能辅助 Candidate 或语言表达。
+
+## C7 Durable Execution v1
 
 - Thread/Run；
-- Checkpoint；
+- PostgreSQL Checkpointer；
 - Interrupt；
 - ResumeRequest；
-- runtime version；
-- cdp version；
-- graph/state schema version。
-
-## C6 Resume 安全
-
-- authentication；
-- authorization；
-- expected checkpoint；
-- expected cdp version；
-- resume inbox dedup；
-- expired/cancelled；
+- Resume Inbox 去重；
+- expected checkpoint/CDP version；
 - process restart；
-- node re-entry test。
+- stale/concurrent Resume。
 
-## C7 Model Adapter
+## C8 Tool Runtime v1
 
-从 common/aidoctor_llm 适配：
+- Tool Registry 基础；
+- ToolContext/ToolResult 统一；
+- Parsing/Safety Legacy Adapter；
+- Timeout；
+- Cancel；
+- Policy；
+- Tool Result Validation。
 
-- extraction route；
-- question wording route；
-- structured output；
-- timeout；
-- no provider direct calls outside Router；
-- token/cost metadata。
+## C9 OTel v1
 
-## C8 Frontend Agent Flow
+- Java→Python propagation；
+- Graph node spans；
+- Model spans；
+- Tool spans；
+- Checkpoint spans；
+- log correlation；
+- AgentEvent timeline；
+- PHI Filter。
+
+## C10 Frontend Agent Flow
 
 - Thread Store；
 - Interrupt UI；
 - Resume idempotency；
 - reload recovery；
-- basic delivery；
-- SSE events；
-- connection degraded UI。
+- SSE 事件；
+- connection degraded UI；
+- basic PatientDelivery。
 
-## C9 OTel v1
+## C11 Crash Matrix
 
-- Java→Python propagation；
-- node spans；
-- model/tool spans；
-- checkpoint spans；
-- log correlation；
-- AgentEvent timeline；
-- one restart trace。
-
-## C10 E2E Crash Matrix
-
-- before commit；
+- before State Commit；
 - after commit before checkpoint；
 - after checkpoint before response；
-- after question response；
-- duplicate Resume；
-- stale Resume；
-- concurrent Resume；
+- Provider timeout；
+- Prompt invalid；
+- invalid structured output；
+- duplicate/stale/concurrent Resume；
 - Redis unavailable；
-- model timeout。
+- PostgreSQL unavailable；
+- fixed Workflow fallback。
 
-### Phase C Exit Gate
+Exit Gate：
 
-- [ ] 第一条真正 Agentic 主链路可运行；
-- [ ] 只有 NextAction 动态；
-- [ ] 每轮 Safety；
-- [ ] 重启可恢复；
-- [ ] 重复提交不重复写；
-- [ ] 旧 Workflow 可 fallback；
+- [ ] 第一条 Agentic 主链路可运行；
+- [ ] 所有模型调用经过 Model Runtime；
+- [ ] 业务代码无 Provider 直接调用；
+- [ ] Prompt、Model、Schema 和 Context 可追踪；
+- [ ] 服务重启可恢复；
+- [ ] 重复提交不重复写入；
+- [ ] 每轮 Mandatory Safety；
+- [ ] 高风险无模型时进入固定路径；
 - [ ] 前端刷新可恢复；
-- [ ] E2E crash matrix 通过。
+- [ ] Crash Matrix 通过。
 
 ---
 
-# Phase D：有限临床推理、Patient History 与白名单 Evidence
+# Phase D：有限临床推理、Patient History 与呼吸道 RAG V1
 
 ## D0 运行场景
 
-Agent 结合当前 Observation、有限患者历史和白名单指南，更新候选和信息缺口，并给出带引用的有限说明。
+Agent 结合当前 Observation、批准候选、有限患者历史和白名单知识，形成支持/反对证据、信息缺口和带引用的有限说明。
 
-## D1 DiagnosticHypothesis
+## D1 Hypothesis Pack 与 Clinical Engine
 
-- candidate only；
-- support/against evidence；
-- must-not-miss；
+- 只加载 Capability 批准候选；
+- common/alternative/must-not-miss；
+- support/against；
+- discriminator；
 - uncertainty；
-- status；
-- version；
-- no final diagnosis without policy/review。
+- rule/KG/statistical/LLM adapters；
+- failure isolation；
+- 不输出正式确诊。
 
-## D2 Diagnosis Engine Adapter
+## D2 Patient History Retrieval
 
-- rule/KG/LLM/statistical adapters；
-- common contract；
-- no fixed confidence constants；
-- ensemble explanation；
-- engine failure isolation；
-- double-run compare。
-
-## D3 Patient History Retrieval
-
-- patient scope；
+- patient/tenant scope；
 - consent；
 - structured filter；
+- 时间相关性；
 - reason for recall；
-- no cross-patient；
-- no raw all-history prompt。
+- 不发送全历史 Prompt；
+- cross-patient=0。
 
-## D4 Memory v1
+## D3 Memory v1
 
 - MemoryCandidate；
 - Write Gate；
-- confirmed facts only；
-- expiry/correction hooks；
+- 仅确认事实；
+- source/expiry；
+- correction hook；
 - recall trace；
-- no automatic model inference promotion。
+- 模型推断不自动晋升。
 
-## D5 Medical Knowledge RAG v1
+## D4 Source Registry
 
-- whitelist sources；
-- ingestion release；
-- chunking metadata；
+- 具体白名单来源版本；
+- Publisher、Tier、Region、Population；
+- License 和 Access；
+- valid_from/valid_until；
+- clinical review；
+- checksum；
+- source manifest。
+
+## D5 Knowledge Ingestion
+
+- Artifact 安全检查；
+- 结构解析；
+- 推荐、表格、算法和限制提取；
+- 术语归一化；
+- RespiratoryKnowledgeChunk；
+- 自动质量检查；
+- 临床抽样审核；
+- Knowledge Release。
+
+## D6 RAG Storage 与 Retrieval
+
+- PostgreSQL knowledge schema；
 - pgvector；
+- BM25 Adapter；
+- Embedding Registry；
+- Reranker Registry；
+- metadata/ACL filter；
 - hybrid retrieval；
-- no-result state；
-- versioned source。
+- no-result；
+- cache namespace；
+- Retrieval Audit。
 
-## D6 EvidencePack
+Embedding/Reranker 通过离线评估选型，不在代码中硬编码供应商名称。
 
-- clinical question/PICO；
-- claims；
-- citations；
-- applicability；
-- freshness；
-- conflicts；
-- limitations；
-- citation validation。
+## D7 Knowledge Graph 对照实验
 
-## D7 Context Summary
+- 图 Schema；
+- 来源链；
+- 关系有效期；
+- terminology expansion；
+- must-not-miss expansion；
+- retrieval comparison；
+- false expansion；
+- latency。
+
+只有净收益报告通过后，Neo4j 才进入生产路径；否则保持离线或归档。
+
+## D8 Evidence Intelligence
+
+- ClinicalQuestion/Query Type；
+- PICO/Query Plan；
+- Claim Extraction Route；
+- SourceSpan；
+- Citation Validation；
+- Applicability；
+- Freshness；
+- Conflict；
+- Limitations；
+- EvidencePack。
+
+## D9 Model Runtime 扩展
+
+新增 Route：
+
+```text
+clinical.hypothesis_support.high.v1
+evidence.classify_question.medium.v1
+evidence.build_query.medium.v1
+evidence.extract_claims.medium.v1
+evidence.validate_citation.high.v1
+evidence.summarize_conflict.high.v1
+```
+
+高风险 Route 无已批准模型时返回 unavailable/review，不静默降级。
+
+## D10 Context Summary
 
 - structured summary；
 - source links；
 - Critical Pin；
 - contradiction retention；
-- summary evaluation。
+- summary route；
+- fact faithfulness evaluation。
 
-## D8 Artifact/OCR
+## D11 OCR/Artifact
 
 - Object Storage；
 - SourceArtifact；
 - checksum；
-- quality gate；
+- file/MIME/malware gate；
 - OCR Adapter；
+- quality score；
+- patient/report identity；
 - human confirmation；
-- malicious file scan。
+- Artifact ObservationCandidate。
 
-## D9 Frontend Evidence
+## D12 Frontend Evidence
 
 - report upload；
-- quality state；
+- parse/quality state；
 - citation display；
-- source view permissions；
-- uncertainty display。
+- source span；
+- permission；
+- uncertainty/conflict/no-result；
+- knowledge version。
 
-## D10 Evaluation
+## D13 Evaluation
 
 - extraction；
 - hypothesis quality；
+- must-not-miss recall；
 - patient isolation；
-- retrieval recall；
-- citation correctness；
-- context faithfulness；
-- injection attacks。
+- retrieval Recall@k/Precision/nDCG；
+- citation precision；
+- population match；
+- stale source rejection；
+- injection；
+- graph false expansion；
+- latency/cost。
 
-### Phase D Exit Gate
+Exit Gate：
 
 - [ ] 候选有支持和反对证据；
+- [ ] 候选不超出 Capability 批准范围；
 - [ ] Patient RAG 跨患者为零；
-- [ ] 白名单 Evidence 可追溯；
+- [ ] Medical RAG 仅使用批准 Knowledge Release；
+- [ ] 每个关键 Claim 可追踪 SourceSpan；
+- [ ] 无结果、冲突、人群不匹配可显式返回；
 - [ ] Citation 支持对应 Claim；
-- [ ] 无证据和冲突可明确表达；
+- [ ] Knowledge Release 可回滚；
 - [ ] Critical Context 不因摘要丢失；
-- [ ] OCR 不自动成为确认事实。
+- [ ] OCR 不自动成为确认事实；
+- [ ] 知识图谱若启用具有净收益报告。
 
 ---
 
@@ -618,38 +718,35 @@ Agent 结合当前 Observation、有限患者历史和白名单指南，更新�
 
 ## E0 运行场景
 
-高风险或不确定 Encounter 进入医生审核；医生可修改并批准，系统生成患者、医生和系统三类交付，创建随访和模拟外部动作。
+高风险或不确定 Encounter 进入医生审核。医生可以修改、批准、拒绝或要求更多信息；系统生成三类 Delivery 并创建随访和模拟外部动作。
 
 ## E1 ReviewTask
 
-- create；
-- assign；
-- priority；
+- create/assign/priority；
 - reason codes；
 - expected versions；
 - approve/edit/reject/request more info/escalate；
 - SLA；
-- audit。
+- Audit。
 
 ## E2 Clinician Interrupt/Resume
 
 - checkpoint link；
 - reviewer auth；
-- version conflict；
-- state commit；
-- resume；
-- stale decision；
-- concurrent clinicians。
+- concurrent/stale decision；
+- doctor StatePatch；
+- commit；
+- resume。
 
 ## E3 Clinician Console
 
 - queue；
 - source facts；
 - hypotheses；
-- evidence；
+- evidence/citations；
 - triage；
-- Agent timeline；
-- edit and decision；
+- AgentEvent timeline；
+- edit/decision；
 - audit trail。
 
 ## E4 DeliveryPackage
@@ -660,44 +757,39 @@ ClinicianDelivery
 SystemDelivery
 ```
 
-保证：
-
 - 同一事实基础；
 - 不同披露范围；
 - 版本一致；
 - 限制说明；
 - 不暴露 CoT/Prompt。
 
-## E5 Care Navigation
+## E5 Model Runtime 扩展
 
-- recommended care level；
+新增：
+
+```text
+delivery.patient_rewrite.low.v1
+review.clinician_summary.high.v1
+delivery.followup_wording.low.v1
+```
+
+医生摘要关键事实必须由结构化字段校验，不能只依赖生成文本。
+
+## E6 Care Navigation 与 Follow-up
+
+- care level；
 - urgency；
 - location capability；
-- unavailable location fallback；
-- emergency guidance；
-- no false availability claim。
-
-## E6 Follow-up
-
-- plan；
-- task；
-- reminder；
-- patient response；
+- unavailable fallback；
+- plan/task/reminder；
+- response；
 - deterioration escalation；
 - cancel/expire。
 
-## E7 Outbox/Inbox
+## E7 Outbox/Inbox 与模拟外部动作
 
-- State/Review/Follow-up events；
 - transactional outbox；
 - consumer inbox；
-- retry；
-- poison message；
-- reconciliation。
-
-## E8 External Action Simulation
-
-- notification or simulated appointment；
 - ExternalActionRecord；
 - idempotency；
 - timeout=unknown；
@@ -705,281 +797,200 @@ SystemDelivery
 - compensation hook；
 - replay disabled。
 
-## E9 Frontend Business Closure
+## E8 Frontend Closure
 
 - PatientDelivery；
-- wait review；
+- waiting review；
 - review changes；
 - follow-up；
-- status and retry；
-- support correlation ID。
+- status/retry；
+- support correlation id。
 
-### Phase E Exit Gate
+Exit Gate：
 
 - [ ] 医生修改进入真实 CDP；
 - [ ] 高风险不能绕过医生；
 - [ ] 三类 Delivery 一致；
+- [ ] 关键医生摘要事实经过校验；
 - [ ] Outbox/Inbox 不丢事件；
 - [ ] 重复请求不重复动作；
-- [ ] 前端患者/医生闭环；
+- [ ] 患者和医生前端闭环；
 - [ ] Audit 可追踪受保护操作。
 
 ---
 
 # Phase F：治理、生产硬化、评估、放量与下线
 
-## F1 Tool/Skill/Model Governance
+## F1 Capability Governance
 
-- Tool Registry；
-- Skill Registry；
-- Prompt Registry；
-- Model Registry/Router；
-- release workflow；
-- owner/reviewer；
-- compatibility matrix；
+- Registry；
+- clinical/technical review；
+- Eval Report；
+- Shadow；
+- Clinician Assist；
+- Restricted Patient；
+- Active/Deprecated/Retired；
 - emergency disable；
-- cost/latency policy。
+- rollback。
 
-## F2 Durable Hardening
+## F2 Prompt/Model Governance
+
+- Prompt Registry 后台或受控配置；
+- Model Health；
+- Compatibility Matrix；
+- cost/latency policy；
+- provider/region policy；
+- prompt/model shadow compare；
+- emergency disable；
+- release and rollback audit。
+
+## F3 Tool/Skill Governance
+
+- Tool Registry 完整化；
+- Skill Registry；
+- Owner/Reviewer；
+- Compatibility；
+- Sandbox；
+- permissions；
+- version and rollback。
+
+## F4 Durable Hardening
 
 - Thread Lease；
-- worker heartbeat；
-- takeover；
+- worker heartbeat/takeover；
 - Checkpoint Migration；
 - legacy runtime；
-- fixed Workflow fallback；
 - cancellation/expiry；
 - reconciliation；
-- compensation。
+- compensation；
+- fixed Workflow fallback drills。
 
-## F3 Observability Stack
+## F5 Observability Stack
 
 - OTel Collector；
 - Tempo/Jaeger；
 - Prometheus；
 - Loki/OpenSearch；
 - Grafana；
-- PHI filter；
-- SLO；
-- on-call alert；
-- AgentEvent/Decision/Audit separated views。
+- SLO/Alert；
+- PHI telemetry gate；
+- Agent/Clinical/Audit 分层视图。
 
-## F4 Evaluation Platform
+## F6 Evaluation 与 Replay
 
-- versioned case sets；
-- patient simulator；
-- OSCE；
-- clinical metrics；
-- safety metrics；
-- RAG/context/memory/resume/security metrics；
-- release report；
-- regression blocking。
-
-## F5 Replay
-
-- State Resume；
+- Clinical/Safety/Context/Memory/RAG/Model/Prompt/Resume/Security；
+- Patient Simulator；
 - Simulation Replay；
-- Forensic Replay；
-- no real action；
-- version compare；
-- access control；
-- evidence snapshot。
+- version comparison；
+- no real side effects；
+- release report automation。
 
-## F6 Platform Hardening
+## F7 生产基础设施
 
-- secret manager；
-- SBOM/signing；
-- resource limits；
-- autoscaling；
-- rate limiting；
-- backup/PITR；
-- restore drill；
-- DR；
-- performance/load；
-- capacity planning。
+- Secret Manager；
+- backup/restore；
+- disaster recovery；
+- performance/capacity；
+- data retention/deletion；
+- operational runbooks；
+- incident levels。
 
-## F7 Rollout
+## F8 放量
 
 ```text
 Internal
 → Shadow
 → Clinician Assist
 → Restricted Patient
-→ Gradual Cohort
+→ Controlled Expansion
 ```
 
 每一步有：
 
-- clinical approval；
-- safety report；
-- rollback；
-- monitoring；
-- support plan。
+- Capability version；
+- Knowledge Release；
+- Prompt Release；
+- Model Route Policy；
+- Eval Report；
+- Rollback；
+- monitoring threshold。
 
-## F8 Legacy Decommission
+## F9 旧服务下线
 
-按 Migration Matrix：
+每个旧服务满足：
 
-- 禁止新依赖；
-- adapter-only；
-- traffic zero；
-- read-only；
-- archive；
-- delete PR。
+- 新能力覆盖；
+- 无生产流量；
+- 无代码引用；
+- 数据迁移和对账；
+- rollback window；
+- Archive Snapshot；
+- Owner 批准；
+- Decommission Record。
 
-重点：
+Exit Gate：
 
-- direct CDP writes；
-- duplicate health/risk endpoints；
-- Python step services；
-- old Java Agent orchestration；
-- CDP execution trace writes；
-- legacy Trace technical backend；
-- Nacos if unused；
-- old database writes。
-
-### Phase F Exit Gate
-
-- [ ] Capability Release Report 完整；
-- [ ] PHI telemetry violations 为零；
-- [ ] high-risk silent fallback 为零；
-- [ ] replay 无真实副作用；
-- [ ] backup/restore drill；
-- [ ] SLO 和 on-call；
-- [ ] 生产灰度通过；
-- [ ] 旧服务按门禁下线；
-- [ ] 第一 Capability 进入受控生产。
+- [ ] Capability 发布和停用可控；
+- [ ] Prompt/Model/Knowledge 可独立回滚；
+- [ ] 高风险静默降级为零；
+- [ ] Replay 不产生真实副作用；
+- [ ] 版本链可还原；
+- [ ] PHI 遥测门禁通过；
+- [ ] 备份恢复演练通过；
+- [ ] 生产 SLO 和 Incident Runbook 完成；
+- [ ] 旧服务按门禁下线。
 
 ---
 
-## 4. 跨阶段不可遗漏项
+# 4. 跨阶段任务
 
-每个 Phase 都检查：
+## 4.1 文档状态
 
-### Contracts
+每完成一个阶段必须更新：
 
-- schema version；
-- compatibility；
-- Java/Python/TS parity。
+- Implementation Roadmap；
+- Coverage Matrix；
+- Migration Matrix；
+- Current System Inventory；
+- ADR；
+- Release Notes；
+- Eval Report。
 
-### Security
+## 4.2 Definition of Done
 
-- authentication；
-- authorization；
-- Consent；
-- tenant/patient isolation；
-- PHI；
-- injection；
-- secrets。
+任何任务完成至少满足：
 
-### Data
+- 代码合并；
+- Contract 和 Migration；
+- Unit/Integration 测试；
+- E2E 或阶段场景；
+- Trace/Metric/Log；
+- Security/PHI；
+- Rollback；
+- 文档更新。
 
-- source；
-- version；
-- migration；
-- retention；
-- backup；
-- audit。
+## 4.3 禁止提前建设
 
-### Durable
+在对应前置未满足前，不建设：
 
-- idempotency；
-- retry；
-- resume；
-- concurrency；
-- cancellation；
-- reconciliation。
+- 全医学知识库；
+- 自由自治 Agent；
+- 自动治疗和处方；
+- 多套 Agent 框架；
+- 未治理的 Prompt 平台；
+- 无来源知识图谱；
+- 无评估模型自动路由；
+- 真实不可逆外部动作。
 
-### Observability
-
-- trace；
-- metric；
-- log；
-- AgentEvent；
-- ClinicalDecisionRecord；
-- Audit。
-
-### Evaluation
-
-- normal；
-- red flag；
-- missing data；
-- conflict；
-- attack；
-- failure；
-- restart；
-- regression。
-
-### Release
-
-- feature flag；
-- migration dry-run；
-- rollback；
-- dashboard；
-- runbook；
-- communication。
-
----
-
-## 5. Task 状态和证据
-
-每个任务记录：
+## 4.4 当前第一批实际任务
 
 ```text
-Task ID
-Owner
-Status
-Dependencies
-Target release
-PR
-Test evidence
-Eval report
-Migration evidence
-Rollback evidence
-Open risks
+1. 执行 A1-A4 真实基线
+2. 生成 Contracts v1
+3. 创建 adult_respiratory_v1 配置骨架
+4. 创建 PromptSpec/ModelSpec/RoutePolicy Schema
+5. 适配 common/aidoctor_llm 的第一个 ProviderAdapter
+6. 完成数据库/Runtime/RAG ADR
+7. 建立 CI
+8. Freeze Review
 ```
-
-任务只有在证据链接完整时才能标记 Done。
-
----
-
-## 6. Roadmap 修改规则
-
-可以调整：
-
-- 同一 Phase 内任务顺序；
-- 具体库；
-- 类和包；
-- 排期和 Owner；
-- 指标阈值。
-
-必须 ADR：
-
-- 移除 Phase 的安全/状态/Durable 能力；
-- 让 Agent 绕过固定骨架；
-- 改状态所有权；
-- 改数据库目标；
-- 提前开放高风险能力；
-- 删除医生审核；
-- 删除固定 Workflow fallback。
-
----
-
-## 7. 实施完成定义
-
-“照路线做完”的含义是：
-
-- 第一呼吸道 Capability 在受控生产运行；
-- 核心旧资产完成迁移或明确归档；
-- 新旧数据完成对账；
-- 患者与医生闭环；
-- 服务重启可恢复；
-- 外部动作幂等；
-- 证据可引用；
-- Safety 不可绕过；
-- Trace/Decision/Audit 分责；
-- 评估阻止回归；
-- CI/CD、备份和回滚有效；
-- 无必要的旧生产写路径已下线。
-
-后续增加其他疾病和人群属于新增 Capability，不是本次重构遗漏。
