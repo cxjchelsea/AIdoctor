@@ -10,6 +10,16 @@
 
 整体状态为 **PARTIALLY_VALIDATED**。
 
+本基线使用以下证据等级：
+
+| Evidence Level | 定义 |
+|---|---|
+| `CODE_CONFIRMED` | 已通过实际源码或配置定位确认，但未证明构建或运行结果。 |
+| `BUILD_VERIFIED` | 已通过真实依赖解析、编译或构建生命周期验证，但未证明服务启动、接口调用、数据库连接或业务流程运行。 |
+| `RUNTIME_VERIFIED` | 已实际启动服务或执行真实运行路径。 |
+
+本次没有服务启动或真实 API 调用证据，因此 A1 不产生 `RUNTIME_VERIFIED` 结论；也不产生 `TEST_VERIFIED` 或 `DATA_VERIFIED` 结论。
+
 | 服务 | dependency resolution | compile | clean test | 测试统计 | 结论 |
 |---|---|---|---|---|---|
 | `diagnosis-service` | PASS（单进程重跑） | FAIL | FAIL（主源码编译阶段） | tests 0，failures 0，errors 0，skipped 0；未进入 Surefire | 代码级编译阻塞 |
@@ -48,6 +58,10 @@
 | diagnosis | `mvn -B -ntp clean test` | 1 | 4.909 s | 清理后在 main compile 失败；未进入测试 |
 | examination | `mvn -B -ntp clean test` | 0 | 3.459 s | 编译成功；`No tests to run` |
 | 两服务 | `mvn -B -ntp dependency:tree -Dincludes=...` | 0 | 约 3.5 s/3.3 s | 解析依赖版本成功 |
+| diagnosis（评审复核） | `mvn -B -ntp clean compile` | 1 | Maven 3.897 s；脚本 4.847 s | 编译 146 个源文件后仍为 44 个源码错误 |
+| diagnosis（评审复核） | `mvn -B -ntp clean test` | 1 | 脚本 4.861 s | main compile 阶段失败；未进入 Surefire/测试执行 |
+| examination（评审复核） | `mvn -B -ntp clean compile` | 0 | Maven 2.389 s；脚本 3.375 s | 编译 12 个源文件；unchecked warning |
+| examination（评审复核） | `mvn -B -ntp clean test` | 0 | Maven 2.433 s；脚本 3.341 s | 生命周期成功；`No tests to run`，测试数为 0 |
 
 ## 4. Build Blocker
 
@@ -73,7 +87,7 @@
 | service | groupId/artifactId | version | 来源/直接性 | 实际用途 | 证据 | 风险或阻塞 |
 |---|---|---|---|---|---|---|
 | both | `org.springframework.boot:spring-boot-starter-parent` | 2.7.8 | parent/direct | 依赖与插件管理 | CODE_CONFIRMED | 已停止主流支持，A1 不升级 |
-| both | `org.springframework.boot:spring-boot-starter-web` | 2.7.8 | direct | MVC/REST/Tomcat | RUNTIME_VERIFIED | examination 编译验证；diagnosis 源码失败 |
+| both | `org.springframework.boot:spring-boot-starter-web` | 2.7.8 | direct | MVC/REST/Tomcat | BUILD_VERIFIED | examination 编译验证；diagnosis 源码失败；未启动服务 |
 | both | `spring-boot-starter-data-jpa` / `hibernate-core` | 2.7.8 / 5.6.14.Final | direct/transitive | JPA Repository/ORM | CODE_CONFIRMED | 运行需数据库 |
 | both | `com.oracle.database.jdbc:ojdbc8` | 21.5.0.0 | direct | Oracle JDBC | CODE_CONFIRMED | 未连接真实 Oracle |
 | diagnosis | `com.oracle.database.nls:orai18n` | 21.5.0.0 | direct | Oracle ZHS16GBK | CODE_CONFIRMED | 未运行验证 |
@@ -85,12 +99,12 @@
 | diagnosis | `spring-boot-starter-websocket` | 2.7.8 | direct | WebSocket/STOMP 依赖 | CODE_CONFIRMED | 目标 Java 源码中未定位 endpoint/config，实际用途 UNKNOWN |
 | diagnosis | `spring-boot-starter-aop` | 2.7.8 | direct | `@TraceExecution` 切面 | CODE_CONFIRMED | Trace 默认关闭；未运行验证切点 |
 | both | `spring-boot-starter-validation` | 2.7.8 | direct | Bean Validation | CODE_CONFIRMED | diagnosis controller 使用 `@Valid` |
-| both | `org.projectlombok:lombok` | 1.18.24 | direct | 代码生成 | RUNTIME_VERIFIED | examination 编译验证 |
+| both | `org.projectlombok:lombok` | 1.18.24 | direct | 代码生成 | BUILD_VERIFIED | examination 编译验证；未启动服务 |
 | both | `com.vladmihalcea:hibernate-types-52` | 2.21.1 | direct | JSON 类型候选 | CODE_CONFIRMED | CDP 实体实际使用 CLOB+手工 Jackson |
 | both | `io.micrometer:micrometer-registry-prometheus` | 1.9.7 | direct | Prometheus metrics | CODE_CONFIRMED | 未启动验证 |
 | both | `spring-boot-starter-actuator` | 2.7.8 | direct | 健康/指标 | CODE_CONFIRMED | 未启动验证 |
 | both | `spring-boot-starter-test` | 2.7.8 | direct test | JUnit 5.8.2 / Mockito 4.5.1 | CODE_CONFIRMED | 两服务均无测试源码 |
-| both | `maven-compiler-plugin` | 3.8.1 | direct plugin | Java 8 compile | RUNTIME_VERIFIED | diagnosis 暴露 Java 8/API 不一致错误 |
+| both | `maven-compiler-plugin` | 3.8.1 | direct plugin | Java 8 compile | BUILD_VERIFIED | examination 编译成功；diagnosis 暴露 Java 8/API 不一致错误 |
 | both | `spring-boot-maven-plugin` | 2.7.8 | parent-managed plugin | 打包/运行 | CODE_CONFIRMED | A1 未 package/start |
 | both | MyBatis | absent | POM/源码搜索 | 不适用 | CODE_CONFIRMED | NOT APPLICABLE |
 | both | Java 模型/AI SDK | absent | POM/源码搜索 | 无直接模型 SDK | CODE_CONFIRMED | 模型能力仅通过远端服务候选 |
@@ -99,7 +113,7 @@
 
 ## 6. API、数据和测试资产摘要
 
-- `diagnosis-service`：3 个 Controller，确认 `/api/v1/diagnosis/start`、`/continue`、`/{cdpId}/status`、`/{cdpId}/result`、旧 `/{diagnosisId}/answer`、CDP 读写/Trace 摘要接口和 `/health`；11 个 Feign Client（含 Trace RestTemplate Client）；10 个 JPA Entity；9 个 Repository；3 个 SQL migration 文件；无测试源码。
+- `diagnosis-service`：3 个 Controller，确认 `/api/v1/diagnosis/start`、`/continue`、`/{cdpId}/status`、`/{cdpId}/result`、旧 `/{diagnosisId}/answer`、CDP 读写/Trace 摘要接口和 `/health`；11 个 Feign Client，加 1 个 Trace RestTemplate Client，合计 12 个远程 Client；10 个 JPA Entity；9 个 Repository；3 个 SQL migration 文件；无测试源码。统计口径按 `java-api-inventory.csv` 中 `service=diagnosis-service`、`asset_type=CLIENT` 的接口/类去重。
 - `examination-service`：2 个 Controller、4 个业务 API、1 个 OCR Feign Client、2 个 Entity、2 个 Repository；无 migration、无测试源码。
 - Spring Security/认证依赖和控制器鉴权注解未定位，因此这些 API 的认证状态为 `UNKNOWN`/代码层未见门禁。
 - 详细清单见 [java-api-inventory.csv](./java-api-inventory.csv)。
@@ -165,7 +179,7 @@ DiagnosisController /continue
 
 ### 已验证事实
 
-- 两服务依赖均可解析；examination 可 clean compile/test 生命周期执行。
+- 两服务依赖均可解析；examination 可 clean compile/test 生命周期执行，相关编译证据为 BUILD_VERIFIED，不代表服务运行成功。
 - diagnosis 在干净构建中不能编译；失败是实际代码错误，不是数据库/Nacos/Redis 未启动导致。
 - 两服务均没有 Java 测试源码，不能产生 TEST_VERIFIED 业务结论。
 - API、CDP、Workflow、Trace 和远端 Client 已达到代码级盘点（CODE_CONFIRMED）。
@@ -183,7 +197,6 @@ DiagnosisController /continue
 - diagnosis compile/test：被仓库内多组源码契约错误阻塞。
 - diagnosis 运行与 Workflow runtime verification：被 compile blocker 阻塞，且运行还需要数据库和多项远端服务。
 - examination 集成/Context 测试：无测试资产，且实际运行需要数据库；上传/OCR 流程还需要 OCR 服务和可写上传目录。
-- Draft PR 工具：初始检查时本机未安装 GitHub CLI `gh`；发布步骤需安装并认证后执行。
 
 ## 12. A1 范围外事项
 
@@ -199,12 +212,12 @@ mvn -version
 
 Set-Location diagnosis-service
 mvn -B -ntp dependency:go-offline
-mvn -B -ntp compile
+mvn -B -ntp clean compile
 mvn -B -ntp clean test
 
 Set-Location ..\examination-service
 mvn -B -ntp dependency:go-offline
-mvn -B -ntp compile
+mvn -B -ntp clean compile
 mvn -B -ntp clean test
 ```
 
