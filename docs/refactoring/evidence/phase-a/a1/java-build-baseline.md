@@ -1,9 +1,9 @@
 # Phase A1 Java 构建与资产基线
 
-> 执行日期：2026-07-30（Asia/Shanghai）  
-> Base Branch：`agent/enterprise-agent-refactoring-plan`  
-> Base Commit：`c573e9901a5385d0cd61b7d8f7f0a8368289321a`  
-> 工作分支：`agent/phase-a1-java-baseline`  
+> 执行日期：2026-07-30（Asia/Shanghai）
+> Base Branch：`agent/enterprise-agent-refactoring-plan`
+> Base Commit：`c573e9901a5385d0cd61b7d8f7f0a8368289321a`
+> 工作分支：`agent/phase-a1-java-baseline`
 > 范围：仅 Phase A1；未实施 A2-A4 或 A5 以后重构。
 
 ## 1. 结论
