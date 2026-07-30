@@ -1,0 +1,110 @@
+﻿service,package,declared_version,resolved_version,direct_or_transitive,purpose,evidence_level,risk,notes
+health-state-assessment-service,fastapi,==0.104.1,0.104.1,direct,HTTP API,BUILD_VERIFIED,,requirements.txt; no lock file
+health-state-assessment-service,uvicorn,[standard]==0.24.0,0.24.0,direct,ASGI server,BUILD_VERIFIED,,requirements.txt; no lock file
+health-state-assessment-service,pydantic,==2.5.0,2.5.0,direct,contracts/settings,BUILD_VERIFIED,cross-service/version drift,requirements.txt; no lock file
+health-state-assessment-service,pydantic-settings,==2.1.0,2.1.0,direct,settings,BUILD_VERIFIED,,requirements.txt; no lock file
+health-state-assessment-service,httpx,==0.25.1,0.25.1,direct,HTTP client,BUILD_VERIFIED,,requirements.txt; no lock file
+health-state-assessment-service,python-multipart,==0.0.6,0.0.6,direct,multipart,BUILD_VERIFIED,,requirements.txt; no lock file
+health-state-assessment-service,prometheus-client,==0.19.0,0.19.0,direct,metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+health-state-assessment-service,psutil,==5.9.6,5.9.6,direct,process metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+health-state-assessment-service,python-dotenv,==1.0.0  # 环境变量管理（用于加载根目录的.env文件）,1.0.0,direct,environment,BUILD_VERIFIED,,requirements.txt; no lock file
+clinical-parsing-service,fastapi,==0.104.1,0.104.1,direct,HTTP API,BUILD_VERIFIED,,requirements.txt; no lock file
+clinical-parsing-service,uvicorn,[standard]==0.24.0,0.24.0,direct,ASGI server,BUILD_VERIFIED,,requirements.txt; no lock file
+clinical-parsing-service,pydantic,==2.5.0,2.5.0,direct,contracts/settings,BUILD_VERIFIED,cross-service/version drift,requirements.txt; no lock file
+clinical-parsing-service,pydantic-settings,==2.1.0,2.1.0,direct,settings,BUILD_VERIFIED,,requirements.txt; no lock file
+clinical-parsing-service,httpx,==0.25.1,0.25.1,direct,HTTP client,BUILD_VERIFIED,,requirements.txt; no lock file
+clinical-parsing-service,python-multipart,==0.0.6,0.0.6,direct,multipart,BUILD_VERIFIED,,requirements.txt; no lock file
+clinical-parsing-service,spacy,==3.7.2,3.7.2,direct,NLP,BUILD_VERIFIED,,requirements.txt; no lock file
+clinical-parsing-service,transformers,==4.35.0,4.35.0,direct,NLP/models,BUILD_VERIFIED,,requirements.txt; no lock file
+clinical-parsing-service,prometheus-client,==0.19.0,0.19.0,direct,metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+clinical-parsing-service,psutil,==5.9.6,5.9.6,direct,process metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+dialog-service,fastapi,==0.104.1,0.104.1,direct,HTTP API,BUILD_VERIFIED,,requirements.txt; no lock file
+dialog-service,uvicorn,[standard]==0.24.0,0.24.0,direct,ASGI server,BUILD_VERIFIED,,requirements.txt; no lock file
+dialog-service,pydantic,>=2.7.0,2.13.4,direct,contracts/settings,BUILD_VERIFIED,cross-service/version drift,requirements.txt; no lock file
+dialog-service,pydantic-settings,==2.1.0,2.1.0,direct,settings,BUILD_VERIFIED,,requirements.txt; no lock file
+dialog-service,redis,==5.0.1,5.0.1,direct,state/cache,BUILD_VERIFIED,,requirements.txt; no lock file
+dialog-service,python-dotenv,==1.0.0,1.0.0,direct,environment,BUILD_VERIFIED,,requirements.txt; no lock file
+dialog-service,websockets,==12.0,12.0,direct,realtime transport,BUILD_VERIFIED,,requirements.txt; no lock file
+dialog-service,httpx,==0.25.1,0.25.1,direct,HTTP client,BUILD_VERIFIED,,requirements.txt; no lock file
+dialog-service,prometheus-client,==0.19.0,0.19.0,direct,metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+dialog-service,psutil,==5.9.6,5.9.6,direct,process metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+dialog-service,aidoctor-llm-common,editable ../common/aidoctor_llm,0.1.0,direct,service dependency,BUILD_VERIFIED,,requirements.txt; no lock file
+diagnosis-engine-service,fastapi,==0.104.1,UNRESOLVED,direct,HTTP API,BLOCKED,,requirements.txt; no lock file
+diagnosis-engine-service,uvicorn,[standard]==0.24.0,UNRESOLVED,direct,ASGI server,BLOCKED,,requirements.txt; no lock file
+diagnosis-engine-service,pydantic,>=2.7.0,UNRESOLVED,direct,contracts/settings,BLOCKED,cross-service/version drift,requirements.txt; no lock file
+diagnosis-engine-service,neo4j,==5.14.0,UNRESOLVED,direct,graph database,BLOCKED,,requirements.txt; no lock file
+diagnosis-engine-service,scikit-learn,==1.3.2,UNRESOLVED,direct,statistical model,BLOCKED,,requirements.txt; no lock file
+diagnosis-engine-service,numpy,==1.24.3,UNRESOLVED,direct,numeric,BLOCKED,cross-service/version drift,requirements.txt; no lock file
+diagnosis-engine-service,httpx,==0.25.1,UNRESOLVED,direct,HTTP client,BLOCKED,,requirements.txt; no lock file
+diagnosis-engine-service,python-multipart,==0.0.6,UNRESOLVED,direct,multipart,BLOCKED,,requirements.txt; no lock file
+diagnosis-engine-service,python-dotenv,==1.0.0,UNRESOLVED,direct,environment,BLOCKED,,requirements.txt; no lock file
+diagnosis-engine-service,prometheus-client,==0.19.0,UNRESOLVED,direct,metrics,BLOCKED,,requirements.txt; no lock file
+diagnosis-engine-service,psutil,==5.9.6,UNRESOLVED,direct,process metrics,BLOCKED,,requirements.txt; no lock file
+diagnosis-engine-service,aidoctor-llm-common,editable ../common/aidoctor_llm,UNRESOLVED,direct,service dependency,BLOCKED,,requirements.txt; no lock file
+workup-planner-service,fastapi,==0.104.1,0.104.1,direct,HTTP API,BUILD_VERIFIED,,requirements.txt; no lock file
+workup-planner-service,uvicorn,[standard]==0.24.0,0.24.0,direct,ASGI server,BUILD_VERIFIED,,requirements.txt; no lock file
+workup-planner-service,pydantic,==2.5.0,2.5.0,direct,contracts/settings,BUILD_VERIFIED,cross-service/version drift,requirements.txt; no lock file
+workup-planner-service,pydantic-settings,==2.1.0,2.1.0,direct,settings,BUILD_VERIFIED,,requirements.txt; no lock file
+workup-planner-service,httpx,==0.25.1,0.25.1,direct,HTTP client,BUILD_VERIFIED,,requirements.txt; no lock file
+workup-planner-service,python-multipart,==0.0.6,0.0.6,direct,multipart,BUILD_VERIFIED,,requirements.txt; no lock file
+workup-planner-service,python-dotenv,==1.0.0,1.0.0,direct,environment,BUILD_VERIFIED,,requirements.txt; no lock file
+workup-planner-service,prometheus-client,==0.19.0,0.19.0,direct,metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+workup-planner-service,psutil,==5.9.6,5.9.6,direct,process metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+treatment-engine-service,fastapi,==0.104.1,0.104.1,direct,HTTP API,BUILD_VERIFIED,,requirements.txt; no lock file
+treatment-engine-service,uvicorn,[standard]==0.24.0,0.24.0,direct,ASGI server,BUILD_VERIFIED,,requirements.txt; no lock file
+treatment-engine-service,pydantic,==2.5.0,2.5.0,direct,contracts/settings,BUILD_VERIFIED,cross-service/version drift,requirements.txt; no lock file
+treatment-engine-service,pydantic-settings,==2.1.0,2.1.0,direct,settings,BUILD_VERIFIED,,requirements.txt; no lock file
+treatment-engine-service,httpx,==0.25.1,0.25.1,direct,HTTP client,BUILD_VERIFIED,,requirements.txt; no lock file
+treatment-engine-service,python-multipart,==0.0.6,0.0.6,direct,multipart,BUILD_VERIFIED,,requirements.txt; no lock file
+treatment-engine-service,python-dotenv,==1.0.0,1.0.0,direct,environment,BUILD_VERIFIED,,requirements.txt; no lock file
+treatment-engine-service,prometheus-client,==0.19.0,0.19.0,direct,metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+treatment-engine-service,psutil,==5.9.6,5.9.6,direct,process metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+risk-assessment-service,fastapi,==0.104.1,0.104.1,direct,HTTP API,BUILD_VERIFIED,,requirements.txt; no lock file
+risk-assessment-service,uvicorn,[standard]==0.24.0,0.24.0,direct,ASGI server,BUILD_VERIFIED,,requirements.txt; no lock file
+risk-assessment-service,pydantic,==2.5.0,2.5.0,direct,contracts/settings,BUILD_VERIFIED,cross-service/version drift,requirements.txt; no lock file
+risk-assessment-service,pydantic-settings,==2.1.0,2.1.0,direct,settings,BUILD_VERIFIED,,requirements.txt; no lock file
+risk-assessment-service,httpx,==0.25.1,0.25.1,direct,HTTP client,BUILD_VERIFIED,,requirements.txt; no lock file
+risk-assessment-service,python-multipart,==0.0.6,0.0.6,direct,multipart,BUILD_VERIFIED,,requirements.txt; no lock file
+risk-assessment-service,python-dotenv,==1.0.0,1.0.0,direct,environment,BUILD_VERIFIED,,requirements.txt; no lock file
+risk-assessment-service,prometheus-client,==0.19.0,0.19.0,direct,metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+risk-assessment-service,psutil,==5.9.6,5.9.6,direct,process metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+explanation-service,fastapi,==0.104.1,UNRESOLVED,direct,HTTP API,BLOCKED,,requirements.txt; no lock file
+explanation-service,uvicorn,[standard]==0.24.0,UNRESOLVED,direct,ASGI server,BLOCKED,,requirements.txt; no lock file
+explanation-service,pydantic,==2.5.0,UNRESOLVED,direct,contracts/settings,BLOCKED,cross-service/version drift,requirements.txt; no lock file
+explanation-service,pydantic-settings,==2.1.0,UNRESOLVED,direct,settings,BLOCKED,,requirements.txt; no lock file
+explanation-service,httpx,==0.25.1,UNRESOLVED,direct,HTTP client,BLOCKED,,requirements.txt; no lock file
+explanation-service,python-multipart,==0.0.6,UNRESOLVED,direct,multipart,BLOCKED,,requirements.txt; no lock file
+explanation-service,prometheus-client,==0.19.0,UNRESOLVED,direct,metrics,BLOCKED,,requirements.txt; no lock file
+explanation-service,psutil,==5.9.6,UNRESOLVED,direct,process metrics,BLOCKED,,requirements.txt; no lock file
+explanation-service,aidoctor-llm-common,editable ../common/aidoctor_llm,UNRESOLVED,direct,service dependency,BLOCKED,,requirements.txt; no lock file
+ocr-service,fastapi,==0.104.1,0.104.1,direct,HTTP API,BUILD_VERIFIED,,requirements.txt; no lock file
+ocr-service,uvicorn,[standard]==0.24.0,0.24.0,direct,ASGI server,BUILD_VERIFIED,,requirements.txt; no lock file
+ocr-service,pydantic,==2.5.0,2.5.0,direct,contracts/settings,BUILD_VERIFIED,cross-service/version drift,requirements.txt; no lock file
+ocr-service,pytesseract,==0.3.10,0.3.10,direct,OCR,BUILD_VERIFIED,,requirements.txt; no lock file
+ocr-service,Pillow,==10.1.0,10.1.0,direct,images,BUILD_VERIFIED,,requirements.txt; no lock file
+ocr-service,opencv-python,==4.8.1.78,4.8.1.78,direct,images/OCR,BUILD_VERIFIED,resolved NumPy 2.x is ABI-incompatible with OpenCV 4.8.1.78,requirements.txt; no lock file
+ocr-service,python-multipart,==0.0.6,0.0.6,direct,multipart,BUILD_VERIFIED,,requirements.txt; no lock file
+ocr-service,python-dotenv,==1.0.0,1.0.0,direct,environment,BUILD_VERIFIED,,requirements.txt; no lock file
+ocr-service,prometheus-client,==0.19.0,0.19.0,direct,metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+ocr-service,psutil,==5.9.6,5.9.6,direct,process metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+knowledge-management-service,fastapi,==0.104.1,0.104.1,direct,HTTP API,BUILD_VERIFIED,,requirements.txt; no lock file
+knowledge-management-service,uvicorn,[standard]==0.24.0,0.24.0,direct,ASGI server,BUILD_VERIFIED,,requirements.txt; no lock file
+knowledge-management-service,pydantic,>=2.7.0,2.13.4,direct,contracts/settings,BUILD_VERIFIED,cross-service/version drift,requirements.txt; no lock file
+knowledge-management-service,pydantic-settings,>=2.0.0,2.14.2,direct,settings,BUILD_VERIFIED,,requirements.txt; no lock file
+knowledge-management-service,neo4j,==5.14.0,5.14.0,direct,graph database,BUILD_VERIFIED,,requirements.txt; no lock file
+knowledge-management-service,pandas,>=2.0.0,2.3.3,direct,data import,BUILD_VERIFIED,,requirements.txt; no lock file
+knowledge-management-service,openpyxl,>=3.1.0,3.1.5,direct,Excel import,BUILD_VERIFIED,,requirements.txt; no lock file
+knowledge-management-service,pyyaml,>=6.0,6.0.3,direct,YAML,BUILD_VERIFIED,,requirements.txt; no lock file
+knowledge-management-service,python-multipart,==0.0.6,0.0.6,direct,multipart,BUILD_VERIFIED,,requirements.txt; no lock file
+knowledge-management-service,python-dotenv,==1.0.0,1.0.0,direct,environment,BUILD_VERIFIED,,requirements.txt; no lock file
+knowledge-management-service,prometheus-client,==0.19.0,0.19.0,direct,metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+knowledge-management-service,psutil,==5.9.6,5.9.6,direct,process metrics,BUILD_VERIFIED,,requirements.txt; no lock file
+common/aidoctor_llm,langchain,>=0.1.0,0.1.20,direct,LLM orchestration,BUILD_VERIFIED,broad ranges caused about 14 minutes of resolver backtracking,setup.py; no lock file
+common/aidoctor_llm,langchain-openai,>=0.0.2,0.1.5,direct,OpenAI wrapper,BUILD_VERIFIED,broad ranges caused about 14 minutes of resolver backtracking,setup.py; no lock file
+common/aidoctor_llm,langchain-community,>=0.0.10,0.0.38,direct,provider wrappers,BUILD_VERIFIED,broad ranges caused about 14 minutes of resolver backtracking,setup.py; no lock file
+common/aidoctor_llm,langchain-core,>=0.1.0,0.1.53,direct,LLM core,BUILD_VERIFIED,broad ranges caused about 14 minutes of resolver backtracking,setup.py; no lock file
+common/aidoctor_llm,openai,==1.10.0,1.10.0,direct,OpenAI SDK,BUILD_VERIFIED,version drift,setup.py; no lock file
+common/aidoctor_llm,jinja2,==3.1.2,3.1.2,direct,templates,BUILD_VERIFIED,version drift,setup.py; no lock file
+common/aidoctor_llm,pyyaml,==6.0.1,6.0.1,direct,YAML,BUILD_VERIFIED,version drift,setup.py; no lock file
+common/aidoctor_llm,httpx,==0.25.1,0.25.1,direct,HTTP client,BUILD_VERIFIED,version drift,setup.py; no lock file
+common/aidoctor_llm,pydantic,>=2.7.0,2.13.4,direct,contracts/settings,BUILD_VERIFIED,version drift,setup.py; no lock file
