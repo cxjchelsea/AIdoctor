@@ -1,7 +1,7 @@
 # AIdoctor 重构方案导航
 
 > 当前整合版本：Draft v2.6 Freeze Candidate  
-> 更新时间：2026-07-29  
+> 更新时间：2026-07-30  
 > 适用分支：`agent/enterprise-agent-refactoring-plan`
 
 ---
@@ -408,12 +408,16 @@ Legacy Asset / Target Capability
 文档体系已能够支撑开发，下一步停止继续扩展总体概念，正式执行 Phase A：
 
 ```text
-真实运行
-→ 全量盘点
-→ Capability骨架
-→ 旧设计资产验证
-→ 契约和Schema
-→ ADR
-→ CI和固定Workflow基线
-→ Frozen Baseline Review
+A1 Java 基线
+→ A2 Python 基线
+→ A3 Frontend 与 Docker 基线
+→ A4 数据资产盘点
+→ A5 Shared Contracts v1
+→ A6 adult_respiratory_v1 Capability Package 骨架
+→ A6.5 Legacy Design Asset Validation
+→ A7 Model Runtime 骨架
+→ A8 ADR
+→ A9 CI 与开发环境
+→ A10 固定 Workflow、AOP/Trace 基线
+→ A11 Frozen Baseline Review
 ```
