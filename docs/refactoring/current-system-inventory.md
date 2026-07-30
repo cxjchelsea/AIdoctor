@@ -2,26 +2,27 @@
 
 > 文档状态：Draft v2.6 Inventory  
 > 更新时间：2026-07-29  
-> 盘点范围：`cxjchelsea/AIdoctor` 当前重构分支及其继承的主分支代码  
-> 关联文档：[迁移矩阵](./migration-matrix.md) · [Capability Package](./capability-package-specification.md) · [Model Runtime](./prompt-and-model-runtime-design.md)
+> 盘点范围：`cxjchelsea/AIdoctor` 当前重构分支及其继承的主分支代码、数据、配置、测试与 `docs/AI医生/项目文档`  
+> 关联文档：[迁移矩阵](./migration-matrix.md) · [旧设计资产映射](./legacy-design-asset-retention-and-mapping.md) · [Capability Package](./capability-package-specification.md) · [Model Runtime](./prompt-and-model-runtime-design.md)
 
 ---
 
 ## 1. 盘点目的与证据等级
 
-本文件回答“当前仓库实际上有什么”，不以 README 中的完成百分比代替编译、运行和测试结果。
+本文件回答“当前仓库实际上有什么”，不以 README、历史文档或注释中的完成百分比代替编译、运行、测试和数据结果。
 
 证据等级：
 
 | 等级 | 含义 |
 |---|---|
-| CODE_CONFIRMED | 已查看实际源码或配置 |
-| DOC_CLAIMED | 仅有文档或注释声明 |
-| RUNTIME_VERIFIED | 已编译、启动或执行测试 |
-| DATA_VERIFIED | 已检查真实数据库或索引样本 |
+| DOCUMENTED | 仅在设计文档、README 或注释中出现 |
+| CODE_CONFIRMED | 已定位实际源码或配置 |
+| RUNTIME_VERIFIED | 已编译、启动或执行真实流程 |
+| DATA_VERIFIED | 已检查数据库、缓存、图谱或索引样本 |
+| TEST_VERIFIED | 有可重复自动化或临床评估证据 |
 | UNKNOWN | 尚未取得足够证据 |
 
-当前主要结论属于 `CODE_CONFIRMED`；编译、启动、数据库和 E2E 仍需在 Phase A 完成。
+任何资产可保留其设计原则，但在代码、运行、数据和测试未验证前，不得宣称当前实现可直接 `KEEP`。
 
 ---
 
@@ -52,53 +53,103 @@ Shared
 Frontend
 └── React + Vite + Ant Design + Zustand + SockJS/STOMP
 
-Other
-├── science/
-├── scripts/
-├── docs/
+Data / Infra
+├── MySQL / Oracle
+├── Redis
+├── Neo4j
+├── Milvus（待验证）
 └── docker-compose.yml
+
+Documentation
+├── docs/refactoring/
+└── docs/AI医生/项目文档/
 ```
 
-当前物理结构按照“步骤/工具/脑区”拆分，目标结构按照状态所有权、安全边界、Runtime 和治理职责拆分，两者不能一一改名映射。
+当前物理结构按照“步骤、工具或脑区”拆分；目标结构按照状态所有权、安全边界、Runtime 和治理职责拆分，两者不能一一改名映射。
 
 ---
 
 ## 3. Java 资产
 
-### 3.1 技术基线
+### 3.1 技术基线候选
 
-已观察到：Java 8、Spring Boot 2.7.x、JPA/Hibernate、Redis、WebSocket、Feign、Nacos、Flyway、MySQL/Oracle 适配。
+已观察到或由现有配置声明：Java 8、Spring Boot 2.7.x、JPA/Hibernate、Redis、WebSocket、Feign、Nacos、Flyway、MySQL/Oracle 适配。
+
+Phase A 必须验证：
+
+- Maven/JDK 可复现版本；
+- Module 编译和测试；
+- Flyway 顺序；
+- 外部依赖和 Secret；
+- 数据库兼容配置；
+- 固定 Workflow 最小运行路径。
 
 ### 3.2 `diagnosis-service`
 
-当前能力：
+当前能力候选：
 
 - `/start`、`/continue`、`/status`、`/result` 等诊断 API；
 - 创建 CDP 和 Session；
-- 调用健康状态判定服务；
+- 调用健康状态判定；
 - 固定 Workflow 编排；
 - 兼容旧接口；
-- CDP 版本历史。
+- CDP 版本历史；
+- AOP/Trace 注解和 Feign Trace 传播。
 
-结构问题：
+主要问题：
 
 - Java 同时承担业务入口、临床状态、固定流程和部分下一步决策；
-- 远程服务失败时存在默认继续流程；
-- 状态更新以 `Map<String,Object>` 为主；
-- `conclusionPackage`、Trace、Audit 等混入临床聚合对象。
+- 远程服务失败时可能默认继续；
+- 状态更新大量使用 `Map<String,Object>`；
+- `conclusionPackage`、Trace、Audit 等混入临床聚合对象；
+- 自定义 Trace 可能同步依赖远程 Trace 服务；
+- ThreadLocal 异步传播需要验证。
 
 ### 3.3 CDP
 
-当前 CDP 主要以单表和 CLOB/JSON 保存：患者状态、DDX、证据图、检查计划、治疗计划、分诊、不确定性、Audit 和 Execution Trace。
+旧 CDP 主要以单表和 CLOB/JSON 保存：患者状态、DDX、证据图、检查计划、治疗计划、分诊、不确定性、Audit、Execution Trace 和 Conclusion Package。
+
+可继承原则：
+
+- Encounter 内统一聚合视图；
+- Copy-on-Write；
+- 版本历史；
+- 变更原因和来源；
+- 回放能力。
 
 风险：
 
+- 临床事实、模型候选、运行状态、交付和审计混合；
 - 字段语义和来源弱约束；
-- 临床事实、模型候选、运行状态和审计混合；
-- 部分更新依赖悲观锁和重试；
-- 旧 JSON 内可能存在未文档化字段。
+- 旧 JSON 可能存在未文档化字段；
+- 当前版本机制是否完整可回放尚待验证。
 
-Phase A 必须抽样真实 CDP，输出字段频率、空值、坏数据、未映射字段和版本分布。
+Phase A 必须抽样真实 CDP，输出字段频率、空值、坏数据、未映射字段、版本分布和迁移错误策略。
+
+### 3.4 AOP / Trace
+
+必须盘点：
+
+```text
+@TraceExecution
+ExecutionTraceAspect
+TraceContext
+TraceServiceClient
+FeignTraceInterceptor
+FeignTraceResponseInterceptor
+execution-trace-service
+```
+
+记录：
+
+- 实际切点范围；
+- 自调用/private method 是否失效；
+- Trace 失败是否阻断业务；
+- 输入输出是否包含 PHI；
+- ThreadLocal 在线程池和异步场景是否传播；
+- 自定义 trace ID/header；
+- AgentEvent 与 Technical Trace 是否混合；
+- UI 时间线和 ReactFlow 是否可复用。
 
 ---
 
@@ -107,10 +158,10 @@ Phase A 必须抽样真实 CDP，输出字段频率、空值、坏数据、未�
 | 服务 | 可复用候选 | 主要问题 |
 |---|---|---|
 | health-state-assessment | 红旗、风险、输入校验、健康流程样例 | 与 risk 服务重叠，最终分诊边界不统一 |
-| clinical-parsing | 词表、概念归一化、结构化抽取 | 读取 CDP、自建 ToolResult、质量常量、模型调用边界不统一 |
+| clinical-parsing | 词表、归一化、结构化抽取 | 读取 CDP、自建 ToolResult、模型调用边界不统一 |
 | dialog | 信息缺口、问题模板、NLU/NLG、通信经验 | 同时承担 Context、Question、CDP、WebSocket 和模型调用 |
 | diagnosis-engine | KG、规则、统计、模型 Adapter | 候选、证据和最终结论边界不足 |
-| workup-planner | 检查计划原型 | 高风险、证据和医生审核不足 |
+| workup-planner | 检查建议原型 | 高风险、证据和医生审核不足 |
 | treatment-engine | 治疗原型和术语 | 不进入首个生产 Capability |
 | risk-assessment | 分诊、升级、reason code | 与 health 风险职责重叠 |
 | explanation | NLG、路径展示 | Evidence、Decision、Presentation 混合 |
@@ -123,23 +174,23 @@ Phase A 必须抽样真实 CDP，输出字段频率、空值、坏数据、未�
 
 ## 5. 前端资产
 
-已观察到 React、Vite、Ant Design、Zustand、Axios、SockJS/STOMP、ReactFlow 等资产。
-
-可保留：
+可保留候选：
 
 - 页面布局和通用组件；
 - 对话、状态、时间线和调用图展示经验；
 - ReactFlow 可视化；
-- 基础 API Client。
+- 基础 API Client；
+- WebSocket/STOMP 交互经验。
 
 需改造：
 
 - 从“诊断步骤状态”迁为 Encounter/Thread/Interrupt/Review 状态；
 - 增加 Reload/Resume；
 - 增加患者、医生、管理端角色边界；
-- Evidence、Citation、Knowledge Release 和不确定性展示；
-- Prompt/Model/Capability/Knowledge 发布管理；
-- Unit/Component/E2E/Accessibility 测试。
+- 展示 Evidence、Citation、Knowledge Release 和不确定性；
+- 增加 Prompt/Model/Capability/Knowledge 发布管理；
+- 将 Technical Trace、AgentEvent 和 ClinicalDecisionRecord 分视图；
+- 建立 Unit/Component/E2E/Accessibility 测试。
 
 ---
 
@@ -147,15 +198,31 @@ Phase A 必须抽样真实 CDP，输出字段频率、空值、坏数据、未�
 
 ### 6.1 数据存储
 
-当前描述或配置涉及 MySQL、Oracle、Redis、Neo4j、Milvus 等组件。目标 PostgreSQL/pgvector 尚未通过运行验证。
+当前描述或配置涉及 MySQL、Oracle、Redis、Neo4j、Milvus。目标 PostgreSQL/pgvector 尚未通过运行验证。
+
+必须确认：
+
+- 哪些数据库真实存在并有数据；
+- Redis 是缓存、会话、AgentState 还是任务协调；
+- Neo4j 节点和关系是否有来源与版本；
+- Milvus 是否真实被调用；
+- 备份、恢复、Retention 和 PHI 策略。
 
 ### 6.2 Compose 与配置
 
-当前 Compose 只覆盖部分服务，服务依赖和端口存在不完整或不一致风险；配置中需要检查硬编码密码、供应商密钥、模型名称和直接 URL。
+必须检查：
+
+- 服务依赖和端口；
+- 硬编码密码、供应商密钥和 URL；
+- 模型名称和 Prompt 路径；
+- 环境变量漂移；
+- 健康检查；
+- 数据库初始化顺序；
+- 非生产数据是否脱敏。
 
 ### 6.3 Trace
 
-现有 execution-trace-service 有可复用的 AgentEvent 和 UI 思路，但技术 Trace 应迁 OpenTelemetry，且普通遥测不得保存完整 PHI。
+`execution-trace-service` 的 AgentEvent、时间线和 UI 思路可以复用；底层技术 Trace 应迁 OpenTelemetry，普通遥测不得保存完整 PHI，也不得作为 Checkpoint 或临床事实源。
 
 ---
 
@@ -163,27 +230,26 @@ Phase A 必须抽样真实 CDP，输出字段频率、空值、坏数据、未�
 
 首个目标包：`adult_respiratory_v1`。
 
-必须建立以下清单：
-
 | 资产类别 | 盘点字段 |
 |---|---|
 | Scope | 支持主诉、年龄、人群、排除项、停止条件 |
-| Terminology | 词典文件、编码体系、同义词、版本、来源 |
+| Terminology | 词典、编码、同义词、版本、来源 |
 | Observation | 字段、类型、单位、否定、时间、严重度 |
-| Safety | 红旗规则、分诊规则、阈值、来源、测试病例 |
-| Question | 问题模板、触发条件、重复控制、信息价值 |
+| Safety | 红旗、分诊、阈值、来源、测试病例 |
+| Question | 模板、触发条件、重复控制、信息价值 |
 | Hypothesis | 候选疾病、must-not-miss、支持/反对证据 |
 | Tool | 允许调用的旧服务、权限、输入字段、失败策略 |
+| Knowledge | 来源、版本、许可、地区、人群、索引 |
 | Delivery | 患者表达、医生摘要、就医导航和限制 |
-| Eval | 红旗病例、普通病例、对话样例、攻击样例 |
+| Eval | 红旗病例、普通病例、对话、轨迹、攻击样例 |
 
-当前结论：呼吸道规则、术语、问题和候选散落在多个服务和文档中，尚未形成可发布的 Capability Package。
+当前结论：呼吸道规则、术语、问题、候选和评估资产散落在多个服务和历史文档中，尚未形成可发布 Capability Package。
 
 ---
 
 ## 8. Prompt Inventory
 
-必须扫描 `.py`、`.java`、`.yaml`、`.yml`、`.json`、`.properties` 和数据库初始化脚本，建立：
+必须扫描 `.py`、`.java`、`.yaml`、`.yml`、`.json`、`.properties`、数据库初始化脚本和历史设计示例。
 
 | 字段 | 说明 |
 |---|---|
@@ -236,7 +302,7 @@ Trace 字段
 - JSON 修复和重试逻辑；
 - Embedding 和 Reranker 调用。
 
-当前结论：`common/aidoctor_llm` 可作为 ProviderAdapter 起点，但是否存在绕过该公共模块的直接调用尚需全仓扫描确认。
+当前结论：`common/aidoctor_llm` 可作为 ProviderAdapter 起点，但是否存在绕过公共模块的直接调用尚需全仓确认。
 
 ---
 
@@ -271,16 +337,92 @@ Trace 字段
 - 关系类型、数量和方向；
 - 每条关系的来源、版本和时间；
 - 是否包含患者数据；
-- 是否有重复、孤立、冲突和无来源关系；
-- 当前查询入口和被哪些服务使用；
+- 重复、孤立、冲突和无来源关系；
+- 当前查询入口和使用方；
 - 是否支持术语归一化、Query Expansion 或 must-not-miss；
-- 与无图检索基线相比的收益。
+- 与无图检索基线相比的收益；
+- DR.KNOWS 路径和路径注入 Prompt 的真实实现。
 
 现有图谱在完成来源治理和对照实验前，只能作为候选资产，不得直接成为循证依据。
 
 ---
 
-## 12. 测试与运行资产
+## 12. Legacy Design Asset Inventory
+
+### 12.1 盘点范围
+
+必须覆盖 `docs/AI医生/项目文档` 中：
+
+```text
+系统定位与架构
+业务和五步诊疗流程
+工具设计与接口协议
+主Agent运行循环
+CDP / AgentState / AuditTrail
+AOP / Trace
+错误处理与降级
+三类评估集
+知识演化与 Publish Gate
+Neo4j / DR.KNOWS / 路径注入LLM
+前端时间线与ReactFlow
+```
+
+### 12.2 每项资产字段
+
+```text
+asset_id
+asset_name
+asset_type
+document_path
+code_path
+config_path
+data_location
+test_location
+evidence_level
+valuable_principle
+current_problem
+retention_decision
+target_module
+target_contract
+migration_action
+validation_suite
+owner
+reviewer
+phase
+dependency
+decommission_condition
+status
+```
+
+### 12.3 P0/P1 资产
+
+至少包括：
+
+- 双通道推理；
+- ToolContext / ToolResult；
+- CDP Copy-on-Write；
+- AgentState 预算和停止条件；
+- AuditTrail 追加写；
+- AOP/Trace 组件；
+- 分层错误处理；
+- 静态、交互和轨迹评估集；
+- Knowledge Publish Gate；
+- 五步流程、三层候选和 Conclusion Package；
+- Neo4j/DR.KNOWS 和路径约束。
+
+### 12.4 执行原则
+
+- 旧文档是证据，不是当前架构真值；
+- 设计原则可 `KEEP`，当前实现可同时 `REWRITE`；
+- 未找到代码不等于设计没有价值，但证据不得高于 `DOCUMENTED`；
+- 未验证资产不得删除；
+- `KEEP/ADAPT` 必须有测试计划；
+- `EVALUATE` 必须有基线和对照；
+- `ARCHIVE/REMOVE` 必须确认依赖、数据和回滚价值。
+
+---
+
+## 13. 测试与运行资产
 
 必须盘点：
 
@@ -290,18 +432,22 @@ Trace 字段
 - Docker Compose 启动脚本；
 - 数据库 Migration；
 - 红旗和分诊病例；
+- 静态病例集；
+- 交互问诊集；
+- 轨迹回放集；
 - RAG 检索与 Citation 数据集；
 - Prompt/Model Eval；
 - E2E 和 Crash Matrix；
+- AOP/Trace 失败与异步传播测试；
 - 性能与安全测试。
 
-README 中“完成”但无测试或无法运行的能力，状态不得高于 `DOC_CLAIMED`。
+README 或旧文档中“完成”但无测试或无法运行的能力，状态不得高于 `DOCUMENTED`。
 
 ---
 
-## 13. Phase A 盘点输出
+## 14. Phase A 盘点输出
 
-Phase A 完成时必须交付：
+### 14.1 技术与数据 Inventory
 
 ```text
 service-inventory.csv
@@ -316,14 +462,27 @@ test-inventory.csv
 configuration-inventory.csv
 ```
 
-每条记录必须关联 Owner、目标模块、迁移决定、验证证据、目标阶段和下线条件。
+### 14.2 旧设计资产继承交付物
+
+```text
+legacy-design-asset-inventory.csv
+legacy-design-code-evidence.csv
+legacy-contract-extraction.md
+legacy-clinical-policy-extraction.md
+legacy-eval-asset-inventory.csv
+legacy-observability-migration.md
+legacy-asset-decommission-register.csv
+```
+
+每条记录必须关联 Owner、目标模块、迁移决定、验证证据、目标阶段、测试和下线条件。
 
 ---
 
-## 14. 当前结论
+## 15. 当前结论
 
-1. 当前系统包含可复用的临床解析、规则、KG、问题和展示原型；
-2. 最大问题不是“完全没有能力”，而是状态、安全、模型、知识和发布边界混杂；
+1. 当前系统包含可复用的临床解析、规则、KG、问题、协议、版本、审计、AOP 和展示原型；
+2. 最大问题不是“完全没有能力”，而是状态、安全、模型、知识、可观测性和发布边界混杂；
 3. 呼吸道场景资产尚未收敛为 Capability Package；
-4. Prompt、Model Call 和 Knowledge Asset 必须在最终冻结前完成全量盘点；
-5. 未经运行和数据验证的资产不得直接标记 KEEP、REMOVE 或进入生产 Release。
+4. Prompt、Model Call、Knowledge、Neo4j、Rule、Test 和 Legacy Design Asset 必须在最终冻结前完成全量盘点；
+5. AOP 值得保留其横切治理思想，但同步自定义 Trace、ThreadLocal 和 PHI 处理必须验证改造；
+6. 未经运行和数据验证的资产不得直接标记 `KEEP`、`REMOVE` 或进入生产 Release。

@@ -11,12 +11,13 @@
 本文明确：
 
 1. 哪些架构决策作为长期稳定基线；
-2. 哪些实施内容由路线、矩阵和详细设计持续维护；
-3. 哪些事项仍需真实代码、数据和运行验证；
-4. 文档冲突如何处理；
-5. 最终进入 Frozen Baseline 的门禁。
+2. 哪些旧设计资产必须验证后继承、改造、评估或归档；
+3. 哪些实施内容由路线、矩阵和详细设计持续维护；
+4. 哪些事项仍需真实代码、数据和运行验证；
+5. 文档冲突如何处理；
+6. 最终进入 Frozen Baseline 的门禁。
 
-冻结不是永远禁止修改，而是：普通实现变化进入 Implementation Roadmap、Migration Matrix 或 ADR；只有系统定位、状态所有权、安全原则和核心依赖方向实质变化时，才修改总体蓝图。
+冻结不是永远禁止修改。普通实现变化进入 Implementation Roadmap、Migration Matrix、Coverage Matrix、Release 或 ADR；只有系统定位、状态所有权、安全原则和核心依赖方向发生实质变化时，才修改总体蓝图。
 
 ---
 
@@ -30,7 +31,7 @@ Constrained Agentic Workflow
 + 在批准范围内动态选择下一动作的 Agent
 ```
 
-不调整为完全自由自治 Agent、无治理多 Agent、纯模型诊断或单一固定路径。
+系统不调整为完全自由自治 Agent、无治理多 Agent、纯模型诊断或单一不可扩展固定路径。
 
 ### 2.2 不可绕过的安全骨架
 
@@ -48,7 +49,7 @@ Capability / Consent / Permission
 → Output Safety / Human Review
 ```
 
-Planner、LLM、Tool、Skill、Prompt 和知识文档都不能绕过该骨架。
+Planner、LLM、Tool、Skill、Prompt、Memory、RAG 和知识图谱都不能绕过该骨架。
 
 ### 2.3 十一个一级模块
 
@@ -64,21 +65,21 @@ Planner、LLM、Tool、Skill、Prompt 和知识文档都不能绕过该骨架。
 10. Durable Execution
 11. Observability, Audit & Evaluation
 
-Capability Package、Prompt/Model Runtime 和 Knowledge Release 是现有模块内部能力，不新增新的一级模块。
+Capability Package、Prompt/Model Runtime、Knowledge Release 和 Legacy Asset Mapping 是现有模块内部能力，不新增第十二个一级模块。
 
 ### 2.4 状态所有权
 
 - Encounter：Business；
 - EncounterCDP/Evidence Ledger：Clinical State；
-- 所有临床写入：State Committer；
+- 所有临床写入：唯一 State Committer；
 - AgentState：Agent Runtime；
 - Thread/Run/Checkpoint/Interrupt/Resume：Durable Execution；
 - ContextEnvelope：Context 临时视图；
 - EvidencePack：Evidence Intelligence；
 - Prompt/Model/Capability/Knowledge Release：Governance；
-- Trace、AgentEvent、ClinicalDecisionRecord、Audit：各自独立。
+- Technical Trace、AgentEvent、ClinicalDecisionRecord、ComplianceAudit：各自独立。
 
-LLM、Tool、Memory、RAG、Checkpoint 和 Trace 均不是临床事实源。
+LLM、Tool、Memory、RAG、Checkpoint、Trace 和旧 CDP JSON 均不是新系统的临床事实直接写入者。
 
 ### 2.5 核心依赖方向
 
@@ -100,7 +101,99 @@ Observability/Audit/Evaluation 横向接收事件，不反向定义临床真值�
 
 ---
 
-## 3. 场景扩展冻结规则
+## 3. 旧设计资产继承冻结规则
+
+### 3.1 总体原则
+
+```text
+目标架构重构
+≠ 旧设计全部废弃
+
+目标架构重构
+= 旧设计资产验证与继承
++ 状态、安全、治理和工程边界修正
+```
+
+旧资产必须经过：
+
+```text
+Legacy Design Evidence
+→ Asset Inventory
+→ Evidence Level
+→ Retention Decision
+→ Target Mapping
+→ Migration / Validation
+→ Shadow / Rollback
+→ Decommission Gate
+```
+
+未经验证不得默认 `KEEP`、`REMOVE` 或进入生产 Release。
+
+### 3.2 必须纳入验证的资产
+
+至少包括：
+
+- 双通道推理；
+- 单主编排责任链；
+- 无状态工具；
+- ToolContext / ToolResult；
+- CDP 聚合、Copy-on-Write 和版本历史；
+- AgentState 预算、工具尝试、停止和 fallback；
+- AuditTrail 追加写；
+- `@TraceExecution`、`ExecutionTraceAspect`、`TraceContext` 和 Feign Trace；
+- 分层错误处理；
+- 静态病例集、交互问诊集和轨迹回放集；
+- Knowledge Sandbox/Staging/Publish Gate/Rollback；
+- 五步循证流程、三层候选和 Conclusion Package；
+- Neo4j、DR.KNOWS 和路径约束 LLM。
+
+### 3.3 保留思想与保留实现分离
+
+以下两种判断必须分开：
+
+```text
+Valuable Principle
+Current Implementation
+```
+
+例如：
+
+- AOP 横切治理原则可 `KEEP`，同步自定义 Trace 链路需 `REWRITE/SPLIT`；
+- CDP 统一状态和版本原则可 `KEEP`，单表大 JSON 需 `SPLIT`；
+- ToolContext/ToolResult 可 `ADAPT`，Tool 直接读写完整 CDP 必须取消；
+- Knowledge Publish Gate 可 `KEEP`，自治知识 Agent 集群可 `DEFER`；
+- 路径约束可 `EVALUATE`，图路径直接降级为诊断结果必须禁止。
+
+### 3.4 AOP 冻结边界
+
+AOP 可以负责：
+
+```text
+Technical Trace
+Metrics
+Structured Logging
+PHI-safe telemetry metadata
+Request context observation
+Technical audit entry
+```
+
+AOP 不得隐藏执行：
+
+```text
+Red Flag / Triage
+Clinical State Commit
+Clinical Fallback
+Model Route Selection
+Human Review Requirement
+Clinical Permission Decision
+Knowledge Release Selection
+```
+
+Trace 失败不得阻止业务方法执行；遥测 Export 不得同步阻塞临床事务；技术 Span 与领域 AgentEvent 必须分离。
+
+---
+
+## 4. 场景扩展冻结规则
 
 ```text
 Stable Platform
@@ -116,16 +209,16 @@ Stable Platform
 
 ---
 
-## 4. RAG 与知识图谱冻结规则
+## 5. RAG 与知识图谱冻结规则
 
-### 4.1 两类 RAG 隔离
+### 5.1 两类 RAG 隔离
 
 - Patient RAG：患者/租户/Consent/时间范围，结构化查询优先；
 - Medical Knowledge RAG：白名单来源、版本、人群、地区、Citation 和冲突。
 
 两者不得使用无权限隔离的同一索引或 collection。
 
-### 4.2 Medical RAG V1 基线
+### 5.2 Medical RAG V1 基线
 
 ```text
 Source Registry
@@ -139,15 +232,22 @@ Source Registry
 + Knowledge Release
 ```
 
-### 4.3 Knowledge Graph
+### 5.3 Knowledge Graph
 
 知识图谱只用于术语、多跳关系、Query Expansion 和 must-not-miss 增强；不能替代指南、证据等级、适用性和 Citation。
 
-生产启用必须通过来源治理、版本回滚和有图/无图净收益评估；未通过时保持实验状态。
+生产启用必须通过来源治理、许可、版本回滚、患者数据隔离和有图/无图净收益评估；未通过时保持实验状态。
+
+```text
+图中存在路径
+≠ 当前指南支持
+≠ 对该患者适用
+≠ 可以直接形成诊断
+```
 
 ---
 
-## 5. Prompt 与 Model Runtime 冻结规则
+## 6. Prompt 与 Model Runtime 冻结规则
 
 所有模型调用必须经过：
 
@@ -171,7 +271,7 @@ Prompt Registry / Loader / Builder
 
 ---
 
-## 6. 统一生产发布单元
+## 7. 统一生产发布单元
 
 生产发布必须形成统一 Release Manifest：
 
@@ -189,21 +289,22 @@ Application Version
 + Eval Report
 ```
 
-Prompt、Model Route、Knowledge 和 Capability 必须可独立禁用和回滚。历史运行永远保留当时版本快照。
+Prompt、Model Route、Knowledge、Capability 和 Graph Expansion 必须可独立禁用和回滚。历史运行永远保留当时版本快照。
 
 ---
 
-## 7. Java 与 Python 边界
+## 8. Java 与 Python 边界
 
 - Java：身份、Consent、Encounter、ReviewTask、Delivery、外部业务动作和兼容 API；
 - Python：唯一 Agent Runtime，以及 Safety、Clinical Intelligence、Evidence、Context、Model Runtime 等首版 packages；
-- Python 首版 package 模块化，不继续按每个临床步骤拆独立微服务；
+- Python 首版采用 package 模块化，不继续按每个临床步骤拆独立微服务；
 - Java/Python 通过版本化 Contracts 协作；
-- 现有固定 Workflow 保留为受同一 Capability/Safety/Release 约束的 fallback。
+- 现有固定 Workflow 保留为受同一 Capability/Safety/Release 约束的 fallback；
+- 旧服务只通过 Legacy Adapter 接入，不能绕过新治理边界。
 
 ---
 
-## 8. 高风险边界
+## 9. 高风险边界
 
 治疗、用药、处方修改和正式医疗动作不进入首个自动路径。恢复开发前必须具备：
 
@@ -217,47 +318,49 @@ Prompt、Model Route、Knowledge 和 Capability 必须可独立禁用和回滚�
 
 ---
 
-## 9. 文档体系与优先级
+## 10. 文档体系与优先级
 
-### 9.1 稳定架构
+### 10.1 稳定架构
 
 - [总体架构与模块设计](./overall-architecture-and-module-design.md)
 - 本冻结基线
 - [v2.6 跨文档一致性补充](./v2.6-cross-document-consistency-addendum.md)
+- [原设计资产保留、改造与目标架构映射](./legacy-design-asset-retention-and-mapping.md)
 
-### 9.2 详细设计
+### 10.2 详细设计
 
 - [Capability Package](./capability-package-specification.md)
 - [成人呼吸道 RAG V1](./adult-respiratory-medical-rag-v1-design.md)
 - [模型调用矩阵](./model-call-and-routing-matrix.md)
 - [Prompt 与 Model Runtime](./prompt-and-model-runtime-design.md)
 
-### 9.3 执行文件
+### 10.3 执行文件
 
-- Inventory
+- Current System Inventory
 - Migration Matrix
 - Coverage Matrix
 - Data/Frontend/Engineering Migration
 - Implementation Roadmap
 - ADR
 
-### 9.4 冲突优先级
+### 10.4 冲突优先级
 
 ```text
 Architecture Freeze Baseline
 → v2.6 Cross-document Addendum
+→ Legacy Design Asset Retention and Mapping
 → Overall Architecture
 → Capability/RAG/Model 详细设计
-→ Coverage Matrix / Roadmap
+→ Inventory / Migration / Coverage / Roadmap / Engineering
 → 四份专题长文
-→ 历史文档
+→ docs/AI医生/项目文档 等历史文档
 ```
 
-涉及状态所有权、安全骨架或核心依赖的冲突必须提交 ADR，不能静默覆盖。
+涉及状态所有权、安全骨架、旧资产默认删除或核心依赖的冲突必须提交 ADR，不能静默覆盖。
 
 ---
 
-## 10. 变更控制
+## 11. 变更控制
 
 ### 不需要修改总体蓝图
 
@@ -266,9 +369,10 @@ Architecture Freeze Baseline
 - Prompt/Model/Knowledge 具体版本；
 - 阶段内部任务顺序；
 - 某旧服务下线时间；
+- 某旧资产的证据等级或保留决定；
 - 评估阈值调整。
 
-这些进入路线、矩阵、Release 或 ADR。
+这些进入路线、矩阵、Release、Legacy Asset Register 或 ADR。
 
 ### 必须提交 ADR
 
@@ -281,7 +385,9 @@ Architecture Freeze Baseline
 - 修改 Java/Python 主边界；
 - 更换生产主数据库；
 - 取消固定 Workflow fallback；
-- 取消医生对高风险动作的控制。
+- 取消医生对高风险动作的控制；
+- 默认删除未经验证的 P0/P1 旧设计资产；
+- 让 AOP 隐式执行临床决策。
 
 ### 必须修改总体蓝图
 
@@ -289,28 +395,38 @@ Architecture Freeze Baseline
 
 ---
 
-## 11. Frozen Baseline 门禁
+## 12. Frozen Baseline 门禁
 
-进入最终 Frozen Baseline 前必须满足：
-
-### 代码与现状
+### 12.1 代码与现状
 
 - [ ] Java/Python/Frontend 真实编译和启动结果；
 - [ ] 固定 Workflow 可运行或明确失败原因；
 - [ ] 所有生产候选目录已盘点；
 - [ ] 每个现有服务有 Migration Decision；
-- [ ] Prompt、Model Call、Knowledge、Neo4j、Rule 和 Test Inventory 完成；
+- [ ] Prompt、Model Call、Knowledge、Neo4j、Rule、Test 和配置 Inventory 完成；
 - [ ] 未验证资产未被直接删除。
 
-### 契约与基础设施
+### 12.2 旧设计资产继承
+
+- [ ] `legacy-design-asset-inventory.csv` 完成；
+- [ ] 文档资产已映射到代码、配置、数据和测试；
+- [ ] 双通道、Tool Contract、CDP、AgentState、AuditTrail、AOP/Trace、错误体系、评估集和 Knowledge Gate 有明确决定；
+- [ ] `KEEP/ADAPT` 有验证计划；
+- [ ] `EVALUATE` 有对照实验；
+- [ ] `ARCHIVE/REMOVE` 有依赖、数据和回滚检查；
+- [ ] `legacy-observability-migration.md` 完成；
+- [ ] `legacy-asset-decommission-register.csv` 建立；
+- [ ] Coverage Matrix 无“有价值但无归属”的旧资产。
+
+### 12.3 契约与基础设施
 
 - [ ] Shared Contracts v1 评审；
 - [ ] Capability/Prompt/Model/Knowledge Schema 评审；
-- [ ] 数据库、Runtime、RAG、Graph、框架 ADR；
+- [ ] 数据库、Runtime、RAG、Graph、框架和 OTel ADR；
 - [ ] Java/Python/TypeScript 同步策略；
 - [ ] CDP 迁移和回滚设计。
 
-### 首个 Capability
+### 12.4 首个 Capability
 
 - [ ] `adult_respiratory_v1` Package Skeleton；
 - [ ] Scope、Safety、Question、Hypothesis 和 Eval 初版；
@@ -318,21 +434,25 @@ Architecture Freeze Baseline
 - [ ] 首批 PromptSpec、ModelSpec、RoutePolicy；
 - [ ] 第一条纵向切片 E2E 设计。
 
-### 工程和发布
+### 12.5 工程和发布
 
 - [ ] CI/CD；
 - [ ] Prompt/Model/Knowledge/Capability Release Gate；
 - [ ] OTel 和版本链字段；
+- [ ] AOP/Trace 迁移验证方案；
 - [ ] 前端/API 迁移；
 - [ ] Backup、Rollback、Decommission 方案；
-- [ ] Coverage Matrix 无未归属能力。
+- [ ] Coverage Matrix 无未归属能力或旧资产。
+
+未满足以上门禁时，状态保持 `Freeze Candidate`。满足并评审通过后，才可更新为 `Frozen Baseline`。
 
 ---
 
-## 12. 当前冻结状态
+## 13. 当前执行结论
 
-当前状态：
-
-> **Freeze Candidate：架构、扩场景、RAG、Model Runtime、迁移和发布体系已经设计完成；尚需 Phase A 真实运行、资产和数据验证后转为 Frozen Baseline。**
-
-下一步不是继续增加总体概念，而是执行 Phase A，并把 Inventory 和 Migration Matrix 中的静态结论升级为验证后结论。
+```text
+可以立即执行：A1-A4 基线与盘点
+不得提前执行：大规模删除旧服务、覆盖旧Prompt、清理旧规则/评估集、清空图谱/向量、下线AOP/Trace
+必须完成：A5、A6、A6.5、A7-A10
+最终进入：A11 Freeze Review
+```
