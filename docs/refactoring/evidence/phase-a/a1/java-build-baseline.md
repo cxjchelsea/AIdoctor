@@ -222,3 +222,9 @@ mvn -B -ntp clean test
 ```
 
 在受限沙箱中 Maven Central 访问可能需要网络授权。不要并行运行首次依赖下载，以避免共享 `.m2` tracking file 争用。
+
+## Post-baseline repair reference
+
+A1 的 44 个错误和失败结论仍然有效，代表修复前状态。后续独立修复、干净 compile/test/package 与局部单元测试证据见 [diagnosis-service Java 8 构建修复报告](../a1-diagnosis-build-repair/diagnosis-build-repair-report.md)。
+
+修复后的 `diagnosis-service` 达到 `BUILD_VERIFIED`；只有报告中列出的纯代码组件达到局部 `TEST_VERIFIED`。本修复没有服务启动证据，因此仍无 `RUNTIME_VERIFIED`；没有真实数据证据，因此仍无 `DATA_VERIFIED`。
