@@ -35,7 +35,7 @@ public class EscalationHandler {
         String escalationType = null;
         
         // 1. 检查高风险识别
-        Map<String, Object> triageMap = cdp.getTriageMap();
+        Map<String, Object> triageMap = cdp.getTriage();
         if (triageMap != null) {
             String riskLevel = (String) triageMap.get("risk_level");
             if ("L1".equals(riskLevel) || "L2".equals(riskLevel)) {
@@ -59,7 +59,7 @@ public class EscalationHandler {
         }
         
         // 3. 检查证据不足
-        Map<String, Object> uncertaintyMap = cdp.getUncertaintyMap();
+        Map<String, Object> uncertaintyMap = cdp.getUncertainty();
         if (uncertaintyMap != null) {
             Object missingInfoObj = uncertaintyMap.get("missing_critical_info");
             if (missingInfoObj instanceof java.util.List) {

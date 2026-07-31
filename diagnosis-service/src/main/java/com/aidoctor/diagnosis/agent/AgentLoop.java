@@ -4,6 +4,7 @@ import com.aidoctor.diagnosis.dto.tool.ToolContext;
 import com.aidoctor.diagnosis.dto.tool.ToolResult;
 import com.aidoctor.diagnosis.entity.AgentState;
 import com.aidoctor.diagnosis.entity.CDP;
+import com.aidoctor.diagnosis.exception.ClinicalSemanticBlockerException;
 import com.aidoctor.diagnosis.service.agent_state.AgentStateManager;
 import com.aidoctor.diagnosis.service.audit.AuditTrailManager;
 import com.aidoctor.diagnosis.service.cdp.CDPManager;
@@ -157,7 +158,7 @@ public class AgentLoop {
         cdpStateData.put("cdp_status", cdp.getCdpStatus());
         
         // 识别信息缺口（详细分析）
-        Map<String, Object> uncertaintyMap = cdp.getUncertaintyMap();
+        Map<String, Object> uncertaintyMap = cdp.getUncertainty();
         List<Object> missingInfo = new ArrayList<>();
         List<Object> criticalMissingInfo = new ArrayList<>();
         if (uncertaintyMap != null) {
@@ -187,7 +188,7 @@ public class AgentLoop {
         }
         
         // 识别风险信号
-        Map<String, Object> triageMap = cdp.getTriageMap();
+        Map<String, Object> triageMap = cdp.getTriage();
         List<Object> redFlags = new ArrayList<>();
         if (triageMap != null) {
             Object redFlagsObj = triageMap.get("red_flags");
@@ -316,6 +317,21 @@ public class AgentLoop {
             .callOrder("sequential")
             .reason("基于Step " + currentStep + "的默认诊断路径")
             .build();
+    }
+
+    ToolCallPlan checkRedFlagPriority(CDPState cdpState, AgentState agentState) {
+        throw new ClinicalSemanticBlockerException(
+            "AgentLoop red-flag planning policy has no deterministic implementation");
+    }
+
+    ToolCallPlan checkConflictReview(CDPState cdpState, AgentState agentState) {
+        throw new ClinicalSemanticBlockerException(
+            "AgentLoop conflict-review policy has no deterministic implementation");
+    }
+
+    ToolCallPlan checkInsufficientEvidence(CDPState cdpState, AgentState agentState) {
+        throw new ClinicalSemanticBlockerException(
+            "AgentLoop insufficient-evidence policy has no deterministic implementation");
     }
     
     /**

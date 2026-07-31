@@ -46,7 +46,7 @@ public class ClinicalAgentBrain {
         log.info("启动主Agent: cdpId={}", cdpId);
         
         // 获取CDP和AgentState
-        CDP cdp = cdpManager.getCDP(cdpId)
+        CDP cdp = cdpManager.getCDPById(cdpId)
             .orElseThrow(() -> new RuntimeException("CDP不存在: " + cdpId));
         
         AgentState agentState = agentStateManager.getAgentStateByCdpId(cdpId)

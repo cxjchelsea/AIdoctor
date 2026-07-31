@@ -1,0 +1,16 @@
+behavior_area,changed,evidence,notes
+compile_compatibility_and_type_contracts,yes,Java source diff and 20 regression tests,Canonical Java 8 APIs and precise Map/List contracts only
+controller_endpoints,no,git diff --name-only,No controller file changed
+feign_endpoints,no,git diff --name-only,No Feign client declaration changed
+database_tables_and_migrations,no,git diff --name-only,No entity column or migration changed
+prompts,no,git diff --name-only,No Prompt asset changed
+model_provider,no,git diff --name-only,No provider or model call changed
+risk_level_rules,no,source diff,Existing risk comparisons unchanged
+red_flag_thresholds,no,AgentLoop fail-closed tests,No threshold or red-flag rule added
+fallback_semantics,no,source diff,Fixed Workflow and remote fallback code unchanged
+fixed_workflow_steps,no,git diff --name-only,DiagnosisWorkflowOrchestrator unchanged
+cdp_status_transitions,no,source diff,No cdpStatus write changed
+patient_delivery,no,source diff,No response DTO or patient output changed
+evidence_ui,no,git diff --name-only,No frontend file changed
+trace_protocol,no,git diff --name-only,No Trace or Feign interceptor changed
+a2_python,no,git diff --name-only,No Python file changed

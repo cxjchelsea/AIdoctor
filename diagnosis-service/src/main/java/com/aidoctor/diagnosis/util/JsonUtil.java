@@ -153,6 +153,9 @@ public class JsonUtil {
             return null;
         }
         try {
+            if (clazz.getName().equals("com.aidoctor.diagnosis.entity.CDP")) {
+                return fieldMapper.readValue(json, clazz);
+            }
             return objectMapper.readValue(json, clazz);
         } catch (Exception e) {
             log.error("JSON转对象失败: {}", json, e);

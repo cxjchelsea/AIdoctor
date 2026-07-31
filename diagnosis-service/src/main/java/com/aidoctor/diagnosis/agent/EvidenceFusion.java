@@ -222,8 +222,8 @@ public class EvidenceFusion {
                                 Map<String, Object> conflict = new HashMap<>();
                                 conflict.put("conflict_type", "diagnosis_probability");
                                 conflict.put("conflicting_values", Arrays.asList(
-                                    Map.of("tool_id", "tool_3", "value", prob1),
-                                    Map.of("tool_id", "tool_3", "value", prob2)
+                                    createConflictValue("tool_3", prob1),
+                                    createConflictValue("tool_3", prob2)
                                 ));
                                 conflict.put("severity", Math.abs(prob1 - prob2) > 0.5 ? "high" : "medium");
                                 conflicts.add(conflict);
@@ -235,6 +235,13 @@ public class EvidenceFusion {
         }
         
         return conflicts;
+    }
+
+    private Map<String, Object> createConflictValue(String toolId, Double value) {
+        Map<String, Object> conflictValue = new HashMap<>();
+        conflictValue.put("tool_id", toolId);
+        conflictValue.put("value", value);
+        return Collections.unmodifiableMap(conflictValue);
     }
     
     /**

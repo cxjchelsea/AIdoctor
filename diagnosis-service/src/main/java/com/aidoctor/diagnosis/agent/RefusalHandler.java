@@ -35,7 +35,7 @@ public class RefusalHandler {
         
         // 1. 检查超出能力范围
         // 简化实现：检查是否有明确的超出能力范围的标记
-        Map<String, Object> uncertaintyMap = cdp.getUncertaintyMap();
+        Map<String, Object> uncertaintyMap = cdp.getUncertainty();
         if (uncertaintyMap != null && Boolean.TRUE.equals(uncertaintyMap.get("out_of_scope"))) {
             shouldRefuse = true;
             refusalReason = "超出AI医生的能力范围";
@@ -57,7 +57,7 @@ public class RefusalHandler {
         }
         
         // 3. 检查安全风险
-        Map<String, Object> triageMap = cdp.getTriageMap();
+        Map<String, Object> triageMap = cdp.getTriage();
         if (triageMap != null) {
             String riskLevel = (String) triageMap.get("risk_level");
             if ("L1".equals(riskLevel)) {

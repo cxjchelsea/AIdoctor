@@ -164,7 +164,7 @@ public class ToolCaller {
         Map<String, Object> request = new HashMap<>();
         
         // 获取CDP数据
-        CDP cdp = cdpManager.getCDP(toolContext.getCdpReference().getCdpId())
+        CDP cdp = cdpManager.getCDPById(toolContext.getCdpReference().getCdpId())
             .orElseThrow(() -> new RuntimeException("CDP不存在: " + toolContext.getCdpReference().getCdpId()));
         
         // 根据readFields读取CDP字段
@@ -196,17 +196,17 @@ public class ToolCaller {
         // 简化实现：根据字段路径返回对应的CDP字段
         // 实际应该实现完整的路径解析
         if (fieldPath.startsWith("cdp.patient_state")) {
-            return cdp.getPatientStateMap();
+            return cdp.getPatientState();
         } else if (fieldPath.startsWith("cdp.ddx")) {
-            return cdp.getDdxMap();
+            return cdp.getDdx();
         } else if (fieldPath.startsWith("cdp.triage")) {
-            return cdp.getTriageMap();
+            return cdp.getTriage();
         } else if (fieldPath.startsWith("cdp.workup_plan")) {
-            return cdp.getWorkupPlanMap();
+            return cdp.getWorkupPlan();
         } else if (fieldPath.startsWith("cdp.management_plan")) {
-            return cdp.getManagementPlanMap();
+            return cdp.getManagementPlan();
         } else if (fieldPath.startsWith("cdp.evidence_graph")) {
-            return cdp.getEvidenceGraphMap();
+            return cdp.getEvidenceGraph();
         }
         return null;
     }
@@ -279,7 +279,7 @@ public class ToolCaller {
      * 从CDP获取会话ID
      */
     private String getSessionIdFromCdp(String cdpId) {
-        return cdpManager.getCDP(cdpId)
+        return cdpManager.getCDPById(cdpId)
             .map(CDP::getSessionId)
             .orElse("unknown");
     }

@@ -39,9 +39,9 @@ public class CDPFieldWriter {
             
             // 获取目标字段的当前值
             Object currentValue = getFieldValue(cdp, pathInfo.getBaseField());
-            if (currentValue == null) {
-                log.warn("字段不存在: {}", pathInfo.getBaseField());
-                return false;
+            if (currentValue == null && !pathInfo.getNestedPath().isEmpty()) {
+                currentValue = pathInfo.getNestedPath().get(0).startsWith("[")
+                    ? new ArrayList<>() : new HashMap<>();
             }
             
             // 更新字段值
@@ -80,8 +80,10 @@ public class CDPFieldWriter {
             return null;
         }
         
-        String baseField = parts[0];
+        String baseField = extractFieldName(parts[0]);
         List<String> nestedPath = new ArrayList<>();
+
+        addArrayIndex(parts[0], nestedPath);
         
         // 处理嵌套路径和数组索引
         for (int i = 1; i < parts.length; i++) {
@@ -89,12 +91,11 @@ public class CDPFieldWriter {
             
             // 检查是否包含数组索引（如：tier1_most_likely[0]）
             if (part.contains("[")) {
-                int bracketIndex = part.indexOf('[');
-                String fieldName = part.substring(0, bracketIndex);
-                String indexStr = part.substring(bracketIndex + 1, part.indexOf(']'));
-                
-                nestedPath.add(fieldName);
-                nestedPath.add("[" + indexStr + "]");
+                String fieldName = extractFieldName(part);
+                if (!fieldName.isEmpty()) {
+                    nestedPath.add(fieldName);
+                }
+                addArrayIndex(part, nestedPath);
             } else {
                 nestedPath.add(part);
             }
@@ -105,33 +106,46 @@ public class CDPFieldWriter {
             .nestedPath(nestedPath)
             .build();
     }
+
+    private String extractFieldName(String part) {
+        int bracketIndex = part.indexOf('[');
+        return bracketIndex >= 0 ? part.substring(0, bracketIndex) : part;
+    }
+
+    private void addArrayIndex(String part, List<String> nestedPath) {
+        int bracketIndex = part.indexOf('[');
+        if (bracketIndex < 0 || !part.endsWith("]")) {
+            return;
+        }
+        String index = part.substring(bracketIndex + 1, part.length() - 1);
+        nestedPath.add("[" + index + "]");
+    }
     
     /**
      * 获取CDP字段值
      */
-    @SuppressWarnings("unchecked")
     private Object getFieldValue(CDP cdp, String fieldName) {
         switch (fieldName) {
             case "patient_state":
-                return cdp.getPatientStateMap();
+                return cdp.getPatientState();
             case "ddx":
-                return cdp.getDdxMap();
+                return cdp.getDdx();
             case "triage":
-                return cdp.getTriageMap();
+                return cdp.getTriage();
             case "workup_plan":
-                return cdp.getWorkupPlanMap();
+                return cdp.getWorkupPlan();
             case "management_plan":
-                return cdp.getManagementPlanMap();
+                return cdp.getManagementPlan();
             case "evidence_graph":
-                return cdp.getEvidenceGraphMap();
+                return cdp.getEvidenceGraph();
             case "uncertainty":
-                return cdp.getUncertaintyMap();
+                return cdp.getUncertainty();
             case "health_state_assessment":
-                return cdp.getHealthStateAssessmentMap();
+                return cdp.getHealthStateAssessment();
             case "wellness_plan":
-                return cdp.getWellnessPlanMap();
+                return cdp.getWellnessPlan();
             case "final_conclusion":
-                return cdp.getFinalConclusionMap();
+                return cdp.getPatientState().get("conclusion_package");
             default:
                 log.warn("未知的CDP字段: {}", fieldName);
                 return null;
@@ -141,59 +155,74 @@ public class CDPFieldWriter {
     /**
      * 设置CDP字段值
      */
-    @SuppressWarnings("unchecked")
     private void setFieldValue(CDP cdp, String fieldName, Object value) {
-        if (value instanceof Map) {
-            switch (fieldName) {
-                case "patient_state":
-                    cdp.setPatientState((Map<String, Object>) value);
-                    break;
-                case "ddx":
-                    cdp.setDdx((Map<String, Object>) value);
-                    break;
-                case "triage":
-                    cdp.setTriage((Map<String, Object>) value);
-                    break;
-                case "workup_plan":
-                    cdp.setWorkupPlan((List<Map<String, Object>>) value);
-                    break;
-                case "management_plan":
-                    cdp.setManagementPlan((Map<String, Object>) value);
-                    break;
-                case "evidence_graph":
-                    cdp.setEvidenceGraph((List<Map<String, Object>>) value);
-                    break;
-                case "uncertainty":
-                    cdp.setUncertainty((Map<String, Object>) value);
-                    break;
-                case "health_state_assessment":
-                    cdp.setHealthStateAssessment((Map<String, Object>) value);
-                    break;
-                case "wellness_plan":
-                    cdp.setWellnessPlan((Map<String, Object>) value);
-                    break;
-                case "final_conclusion":
-                    cdp.setFinalConclusion((Map<String, Object>) value);
-                    break;
-                default:
-                    log.warn("未知的CDP字段: {}", fieldName);
-            }
-        } else if (value instanceof List) {
-            switch (fieldName) {
-                case "workup_plan":
-                    cdp.setWorkupPlan((List<Map<String, Object>>) value);
-                    break;
-                case "evidence_graph":
-                    cdp.setEvidenceGraph((List<Map<String, Object>>) value);
-                    break;
-                case "ddx":
-                    // ddx可能是List格式
-                    cdp.setDdx((List<Map<String, Object>>) value);
-                    break;
-                default:
-                    log.warn("未知的CDP字段（List类型）: {}", fieldName);
-            }
+        switch (fieldName) {
+            case "patient_state":
+                cdp.setPatientState(toStringObjectMap(value, fieldName));
+                return;
+            case "triage":
+                cdp.setTriage(toStringObjectMap(value, fieldName));
+                return;
+            case "uncertainty":
+                cdp.setUncertainty(toStringObjectMap(value, fieldName));
+                return;
+            case "health_state_assessment":
+                cdp.setHealthStateAssessment(toStringObjectMap(value, fieldName));
+                return;
+            case "wellness_plan":
+                cdp.setWellnessPlan(toStringObjectMap(value, fieldName));
+                return;
+            case "ddx":
+                cdp.setDdx(toMapList(value, fieldName));
+                return;
+            case "workup_plan":
+                cdp.setWorkupPlan(toMapList(value, fieldName));
+                return;
+            case "management_plan":
+                cdp.setManagementPlan(toMapList(value, fieldName));
+                return;
+            case "evidence_graph":
+                cdp.setEvidenceGraph(toMapList(value, fieldName));
+                return;
+            case "final_conclusion":
+                Map<String, Object> patientState = new HashMap<>(cdp.getPatientState());
+                patientState.put("conclusion_package", toStringObjectMap(value, fieldName));
+                cdp.setPatientState(patientState);
+                return;
+            default:
+                throw new IllegalArgumentException("未知的CDP字段: " + fieldName);
         }
+    }
+
+    private Map<String, Object> toStringObjectMap(Object value, String fieldName) {
+        if (value == null) {
+            return null;
+        }
+        if (!(value instanceof Map)) {
+            throw new IllegalArgumentException(fieldName + " requires a Map value");
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+            if (!(entry.getKey() instanceof String)) {
+                throw new IllegalArgumentException(fieldName + " requires String map keys");
+            }
+            result.put((String) entry.getKey(), entry.getValue());
+        }
+        return result;
+    }
+
+    private List<Map<String, Object>> toMapList(Object value, String fieldName) {
+        if (value == null) {
+            return null;
+        }
+        if (!(value instanceof List)) {
+            throw new IllegalArgumentException(fieldName + " requires a List value");
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Object item : (List<?>) value) {
+            result.add(toStringObjectMap(item, fieldName));
+        }
+        return result;
     }
     
     /**
@@ -245,6 +274,8 @@ public class CDPFieldWriter {
                         }
                         current = item;
                     }
+                } else {
+                    throw new IllegalArgumentException("数组索引只能应用于List字段");
                 }
             } else {
                 // 字段名
@@ -268,6 +299,8 @@ public class CDPFieldWriter {
                         }
                         current = next;
                     }
+                } else {
+                    throw new IllegalArgumentException("字段名只能应用于Map字段");
                 }
             }
         }
