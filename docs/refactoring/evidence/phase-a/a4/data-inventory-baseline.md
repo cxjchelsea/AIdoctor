@@ -55,6 +55,7 @@ No MySQL, Oracle, Redis, Neo4j, Milvus, model provider or production endpoint wa
 | [data-access-path-inventory.csv](./data-access-path-inventory.csv) | 45 | 21 rows with reads, 28 with writes/proposals and 5 with deletes; a row may contain more than one operation. |
 | [data-lifecycle-governance-inventory.csv](./data-lifecycle-governance-inventory.csv) | 20 | Retention, deletion, withdrawal, backup, restore, lineage and release evidence or explicit gaps. |
 | [data-schema-drift-inventory.csv](./data-schema-drift-inventory.csv) | 16 | Dialect/profile, migration, entity, CDP, identity, Trace, Redis, graph, vector, file and monitoring drift. |
+| [data-verified-asset-manifest.csv](./data-verified-asset-manifest.csv) | 13 | Exact tracked files with byte size, parse result, structural shape and SHA256; no group-level validation. |
 
 ## Data stores
 
@@ -62,6 +63,7 @@ No MySQL, Oracle, Redis, Neo4j, Milvus, model provider or production endpoint wa
 
 - Eleven distinct JPA table names were identified: `cdp`, `cdp_version`, `diagnosis_record`, `examination_plan`, `examination_record`, `follow_up_plan`, `health_state_assessment_record`, `wellness_screening_record`, `agent_state`, `audit_trail` and `execution_trace`.
 - The repository contains 13 entity classes because `examination_plan` and `examination_record` are duplicated across diagnosis and examination services.
+- The clinical logical store contains 12 Entity representations across 10 distinct table names. `execution_trace` is the thirteenth Entity representation and eleventh distinct table name, inventoried as a separate logical store.
 - Oracle migrations define diagnosis and Trace tables; a separate MySQL-style migration defines AgentState/AuditTrail. The visible MySQL examination profile enables `hibernate.ddl-auto=update`.
 - No foreign keys or unique business constraints were located. Indexes exist for common patient/session/status/time access, but duplicate entities and migrations disagree.
 - Database URLs/profiles are inconsistent or incomplete. Live schemas and rows were not inspected; relational evidence is `CODE_CONFIRMED`, not `DATA_VERIFIED`.
@@ -75,7 +77,7 @@ No MySQL, Oracle, Redis, Neo4j, Milvus, model provider or production endpoint wa
 ### Neo4j and knowledge graph
 
 - Diagnosis code reads `Symptom` to `Disease` paths by CUI/name and returns empty results on query failure.
-- Knowledge management defines 18 expected node labels, 22 relationship types, 17 uniqueness constraints and 9 property indexes.
+- Knowledge management defines 18 expected node labels, 21 relationship types, 17 uniqueness constraints and 9 property indexes.
 - The schema endpoint can create constraints/indexes, but the four graph importers and validator are TODO stubs that report success with zero imported rows.
 - No graph connection, node, relationship, constraint or index data was inspected. Patient/medical graph isolation, provenance, version, deletion, withdrawal and release state remain `BLOCKED`/`UNKNOWN`.
 
@@ -96,7 +98,7 @@ No MySQL, Oracle, Redis, Neo4j, Milvus, model provider or production endpoint wa
 
 ## Entity, schema and contract findings
 
-- CDP is a large mixed PHI aggregate with 11 JSON/CLOB-like payloads and an integer version. Version snapshots serialize the full CDP.
+- CDP is a large mixed PHI-capable aggregate with 11 JSON/CLOB-like payloads and an integer version. Version snapshots serialize the full CDP and may contain PHI in a real runtime.
 - Caller-provided expected version is absent. `CDPManager` relies on a pessimistic lock and server-side increment; Python readers/direct writers do not enforce the reference version carried by some ToolContext variants.
 - `examination_record` differs across services: only the examination-service representation has `ocr_status`, while the Oracle migration lacks it.
 - CDP uses string patient IDs; follow-up, wellness and health-state records use numeric patient IDs. No foreign keys enforce linkage.
@@ -114,7 +116,7 @@ No MySQL, Oracle, Redis, Neo4j, Milvus, model provider or production endpoint wa
 
 ## Data classification
 
-- `PHI`: CDP, diagnosis records, examination reports/OCR, dialog context, version snapshots, audit and Trace input/output candidates.
+- `PHI-capable`/`PHI candidate`: CDP, diagnosis records, examination reports/OCR, dialog context, version snapshots, audit and Trace input/output structures may contain PHI in a real runtime. This classification does not assert that tracked repository files contain real patient data.
 - `PII`: patient/user/family/session identifiers; no high-confidence real identity number, phone or patient identity fixture was found in tracked text.
 - `AUTHENTICATION`/`CREDENTIAL`: browser token storage and development credential configuration. Environment variable names are classified as `SECRET_REFERENCE`, not as secrets.
 - `AUDIT_TRACE`: AuditTrail, execution Trace, CDP trace summary, application logs and monitoring streams.
@@ -132,7 +134,11 @@ The following checks are file-structure evidence only:
 - A representative extracted book outline JSON parsed.
 - DRKnows relations parsed with 107 rows, but at least one header is missing and PowerShell assigned a placeholder column name.
 
-These named tracked-file checks are `DATA_VERIFIED` only for syntax/structure and hashes. They do not validate clinical accuracy, licensing, production data, runtime ingestion, graph/vector contents or patient outcomes.
+Exactly 13 named files receive limited per-file `DATA_VERIFIED`; their full paths, tracked status, byte sizes, parser results, structures and SHA256 values are recorded in [data-verified-asset-manifest.csv](./data-verified-asset-manifest.csv). Every other tracked file and every directory or asset group remains `CODE_CONFIRMED` at most.
+
+The counts of 35 tracked source-data files and 30 tracked derived files establish path presence and aggregate size only. They do not mean that every file in either group was parsed, hashed or individually `DATA_VERIFIED`.
+
+The 13 per-file checks validate only file existence, Git tracked status, byte size, format parsing, structural shape or row/column counts, and SHA256. They do not validate completeness, clinical accuracy, knowledge validity, provenance, licensing, production data, runtime ingestion, graph/vector contents, release approval or patient outcomes.
 
 ## Secret and patient-data scan
 
@@ -153,15 +159,20 @@ These named tracked-file checks are `DATA_VERIFIED` only for syntax/structure an
 
 ## Risks
 
-### BLOCKER
+### BLOCKED_FOR_LIVE_DATA_VERIFICATION
 
-- No safe, identified non-production database/Redis/Neo4j/Milvus dataset was available, so live schema/content profiling is blocked.
-- Milvus has configuration only: no service, client or schema.
+- No safe, identified non-production live datastore was available. Consequently, live database rows, current Redis keys/TTLs, Neo4j contents and other runtime data cannot receive `DATA_VERIFIED`.
+- This blocks live-data verification only; it is not a merge blocker for this static A4 Evidence baseline.
+
+### CURRENT_CAPABILITY_GAPS
+
+- Milvus has environment references only: no Compose service, client, collection, index, dimension, metric or namespace implementation was found.
+- This is `NOT_IMPLEMENTED` as a descriptive current capability gap, not a formal Evidence Level and not an A4 static-baseline merge blocker. Inventory fields continue to use only the project-approved `CODE_CONFIRMED`, `UNKNOWN` or `BLOCKED` values according to field semantics.
 
 ### HIGH
 
 - CDP has multiple direct/proposed writers without caller expected-version, idempotency or a single commit boundary.
-- PHI may be duplicated across CDP, snapshots, AuditTrail, execution Trace, logs, uploads and frontend raw result paths without proven authorization/retention controls.
+- PHI-capable data may be duplicated across CDP, snapshots, AuditTrail, execution Trace, logs, uploads and frontend raw result paths in a real runtime without proven authorization/retention controls.
 - Relational profile/migration/entity drift can create environment-specific schemas, especially `examination_record.ocr_status` and Oracle/MySQL JSON/CLOB differences.
 - Patient and medical graph/vector isolation is not demonstrated.
 
@@ -192,7 +203,7 @@ A5 must consume, without implementing them in A4:
 9. retention/delete/withdrawal status representations;
 10. patient-safe delivery allowlist rather than raw CDP/result payloads.
 
-## BLOCKED / UNKNOWN and unverified scope
+## Remaining UNKNOWN and unverified scope
 
 - Live database tables, indexes, constraints, row counts, null/invalid JSON profiles and version distributions.
 - Redis keys/TTLs currently stored, Neo4j nodes/relations/properties, Milvus collections/indexes and monitoring data.
