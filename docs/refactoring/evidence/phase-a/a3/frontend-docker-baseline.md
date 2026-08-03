@@ -171,7 +171,6 @@ Detailed rows are in [docker-compose-inventory.csv](docker-compose-inventory.csv
 
 ### Risks
 
-- Repository visibility is public: `REPOSITORY_VISIBILITY_RISK`.
 - Dependency audit reports 22 findings per frontend, including one critical. No dependency was upgraded or auto-fixed in A3.
 - Current result conversion and UI can expose internal structures, raw response data in browser logs, uncalibrated confidence, and non-citation evidence.
 - Compose development credentials, mutable image tags, absent healthchecks, broad host mounts, and missing services prevent a production-readiness claim.
