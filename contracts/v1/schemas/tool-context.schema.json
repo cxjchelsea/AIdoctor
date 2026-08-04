@@ -1,0 +1,26 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/v1/tool-context.schema.json",
+  "title":"ToolContext",
+  "description":"Bounded tool invocation context without a full CDP, prompt, provider response, or arbitrary input dictionary.",
+  "type":"object","additionalProperties":false,
+  "required":["contract_version","envelope","actor","identifiers","capability","current_state_ref","authorization_scope","deadline","locale","requested_operation","input_refs"],
+  "properties":{
+    "contract_version":{"const":"1.0.0"},
+    "envelope":{"$ref":"contract-envelope.schema.json"},
+    "actor":{"type":"object","additionalProperties":false,"required":["actor_id","actor_type"],"properties":{"actor_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},"actor_type":{"enum":["SERVICE","AGENT","CLINICIAN","PATIENT","SYSTEM"]}}},
+    "identifiers":{"$ref":"identifier-set.schema.json"},
+    "capability":{"type":"object","additionalProperties":false,"required":["capability_id","capability_version"],"properties":{"capability_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},"capability_version":{"$ref":"contract-envelope.schema.json#/$defs/semanticVersion"}}},
+    "current_state_ref":{"type":"object","additionalProperties":false,"required":["cdp_id","version","read_fields"],"properties":{"cdp_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},"version":{"type":"integer","minimum":0},"read_fields":{"type":"array","uniqueItems":true,"maxItems":64,"items":{"$ref":"contract-envelope.schema.json#/$defs/jsonPointer"}}}},
+    "authorization_scope":{"type":"object","additionalProperties":false,"required":["granted","requested"],"properties":{"granted":{"$ref":"#/$defs/scopeList"},"requested":{"$ref":"#/$defs/scopeList"}}},
+    "deadline":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "locale":{"type":"string","pattern":"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$","maxLength":35},
+    "requested_operation":{"type":"string","minLength":1,"maxLength":80,"pattern":"^[A-Z][A-Z0-9_]*$"},
+    "input_refs":{"type":"array","maxItems":64,"items":{"$ref":"#/$defs/inputRef"}}
+  },
+  "$defs":{
+    "scopeList":{"type":"array","uniqueItems":true,"maxItems":32,"items":{"enum":["CDP_READ","EVIDENCE_READ","KNOWLEDGE_READ","STATE_PATCH_PROPOSE","PATIENT_DELIVERY_READ"]}},
+    "inputRef":{"type":"object","additionalProperties":false,"required":["ref_type","ref_id","ref_version"],"properties":{"ref_type":{"enum":["ARTIFACT","EVIDENCE_PACK","KNOWLEDGE_RELEASE","STATE_VIEW"]},"ref_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},"ref_version":{"type":"integer","minimum":1}}},
+    "namedValue":{"type":"object","additionalProperties":false,"required":["name","value"],"properties":{"name":{"type":"string","pattern":"^[a-z][a-z0-9_]{0,63}$"},"value":{"anyOf":[{"type":"string","maxLength":4000},{"type":"number"},{"type":"integer"},{"type":"boolean"},{"type":"null"},{"type":"array","maxItems":64,"items":{"type":"string","maxLength":1000}}]}}}
+  }
+}

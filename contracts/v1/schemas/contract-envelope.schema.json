@@ -1,0 +1,28 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/v1/contract-envelope.schema.json",
+  "title":"ContractEnvelope",
+  "description":"Shared routing and provenance metadata. It never carries prompts, private reasoning, or provider responses.",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["contract_name","contract_version","message_id","correlation_id","trace_id","created_at","producer","capability_id","capability_version"],
+  "properties":{
+    "contract_name":{"type":"string","minLength":1,"maxLength":80,"pattern":"^[A-Z][A-Za-z0-9]+$"},
+    "contract_version":{"const":"1.0.0"},
+    "message_id":{"$ref":"#/$defs/opaqueIdentifier"},
+    "correlation_id":{"$ref":"#/$defs/opaqueIdentifier"},
+    "trace_id":{"$ref":"#/$defs/opaqueIdentifier"},
+    "created_at":{"$ref":"#/$defs/timestamp"},
+    "producer":{"$ref":"#/$defs/serviceName"},
+    "capability_id":{"$ref":"#/$defs/opaqueIdentifier"},
+    "capability_version":{"$ref":"#/$defs/semanticVersion"}
+  },
+  "$defs":{
+    "opaqueIdentifier":{"type":"string","minLength":1,"maxLength":128,"pattern":"^[A-Za-z0-9][A-Za-z0-9._:-]*$","description":"Opaque boundary identifier; consumers must not parse numeric or PHI meaning."},
+    "timestamp":{"type":"string","format":"date-time","pattern":"(?:Z|[+-][0-9]{2}:[0-9]{2})$"},
+    "serviceName":{"type":"string","minLength":1,"maxLength":80,"pattern":"^[a-z][a-z0-9-]*$"},
+"semanticVersion":{"type":"string","pattern":"^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "jsonPointer":{"type":"string","minLength":1,"maxLength":256,"pattern":"^/(?:[^~/]|~0|~1)+(?:/(?:[^~/]|~0|~1)+)*$"},
+    "boundedText":{"type":"string","minLength":1,"maxLength":2000}
+  }
+}

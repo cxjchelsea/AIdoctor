@@ -1,0 +1,24 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/v1/commit-result.schema.json",
+  "title":"CommitResult",
+  "description":"Atomic result of one StatePatch; partial success is intentionally not representable.",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["contract_version","envelope","patch_id","cdp_id","status","previous_version","conflicts","rejected_operations","audit_ref","retryable"],
+  "properties":{
+    "contract_version":{"const":"1.0.0"},
+    "envelope":{"$ref":"contract-envelope.schema.json"},
+    "patch_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "cdp_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "status":{"enum":["COMMITTED","REJECTED","CONFLICT","NO_OP","FAILED"]},
+    "previous_version":{"type":"integer","minimum":0},
+    "committed_version":{"type":"integer","minimum":1},
+    "committed_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "conflicts":{"type":"array","maxItems":64,"items":{"$ref":"contract-conflict.schema.json"}},
+    "rejected_operations":{"type":"array","maxItems":64,"items":{"type":"object","additionalProperties":false,"required":["operation_index","reason_code"],"properties":{"operation_index":{"type":"integer","minimum":0},"reason_code":{"type":"string","pattern":"^[A-Z][A-Z0-9_]*$","maxLength":64}}}},
+    "audit_ref":{"$ref":"audit-ref.schema.json"},
+    "retryable":{"type":"boolean"}
+  },
+  "allOf":[{"if":{"properties":{"status":{"const":"COMMITTED"}}},"then":{"required":["committed_version","committed_at"],"properties":{"conflicts":{"maxItems":0},"rejected_operations":{"maxItems":0},"retryable":{"const":false}}}},{"if":{"properties":{"status":{"enum":["REJECTED","CONFLICT","NO_OP","FAILED"]}}},"then":{"not":{"anyOf":[{"required":["committed_version"]},{"required":["committed_at"]}]}}},{"if":{"properties":{"status":{"const":"CONFLICT"}}},"then":{"properties":{"conflicts":{"minItems":1}}}}]
+}

@@ -1,0 +1,24 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/v1/patient-delivery-view.schema.json",
+  "title":"PatientDeliveryView",
+  "description":"Strict patient-facing whitelist. It never references a complete CDP schema or exposes internal execution material.",
+  "type":"object","additionalProperties":false,
+  "required":["contract_version","delivery_id","delivery_version","cdp_id","review_status","generated_at","summary","safety_notice","recommended_actions","evidence_sections","limitations","follow_up","version_bindings"],
+  "properties":{
+    "contract_version":{"const":"1.0.0"},
+    "delivery_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "delivery_version":{"type":"integer","minimum":1},
+    "cdp_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "review_status":{"enum":["NOT_REVIEWED","PENDING_CLINICIAN","CLINICIAN_APPROVED","CLINICIAN_MODIFIED","CLINICIAN_REJECTED"]},
+    "generated_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "summary":{"type":"string","minLength":1,"maxLength":4000},
+    "safety_notice":{"type":"array","maxItems":32,"items":{"type":"object","additionalProperties":false,"required":["notice_id","level_ref","message"],"properties":{"notice_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},"level_ref":{"type":"string","minLength":1,"maxLength":64,"pattern":"^POLICY_[A-Z0-9_]+$","description":"Policy reference only; A5 does not invent clinical risk levels."},"message":{"type":"string","minLength":1,"maxLength":2000}}}},
+    "recommended_actions":{"type":"array","maxItems":32,"items":{"type":"string","minLength":1,"maxLength":1000}},
+    "evidence_sections":{"type":"array","maxItems":32,"items":{"type":"object","additionalProperties":false,"required":["section_id","title","cards"],"properties":{"section_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},"title":{"type":"string","minLength":1,"maxLength":200},"cards":{"type":"array","maxItems":64,"items":{"$ref":"#/$defs/evidenceCard"}}}}},
+    "limitations":{"type":"array","maxItems":32,"items":{"type":"string","minLength":1,"maxLength":1000}},
+    "follow_up":{"type":"array","maxItems":32,"items":{"type":"string","minLength":1,"maxLength":1000}},
+    "version_bindings":{"type":"object","additionalProperties":false,"required":["delivery_version","contract_version","cdp_version","review_decision_version","knowledge_release_id","knowledge_release_version"],"properties":{"delivery_version":{"type":"integer","minimum":1},"contract_version":{"const":"1.0.0"},"cdp_version":{"type":"integer","minimum":0},"review_decision_version":{"oneOf":[{"type":"integer","minimum":1},{"type":"null"}]},"knowledge_release_id":{"oneOf":[{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},{"type":"null"}]},"knowledge_release_version":{"oneOf":[{"$ref":"contract-envelope.schema.json#/$defs/semanticVersion"},{"type":"null"}]}}}
+  },
+  "$defs":{"evidenceCard":{"type":"object","additionalProperties":false,"required":["card_id","card_type","title","body","citation_refs","applicability","limitations"],"properties":{"card_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},"card_type":{"enum":["SAFETY_RULE","MEDICAL_EVIDENCE","CLINICIAN_DECISION","PATIENT_FACT","SOURCE","APPLICABILITY","LIMITATION","EVIDENCE_CONFLICT"]},"title":{"type":"string","minLength":1,"maxLength":300},"body":{"type":"string","minLength":1,"maxLength":2000},"citation_refs":{"type":"array","uniqueItems":true,"maxItems":32,"items":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"}},"applicability":{"enum":["GENERAL","PATIENT_SPECIFIC","NOT_APPLICABLE","UNKNOWN"]},"limitations":{"type":"array","maxItems":32,"items":{"type":"string","minLength":1,"maxLength":1000}}},"allOf":[{"if":{"properties":{"card_type":{"const":"MEDICAL_EVIDENCE"}}},"then":{"properties":{"citation_refs":{"minItems":1}}}}]}}
+}

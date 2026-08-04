@@ -1,0 +1,22 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/v1/contract-conflict.schema.json",
+  "title":"ContractConflict",
+  "description":"Bounded conflict detail without private reasoning, secrets, or open-form objects.",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["contract_version","conflict_id","type","path","expected_version","actual_version","expected_value","actual_value","resolution","retryable","details"],
+  "properties":{
+    "contract_version":{"const":"1.0.0"},
+    "conflict_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "type":{"enum":["VERSION_MISMATCH","VALUE_MISMATCH","IDEMPOTENCY_MISMATCH","PROTECTED_PATH","VALIDATION_FAILURE"]},
+    "path":{"$ref":"contract-envelope.schema.json#/$defs/jsonPointer"},
+    "expected_version":{"type":["integer","null"],"minimum":0},
+    "actual_version":{"type":["integer","null"],"minimum":0},
+    "expected_value":{"$ref":"state-patch.schema.json#/$defs/controlledValue"},
+    "actual_value":{"$ref":"state-patch.schema.json#/$defs/controlledValue"},
+    "resolution":{"enum":["RETRY_WITH_CURRENT_VERSION","REFRESH_AND_REVIEW","MANUAL_REVIEW","REJECT_PATCH","POLICY_REQUIRED"]},
+    "retryable":{"type":"boolean"},
+    "details":{"type":"string","minLength":1,"maxLength":1000}
+  }
+}

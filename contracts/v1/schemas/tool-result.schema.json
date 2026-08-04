@@ -1,0 +1,23 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/v1/tool-result.schema.json",
+  "title":"ToolResult",
+  "description":"Tool execution result. Suggested patches remain proposals and are never represented as committed state.",
+  "type":"object","additionalProperties":false,
+  "required":["contract_version","envelope","tool_name","tool_version","invocation_id","status","output","suggested_patches","evidence_refs","errors","started_at","completed_at"],
+  "properties":{
+    "contract_version":{"const":"1.0.0"},
+    "envelope":{"$ref":"contract-envelope.schema.json"},
+    "tool_name":{"type":"string","minLength":1,"maxLength":80,"pattern":"^[a-z][a-z0-9-]*$"},
+    "tool_version":{"$ref":"contract-envelope.schema.json#/$defs/semanticVersion"},
+    "invocation_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "status":{"enum":["SUCCEEDED","NO_RESULT","RETRYABLE_FAILURE","NON_RETRYABLE_FAILURE","TIMED_OUT","POLICY_BLOCKED"]},
+    "output":{"type":"array","maxItems":64,"items":{"$ref":"tool-context.schema.json#/$defs/namedValue"}},
+    "suggested_patches":{"type":"array","maxItems":64,"items":{"$ref":"state-patch.schema.json"}},
+    "evidence_refs":{"type":"array","uniqueItems":true,"maxItems":64,"items":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"}},
+    "errors":{"type":"array","maxItems":32,"items":{"$ref":"#/$defs/error"}},
+    "started_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "completed_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"}
+  },
+  "$defs":{"error":{"type":"object","additionalProperties":false,"required":["code","category","message","retryable"],"properties":{"code":{"type":"string","pattern":"^[A-Z][A-Z0-9_]{1,63}$"},"category":{"enum":["VALIDATION","DEPENDENCY","TIMEOUT","AUTHORIZATION","CONFLICT","POLICY","INTERNAL"]},"message":{"type":"string","minLength":1,"maxLength":1000},"retryable":{"type":"boolean"}}}}
+}

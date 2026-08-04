@@ -1,0 +1,17 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/v1/trace-ref.schema.json",
+  "title":"TraceRef",
+  "description":"Reference to internal trace material; never embeds raw input or output.",
+  "type":"object","additionalProperties":false,
+  "required":["contract_version","trace_id","trace_type","trace_version","created_at","access_level","phi_capable"],
+  "properties":{
+    "contract_version":{"const":"1.0.0"},
+    "trace_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "trace_type":{"enum":["REQUEST_TRACE","TOOL_TRACE","WORKFLOW_TRACE","MODEL_TRACE"]},
+    "trace_version":{"type":"integer","minimum":1},
+    "created_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "access_level":{"enum":["INTERNAL","RESTRICTED","SECURITY_REVIEW_REQUIRED"]},
+    "phi_capable":{"type":"boolean"}
+  }
+}

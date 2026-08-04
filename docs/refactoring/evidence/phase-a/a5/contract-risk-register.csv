@@ -1,0 +1,13 @@
+risk_id,risk,severity,affected_contracts,control_in_a5,evidence_level,remaining_gate
+A5-R01,"Schemas are not adopted by Java/Python/TypeScript services",HIGH,ALL,"language-neutral source plus mapping only",CODE_CONFIRMED,"authorized binding generation and consumer contract tests"
+A5-R02,"StatePatch path allowlist is transitional and is not authorization",HIGH,StatePatch;ToolContext,"protected system fields; explicit auth-scope subset test",TEST_VERIFIED,"State Committer policy and role enforcement"
+A5-R03,"Existing multiple CDP writers bypass the new contract",HIGH,StatePatch;CommitResult,"legacy mapping records the gap",CODE_CONFIRMED,"service migration and single-writer enforcement"
+A5-R04,"Identifier String/Long drift remains in storage and APIs",HIGH,IdentifierSet,"v1 boundary requires opaque strings",CODE_CONFIRMED,"adapter and data migration decision"
+A5-R05,"Claim structure does not prove medical or clinical validity",HIGH,EvidencePack;PatientDeliveryView,"citation and insufficient-evidence rules",TEST_VERIFIED,"clinical review; source quality; golden/evaluation sets"
+A5-R06,"Safety rules must not inherit support from medical-evidence citations",HIGH,EvidencePack,"independent semantic test",TEST_VERIFIED,"reviewed safety policy registry"
+A5-R07,"Knowledge withdrawal is not enforced by a runtime registry",HIGH,KnowledgeReleaseRef;PatientDeliveryView,"new-delivery semantic test",TEST_VERIFIED,"release registry and runtime gate"
+A5-R08,"PatientDelivery whitelist is not yet an API or UI boundary",HIGH,PatientDeliveryView,"strict schema plus forbidden-field tests",TEST_VERIFIED,"authorized delivery endpoint; clinician review and role checks"
+A5-R09,"Trace/Audit payloads may already contain PHI",HIGH,TraceRef;AuditRef,"v1 references reject embedded payload fields",CODE_CONFIRMED,"existing data classification and migration"
+A5-R10,"No compatibility bindings or cross-language serialization tests",MEDIUM,ALL,"manifest and JSON Schema are canonical",CODE_CONFIRMED,"later binding-generation phase; A5 intentionally prohibits generated DTOs"
+A5-R11,"Enum expansion is not silently compatible for closed consumers",MEDIUM,ALL,"README requires minor release and consumer review",DOCUMENTED,"consumer compatibility matrix and release gate"
+A5-R12,"Format validation depends on the pinned jsonschema format extra",MEDIUM,ALL,"requirements-test pins jsonschema[format] 4.25.1",BUILD_VERIFIED,"CI installation and check wiring"
