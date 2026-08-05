@@ -12,6 +12,7 @@ does not start A6.5 legacy-asset validation, and does not start A7 Model Runtime
 - Base branch: `agent/enterprise-agent-refactoring-plan`
 - Base SHA: `f406fec3d6c3159f1f229bbb41113117a34a31e3`
 - Head branch: `agent/phase-a6-adult-respiratory-capability-skeleton`
+- Head SHA: `9377f8424e38edf254307d5e06ee96cfb49c76f5`
 - Package lifecycle: `DRAFT`
 - Clinical content: `REQUIRES_CLINICAL_REVIEW`
 - Runtime adoption: `NOT_IMPLEMENTED`
