@@ -64,7 +64,7 @@ def test_prompt_required_field_coverage(package):
         "KnowledgeReleaseRef":{"knowledge_release_id","source_registry_version","released_at","status","source_refs","checksum_manifest_ref"},
         "TraceRef":{"trace_id","trace_type","trace_version","created_at","access_level","phi_capable"},
         "AuditRef":{"audit_id","audit_type","audit_version","created_at","access_level","phi_capable"},
-        "PatientDeliveryView":{"delivery_id","delivery_version","cdp_id","review_status","generated_at","summary","safety_notice","recommended_actions","evidence_sections","limitations","follow_up","version_bindings"},
+        "PatientDeliveryView":{"delivery_id","delivery_version","cdp_id","review_status","generated_at","summary","safety_notice","recommended_actions","evidence_sections","limitations","version_bindings"},
     }
     for name, fields in required.items():
         assert fields <= set(package[1][name]["required"]), name
@@ -218,6 +218,7 @@ def test_manifest_names_match_envelope_bindings(package):
     "/patient_state/system/audit_info", "/patient_state/../version",
     "/patient_state/.", "/patient_state/0", "/patient_state/system/createdAt",
     "/patient_state/system/cdp-version", "/patient_state/system/TRACE_INFO",
+    "/patient_state/-", "/patient_state/state/versions/cdp",
 ])
 def test_state_patch_semantic_path_bypasses_are_rejected(package, path):
     instance = copy.deepcopy(package[2]["StatePatch"])
@@ -303,6 +304,24 @@ def test_patient_ui_structures_are_present(package):
     assert card["clinician_reviewed"] is True and card["display_priority"] == "HIGH"
 
 
+def test_patient_ui_optional_fields_follow_reviewed_contract(package):
+    instance = copy.deepcopy(package[2]["PatientDeliveryView"])
+    section = instance["evidence_sections"][0]
+    card = section["cards"][0]
+    source = card["sources"][0]
+    section.pop("description")
+    for field in ("rationale_summary", "certainty_label", "conflict_summary", "reviewed_at"):
+        card.pop(field)
+    card["applicability"].pop("patient_friendly_message")
+    section["cards"][1].pop("applicability")
+    for field in ("publication_date", "source_version", "applicable_population", "region", "patient_friendly_excerpt", "access_url"):
+        source.pop(field)
+    instance["limitations"][0]["user_action"] = "Use the authorized follow-up channel."
+    instance.pop("follow_up")
+    assert not schema_errors(package, "PatientDeliveryView", instance)
+    assert not semantic_errors("PatientDeliveryView", instance)
+
+
 def test_patient_conflict_references_resolve(package):
     instance = copy.deepcopy(package[2]["PatientDeliveryView"])
     instance["evidence_sections"][0]["cards"][0]["conflict_summary"]["affected_claim_ids"][1] = "missing"
@@ -337,6 +356,10 @@ def test_source_artifact_lineage_rejects_self_and_duplicates(package):
     instance = copy.deepcopy(package[2]["SourceArtifact"])
     instance["derived_artifacts"] = [instance["artifact_id"]]
     assert "derived_artifacts cannot directly reference artifact_id" in semantic_errors("SourceArtifact", instance)
+    instance["derived_artifacts"] = []
+    instance["artifact_type"] = "OCR_TEXT"
+    instance["source_artifact_id"] = instance["artifact_id"]
+    assert "source_artifact_id cannot directly reference artifact_id" in semantic_errors("SourceArtifact", instance)
     instance["derived_artifacts"] = ["derived-1", "derived-1"]
     assert any(error.validator == "uniqueItems" for error in schema_errors(package, "SourceArtifact", instance))
 

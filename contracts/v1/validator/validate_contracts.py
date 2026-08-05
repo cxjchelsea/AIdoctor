@@ -26,6 +26,7 @@ WRITABLE_PATCH_DOMAINS = {
 }
 PROTECTED_PATCH_TOKENS = {
     "version", "cdp_version", "id", "cdp_id", "patient_id", "tenant_id",
+    "identifiers", "versions", "authorization", "patient_delivery",
     "audit", "audit_info", "audit_trail", "trace", "trace_info",
     "created_at", "updated_at", "created_by", "updated_by", "status",
     "commit_status", "committed_status",
@@ -96,7 +97,7 @@ def decode_pointer(path):
             raise ValueError("whitespace, controls, and non-ASCII confusables are forbidden")
         if not re.fullmatch(r"[A-Za-z0-9_-]+", token):
             raise ValueError("decoded path segments must use ASCII letters, digits, underscore, or hyphen")
-        if token.isdigit():
+        if token == "-" or token.isdigit():
             raise ValueError("array-index operations require a future field schema and are forbidden in v1")
         decoded.append(token)
     return decoded
@@ -154,6 +155,8 @@ def storage_ref_errors(instance):
         errors.append("storage_ref contains empty or traversal segments")
     if instance.get("artifact_id") in instance.get("derived_artifacts", []):
         errors.append("derived_artifacts cannot directly reference artifact_id")
+    if instance.get("source_artifact_id") == instance.get("artifact_id"):
+        errors.append("source_artifact_id cannot directly reference artifact_id")
     return errors
 
 

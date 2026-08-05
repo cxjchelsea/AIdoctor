@@ -32,10 +32,10 @@ dependencies.
 | Area | SCHEMA_ENFORCED | VALIDATOR_ENFORCED | Remaining |
 |---|---|---|---|
 | Envelope | required bounded fields and exact outer contract name | none | service adoption later |
-| StatePatch | legal Pointer shape, proposal domain and leaf depth | decoded/canonical tokens, protected fields, dot/array/control/confusable rejection | exact field authorization by future State Committer/Policy Registry |
+| StatePatch | legal Pointer shape, proposal domain and leaf depth | decoded/canonical tokens, protected containers/fields, dot/array append/index/control/confusable rejection | exact field authorization by future State Committer/Policy Registry |
 | Commit/Tool outcomes | required/forbidden state fields, reason/error/retry matrices | version and time ordering | runtime concurrency/idempotency/tool execution later |
 | EvidencePack | bounded typed claims/sources and duplicate array items | ID uniqueness, citation/conflict resolution, source-type matrix and validity order | source quality, licensing and clinical review later |
-| SourceArtifact | approved logical schemes, host path/dot rejection, unique derived IDs | decoded traversal and direct self-reference | multi-node cycle and resolver safety in registry/storage layer |
+| SourceArtifact | approved logical schemes, host path/dot rejection, unique derived IDs | decoded traversal and parent/derived direct self-reference | multi-node cycle and resolver safety in registry/storage layer |
 | KnowledgeRelease | status-dependent fields | self-reference/time order and withdrawn-delivery gate | runtime release registry later |
 | PatientDelivery | closed structured Source/Conflict/Applicability/Limitation and review/display fields | cross-card references and knowledge bindings | free-text content safety and authorization later |
 
@@ -59,6 +59,7 @@ consent, licensing, and semantic inspection of patient-facing strings.
 | follow-up | bounded strings | KEEP; semantic content policy later |
 | Delivery/CDP/Review/Knowledge versions | `version_bindings` | KEEP |
 | PatientSummaryBlock/RiskBlock implementation | title/summary plus structured cards/notices | ADAPT; API/UI implementation deferred |
+| reviewed optional fields | omittable snake_case properties; nullable only where explicitly declared | KEEP optional/required semantics |
 
 Schema rejects forbidden *fields* recursively because every object is closed.
 It cannot understand whether `summary`, `recommended_actions`, `follow_up` or
@@ -78,7 +79,7 @@ adapters and consumer support declarations remain later work.
 
 - 13 schemas and 13 canonical valid fixtures.
 - 33 structural invalid fixtures with expected validator/path/category/reason.
-- 107 tests covering meta-schema, manifest/ref integrity, duplicate keys,
+- 110 tests covering meta-schema, manifest/ref integrity, duplicate keys,
   state matrices, adversarial paths, Evidence cross-rules, Patient UI structures,
   artifact traversal, exact versions and integer boundaries.
 - Direct and transitive dependencies pinned; `pip check` required.

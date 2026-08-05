@@ -11,4 +11,4 @@ A5-R09,"Trace/Audit payloads may already contain PHI",HIGH,TraceRef;AuditRef,"v1
 A5-R10,"No compatibility bindings or cross-language serialization tests",MEDIUM,ALL,"exact-version IDs/manifest and safe integer bounds",TEST_VERIFIED,"binding generation and consumer release gate"
 A5-R11,"Minor additions are not automatically wire compatible",MEDIUM,ALL,"exact-version negotiation and unknown-version rejection",TEST_VERIFIED,"runtime negotiation/adapters"
 A5-R12,"Validation depends on a pinned contract-test graph",MEDIUM,ALL,"complete lock plus pip check",BUILD_VERIFIED,"CI installation/check wiring"
-A5-R13,"Storage resolver and multi-node lineage cycles are not globally validated",HIGH,SourceArtifact,"decoded traversal and direct self-reference checks",TEST_VERIFIED,"registry/storage resolver and global graph validation"
+A5-R13,"Storage resolver and multi-node lineage cycles are not globally validated",HIGH,SourceArtifact,"decoded traversal and both parent/derived direct self-reference checks",TEST_VERIFIED,"registry/storage resolver and global graph validation"

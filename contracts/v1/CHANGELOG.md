@@ -10,3 +10,6 @@
 - Align PatientDeliveryView with the reviewed UI structures while documenting
   free-text content safety as a later policy gate.
 - Pin the complete contract-test dependency graph and add cross-language integer bounds.
+- Reject StatePatch array-append and protected-container bypasses, reject both
+  directions of direct SourceArtifact self-reference, and preserve reviewed
+  PatientDelivery optional-field semantics.

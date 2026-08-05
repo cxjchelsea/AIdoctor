@@ -9,7 +9,7 @@
     "contract_version", "delivery_id", "delivery_version", "delivery_status",
     "cdp_id", "review_status", "generated_at", "title", "summary",
     "safety_notice", "recommended_actions", "evidence_sections",
-    "limitations", "follow_up", "version_bindings"
+    "limitations", "version_bindings"
   ],
   "properties": {
     "contract_version": {"const": "1.0.0"},
@@ -40,7 +40,7 @@
     },
     "evidenceSection": {
       "type": "object", "additionalProperties": false,
-      "required": ["section_id", "title", "description", "display_order", "cards"],
+      "required": ["section_id", "title", "display_order", "cards"],
       "properties": {
         "section_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
         "title": {"type": "string", "minLength": 1, "maxLength": 200},
@@ -51,7 +51,7 @@
     },
     "evidenceCard": {
       "type": "object", "additionalProperties": false,
-      "required": ["card_id", "claim_id", "basis_type", "patient_friendly_claim", "rationale_summary", "evidence_status", "certainty_label", "related_patient_fact_ids", "sources", "conflict_summary", "applicability", "limitations", "clinician_reviewed", "reviewed_at", "display_priority", "expandable"],
+      "required": ["card_id", "claim_id", "basis_type", "patient_friendly_claim", "evidence_status", "related_patient_fact_ids", "sources", "limitations", "clinician_reviewed", "display_priority", "expandable"],
       "properties": {
         "card_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
         "claim_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
@@ -78,7 +78,7 @@
     },
     "patientSourceSummary": {
       "type": "object", "additionalProperties": false,
-      "required": ["citation_id", "source_id", "title", "organization", "publication_date", "source_version", "source_type", "applicable_population", "region", "patient_friendly_excerpt", "access_url", "link_policy", "freshness_status"],
+      "required": ["citation_id", "source_id", "title", "organization", "source_type", "link_policy", "freshness_status"],
       "properties": {
         "citation_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
         "source_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
@@ -107,7 +107,7 @@
     },
     "patientApplicabilitySummary": {
       "type": "object", "additionalProperties": false,
-      "required": ["population_match", "region_match", "patient_friendly_message"],
+      "required": ["population_match", "region_match"],
       "properties": {
         "population_match": {"enum": ["MATCH", "PARTIAL", "MISMATCH", "UNKNOWN"]},
         "region_match": {"enum": ["MATCH", "PARTIAL", "MISMATCH", "UNKNOWN"]},
@@ -120,7 +120,8 @@
       "properties": {
         "code": {"enum": ["MISSING_INFORMATION", "INSUFFICIENT_EVIDENCE", "CONFLICTING_EVIDENCE", "POPULATION_MISMATCH", "REGION_MISMATCH", "STALE_SOURCE", "SOURCE_ACCESS_LIMITED", "CLINICIAN_REVIEW_REQUIRED", "CAPABILITY_SCOPE_LIMIT"]},
         "message": {"type": "string", "minLength": 1, "maxLength": 1000},
-        "severity": {"enum": ["INFO", "WARNING", "CRITICAL"]}
+        "severity": {"enum": ["INFO", "WARNING", "CRITICAL"]},
+        "user_action": {"type": "string", "minLength": 1, "maxLength": 1000}
       }
     },
     "versionBindings": {

@@ -19,9 +19,10 @@ runtime authorization, or claim clinical correctness.
 
 - `SCHEMA_ENFORCED`: closed structures, required fields, exact envelope names,
   state-dependent fields, basic JSON Pointer domains, bounds and formats.
-- `VALIDATOR_ENFORCED`: normalized StatePatch tokens, parent/array/dot rejection,
+- `VALIDATOR_ENFORCED`: normalized StatePatch tokens, parent/array-append/index/dot rejection,
   cross-object evidence references, time ordering, SourceArtifact normalization,
-  authorization-scope subsets and direct lineage self-reference.
+  authorization-scope subsets and direct lineage self-reference in both parent
+  and derived-artifact directions.
 - `DOCUMENTED_ONLY`: migration mappings and legacy behavior not yet adopted by services.
 - `POLICY_ENFORCED_LATER`: clinical thresholds, permissions, retention, consent,
   licensing and semantic inspection of patient-facing free text.
@@ -32,6 +33,8 @@ future State Committer must use Capability/Policy Registry rules for exact field
 authorization.
 
 PatientDeliveryView rejects unknown structured fields at every object boundary.
+Fields marked optional by the reviewed patient UI contract remain omittable;
+explicit `null` is also accepted only where the wire Schema declares it.
 JSON Schema cannot determine whether ordinary strings contain a prompt, provider
 response, private reasoning, unapproved hypothesis, prescription or dosage.
 Those content checks remain `POLICY_ENFORCED_LATER`; A5 fixtures contain no such
