@@ -66,10 +66,13 @@ Observed local results:
 
 - `pip check`: no broken requirements
 - Validator: `A6 CAPABILITY VALIDATION PASSED: 11 schemas, 25 assets, 5 eval cases, 0 issues`
-- Pytest after independent-review remediation: `43 passed`
-- Original PR #8 head had `37 passed`; remediation closed four lifecycle/runtime
-  bypasses and added six negative tests. See
+- Pytest after independent-review remediation round 2: `59 passed`
+- Original PR #8 head had `37 passed`; round 1 reached `43`; round 2 closed
+  remaining A6 runtime/knowledge/child authorization bypasses. See
   [a6-independent-review-report.md](./a6-independent-review-report.md).
+- A6 package `1.0.0` locks `runtime_adoption=NOT_IMPLEMENTED` and
+  `production_eligibility=BLOCKED`; approved-source count uses a predicate and
+  remains `0`.
 - No CI workflow is configured for this package in A6 (`NO_CI_CONFIGURED`)
 
 Validation proves package structure, parseability, schema closure, reference
