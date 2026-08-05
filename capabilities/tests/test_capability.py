@@ -50,6 +50,118 @@ def test_complete_package_validation():
     }
 
 
+def assert_issue(issues, *, category, path, validator, reason_substr):
+    matched = [
+        item
+        for item in issues
+        if item.category == category
+        and item.path == path
+        and item.validator == validator
+        and reason_substr in item.reason
+    ]
+    assert matched, (
+        f"expected category={category} path={path} validator={validator} "
+        f"reason~={reason_substr!r}; got={[(i.category, i.path, i.validator, i.reason) for i in issues]}"
+    )
+
+
+def _synthetic_safety_rule(rule_id="synthetic-safety-rule-1", review_status="APPROVED", prohibited_runtime_use=False):
+    return {
+        "rule_id": rule_id,
+        "owner_role": "clinical-safety-owner",
+        "review_status": review_status,
+        "condition_refs": ["synthetic-observation"],
+        "result_code": "escalate-human-review",
+        "required_evidence": ["clinical approval evidence"],
+        "source_requirement": "approved clinical source",
+        "prohibited_runtime_use": prohibited_runtime_use,
+    }
+
+
+def _synthetic_hypothesis(hypothesis_id="hypothesis-synthetic-1", review_status="APPROVED"):
+    return {
+        "hypothesis_id": hypothesis_id,
+        "display_name": "Synthetic structural hypothesis",
+        "category": "COMMON",
+        "supporting_evidence_refs": ["evidence-1"],
+        "opposing_evidence_refs": [],
+        "missing_evidence_refs": [],
+        "applicability": "structural fixture only",
+        "review_status": review_status,
+        "clinical_source_requirements": ["approved clinical source"],
+        "prohibited_auto_actions": ["AUTOMATIC_DIAGNOSIS"],
+    }
+
+
+def _synthetic_source(**overrides):
+    source = {
+        "source_id": "source-synthetic-1",
+        "title": "Synthetic structural source",
+        "tier": "TIER_1",
+        "region": "UNSCOPED",
+        "population": "UNSCOPED",
+        "freshness_status": "CURRENT",
+        "license_review": "APPROVED",
+        "clinical_review": "APPROVED",
+        "withdrawal_status": "AVAILABLE",
+        "release_binding": "knowledge-release-synthetic-1",
+        "checksum": "a" * 64,
+        "retrieval_eligibility": "ELIGIBLE",
+    }
+    source.update(overrides)
+    return source
+
+
+def _fill_runtime_references(docs, review_status="APPROVED"):
+    for relative in (
+        "runtime/tool_allowlist.yaml",
+        "runtime/skill_allowlist.yaml",
+        "runtime/prompt_allowlist.yaml",
+        "runtime/model_routes.yaml",
+        "runtime/context_policy.yaml",
+    ):
+        docs[relative]["references"] = [
+            {
+                "reference_id": f"{docs[relative]['allowlist_type'].lower().replace('_', '-')}-ref-1",
+                "registry_path": "contracts/v1/manifest.json",
+                "release_version": "1.0.0",
+                "review_status": review_status,
+            }
+        ]
+
+
+def _prepare_defense_in_depth_active(docs):
+    """Probe unreachable A6 ACTIVE combinations for defense-in-depth gates.
+
+    A6 schema keeps knowledge region/population/freshness policies at
+    REQUIRES_CLINICAL_REVIEW, so true approved sources remain unreachable.
+    """
+    manifest = docs["manifest.yaml"]
+    manifest["lifecycle"] = "ACTIVE"
+    manifest["clinical_review_status"] = "APPROVED"
+    manifest["technical_review_status"] = "APPROVED"
+    manifest["production_eligibility"] = "ELIGIBLE"
+    manifest["runtime_adoption"] = "ENABLED"
+    manifest["owner_status"] = "ASSIGNED"
+    for relative in (
+        "safety/red_flags.yaml",
+        "safety/triage_rules.yaml",
+        "safety/special_populations.yaml",
+    ):
+        docs[relative]["review_status"] = "APPROVED"
+        docs[relative]["production_eligibility"] = "ELIGIBLE"
+        docs[relative]["rules"] = [_synthetic_safety_rule()]
+    docs["hypotheses/limited_hypotheses.yaml"]["review_status"] = "APPROVED"
+    docs["hypotheses/limited_hypotheses.yaml"]["hypotheses"] = [_synthetic_hypothesis()]
+    docs["knowledge/knowledge_policy.yaml"]["review_status"] = "APPROVED"
+    docs["knowledge/source_manifest.yaml"]["review_status"] = "APPROVED"
+    docs["knowledge/knowledge_policy.yaml"]["approved_source_count"] = 0
+    docs["knowledge/knowledge_policy.yaml"]["sources"] = []
+    docs["knowledge/source_manifest.yaml"]["approved_source_count"] = 0
+    docs["knowledge/source_manifest.yaml"]["sources"] = []
+    _fill_runtime_references(docs, review_status="APPROVED")
+
+
 def test_required_files_and_schemas_exist():
     assert {path.name for path in (ROOT / "schemas").glob("*.json")} == REQUIRED_SCHEMAS
     for relative in REQUIRED_PACKAGE_RELATIVE:
@@ -244,22 +356,411 @@ def test_negative_active_with_unapproved_safety(package):
     docs["manifest.yaml"]["runtime_adoption"] = "ENABLED"
     docs["manifest.yaml"]["owner_status"] = "ASSIGNED"
     issues = validate_mutated_package(docs)
-    assert any(item.category == "safety" and "ACTIVE" in item.reason for item in issues)
+    assert_issue(
+        issues,
+        category="safety",
+        path="/lifecycle",
+        validator="matrix",
+        reason_substr="unapproved or empty Safety Pack cannot enter ACTIVE",
+    )
+
+
+def test_negative_active_with_empty_approved_hypotheses(package):
+    docs = copy.deepcopy(package[0])
+    _prepare_defense_in_depth_active(docs)
+    docs["hypotheses/limited_hypotheses.yaml"]["hypotheses"] = []
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="hypothesis",
+        path="/lifecycle",
+        validator="matrix",
+        reason_substr="empty Hypothesis Pack cannot enter ACTIVE",
+    )
+    assert_issue(
+        issues,
+        category="a6-stage",
+        path="/runtime_adoption",
+        validator="a6-stage",
+        reason_substr="runtime_adoption must be NOT_IMPLEMENTED",
+    )
+
+
+def test_negative_active_with_zero_knowledge_sources(package):
+    docs = copy.deepcopy(package[0])
+    _prepare_defense_in_depth_active(docs)
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="knowledge",
+        path="/lifecycle",
+        validator="matrix",
+        reason_substr="empty knowledge sources cannot enter ACTIVE",
+    )
+
+
+def test_negative_runtime_enabled_with_empty_allowlists(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["lifecycle"] = "CLINICAL_REVIEW"
+    docs["manifest.yaml"]["runtime_adoption"] = "ENABLED"
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="runtime",
+        path="/runtime_adoption",
+        validator="matrix",
+        reason_substr="runtime ENABLED requires non-empty runtime allowlist references",
+    )
+    assert_issue(
+        issues,
+        category="a6-stage",
+        path="/runtime_adoption",
+        validator="a6-stage",
+        reason_substr="runtime_adoption must be NOT_IMPLEMENTED",
+    )
+
+
+def test_negative_clinical_approved_requires_assigned_owner(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["lifecycle"] = "CLINICAL_REVIEW"
+    docs["manifest.yaml"]["clinical_review_status"] = "APPROVED"
+    docs["manifest.yaml"]["owner_status"] = "UNASSIGNED"
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="lifecycle",
+        path="/clinical_review_status",
+        validator="matrix",
+        reason_substr="clinical APPROVED requires assigned owner",
+    )
+
+
+def test_negative_production_eligible_with_empty_hypotheses(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["clinical_review_status"] = "APPROVED"
+    docs["manifest.yaml"]["owner_status"] = "ASSIGNED"
+    docs["manifest.yaml"]["production_eligibility"] = "ELIGIBLE"
+    for relative in (
+        "safety/red_flags.yaml",
+        "safety/triage_rules.yaml",
+        "safety/special_populations.yaml",
+    ):
+        docs[relative]["rules"] = [_synthetic_safety_rule(rule_id="synthetic-safety-rule-2")]
+        docs[relative]["production_eligibility"] = "ELIGIBLE"
+        docs[relative]["review_status"] = "APPROVED"
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="hypothesis",
+        path="/production_eligibility",
+        validator="matrix",
+        reason_substr="empty Hypothesis Pack requires production BLOCKED",
+    )
+    assert_issue(
+        issues,
+        category="a6-stage",
+        path="/production_eligibility",
+        validator="a6-stage",
+        reason_substr="production_eligibility must be BLOCKED",
+    )
+
+
+def test_negative_production_eligible_with_empty_sources(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["clinical_review_status"] = "APPROVED"
+    docs["manifest.yaml"]["owner_status"] = "ASSIGNED"
+    docs["manifest.yaml"]["production_eligibility"] = "ELIGIBLE"
+    for relative in (
+        "safety/red_flags.yaml",
+        "safety/triage_rules.yaml",
+        "safety/special_populations.yaml",
+    ):
+        docs[relative]["rules"] = [_synthetic_safety_rule(rule_id="synthetic-safety-rule-3")]
+        docs[relative]["production_eligibility"] = "ELIGIBLE"
+        docs[relative]["review_status"] = "APPROVED"
+    docs["hypotheses/limited_hypotheses.yaml"]["review_status"] = "APPROVED"
+    docs["hypotheses/limited_hypotheses.yaml"]["hypotheses"] = [_synthetic_hypothesis("hypothesis-synthetic-2")]
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="knowledge",
+        path="/production_eligibility",
+        validator="matrix",
+        reason_substr="empty knowledge sources require production BLOCKED",
+    )
 
 
 def test_negative_empty_safety_production_eligible(package):
     docs = copy.deepcopy(package[0])
     docs["manifest.yaml"]["production_eligibility"] = "ELIGIBLE"
     docs["manifest.yaml"]["clinical_review_status"] = "APPROVED"
+    docs["manifest.yaml"]["owner_status"] = "ASSIGNED"
     issues = validate_mutated_package(docs)
-    assert any("empty Safety rules require production BLOCKED" in item.reason for item in issues)
+    assert_issue(
+        issues,
+        category="safety",
+        path="/production_eligibility",
+        validator="matrix",
+        reason_substr="empty Safety rules require production BLOCKED",
+    )
 
 
 def test_negative_empty_sources_knowledge_enabled(package):
     docs = copy.deepcopy(package[0])
     docs["knowledge/knowledge_policy.yaml"]["retrieval_eligibility"] = "ELIGIBLE"
     issues = validate_mutated_package(docs)
-    assert any("empty approved sources" in item.reason for item in issues)
+    assert_issue(
+        issues,
+        category="knowledge",
+        path="/retrieval_eligibility",
+        validator="matrix",
+        reason_substr="empty approved sources require knowledge runtime BLOCKED",
+    )
+
+
+def test_negative_a6_runtime_implemented_not_enabled(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["runtime_adoption"] = "IMPLEMENTED_NOT_ENABLED"
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="a6-stage",
+        path="/runtime_adoption",
+        validator="a6-stage",
+        reason_substr="runtime_adoption must be NOT_IMPLEMENTED",
+    )
+
+
+def test_negative_a6_runtime_enabled_with_one_reference(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["runtime_adoption"] = "ENABLED"
+    docs["runtime/tool_allowlist.yaml"]["references"] = [
+        {
+            "reference_id": "tool-ref-1",
+            "registry_path": "contracts/v1/manifest.json",
+            "release_version": "1.0.0",
+            "review_status": "APPROVED",
+        }
+    ]
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="a6-stage",
+        path="/runtime_adoption",
+        validator="a6-stage",
+        reason_substr="runtime_adoption must be NOT_IMPLEMENTED",
+    )
+    assert_issue(
+        issues,
+        category="runtime",
+        path="/runtime_adoption",
+        validator="matrix",
+        reason_substr="runtime packs remain NOT_IMPLEMENTED/BLOCKED",
+    )
+
+
+def test_negative_a6_runtime_enabled_with_all_references_still_blocked(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["runtime_adoption"] = "ENABLED"
+    _fill_runtime_references(docs, review_status="APPROVED")
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="a6-stage",
+        path="/runtime_adoption",
+        validator="a6-stage",
+        reason_substr="runtime_adoption must be NOT_IMPLEMENTED",
+    )
+    assert_issue(
+        issues,
+        category="runtime",
+        path="/runtime_adoption",
+        validator="matrix",
+        reason_substr="runtime packs remain NOT_IMPLEMENTED/BLOCKED",
+    )
+
+
+def test_negative_a6_production_eligible_even_with_nonempty_packs(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["clinical_review_status"] = "APPROVED"
+    docs["manifest.yaml"]["owner_status"] = "ASSIGNED"
+    docs["manifest.yaml"]["production_eligibility"] = "ELIGIBLE"
+    for relative in (
+        "safety/red_flags.yaml",
+        "safety/triage_rules.yaml",
+        "safety/special_populations.yaml",
+    ):
+        docs[relative]["review_status"] = "APPROVED"
+        docs[relative]["production_eligibility"] = "ELIGIBLE"
+        docs[relative]["rules"] = [_synthetic_safety_rule()]
+    docs["hypotheses/limited_hypotheses.yaml"]["review_status"] = "APPROVED"
+    docs["hypotheses/limited_hypotheses.yaml"]["hypotheses"] = [_synthetic_hypothesis()]
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="a6-stage",
+        path="/production_eligibility",
+        validator="a6-stage",
+        reason_substr="production_eligibility must be BLOCKED",
+    )
+
+
+@pytest.mark.parametrize(
+    ("override", "path_suffix", "reason_substr"),
+    [
+        ({"license_review": "PENDING"}, "/license_review", "license_review must be APPROVED"),
+        ({"clinical_review": "REQUIRES_CLINICAL_REVIEW"}, "/clinical_review", "clinical_review must be APPROVED"),
+        ({"retrieval_eligibility": "BLOCKED"}, "/retrieval_eligibility", "retrieval_eligibility must be ELIGIBLE"),
+        ({"withdrawal_status": "WITHDRAWN"}, "/withdrawal_status", "withdrawal_status must be AVAILABLE"),
+        ({"freshness_status": "STALE"}, "/freshness_status", "freshness_status must not be STALE"),
+    ],
+)
+def test_negative_approved_source_predicate_fields(package, override, path_suffix, reason_substr):
+    docs = copy.deepcopy(package[0])
+    source = _synthetic_source(**override)
+    for relative in ("knowledge/knowledge_policy.yaml", "knowledge/source_manifest.yaml"):
+        docs[relative]["approved_source_count"] = 1
+        docs[relative]["sources"] = [copy.deepcopy(source)]
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="knowledge",
+        path="/approved_source_count",
+        validator="predicate",
+        reason_substr="incomplete knowledge policies require approved_source_count 0",
+    )
+    assert_issue(
+        issues,
+        category="knowledge",
+        path=f"/sources/0{path_suffix}",
+        validator="predicate",
+        reason_substr=reason_substr,
+    )
+
+
+def test_negative_knowledge_policy_source_manifest_inconsistency(package):
+    docs = copy.deepcopy(package[0])
+    source = _synthetic_source(license_review="PENDING", clinical_review="REQUIRES_CLINICAL_REVIEW", retrieval_eligibility="BLOCKED")
+    docs["knowledge/knowledge_policy.yaml"]["approved_source_count"] = 1
+    docs["knowledge/knowledge_policy.yaml"]["sources"] = [source]
+    docs["knowledge/source_manifest.yaml"]["approved_source_count"] = 0
+    docs["knowledge/source_manifest.yaml"]["sources"] = []
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="knowledge",
+        path="/sources",
+        validator="consistency",
+        reason_substr="knowledge policy and source manifest approved-source state must be consistent",
+    )
+
+
+def test_negative_safety_pack_approved_with_unapproved_child(package):
+    docs = copy.deepcopy(package[0])
+    docs["safety/red_flags.yaml"]["review_status"] = "APPROVED"
+    docs["safety/red_flags.yaml"]["rules"] = [
+        _synthetic_safety_rule(review_status="REQUIRES_CLINICAL_REVIEW", prohibited_runtime_use=False)
+    ]
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="safety-child",
+        path="/rules/0/review_status",
+        validator="matrix",
+        reason_substr="every rule.review_status APPROVED",
+    )
+
+
+def test_negative_safety_pack_approved_with_runtime_prohibited_child(package):
+    docs = copy.deepcopy(package[0])
+    docs["safety/red_flags.yaml"]["review_status"] = "APPROVED"
+    docs["safety/red_flags.yaml"]["rules"] = [
+        _synthetic_safety_rule(review_status="APPROVED", prohibited_runtime_use=True)
+    ]
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="safety-child",
+        path="/rules/0/prohibited_runtime_use",
+        validator="matrix",
+        reason_substr="rule.prohibited_runtime_use false",
+    )
+
+
+def test_negative_hypothesis_pack_approved_with_unapproved_child(package):
+    docs = copy.deepcopy(package[0])
+    docs["hypotheses/limited_hypotheses.yaml"]["review_status"] = "APPROVED"
+    docs["hypotheses/limited_hypotheses.yaml"]["hypotheses"] = [
+        _synthetic_hypothesis(review_status="REQUIRES_CLINICAL_REVIEW")
+    ]
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="hypothesis-child",
+        path="/hypotheses/0/review_status",
+        validator="matrix",
+        reason_substr="every hypothesis.review_status APPROVED",
+    )
+
+
+def test_negative_runtime_pack_pending_reference(package):
+    docs = copy.deepcopy(package[0])
+    docs["runtime/tool_allowlist.yaml"]["references"] = [
+        {
+            "reference_id": "tool-pending-1",
+            "registry_path": "contracts/v1/manifest.json",
+            "release_version": "1.0.0",
+            "review_status": "PENDING",
+        }
+    ]
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="runtime",
+        path="/references/0/review_status",
+        validator="matrix",
+        reason_substr="runtime reference review_status must be APPROVED",
+    )
+
+
+def test_negative_pack_approved_with_only_review_required_children(package):
+    docs = copy.deepcopy(package[0])
+    docs["safety/red_flags.yaml"]["review_status"] = "APPROVED"
+    docs["safety/red_flags.yaml"]["rules"] = [
+        _synthetic_safety_rule(review_status="REQUIRES_CLINICAL_REVIEW", prohibited_runtime_use=True)
+    ]
+    docs["hypotheses/limited_hypotheses.yaml"]["review_status"] = "APPROVED"
+    docs["hypotheses/limited_hypotheses.yaml"]["hypotheses"] = [
+        _synthetic_hypothesis(review_status="REQUIRES_CLINICAL_REVIEW")
+    ]
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="safety-child",
+        path="/rules/0/review_status",
+        validator="matrix",
+        reason_substr="every rule.review_status APPROVED",
+    )
+    assert_issue(
+        issues,
+        category="hypothesis-child",
+        path="/hypotheses/0/review_status",
+        validator="matrix",
+        reason_substr="every hypothesis.review_status APPROVED",
+    )
+
+
+def test_negative_active_with_governance_prohibited_runtime_use(package):
+    docs = copy.deepcopy(package[0])
+    _prepare_defense_in_depth_active(docs)
+    issues = validate_mutated_package(docs)
+    assert_issue(
+        issues,
+        category="governance",
+        path="/governance/prohibited_runtime_use",
+        validator="matrix",
+        reason_substr="ACTIVE capability cannot retain governance.prohibited_runtime_use true",
+    )
 
 
 def test_negative_unknown_runtime_reference(package):
