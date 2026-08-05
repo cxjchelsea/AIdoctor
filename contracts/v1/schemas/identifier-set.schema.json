@@ -1,0 +1,20 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/1.0.0/identifier-set.schema.json",
+  "title":"IdentifierSet",
+  "description":"Optional opaque business identifiers. Existing numeric database IDs are serialized as decimal strings without changing storage types.",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["contract_version"],
+  "properties":{
+    "contract_version":{"const":"1.0.0"},
+    "cdp_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "patient_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "encounter_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "session_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "tenant_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "review_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "delivery_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"}
+  },
+  "anyOf":[{"required":["cdp_id"]},{"required":["patient_id"]},{"required":["encounter_id"]},{"required":["session_id"]},{"required":["tenant_id"]},{"required":["review_id"]},{"required":["delivery_id"]}]
+}
