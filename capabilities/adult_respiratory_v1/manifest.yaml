@@ -1,0 +1,53 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+schema_version: 1.0.0
+lifecycle: DRAFT
+display_name: Adult respiratory capability structural skeleton
+owner_status: UNASSIGNED
+owner_role: clinical-capability-owner
+reviewer_requirements:
+  - clinical-reviewer
+  - safety-reviewer
+  - technical-reviewer
+  - knowledge-license-reviewer
+compatible_shared_contract_version: 1.0.0
+effective_from: null
+expires_at: null
+rollback_version: null
+clinical_review_status: REQUIRES_CLINICAL_REVIEW
+technical_review_status: PENDING
+runtime_adoption: NOT_IMPLEMENTED
+production_eligibility: BLOCKED
+overall_evidence: PARTIALLY_VALIDATED
+limitations:
+  - No approved clinical thresholds, safety rules, hypotheses, or medical sources.
+  - No service, model runtime, State Committer, API, or UI consumes this package.
+unresolved_decisions:
+  - Adult numeric age boundary requires clinical and policy approval.
+  - Clinical rules, source licensing, runtime releases, and evaluation gates remain blocked.
+assets:
+  - {asset_id: delivery-policy-asset, path: delivery/delivery_policy.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/delivery-policy.schema.json", sha256: f6941f706636ffd2dcbcfc9ddd64310cef59b1219eb772309c752d8c0e67abb7}
+  - {asset_id: e2e-cases-asset, path: evals/e2e_cases.jsonl, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/eval-case.schema.json", sha256: a281efb0a4285777d7d4f0399b7967ec6b0d3c4e28db059fec22def9413dd088}
+  - {asset_id: extraction-cases-asset, path: evals/extraction_cases.jsonl, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/eval-case.schema.json", sha256: 8b2a98d74f1a80a49bba4586d158c97b38c9dd0a0aadebeb2b5faf9727b26eee}
+  - {asset_id: question-cases-asset, path: evals/question_cases.jsonl, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/eval-case.schema.json", sha256: 55e679670d3d54f5c3cdea0279ef5e6fbe8c601940919d652d0a924590adc739}
+  - {asset_id: rag-cases-asset, path: evals/rag_cases.jsonl, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/eval-case.schema.json", sha256: ceb7757031b93e21f4ad00aed7200449ff247cc2c7ac8b36f009c88340dc1a06}
+  - {asset_id: safety-cases-asset, path: evals/safety_cases.jsonl, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/eval-case.schema.json", sha256: 0f96fcaeacf2a82d3f1fb8d5de807fa88c8b011f5c992348aa169efe03c14aa6}
+  - {asset_id: limited-hypotheses-asset, path: hypotheses/limited_hypotheses.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/hypothesis-pack.schema.json", sha256: 46eb5dce1b7d4fd9d7a6a1c640711b2ca6581391d156c3b5fd25d714a2d03dad}
+  - {asset_id: knowledge-policy-asset, path: knowledge/knowledge_policy.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/knowledge-policy.schema.json", sha256: 39b84e84b85d4c7bf765817ea1ae07499f81611ecf971d29ca950c7a871a01dc}
+  - {asset_id: source-manifest-asset, path: knowledge/source_manifest.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/knowledge-policy.schema.json", sha256: 819eb11d0f9a52a97d7a10bc6005c60c1e8dd778d7804612250da2ef0ce228d8}
+  - {asset_id: observation-profile-asset, path: observations/observation_profile.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/observation-profile.schema.json", sha256: fa2e3f5560cf64ec6cc8a3f38d20ef25bc2404c1f05708f9cd70a45cfe064efb}
+  - {asset_id: scope-asset, path: population/scope.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/population-scope.schema.json", sha256: 46c74ad12350b0667c836297c76635cdb9496d2b4f99c757a0706216474a3c6f}
+  - {asset_id: discriminators-asset, path: questions/discriminators.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/question-policy.schema.json", sha256: 525a48e87764646fdd728b323d5384f066647b7533ba57c36c2a8bcd0e4d3780}
+  - {asset_id: mandatory-asset, path: questions/mandatory.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/question-policy.schema.json", sha256: f49e40c4c3e4ca326ee2802dac1dd9ca34f78c49f2c44181f344e4f1aa9f09d3}
+  - {asset_id: stopping-rules-asset, path: questions/stopping_rules.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/question-policy.schema.json", sha256: 7b5b377bf5d5b20f9758072f0d267d62255ad475453d16593ca6b3695065852c}
+  - {asset_id: context-policy-asset, path: runtime/context_policy.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/runtime-allowlist.schema.json", sha256: 02f1a8798be110990a8768c28ad1d3b85c89bf7c40a9a77d3fb38ffa3fe4e2ee}
+  - {asset_id: model-routes-asset, path: runtime/model_routes.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/runtime-allowlist.schema.json", sha256: ee41a1c7be0ffd5541f4da2b92ac726f1e6381df71bc122703036c76a4978d44}
+  - {asset_id: prompt-allowlist-asset, path: runtime/prompt_allowlist.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/runtime-allowlist.schema.json", sha256: 2f625269bb216059bdac74fab5e7d4e8004a7cf46cdac32ecc89203705346b20}
+  - {asset_id: skill-allowlist-asset, path: runtime/skill_allowlist.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/runtime-allowlist.schema.json", sha256: 0482dd59d6f9af0c09e4bf0d7f15a2d547b4ea2d5ace42d5ecc7b92b1a745a3b}
+  - {asset_id: tool-allowlist-asset, path: runtime/tool_allowlist.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/runtime-allowlist.schema.json", sha256: cb81bcf5d80a9dfccf4d860f9c49427a469d12b3f2ee5e318662052ad5050b26}
+  - {asset_id: red-flags-asset, path: safety/red_flags.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/safety-pack.schema.json", sha256: 767259fddec66eb92f6e3b4368e1f253a8e0b6951b988eabd511353e6ee528d8}
+  - {asset_id: special-populations-asset, path: safety/special_populations.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/safety-pack.schema.json", sha256: ed7dfa0a03a4f25613be09a13d364326a96f3213d27b3f9af15d8e4fba18664a}
+  - {asset_id: triage-rules-asset, path: safety/triage_rules.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/safety-pack.schema.json", sha256: 611015abbb2bab440c584c6dad184a51753f129bd161e33e9dfae7fd95d6c839}
+  - {asset_id: code-mappings-asset, path: terminology/code_mappings.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/terminology-pack.schema.json", sha256: 5d311db24c6f95e77f12c003b1a4219bb75e3025e60db1264e2155ff0de7a67d}
+  - {asset_id: concepts-asset, path: terminology/concepts.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/terminology-pack.schema.json", sha256: 3307d81d79117d5881a6e2b05e6e41619d64f77a4a46fd415bd83756f467b940}
+  - {asset_id: synonyms-asset, path: terminology/synonyms.yaml, schema_id: "https://schemas.aidoctor.dev/capabilities/1.0.0/terminology-pack.schema.json", sha256: 04ccfde8175923e75cc0fde16997fe8bb35134f082d0fab2b188807361538f2d}

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.aidoctor.dev/capabilities/1.0.0/capability-manifest.schema.json",
+  "title": "Capability Manifest",
+  "description": "Structural manifest for a review-gated capability package; it does not assert clinical validity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["capability_id","package_version","schema_version","lifecycle","display_name","owner_status","owner_role","reviewer_requirements","compatible_shared_contract_version","effective_from","expires_at","rollback_version","clinical_review_status","technical_review_status","runtime_adoption","production_eligibility","overall_evidence","limitations","unresolved_decisions","assets"],
+  "properties": {
+    "capability_id": {"const": "adult_respiratory_v1"},
+    "package_version": {"$ref": "#/$defs/version"},
+    "schema_version": {"const": "1.0.0"},
+    "lifecycle": {"enum": ["DRAFT","CLINICAL_REVIEW","TECHNICAL_REVIEW","EVALUATION","SHADOW","CLINICIAN_ASSIST","RESTRICTED_PATIENT","ACTIVE","DEPRECATED","RETIRED"]},
+    "display_name": {"$ref": "#/$defs/boundedString"},
+    "owner_status": {"enum": ["UNASSIGNED","ASSIGNED"]},
+    "owner_role": {"$ref": "#/$defs/id"},
+    "reviewer_requirements": {"$ref": "#/$defs/nonEmptyStringArray"},
+    "compatible_shared_contract_version": {"const": "1.0.0"},
+    "effective_from": {"type": ["string","null"], "format": "date-time", "maxLength": 40},
+    "expires_at": {"type": ["string","null"], "format": "date-time", "maxLength": 40},
+    "rollback_version": {"type": ["string","null"], "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$", "maxLength": 32},
+    "clinical_review_status": {"enum": ["REQUIRES_CLINICAL_REVIEW","PENDING","APPROVED","REJECTED"]},
+    "technical_review_status": {"enum": ["PENDING","APPROVED","REJECTED"]},
+    "runtime_adoption": {"enum": ["NOT_IMPLEMENTED","IMPLEMENTED_NOT_ENABLED","ENABLED"]},
+    "production_eligibility": {"enum": ["BLOCKED","ELIGIBLE"]},
+    "overall_evidence": {"$ref": "#/$defs/evidenceLevel"},
+    "limitations": {"$ref": "#/$defs/nonEmptyStringArray"},
+    "unresolved_decisions": {"$ref": "#/$defs/nonEmptyStringArray"},
+    "assets": {"type": "array", "minItems": 25, "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/assetReference"}}
+  },
+  "$defs": {
+    "id": {"type": "string", "minLength": 1, "maxLength": 96, "pattern": "^[a-z][a-z0-9]*(?:[-_.][a-z0-9]+)*$"},
+    "version": {"type": "string", "maxLength": 32, "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "boundedString": {"type": "string", "minLength": 1, "maxLength": 500},
+    "path": {"type": "string", "minLength": 1, "maxLength": 240, "pattern": "^[A-Za-z0-9._/-]+$"},
+    "evidenceLevel": {"enum": ["DOCUMENTED","CODE_CONFIRMED","BUILD_VERIFIED","RUNTIME_VERIFIED","DATA_VERIFIED","TEST_VERIFIED","UNKNOWN","BLOCKED","PARTIALLY_VALIDATED"]},
+    "reviewStatus": {"enum": ["REQUIRES_CLINICAL_REVIEW","PENDING","LEGACY_CANDIDATE","DOCUMENTED","CODE_CONFIRMED","APPROVED","REJECTED"]},
+    "nonEmptyStringArray": {"type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/boundedString"}},
+    "stringArray": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/boundedString"}},
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_id","owner_role","review_status","blocking_reason","required_evidence","intended_validation_suite","source_requirement","prohibited_runtime_use"],
+      "properties": {
+        "record_id": {"$ref": "#/$defs/id"},
+        "owner_role": {"$ref": "#/$defs/id"},
+        "review_status": {"$ref": "#/$defs/reviewStatus"},
+        "blocking_reason": {"$ref": "#/$defs/boundedString"},
+        "required_evidence": {"$ref": "#/$defs/nonEmptyStringArray"},
+        "intended_validation_suite": {"$ref": "#/$defs/id"},
+        "source_requirement": {"$ref": "#/$defs/boundedString"},
+        "prohibited_runtime_use": {"const": true}
+      }
+    },
+    "assetReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id","path","schema_id","sha256"],
+      "properties": {
+        "asset_id": {"$ref": "#/$defs/id"},
+        "path": {"$ref": "#/$defs/path"},
+        "schema_id": {"type": "string", "format": "uri", "maxLength": 240},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$", "maxLength": 64}
+      }
+    }
+  }
+}

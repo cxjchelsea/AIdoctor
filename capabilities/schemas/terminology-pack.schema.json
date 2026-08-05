@@ -1,0 +1,12 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/capabilities/1.0.0/terminology-pack.schema.json",
+  "title":"Terminology Pack","description":"Bounded terminology candidate structure without clinical approval claims.",
+  "type":"object","additionalProperties":false,
+  "required":["capability_id","package_version","asset_id","schema_version","pack_type","review_status","entries","governance"],
+  "properties":{
+    "capability_id":{"const":"adult_respiratory_v1"},"package_version":{"$ref":"capability-manifest.schema.json#/$defs/version"},"asset_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"schema_version":{"const":"1.0.0"},"pack_type":{"enum":["CONCEPTS","SYNONYMS","CODE_MAPPINGS"]},"review_status":{"$ref":"capability-manifest.schema.json#/$defs/reviewStatus"},
+    "entries":{"type":"array","maxItems":512,"uniqueItems":true,"items":{"$ref":"#/$defs/entry"}},"governance":{"$ref":"capability-manifest.schema.json#/$defs/governance"}
+  },
+  "$defs":{"entry":{"type":"object","additionalProperties":false,"required":["entry_id","display_name","canonical_id","source_status","source_reference","review_status"],"properties":{"entry_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"display_name":{"$ref":"capability-manifest.schema.json#/$defs/boundedString"},"canonical_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"source_status":{"enum":["LEGACY_CANDIDATE","DOCUMENTED","CODE_CONFIRMED"]},"source_reference":{"$ref":"capability-manifest.schema.json#/$defs/path"},"review_status":{"enum":["REQUIRES_CLINICAL_REVIEW","LEGACY_CANDIDATE"]}}}}
+}

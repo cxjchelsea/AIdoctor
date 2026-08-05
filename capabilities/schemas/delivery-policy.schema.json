@@ -1,0 +1,10 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/capabilities/1.0.0/delivery-policy.schema.json",
+  "title":"Delivery Policy","description":"Delivery boundary and exact PatientDeliveryView binding; runtime and clinical safety remain blocked.",
+  "type":"object","additionalProperties":false,
+  "required":["capability_id","package_version","asset_id","schema_version","review_status","allowed_delivery_types","patient_delivery_contract_version","clinician_review_required","prohibited_fields","supported_degraded_states","evidence_requirement","free_text_safety","runtime_eligibility","production_eligibility","governance"],
+  "properties":{
+    "capability_id":{"const":"adult_respiratory_v1"},"package_version":{"$ref":"capability-manifest.schema.json#/$defs/version"},"asset_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"schema_version":{"const":"1.0.0"},"review_status":{"$ref":"capability-manifest.schema.json#/$defs/reviewStatus"},"allowed_delivery_types":{"type":"array","minItems":3,"maxItems":3,"uniqueItems":true,"items":{"enum":["PATIENT","CLINICIAN","SYSTEM"]}},"patient_delivery_contract_version":{"const":"1.0.0"},"clinician_review_required":{"const":true},"prohibited_fields":{"$ref":"capability-manifest.schema.json#/$defs/nonEmptyStringArray"},"supported_degraded_states":{"type":"array","minItems":2,"maxItems":4,"uniqueItems":true,"items":{"enum":["DEGRADED","READY_WITH_LIMITED_EVIDENCE","AWAITING_CLINICIAN","OUT_OF_SCOPE"]}},"evidence_requirement":{"enum":["CITATION_OR_EXPLICIT_LIMITATION"]},"free_text_safety":{"const":"POLICY_ENFORCED_LATER"},"runtime_eligibility":{"const":"NOT_IMPLEMENTED"},"production_eligibility":{"const":"BLOCKED"},"governance":{"$ref":"capability-manifest.schema.json#/$defs/governance"}
+  }
+}

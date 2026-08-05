@@ -1,0 +1,30 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: knowledge-policy-v1
+schema_version: 1.0.0
+pack_type: KNOWLEDGE_POLICY
+review_status: REQUIRES_CLINICAL_REVIEW
+allowed_source_tiers:
+  - TIER_1
+  - TIER_2
+region_policy_status: REQUIRES_CLINICAL_REVIEW
+population_policy_status: REQUIRES_CLINICAL_REVIEW
+freshness_policy_status: REQUIRES_CLINICAL_REVIEW
+conflict_policy: FAIL_CLOSED_AND_REQUIRE_REVIEW
+no_result_policy: RETURN_EXPLICIT_NO_RESULT
+approved_source_count: 0
+retrieval_eligibility: BLOCKED
+patient_knowledge_domain: PATIENT_PRIVATE
+medical_knowledge_domain: MEDICAL_APPROVED
+mixed_index_allowed: false
+sources: []
+governance:
+  record_id: gap-knowledge-policy-001
+  owner_role: knowledge-governance-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: No source, license, clinical review, or Knowledge Release is approved in A6.
+  required_evidence:
+    - Approved source registry and release evaluation
+  intended_validation_suite: capability-knowledge-policy-review
+  source_requirement: Licensed, versioned, clinically reviewed sources
+  prohibited_runtime_use: true

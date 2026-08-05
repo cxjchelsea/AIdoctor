@@ -1,0 +1,17 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: terminology-code-mappings-v1
+schema_version: 1.0.0
+pack_type: CODE_MAPPINGS
+review_status: REQUIRES_CLINICAL_REVIEW
+entries: []
+governance:
+  record_id: gap-terminology-code-001
+  owner_role: clinical-terminology-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: No external code mapping has been approved or licensed for A6.
+  required_evidence:
+    - Reviewed coding-system mapping and version
+  intended_validation_suite: capability-code-mapping-review
+  source_requirement: Authoritative coding-system release and license review
+  prohibited_runtime_use: true

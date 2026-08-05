@@ -1,0 +1,11 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/capabilities/1.0.0/runtime-allowlist.schema.json",
+  "title":"Runtime Allowlist","description":"Closed runtime reference structure; A6 contains no enabled runtime assets.",
+  "type":"object","additionalProperties":false,
+  "required":["capability_id","package_version","asset_id","schema_version","allowlist_type","review_status","runtime_eligibility","production_eligibility","references","human_review_conditions","governance"],
+  "properties":{
+    "capability_id":{"const":"adult_respiratory_v1"},"package_version":{"$ref":"capability-manifest.schema.json#/$defs/version"},"asset_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"schema_version":{"const":"1.0.0"},"allowlist_type":{"enum":["TOOL","SKILL","PROMPT","MODEL_ROUTE","CONTEXT_POLICY","GRAPH_NODE"]},"review_status":{"$ref":"capability-manifest.schema.json#/$defs/reviewStatus"},"runtime_eligibility":{"enum":["NOT_IMPLEMENTED","BLOCKED","ELIGIBLE"]},"production_eligibility":{"enum":["BLOCKED","ELIGIBLE"]},"references":{"type":"array","maxItems":128,"uniqueItems":true,"items":{"$ref":"#/$defs/reference"}},"human_review_conditions":{"$ref":"capability-manifest.schema.json#/$defs/nonEmptyStringArray"},"governance":{"$ref":"capability-manifest.schema.json#/$defs/governance"}
+  },
+  "$defs":{"reference":{"type":"object","additionalProperties":false,"required":["reference_id","registry_path","release_version","review_status"],"properties":{"reference_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"registry_path":{"$ref":"capability-manifest.schema.json#/$defs/path"},"release_version":{"$ref":"capability-manifest.schema.json#/$defs/version"},"review_status":{"enum":["PENDING","APPROVED","REJECTED"]}}}}
+}

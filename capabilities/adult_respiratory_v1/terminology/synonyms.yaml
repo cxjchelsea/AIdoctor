@@ -1,0 +1,17 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: terminology-synonyms-v1
+schema_version: 1.0.0
+pack_type: SYNONYMS
+review_status: REQUIRES_CLINICAL_REVIEW
+entries: []
+governance:
+  record_id: gap-terminology-synonyms-001
+  owner_role: clinical-terminology-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: String similarity is not accepted as clinical synonym evidence.
+  required_evidence:
+    - Clinically reviewed synonym mapping
+  intended_validation_suite: capability-terminology-synonym-review
+  source_requirement: Reviewed language and clinical terminology evidence
+  prohibited_runtime_use: true

@@ -1,0 +1,11 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/capabilities/1.0.0/question-policy.schema.json",
+  "title":"Question Policy","description":"Question-policy item structure without approved patient wording.",
+  "type":"object","additionalProperties":false,
+  "required":["capability_id","package_version","asset_id","schema_version","policy_type","review_status","questions","governance"],
+  "properties":{
+    "capability_id":{"const":"adult_respiratory_v1"},"package_version":{"$ref":"capability-manifest.schema.json#/$defs/version"},"asset_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"schema_version":{"const":"1.0.0"},"policy_type":{"enum":["MANDATORY","DISCRIMINATOR","STOPPING"]},"review_status":{"$ref":"capability-manifest.schema.json#/$defs/reviewStatus"},"questions":{"type":"array","maxItems":256,"uniqueItems":true,"items":{"$ref":"#/$defs/question"}},"governance":{"$ref":"capability-manifest.schema.json#/$defs/governance"}
+  },
+  "$defs":{"question":{"type":"object","additionalProperties":false,"required":["question_id","purpose","required_observation_refs","duplication_group","patient_burden","review_status","source_requirement","required_evidence","prohibited_runtime_use"],"properties":{"question_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"purpose":{"$ref":"capability-manifest.schema.json#/$defs/boundedString"},"required_observation_refs":{"$ref":"capability-manifest.schema.json#/$defs/stringArray"},"duplication_group":{"$ref":"capability-manifest.schema.json#/$defs/id"},"patient_burden":{"enum":["LOW","MEDIUM","HIGH","UNKNOWN"]},"review_status":{"enum":["REQUIRES_CLINICAL_REVIEW","LEGACY_CANDIDATE","APPROVED"]},"source_requirement":{"$ref":"capability-manifest.schema.json#/$defs/boundedString"},"required_evidence":{"$ref":"capability-manifest.schema.json#/$defs/nonEmptyStringArray"},"prohibited_runtime_use":{"type":"boolean"}}}}
+}

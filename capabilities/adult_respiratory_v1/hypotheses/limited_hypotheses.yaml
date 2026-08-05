@@ -1,0 +1,23 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: limited-hypotheses-v1
+schema_version: 1.0.0
+review_status: REQUIRES_CLINICAL_REVIEW
+allowed_categories:
+  - COMMON
+  - ALTERNATIVE
+  - MUST_NOT_MISS
+hypotheses: []
+free_expansion_allowed: false
+automatic_diagnosis_allowed: false
+runtime_eligibility: BLOCKED
+governance:
+  record_id: gap-hypothesis-001
+  owner_role: clinical-review-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: No finite condition list or must-not-miss list is approved in A6.
+  required_evidence:
+    - Clinically reviewed finite hypothesis set and source evidence
+  intended_validation_suite: capability-hypothesis-clinical-eval
+  source_requirement: Approved clinical sources and applicability review
+  prohibited_runtime_use: true

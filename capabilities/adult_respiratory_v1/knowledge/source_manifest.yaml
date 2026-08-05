@@ -1,0 +1,30 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: knowledge-source-manifest-v1
+schema_version: 1.0.0
+pack_type: SOURCE_MANIFEST
+review_status: REQUIRES_CLINICAL_REVIEW
+allowed_source_tiers:
+  - TIER_1
+  - TIER_2
+region_policy_status: REQUIRES_CLINICAL_REVIEW
+population_policy_status: REQUIRES_CLINICAL_REVIEW
+freshness_policy_status: REQUIRES_CLINICAL_REVIEW
+conflict_policy: FAIL_CLOSED_AND_REQUIRE_REVIEW
+no_result_policy: RETURN_EXPLICIT_NO_RESULT
+approved_source_count: 0
+retrieval_eligibility: BLOCKED
+patient_knowledge_domain: PATIENT_PRIVATE
+medical_knowledge_domain: MEDICAL_APPROVED
+mixed_index_allowed: false
+sources: []
+governance:
+  record_id: gap-knowledge-sources-001
+  owner_role: knowledge-license-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: Repository knowledge assets are not automatically approved sources.
+  required_evidence:
+    - Source provenance, license, version, region, and clinical review
+  intended_validation_suite: capability-source-manifest-review
+  source_requirement: Approved source registration records
+  prohibited_runtime_use: true

@@ -1,0 +1,34 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: delivery-policy-v1
+schema_version: 1.0.0
+review_status: REQUIRES_CLINICAL_REVIEW
+allowed_delivery_types:
+  - PATIENT
+  - CLINICIAN
+  - SYSTEM
+patient_delivery_contract_version: 1.0.0
+clinician_review_required: true
+prohibited_fields:
+  - PROMPT
+  - PROVIDER_RESPONSE
+  - PRIVATE_REASONING
+  - UNAPPROVED_HYPOTHESIS
+  - OTHER_PATIENT_DATA
+supported_degraded_states:
+  - DEGRADED
+  - READY_WITH_LIMITED_EVIDENCE
+evidence_requirement: CITATION_OR_EXPLICIT_LIMITATION
+free_text_safety: POLICY_ENFORCED_LATER
+runtime_eligibility: NOT_IMPLEMENTED
+production_eligibility: BLOCKED
+governance:
+  record_id: gap-delivery-001
+  owner_role: patient-delivery-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: Delivery API, UI, authorization, content safety, and clinical review are not implemented.
+  required_evidence:
+    - PatientDelivery authorization, content-safety, clinical, and E2E evidence
+  intended_validation_suite: capability-patient-delivery-eval
+  source_requirement: Shared Contract 1.0.0 and approved delivery policy
+  prohibited_runtime_use: true

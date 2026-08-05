@@ -1,0 +1,17 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: questions-discriminators-v1
+schema_version: 1.0.0
+policy_type: DISCRIMINATOR
+review_status: REQUIRES_CLINICAL_REVIEW
+questions: []
+governance:
+  record_id: gap-question-discriminator-001
+  owner_role: clinical-question-policy-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: No discriminator question set is clinically approved in A6.
+  required_evidence:
+    - Reviewed information-gain and patient-burden evidence
+  intended_validation_suite: capability-question-discriminator-eval
+  source_requirement: Approved clinical question policy
+  prohibited_runtime_use: true

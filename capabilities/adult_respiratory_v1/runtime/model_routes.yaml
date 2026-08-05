@@ -1,0 +1,21 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: runtime-model-routes-v1
+schema_version: 1.0.0
+allowlist_type: MODEL_ROUTE
+review_status: REQUIRES_CLINICAL_REVIEW
+runtime_eligibility: NOT_IMPLEMENTED
+production_eligibility: BLOCKED
+references: []
+human_review_conditions:
+  - Any future high-risk route requires approved deterministic fallback and human review.
+governance:
+  record_id: gap-runtime-model-route-001
+  owner_role: model-governance-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: A7 Model Runtime and released route policies do not exist.
+  required_evidence:
+    - Registered route, model, privacy, quality, fallback, and evaluation evidence
+  intended_validation_suite: capability-model-route-review
+  source_requirement: A7 registered and approved model route release
+  prohibited_runtime_use: true
