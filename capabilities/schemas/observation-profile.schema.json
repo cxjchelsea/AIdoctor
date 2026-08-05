@@ -1,0 +1,12 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/capabilities/1.0.0/observation-profile.schema.json",
+  "title":"Observation Profile","description":"Bounded observation field structure pending clinical review.",
+  "type":"object","additionalProperties":false,
+  "required":["capability_id","package_version","asset_id","schema_version","review_status","fields","conflict_policy","provenance_required","governance"],
+  "properties":{
+    "capability_id":{"const":"adult_respiratory_v1"},"package_version":{"$ref":"capability-manifest.schema.json#/$defs/version"},"asset_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"schema_version":{"const":"1.0.0"},"review_status":{"$ref":"capability-manifest.schema.json#/$defs/reviewStatus"},
+    "fields":{"type":"array","maxItems":256,"uniqueItems":true,"items":{"$ref":"#/$defs/field"}},"conflict_policy":{"enum":["HUMAN_REVIEW_REQUIRED","REJECT_CONFLICT"]},"provenance_required":{"const":true},"governance":{"$ref":"capability-manifest.schema.json#/$defs/governance"}
+  },
+  "$defs":{"field":{"type":"object","additionalProperties":false,"required":["concept_id","display_name","value_type","required_level","allowed_sources","validation_rule_refs","conflict_policy","provenance_requirement","review_status"],"properties":{"concept_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"display_name":{"$ref":"capability-manifest.schema.json#/$defs/boundedString"},"value_type":{"enum":["BOOLEAN","STRING","INTEGER","DECIMAL","CODE","DATE_TIME"]},"required_level":{"enum":["CRITICAL","IMPORTANT","OPTIONAL"]},"allowed_sources":{"$ref":"capability-manifest.schema.json#/$defs/nonEmptyStringArray"},"validation_rule_refs":{"$ref":"capability-manifest.schema.json#/$defs/stringArray"},"conflict_policy":{"enum":["HUMAN_REVIEW_REQUIRED","REJECT_CONFLICT"]},"provenance_requirement":{"enum":["REQUIRED"]},"review_status":{"enum":["REQUIRES_CLINICAL_REVIEW","LEGACY_CANDIDATE"]}}}}
+}

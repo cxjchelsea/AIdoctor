@@ -1,0 +1,21 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: runtime-prompt-allowlist-v1
+schema_version: 1.0.0
+allowlist_type: PROMPT
+review_status: REQUIRES_CLINICAL_REVIEW
+runtime_eligibility: NOT_IMPLEMENTED
+production_eligibility: BLOCKED
+references: []
+human_review_conditions:
+  - Any future prompt release requires clinical, privacy, and output-schema review.
+governance:
+  record_id: gap-runtime-prompt-001
+  owner_role: prompt-governance-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: A7 Prompt Registry and released PromptSpec do not exist.
+  required_evidence:
+    - Registered prompt release and evaluation evidence
+  intended_validation_suite: capability-prompt-release-review
+  source_requirement: A7 registered and approved prompt release
+  prohibited_runtime_use: true

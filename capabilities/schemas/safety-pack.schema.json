@@ -1,0 +1,14 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/capabilities/1.0.0/safety-pack.schema.json",
+  "title":"Safety Pack","description":"Safety rule structure that remains clinically unapproved and production blocked.",
+  "type":"object","additionalProperties":false,
+  "required":["capability_id","package_version","asset_id","schema_version","pack_type","review_status","production_eligibility","rules","fail_closed","governance"],
+  "properties":{
+    "capability_id":{"const":"adult_respiratory_v1"},"package_version":{"$ref":"capability-manifest.schema.json#/$defs/version"},"asset_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"schema_version":{"const":"1.0.0"},"pack_type":{"enum":["RED_FLAGS","TRIAGE_RULES","SPECIAL_POPULATIONS"]},"review_status":{"$ref":"capability-manifest.schema.json#/$defs/reviewStatus"},"production_eligibility":{"enum":["BLOCKED","ELIGIBLE"]},
+    "rules":{"type":"array","maxItems":256,"uniqueItems":true,"items":{"$ref":"#/$defs/rule"}},
+    "fail_closed":{"type":"object","additionalProperties":false,"required":["insufficient_input_action","model_single_point_decision_allowed"],"properties":{"insufficient_input_action":{"enum":["HUMAN_REVIEW_OR_FIXED_SAFETY_PATH"]},"model_single_point_decision_allowed":{"const":false}}},
+    "governance":{"$ref":"capability-manifest.schema.json#/$defs/governance"}
+  },
+  "$defs":{"rule":{"type":"object","additionalProperties":false,"required":["rule_id","owner_role","review_status","condition_refs","result_code","required_evidence","source_requirement","prohibited_runtime_use"],"properties":{"rule_id":{"$ref":"capability-manifest.schema.json#/$defs/id"},"owner_role":{"$ref":"capability-manifest.schema.json#/$defs/id"},"review_status":{"enum":["REQUIRES_CLINICAL_REVIEW","LEGACY_CANDIDATE","APPROVED"]},"condition_refs":{"$ref":"capability-manifest.schema.json#/$defs/nonEmptyStringArray"},"result_code":{"$ref":"capability-manifest.schema.json#/$defs/id"},"required_evidence":{"$ref":"capability-manifest.schema.json#/$defs/nonEmptyStringArray"},"source_requirement":{"$ref":"capability-manifest.schema.json#/$defs/boundedString"},"prohibited_runtime_use":{"type":"boolean"}}}}
+}

@@ -1,0 +1,17 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: questions-mandatory-v1
+schema_version: 1.0.0
+policy_type: MANDATORY
+review_status: REQUIRES_CLINICAL_REVIEW
+questions: []
+governance:
+  record_id: gap-question-mandatory-001
+  owner_role: clinical-question-policy-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: No patient-facing mandatory question content is approved in A6.
+  required_evidence:
+    - Reviewed question purpose, burden, source, and wording
+  intended_validation_suite: capability-question-mandatory-eval
+  source_requirement: Approved clinical question policy
+  prohibited_runtime_use: true

@@ -1,0 +1,17 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: terminology-concepts-v1
+schema_version: 1.0.0
+pack_type: CONCEPTS
+review_status: REQUIRES_CLINICAL_REVIEW
+entries: []
+governance:
+  record_id: gap-terminology-concepts-001
+  owner_role: clinical-terminology-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: No terminology set has completed clinical review for A6.
+  required_evidence:
+    - Approved concept inventory with provenance
+  intended_validation_suite: capability-terminology-clinical-review
+  source_requirement: Reviewed terminology sources and canonical identifiers
+  prohibited_runtime_use: true

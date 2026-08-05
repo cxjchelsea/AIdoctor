@@ -1,0 +1,21 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: runtime-tool-allowlist-v1
+schema_version: 1.0.0
+allowlist_type: TOOL
+review_status: REQUIRES_CLINICAL_REVIEW
+runtime_eligibility: NOT_IMPLEMENTED
+production_eligibility: BLOCKED
+references: []
+human_review_conditions:
+  - Any future high-risk tool requires explicit human review.
+governance:
+  record_id: gap-runtime-tool-001
+  owner_role: tool-governance-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: No repository tool is registered and approved for A6 runtime use.
+  required_evidence:
+    - Registered tool contract, permission, failure, and clinical review evidence
+  intended_validation_suite: capability-tool-allowlist-review
+  source_requirement: Existing registered implementation and approved release
+  prohibited_runtime_use: true

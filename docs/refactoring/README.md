@@ -148,6 +148,8 @@ Stable Platform
 
 首个场景为 `adult_respiratory_v1`。它用于验证通用平台，不是永久限制到呼吸道。
 
+A6 已建立 `adult_respiratory_v1` 的 `DRAFT` 结构骨架（`PARTIALLY_VALIDATED`）：可解析、可校验、可评审，但临床内容仍为 `REQUIRES_CLINICAL_REVIEW`，runtime 未接入，生产资格为 `BLOCKED`。详见 [A6 Evidence](./evidence/phase-a/a6/capability-package-skeleton-report.md)。A6.5/A7 未开始；A5 三语言 binding 仍为 A11 前置缺口。
+
 新增场景必须考虑 Scope、Terminology、Observation、Safety、Question、Hypothesis、Knowledge、Prompt、Model Route、Tool/Skill、Delivery 和 Eval，不允许只更换 Prompt。
 
 Capability Package 是跨模块的临床场景配置与发布单元，不是第十二个一级模块。
@@ -334,7 +336,7 @@ A1 Java 基线
 → A11 Frozen Baseline Review
 ```
 
-A1-A4 可以立即开始。A1 只做真实基线和资产盘点，不提前进入 A5 之后的重构实现。
+A1–A5 已完成基线与 Shared Contracts 结构包。A6 Capability Package 骨架已建立但未临床批准、未接入 runtime、未升级 Frozen Baseline。下一步是 A6 评审通过后进入 A6.5 Legacy Design Asset Validation；不得跳过临床/许可门禁直接填充阈值或规则。
 
 ---
 

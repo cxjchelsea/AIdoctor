@@ -1,0 +1,21 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: safety-triage-rules-v1
+schema_version: 1.0.0
+pack_type: TRIAGE_RULES
+review_status: REQUIRES_CLINICAL_REVIEW
+production_eligibility: BLOCKED
+rules: []
+fail_closed:
+  insufficient_input_action: HUMAN_REVIEW_OR_FIXED_SAFETY_PATH
+  model_single_point_decision_allowed: false
+governance:
+  record_id: gap-safety-triage-001
+  owner_role: clinical-safety-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: No approved triage thresholds or level mapping is available in A6.
+  required_evidence:
+    - Approved triage policy and clinical validation plan
+  intended_validation_suite: capability-safety-triage-eval
+  source_requirement: Licensed and clinically reviewed triage sources
+  prohibited_runtime_use: true
