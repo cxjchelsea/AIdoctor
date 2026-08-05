@@ -66,7 +66,10 @@ Observed local results:
 
 - `pip check`: no broken requirements
 - Validator: `A6 CAPABILITY VALIDATION PASSED: 11 schemas, 25 assets, 5 eval cases, 0 issues`
-- Pytest: `37 passed`
+- Pytest after independent-review remediation: `43 passed`
+- Original PR #8 head had `37 passed`; remediation closed four lifecycle/runtime
+  bypasses and added six negative tests. See
+  [a6-independent-review-report.md](./a6-independent-review-report.md).
 - No CI workflow is configured for this package in A6 (`NO_CI_CONFIGURED`)
 
 Validation proves package structure, parseability, schema closure, reference
@@ -100,6 +103,8 @@ authorization, patient workflow, or production readiness.
 - [capability-asset-manifest.csv](./capability-asset-manifest.csv)
 - [capability-review-gap-register.csv](./capability-review-gap-register.csv)
 - [capability-validation-matrix.csv](./capability-validation-matrix.csv)
+- [a6-independent-review-report.md](./a6-independent-review-report.md)
+- [a6-independent-review-findings.csv](./a6-independent-review-findings.csv)
 
 ## Remaining blockers
 
