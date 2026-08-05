@@ -50,6 +50,54 @@ def test_complete_package_validation():
     }
 
 
+def _prepare_near_active(docs):
+    """Fill only the fields required to isolate a single remaining gate."""
+    manifest = docs["manifest.yaml"]
+    manifest["lifecycle"] = "ACTIVE"
+    manifest["clinical_review_status"] = "APPROVED"
+    manifest["technical_review_status"] = "APPROVED"
+    manifest["production_eligibility"] = "ELIGIBLE"
+    manifest["runtime_adoption"] = "ENABLED"
+    manifest["owner_status"] = "ASSIGNED"
+    for relative in (
+        "safety/red_flags.yaml",
+        "safety/triage_rules.yaml",
+        "safety/special_populations.yaml",
+    ):
+        docs[relative]["review_status"] = "APPROVED"
+        docs[relative]["production_eligibility"] = "ELIGIBLE"
+        docs[relative]["rules"] = [
+            {
+                "rule_id": "synthetic-safety-rule-1",
+                "owner_role": "clinical-safety-owner",
+                "review_status": "APPROVED",
+                "condition_refs": ["synthetic-observation"],
+                "result_code": "escalate-human-review",
+                "required_evidence": ["clinical approval evidence"],
+                "source_requirement": "approved clinical source",
+                "prohibited_runtime_use": False,
+            }
+        ]
+    docs["hypotheses/limited_hypotheses.yaml"]["review_status"] = "APPROVED"
+    docs["knowledge/knowledge_policy.yaml"]["review_status"] = "APPROVED"
+    docs["knowledge/source_manifest.yaml"]["review_status"] = "APPROVED"
+    for relative in (
+        "runtime/tool_allowlist.yaml",
+        "runtime/skill_allowlist.yaml",
+        "runtime/prompt_allowlist.yaml",
+        "runtime/model_routes.yaml",
+        "runtime/context_policy.yaml",
+    ):
+        docs[relative]["references"] = [
+            {
+                "reference_id": f"{docs[relative]['allowlist_type'].lower().replace('_', '-')}-ref-1",
+                "registry_path": "contracts/v1/manifest.json",
+                "release_version": "1.0.0",
+                "review_status": "APPROVED",
+            }
+        ]
+
+
 def test_required_files_and_schemas_exist():
     assert {path.name for path in (ROOT / "schemas").glob("*.json")} == REQUIRED_SCHEMAS
     for relative in REQUIRED_PACKAGE_RELATIVE:
@@ -245,6 +293,169 @@ def test_negative_active_with_unapproved_safety(package):
     docs["manifest.yaml"]["owner_status"] = "ASSIGNED"
     issues = validate_mutated_package(docs)
     assert any(item.category == "safety" and "ACTIVE" in item.reason for item in issues)
+
+
+def test_negative_active_with_empty_approved_hypotheses(package):
+    docs = copy.deepcopy(package[0])
+    _prepare_near_active(docs)
+    docs["hypotheses/limited_hypotheses.yaml"]["hypotheses"] = []
+    docs["knowledge/knowledge_policy.yaml"]["approved_source_count"] = 1
+    docs["knowledge/knowledge_policy.yaml"]["sources"] = [
+        {
+            "source_id": "source-synthetic-1",
+            "title": "Synthetic structural source",
+            "tier": "TIER_1",
+            "region": "UNSCOPED",
+            "population": "UNSCOPED",
+            "freshness_status": "UNKNOWN",
+            "license_review": "PENDING",
+            "clinical_review": "REQUIRES_CLINICAL_REVIEW",
+            "withdrawal_status": "AVAILABLE",
+            "release_binding": "release-none",
+            "checksum": "a" * 64,
+            "retrieval_eligibility": "BLOCKED",
+        }
+    ]
+    docs["knowledge/source_manifest.yaml"]["approved_source_count"] = 1
+    docs["knowledge/source_manifest.yaml"]["sources"] = copy.deepcopy(
+        docs["knowledge/knowledge_policy.yaml"]["sources"]
+    )
+    issues = validate_mutated_package(docs)
+    assert any("empty Hypothesis Pack cannot enter ACTIVE" in item.reason for item in issues)
+
+
+def test_negative_active_with_zero_knowledge_sources(package):
+    docs = copy.deepcopy(package[0])
+    _prepare_near_active(docs)
+    docs["hypotheses/limited_hypotheses.yaml"]["hypotheses"] = [
+        {
+            "hypothesis_id": "hypothesis-synthetic-1",
+            "display_name": "Synthetic structural hypothesis",
+            "category": "COMMON",
+            "supporting_evidence_refs": ["evidence-1"],
+            "opposing_evidence_refs": [],
+            "missing_evidence_refs": [],
+            "applicability": "structural fixture only",
+            "review_status": "APPROVED",
+            "clinical_source_requirements": ["approved clinical source"],
+            "prohibited_auto_actions": ["AUTOMATIC_DIAGNOSIS"],
+        }
+    ]
+    docs["knowledge/knowledge_policy.yaml"]["approved_source_count"] = 0
+    docs["knowledge/knowledge_policy.yaml"]["sources"] = []
+    docs["knowledge/source_manifest.yaml"]["approved_source_count"] = 0
+    docs["knowledge/source_manifest.yaml"]["sources"] = []
+    issues = validate_mutated_package(docs)
+    assert any("empty knowledge sources cannot enter ACTIVE" in item.reason for item in issues)
+
+
+def test_negative_runtime_enabled_with_empty_allowlists(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["lifecycle"] = "CLINICAL_REVIEW"
+    docs["manifest.yaml"]["runtime_adoption"] = "ENABLED"
+    issues = validate_mutated_package(docs)
+    assert any(
+        "runtime ENABLED requires non-empty runtime allowlist references" in item.reason
+        for item in issues
+    )
+
+
+def test_negative_clinical_approved_requires_assigned_owner(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["lifecycle"] = "CLINICAL_REVIEW"
+    docs["manifest.yaml"]["clinical_review_status"] = "APPROVED"
+    docs["manifest.yaml"]["owner_status"] = "UNASSIGNED"
+    issues = validate_mutated_package(docs)
+    assert any("clinical APPROVED requires assigned owner" in item.reason for item in issues)
+
+
+def test_negative_production_eligible_with_empty_hypotheses(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["clinical_review_status"] = "APPROVED"
+    docs["manifest.yaml"]["owner_status"] = "ASSIGNED"
+    docs["manifest.yaml"]["production_eligibility"] = "ELIGIBLE"
+    for relative in (
+        "safety/red_flags.yaml",
+        "safety/triage_rules.yaml",
+        "safety/special_populations.yaml",
+    ):
+        docs[relative]["rules"] = [
+            {
+                "rule_id": "synthetic-safety-rule-2",
+                "owner_role": "clinical-safety-owner",
+                "review_status": "APPROVED",
+                "condition_refs": ["synthetic-observation"],
+                "result_code": "escalate-human-review",
+                "required_evidence": ["clinical approval evidence"],
+                "source_requirement": "approved clinical source",
+                "prohibited_runtime_use": False,
+            }
+        ]
+        docs[relative]["production_eligibility"] = "ELIGIBLE"
+    docs["knowledge/knowledge_policy.yaml"]["approved_source_count"] = 1
+    docs["knowledge/knowledge_policy.yaml"]["sources"] = [
+        {
+            "source_id": "source-synthetic-2",
+            "title": "Synthetic structural source",
+            "tier": "TIER_1",
+            "region": "UNSCOPED",
+            "population": "UNSCOPED",
+            "freshness_status": "UNKNOWN",
+            "license_review": "PENDING",
+            "clinical_review": "REQUIRES_CLINICAL_REVIEW",
+            "withdrawal_status": "AVAILABLE",
+            "release_binding": "release-none",
+            "checksum": "b" * 64,
+            "retrieval_eligibility": "BLOCKED",
+        }
+    ]
+    docs["knowledge/source_manifest.yaml"]["approved_source_count"] = 1
+    docs["knowledge/source_manifest.yaml"]["sources"] = copy.deepcopy(
+        docs["knowledge/knowledge_policy.yaml"]["sources"]
+    )
+    issues = validate_mutated_package(docs)
+    assert any("empty Hypothesis Pack requires production BLOCKED" in item.reason for item in issues)
+
+
+def test_negative_production_eligible_with_empty_sources(package):
+    docs = copy.deepcopy(package[0])
+    docs["manifest.yaml"]["clinical_review_status"] = "APPROVED"
+    docs["manifest.yaml"]["owner_status"] = "ASSIGNED"
+    docs["manifest.yaml"]["production_eligibility"] = "ELIGIBLE"
+    for relative in (
+        "safety/red_flags.yaml",
+        "safety/triage_rules.yaml",
+        "safety/special_populations.yaml",
+    ):
+        docs[relative]["rules"] = [
+            {
+                "rule_id": "synthetic-safety-rule-3",
+                "owner_role": "clinical-safety-owner",
+                "review_status": "APPROVED",
+                "condition_refs": ["synthetic-observation"],
+                "result_code": "escalate-human-review",
+                "required_evidence": ["clinical approval evidence"],
+                "source_requirement": "approved clinical source",
+                "prohibited_runtime_use": False,
+            }
+        ]
+        docs[relative]["production_eligibility"] = "ELIGIBLE"
+    docs["hypotheses/limited_hypotheses.yaml"]["hypotheses"] = [
+        {
+            "hypothesis_id": "hypothesis-synthetic-2",
+            "display_name": "Synthetic structural hypothesis",
+            "category": "COMMON",
+            "supporting_evidence_refs": ["evidence-1"],
+            "opposing_evidence_refs": [],
+            "missing_evidence_refs": [],
+            "applicability": "structural fixture only",
+            "review_status": "APPROVED",
+            "clinical_source_requirements": ["approved clinical source"],
+            "prohibited_auto_actions": ["AUTOMATIC_DIAGNOSIS"],
+        }
+    ]
+    issues = validate_mutated_package(docs)
+    assert any("empty knowledge sources require production BLOCKED" in item.reason for item in issues)
 
 
 def test_negative_empty_safety_production_eligible(package):

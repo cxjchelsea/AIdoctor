@@ -467,6 +467,16 @@ def semantic_validate(
         )
     if clinical == "APPROVED" and lifecycle == "DRAFT":
         issues.append(issue(file, "/clinical_review_status", "matrix", "lifecycle", "DRAFT cannot claim clinical APPROVED"))
+    if clinical == "APPROVED" and manifest.get("owner_status") != "ASSIGNED":
+        issues.append(
+            issue(
+                file,
+                "/clinical_review_status",
+                "matrix",
+                "lifecycle",
+                "clinical APPROVED requires assigned owner",
+            )
+        )
     if production == "ELIGIBLE" and clinical != "APPROVED":
         issues.append(
             issue(
@@ -504,6 +514,22 @@ def semantic_validate(
         )
     if runtime == "ENABLED" and lifecycle == "DRAFT":
         issues.append(issue(file, "/runtime_adoption", "matrix", "runtime", "DRAFT package cannot claim runtime ENABLED"))
+    runtime_docs = [
+        documents[relative]
+        for relative, expected in PATH_TO_EXPECTED.items()
+        if expected["kind"] == "runtime"
+    ]
+    empty_runtime_allowlists = all(not doc.get("references") for doc in runtime_docs)
+    if runtime == "ENABLED" and empty_runtime_allowlists:
+        issues.append(
+            issue(
+                file,
+                "/runtime_adoption",
+                "matrix",
+                "runtime",
+                "runtime ENABLED requires non-empty runtime allowlist references",
+            )
+        )
 
     safety_docs = [
         documents["safety/red_flags.yaml"],
@@ -559,6 +585,7 @@ def semantic_validate(
             )
 
     hypothesis = documents["hypotheses/limited_hypotheses.yaml"]
+    empty_hypotheses = not hypothesis.get("hypotheses")
     if hypothesis.get("review_status") != "APPROVED" and lifecycle == "ACTIVE":
         issues.append(
             issue(
@@ -567,6 +594,26 @@ def semantic_validate(
                 "matrix",
                 "hypothesis",
                 "unapproved Hypothesis Pack cannot enter ACTIVE",
+            )
+        )
+    if empty_hypotheses and lifecycle == "ACTIVE":
+        issues.append(
+            issue(
+                file,
+                "/lifecycle",
+                "matrix",
+                "hypothesis",
+                "empty Hypothesis Pack cannot enter ACTIVE",
+            )
+        )
+    if empty_hypotheses and production == "ELIGIBLE":
+        issues.append(
+            issue(
+                file,
+                "/production_eligibility",
+                "matrix",
+                "hypothesis",
+                "empty Hypothesis Pack requires production BLOCKED",
             )
         )
     if hypothesis.get("automatic_diagnosis_allowed") is True:
@@ -612,6 +659,26 @@ def semantic_validate(
                     "matrix",
                     "knowledge",
                     "empty approved sources require knowledge runtime BLOCKED",
+                )
+            )
+        if (approved_count == 0 or not sources) and lifecycle == "ACTIVE":
+            issues.append(
+                issue(
+                    file,
+                    "/lifecycle",
+                    "matrix",
+                    "knowledge",
+                    "empty knowledge sources cannot enter ACTIVE",
+                )
+            )
+        if (approved_count == 0 or not sources) and production == "ELIGIBLE":
+            issues.append(
+                issue(
+                    file,
+                    "/production_eligibility",
+                    "matrix",
+                    "knowledge",
+                    "empty knowledge sources require production BLOCKED",
                 )
             )
         if knowledge.get("review_status") != "APPROVED" and lifecycle == "ACTIVE":
