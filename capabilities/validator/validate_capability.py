@@ -133,6 +133,95 @@ TREATMENT_TOKENS = {
     "DOSAGE_CHANGE_REQUEST",
 }
 
+PLACEHOLDER_RELEASE_BINDINGS = {
+    "release-none",
+    "none",
+    "placeholder",
+    "todo",
+    "tbd",
+    "n-a",
+    "na",
+}
+
+
+def knowledge_policies_incomplete(knowledge: dict[str, Any]) -> bool:
+    return any(
+        knowledge.get(field) in {None, "REQUIRES_CLINICAL_REVIEW", "PENDING"}
+        for field in (
+            "region_policy_status",
+            "population_policy_status",
+            "freshness_policy_status",
+        )
+    )
+
+
+def is_approved_source(source: dict[str, Any]) -> bool:
+    binding = source.get("release_binding")
+    if not isinstance(binding, str) or not binding.strip():
+        return False
+    normalized = binding.strip().lower()
+    if normalized in PLACEHOLDER_RELEASE_BINDINGS or normalized.startswith("release-none"):
+        return False
+    return (
+        source.get("license_review") == "APPROVED"
+        and source.get("clinical_review") == "APPROVED"
+        and source.get("withdrawal_status") == "AVAILABLE"
+        and source.get("retrieval_eligibility") == "ELIGIBLE"
+        and source.get("freshness_status") != "STALE"
+    )
+
+
+def source_predicate_issues(file: str, index: int, source: dict[str, Any]) -> list[ValidationIssue]:
+    issues: list[ValidationIssue] = []
+    checks = [
+        ("/license_review", source.get("license_review") == "APPROVED", "source license_review must be APPROVED to count as approved"),
+        ("/clinical_review", source.get("clinical_review") == "APPROVED", "source clinical_review must be APPROVED to count as approved"),
+        ("/withdrawal_status", source.get("withdrawal_status") == "AVAILABLE", "source withdrawal_status must be AVAILABLE to count as approved"),
+        ("/retrieval_eligibility", source.get("retrieval_eligibility") == "ELIGIBLE", "source retrieval_eligibility must be ELIGIBLE to count as approved"),
+        ("/freshness_status", source.get("freshness_status") != "STALE", "source freshness_status must not be STALE to count as approved"),
+    ]
+    for suffix, ok, reason in checks:
+        if not ok:
+            issues.append(
+                issue(
+                    file,
+                    f"/sources/{index}{suffix}",
+                    "predicate",
+                    "knowledge",
+                    reason,
+                )
+            )
+    binding = source.get("release_binding")
+    normalized = binding.strip().lower() if isinstance(binding, str) else ""
+    if (
+        not isinstance(binding, str)
+        or not binding.strip()
+        or normalized in PLACEHOLDER_RELEASE_BINDINGS
+        or normalized.startswith("release-none")
+    ):
+        issues.append(
+            issue(
+                file,
+                f"/sources/{index}/release_binding",
+                "predicate",
+                "knowledge",
+                "source release_binding must be a non-placeholder release id to count as approved",
+            )
+        )
+    return issues
+
+
+def pack_claims_authorized(doc: dict[str, Any], manifest: dict[str, Any]) -> bool:
+    return (
+        doc.get("review_status") == "APPROVED"
+        or doc.get("production_eligibility") == "ELIGIBLE"
+        or doc.get("runtime_eligibility") == "ELIGIBLE"
+        or manifest.get("production_eligibility") == "ELIGIBLE"
+        or manifest.get("runtime_adoption") in {"ENABLED", "IMPLEMENTED_NOT_ENABLED"}
+        or manifest.get("lifecycle") in ACTIVE_OR_LATER
+        or manifest.get("lifecycle") == "ACTIVE"
+    )
+
 
 @dataclass(frozen=True)
 class ValidationIssue:
@@ -465,6 +554,29 @@ def semantic_validate(
                 "A6 skeleton must not claim RUNTIME_VERIFIED or DATA_VERIFIED",
             )
         )
+    # A6 package 1.0.0 stage lock: runtime/production cannot be advanced by allowlist padding.
+    if manifest.get("package_version") == PACKAGE_VERSION:
+        if runtime != "NOT_IMPLEMENTED":
+            issues.append(
+                issue(
+                    file,
+                    "/runtime_adoption",
+                    "a6-stage",
+                    "a6-stage",
+                    "A6 package 1.0.0 runtime_adoption must be NOT_IMPLEMENTED",
+                )
+            )
+        if production != "BLOCKED":
+            issues.append(
+                issue(
+                    file,
+                    "/production_eligibility",
+                    "a6-stage",
+                    "a6-stage",
+                    "A6 package 1.0.0 production_eligibility must be BLOCKED",
+                )
+            )
+
     if clinical == "APPROVED" and lifecycle == "DRAFT":
         issues.append(issue(file, "/clinical_review_status", "matrix", "lifecycle", "DRAFT cannot claim clinical APPROVED"))
     if clinical == "APPROVED" and manifest.get("owner_status") != "ASSIGNED":
@@ -520,6 +632,12 @@ def semantic_validate(
         if expected["kind"] == "runtime"
     ]
     empty_runtime_allowlists = all(not doc.get("references") for doc in runtime_docs)
+    runtime_packs_blocked = any(
+        doc.get("runtime_eligibility") in {"NOT_IMPLEMENTED", "BLOCKED"}
+        or doc.get("production_eligibility") == "BLOCKED"
+        or (doc.get("governance") or {}).get("prohibited_runtime_use") is True
+        for doc in runtime_docs
+    )
     if runtime == "ENABLED" and empty_runtime_allowlists:
         issues.append(
             issue(
@@ -528,6 +646,16 @@ def semantic_validate(
                 "matrix",
                 "runtime",
                 "runtime ENABLED requires non-empty runtime allowlist references",
+            )
+        )
+    if runtime == "ENABLED" and runtime_packs_blocked:
+        issues.append(
+            issue(
+                file,
+                "/runtime_adoption",
+                "matrix",
+                "runtime",
+                "runtime ENABLED forbidden while runtime packs remain NOT_IMPLEMENTED/BLOCKED or prohibit runtime use",
             )
         )
 
@@ -563,10 +691,11 @@ def semantic_validate(
         ("safety/triage_rules.yaml", documents["safety/triage_rules.yaml"]),
         ("safety/special_populations.yaml", documents["safety/special_populations.yaml"]),
     ]:
+        file_label = f"adult_respiratory_v1/{relative}"
         if doc.get("rules") == [] and doc.get("production_eligibility") != "BLOCKED":
             issues.append(
                 issue(
-                    f"adult_respiratory_v1/{relative}",
+                    file_label,
                     "/production_eligibility",
                     "matrix",
                     "safety",
@@ -576,13 +705,46 @@ def semantic_validate(
         if doc.get("fail_closed", {}).get("model_single_point_decision_allowed") is not False:
             issues.append(
                 issue(
-                    f"adult_respiratory_v1/{relative}",
+                    file_label,
                     "/fail_closed/model_single_point_decision_allowed",
                     "const",
                     "safety",
                     "Safety cannot rely on model single-point decisions",
                 )
             )
+        if pack_claims_authorized(doc, manifest):
+            rules = doc.get("rules") or []
+            if not rules:
+                issues.append(
+                    issue(
+                        file_label,
+                        "/rules",
+                        "matrix",
+                        "safety-child",
+                        "authorized Safety Pack cannot have empty rules",
+                    )
+                )
+            for rule_index, rule in enumerate(rules):
+                if rule.get("review_status") != "APPROVED":
+                    issues.append(
+                        issue(
+                            file_label,
+                            f"/rules/{rule_index}/review_status",
+                            "matrix",
+                            "safety-child",
+                            "authorized Safety Pack requires every rule.review_status APPROVED",
+                        )
+                    )
+                if rule.get("prohibited_runtime_use") is not False:
+                    issues.append(
+                        issue(
+                            file_label,
+                            f"/rules/{rule_index}/prohibited_runtime_use",
+                            "matrix",
+                            "safety-child",
+                            "authorized Safety Pack requires every rule.prohibited_runtime_use false",
+                        )
+                    )
 
     hypothesis = documents["hypotheses/limited_hypotheses.yaml"]
     empty_hypotheses = not hypothesis.get("hypotheses")
@@ -636,32 +798,85 @@ def semantic_validate(
                 "free disease-set expansion is forbidden",
             )
         )
+    if pack_claims_authorized(hypothesis, manifest):
+        hyps = hypothesis.get("hypotheses") or []
+        if not hyps:
+            issues.append(
+                issue(
+                    "adult_respiratory_v1/hypotheses/limited_hypotheses.yaml",
+                    "/hypotheses",
+                    "matrix",
+                    "hypothesis-child",
+                    "authorized Hypothesis Pack cannot have empty hypotheses",
+                )
+            )
+        for hyp_index, hyp in enumerate(hyps):
+            if hyp.get("review_status") != "APPROVED":
+                issues.append(
+                    issue(
+                        "adult_respiratory_v1/hypotheses/limited_hypotheses.yaml",
+                        f"/hypotheses/{hyp_index}/review_status",
+                        "matrix",
+                        "hypothesis-child",
+                        "authorized Hypothesis Pack requires every hypothesis.review_status APPROVED",
+                    )
+                )
+            prohibited = hyp.get("prohibited_auto_actions") or []
+            if "AUTOMATIC_DIAGNOSIS" not in prohibited:
+                issues.append(
+                    issue(
+                        "adult_respiratory_v1/hypotheses/limited_hypotheses.yaml",
+                        f"/hypotheses/{hyp_index}/prohibited_auto_actions",
+                        "matrix",
+                        "hypothesis-child",
+                        "hypothesis prohibited_auto_actions must include AUTOMATIC_DIAGNOSIS",
+                    )
+                )
 
     for relative in ("knowledge/knowledge_policy.yaml", "knowledge/source_manifest.yaml"):
         knowledge = documents[relative]
+        file_label = f"adult_respiratory_v1/{relative}"
         approved_count = knowledge.get("approved_source_count")
         sources = knowledge.get("sources") or []
-        if approved_count != len(sources):
+        if knowledge_policies_incomplete(knowledge):
+            approved_actual = 0
+            if approved_count != 0:
+                issues.append(
+                    issue(
+                        file_label,
+                        "/approved_source_count",
+                        "predicate",
+                        "knowledge",
+                        "incomplete knowledge policies require approved_source_count 0",
+                    )
+                )
+        else:
+            approved_actual = sum(1 for source in sources if isinstance(source, dict) and is_approved_source(source))
+        if approved_count != approved_actual:
             issues.append(
                 issue(
-                    f"adult_respiratory_v1/{relative}",
+                    file_label,
                     "/approved_source_count",
-                    "consistency",
+                    "predicate",
                     "knowledge",
-                    "approved_source_count must equal sources length",
+                    "approved_source_count must equal number of sources satisfying approved-source predicate",
                 )
             )
-        if approved_count == 0 and knowledge.get("retrieval_eligibility") != "BLOCKED":
+        if approved_count:
+            for source_index, source in enumerate(sources):
+                if isinstance(source, dict) and not is_approved_source(source):
+                    issues.extend(source_predicate_issues(file_label, source_index, source))
+        if approved_actual == 0 and knowledge.get("retrieval_eligibility") != "BLOCKED":
             issues.append(
                 issue(
-                    f"adult_respiratory_v1/{relative}",
+                    file_label,
                     "/retrieval_eligibility",
                     "matrix",
                     "knowledge",
                     "empty approved sources require knowledge runtime BLOCKED",
                 )
             )
-        if (approved_count == 0 or not sources) and lifecycle == "ACTIVE":
+        if (approved_actual == 0 or not sources) and lifecycle == "ACTIVE":
             issues.append(
                 issue(
                     file,
@@ -671,7 +886,7 @@ def semantic_validate(
                     "empty knowledge sources cannot enter ACTIVE",
                 )
             )
-        if (approved_count == 0 or not sources) and production == "ELIGIBLE":
+        if (approved_actual == 0 or not sources) and production == "ELIGIBLE":
             issues.append(
                 issue(
                     file,
@@ -694,7 +909,7 @@ def semantic_validate(
         if knowledge.get("mixed_index_allowed") is True:
             issues.append(
                 issue(
-                    f"adult_respiratory_v1/{relative}",
+                    file_label,
                     "/mixed_index_allowed",
                     "forbidden",
                     "knowledge",
@@ -704,7 +919,7 @@ def semantic_validate(
         if knowledge.get("patient_knowledge_domain") != "PATIENT_PRIVATE":
             issues.append(
                 issue(
-                    f"adult_respiratory_v1/{relative}",
+                    file_label,
                     "/patient_knowledge_domain",
                     "const",
                     "knowledge",
@@ -714,13 +929,31 @@ def semantic_validate(
         if knowledge.get("medical_knowledge_domain") != "MEDICAL_APPROVED":
             issues.append(
                 issue(
-                    f"adult_respiratory_v1/{relative}",
+                    file_label,
                     "/medical_knowledge_domain",
                     "const",
                     "knowledge",
                     "medical knowledge domain must remain MEDICAL_APPROVED",
                 )
             )
+
+    policy_doc = documents["knowledge/knowledge_policy.yaml"]
+    source_doc = documents["knowledge/source_manifest.yaml"]
+    if (
+        policy_doc.get("approved_source_count") != source_doc.get("approved_source_count")
+        or policy_doc.get("retrieval_eligibility") != source_doc.get("retrieval_eligibility")
+        or json.dumps(policy_doc.get("sources") or [], sort_keys=True, ensure_ascii=True)
+        != json.dumps(source_doc.get("sources") or [], sort_keys=True, ensure_ascii=True)
+    ):
+        issues.append(
+            issue(
+                "adult_respiratory_v1/knowledge/source_manifest.yaml",
+                "/sources",
+                "consistency",
+                "knowledge",
+                "knowledge policy and source manifest approved-source state must be consistent",
+            )
+        )
 
     for relative, expected in PATH_TO_EXPECTED.items():
         if expected["kind"] != "runtime":
@@ -736,13 +969,14 @@ def semantic_validate(
                     f"allowlist_type must be {expected['allowlist_type']}",
                 )
             )
+        file_label = f"adult_respiratory_v1/{relative}"
         for ref_index, reference in enumerate(runtime_doc.get("references") or []):
             registry_path = reference.get("registry_path", "")
             path_error = unsafe_path(registry_path)
             if path_error:
                 issues.append(
                     issue(
-                        f"adult_respiratory_v1/{relative}",
+                        file_label,
                         f"/references/{ref_index}/registry_path",
                         "path",
                         "path-safety",
@@ -754,17 +988,38 @@ def semantic_validate(
             if not resolved.exists():
                 issues.append(
                     issue(
-                        f"adult_respiratory_v1/{relative}",
+                        file_label,
                         f"/references/{ref_index}/registry_path",
                         "exists",
                         "runtime",
                         f"runtime reference does not resolve to an existing repository asset: {registry_path}",
                     )
                 )
+            release_version = reference.get("release_version")
+            if not isinstance(release_version, str) or release_version.strip().lower() == "latest" or "latest" in str(release_version).lower():
+                issues.append(
+                    issue(
+                        file_label,
+                        f"/references/{ref_index}/release_version",
+                        "forbidden",
+                        "runtime",
+                        "runtime reference release_version must be explicit and must not be latest",
+                    )
+                )
+            if reference.get("review_status") != "APPROVED":
+                issues.append(
+                    issue(
+                        file_label,
+                        f"/references/{ref_index}/review_status",
+                        "matrix",
+                        "runtime",
+                        "runtime reference review_status must be APPROVED",
+                    )
+                )
             if reference.get("review_status") != "APPROVED" and runtime_doc.get("runtime_eligibility") == "ELIGIBLE":
                 issues.append(
                     issue(
-                        f"adult_respiratory_v1/{relative}",
+                        file_label,
                         f"/references/{ref_index}/review_status",
                         "matrix",
                         "runtime",
@@ -774,7 +1029,7 @@ def semantic_validate(
         if runtime_doc.get("references") and runtime_doc.get("runtime_eligibility") == "ELIGIBLE":
             issues.append(
                 issue(
-                    f"adult_respiratory_v1/{relative}",
+                    file_label,
                     "/runtime_eligibility",
                     "matrix",
                     "runtime",
@@ -784,11 +1039,28 @@ def semantic_validate(
         if runtime_doc.get("runtime_eligibility") not in {"NOT_IMPLEMENTED", "BLOCKED"}:
             issues.append(
                 issue(
-                    f"adult_respiratory_v1/{relative}",
+                    file_label,
                     "/runtime_eligibility",
                     "matrix",
                     "runtime",
                     "A6 runtime eligibility must remain NOT_IMPLEMENTED or BLOCKED",
+                )
+            )
+        if (
+            pack_claims_authorized(runtime_doc, manifest)
+            and runtime_doc.get("references")
+            and (
+                runtime_doc.get("runtime_eligibility") in {"NOT_IMPLEMENTED", "BLOCKED"}
+                or runtime_doc.get("production_eligibility") == "BLOCKED"
+            )
+        ):
+            issues.append(
+                issue(
+                    file_label,
+                    "/runtime_eligibility",
+                    "matrix",
+                    "runtime",
+                    "authorized runtime claim incompatible with blocked runtime pack eligibility",
                 )
             )
 
@@ -975,7 +1247,9 @@ def semantic_validate(
             )
         governance = doc.get("governance")
         if isinstance(governance, dict):
-            if governance.get("prohibited_runtime_use") is not True:
+            if (
+                lifecycle == "DRAFT" or runtime == "NOT_IMPLEMENTED" or production == "BLOCKED"
+            ) and governance.get("prohibited_runtime_use") is not True:
                 issues.append(
                     issue(
                         f"adult_respiratory_v1/{relative}",
@@ -983,6 +1257,16 @@ def semantic_validate(
                         "const",
                         "governance",
                         "A6 clinical/runtime gaps must prohibit runtime use",
+                    )
+                )
+            if lifecycle == "ACTIVE" and governance.get("prohibited_runtime_use") is True:
+                issues.append(
+                    issue(
+                        f"adult_respiratory_v1/{relative}",
+                        "/governance/prohibited_runtime_use",
+                        "matrix",
+                        "governance",
+                        "ACTIVE capability cannot retain governance.prohibited_runtime_use true",
                     )
                 )
             if governance.get("review_status") == "APPROVED":
