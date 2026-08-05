@@ -138,9 +138,32 @@ Source: `a6-5-legacy-asset-inventory.csv`
 | Workflow/state | 17 |
 | API/contract | 10 |
 | Engineering | 7 |
-| P0 / P1 / P2 / P3 | 84 / 65 / 52 / 2 |
+| P0 / P1 / P2 / P3 | 77 / 72 / 52 / 2 |
 | `potential_patient_data=YES` | 18 |
 | Boundary / non-legacy markers | 2 (`BOUND-001`, `BOUND-002`) |
+| Inventory fields added by independent review | `path_status`, `risk_basis`, `phi_path_class` |
+
+### Patient-data semantics (mandatory)
+
+```text
+Tracked real patient records found: 0
+PHI-capable or potentially patient-bearing paths: 18
+Content inspection performed: no
+Privacy authorization required for live-store inspection: yes
+```
+
+`PHI_CAPABLE_PATH` / `potential_patient_data=YES` means capability or path risk only. It does **not** mean confirmed real patient data was found.
+
+### P0 / P1 definitions (after calibration)
+
+| Level | Meaning |
+| --- | --- |
+| P0 | Explicit stop/safety blocker with `risk_basis` in {PHI_CAPABLE_PATH, CLINICAL_LOGIC_ACTIVE_PATH, LICENSE_PROVENANCE_BLOCKER, RUNTIME_COUPLING_BLOCKER, SECURITY_PRIVACY_BLOCKER} |
+| P1 | Required for correct mapping/governance but not an immediate safety stop by itself |
+| P2 | Legacy debt / informative conflict |
+| P3 | Boundary or non-blocking markers |
+
+`UNASSIGNED` owner alone does not create P0. Pure historical design documents are not automatic P0.
 
 Every row has `asset_id`, proposed disposition, risk level, validation level, and batch. Directory cluster rows are limited; critical clinical/prompt/state/source files are file-level.
 
@@ -184,6 +207,13 @@ Judgement outputs per asset (implementation):
 
 ## 13. Safety and Privacy Boundaries
 
+```text
+Tracked real patient records found: 0
+PHI-capable or potentially patient-bearing paths: 18
+Content inspection performed: no
+Privacy authorization required for live-store inspection: yes
+```
+
 - No real patient content is copied into planning docs.
 - PHI-capable runtime paths are quarantined at path level.
 - Secret/credential values are not reproduced.
@@ -221,18 +251,20 @@ A6.5 **cannot** change:
 
 ### A6.5-A — Discovery and Quarantine
 
-- **Goal:** finish discovery, quarantine PHI/unlicensed/P0 clinical-prompt risks, seed clinical-policy extraction list.
+- **Goal:** path discovery, classification correction, P0/P1 calibration, PHI-capable path marking, missing Owner/License/Provenance flags, quarantine suggestions, stop-condition checks.
 - **Inputs:** this inventory; A2/A4 evidence.
-- **Included:** all inventoried assets; expand clusters where P0/P1.
-- **Excluded:** migration, approvals, runtime enablement.
-- **Dependencies:** plan PR approval.
-- **Methods:** static scan, reference grep, privacy checklist (no content dump).
-- **Deliverables:** updated inventory; quarantine list; draft clinical-policy extraction.
-- **Acceptance:** every P0/P1 classified EXISTS/MISSING; PHI/medical sources quarantined or exception-owned.
-- **Failure/stop:** confirmed patient-data sample requiring halt; unauthorized live-store access needed.
+- **Included:** asset path discovery; category/`path_status`/`risk_basis` corrections; PHI-capable path marking; high-risk quarantine suggestions; clinical-policy **candidate path location** only (TASK-A03).
+- **Excluded:** content-level clinical rule extraction; medical rule approval; data-file content inspection; database access; contract mapping; runtime mapping; synthetic regression; migration/rewrite; asset deletion.
+- **Dependencies:** plan PR approval + OD-007 ack recommended.
+- **Methods:** static scan, reference grep, privacy checklist (no content dump; no cat/head/tail of data files).
+- **Deliverables:** updated inventory; quarantine list; clinical-policy-candidate-path-register.md.
+- **Acceptance:** every P0/P1 has path_status; PHI/medical sources quarantined or exception-owned; no clinical rule bodies extracted.
+- **Failure/stop:** confirmed patient-data sample; unauthorized live-store access; content-level extraction attempted in A.
 - **Rollback/containment:** no asset deletion; quarantine flags only.
-- **Reviewers:** architecture, security, clinical-ops.
+- **Reviewers:** architecture, security.
 - **Exit:** `A6_5_A_COMPLETE` or blocked status.
+
+Content-level `legacy-clinical-policy-extraction.md` is **TASK-B04** in A6.5-B and remains `BLOCKED` until a clinical owner role is available.
 
 ### A6.5-B — Structural and Provenance Validation
 
@@ -323,7 +355,7 @@ Planning artifacts themselves are evidence of scope, not of validation PASS.
 
 ## 22. Risks
 
-See `a6-5-risk-register.csv` (18 rows). Highest themes:
+See `a6-5-risk-register.csv` (8 theme rows; related_asset_ids bind calibrated P0 groups). Highest themes:
 
 - PHI-capable runtime stores
 - unapproved clinical rules/prompts
@@ -352,7 +384,7 @@ See `a6-5-decision-log.md` §3 (OD-001..OD-007).
 - Planning documents committed and Draft PR opened
 - Inventory/matrix/risk/backlog internally consistent
 - Enterprise/A6 safety boundaries unchanged
-- Recommendation set to `READY_FOR_A6_5_PLAN_REVIEW`
+- Recommendation set to `READY_FOR_A6_5_PLAN_REVIEW` (planning PR #10); independent remediation aims `READY_FOR_A6_5_PLAN_REMEDIATION_MERGE`
 - No A6.5-A execution started
 
 ## 26. Explicit Non-Claims
@@ -372,6 +404,6 @@ This plan does **not** claim:
 
 ## 27. Recommendation
 
-`READY_FOR_A6_5_PLAN_REVIEW`
+`READY_FOR_A6_5_PLAN_REVIEW` (planning PR #10); independent remediation aims `READY_FOR_A6_5_PLAN_REMEDIATION_MERGE`
 
 Human reviewers should approve or amend asset scope, risk grades, batch folding of Coverage Matrix A6.5-F into D/E, and open decisions before any implementation branch is created.
