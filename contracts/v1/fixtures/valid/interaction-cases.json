@@ -1,7 +1,80 @@
 {
-  "SourceArtifact":{"contract_version":"1.0.0","artifact_id":"artifact-1","artifact_type":"UPLOAD","owner_ref":"patient-fictional-1","content_type":"application/pdf","original_filename":"fictional-report.pdf","size_bytes":128,"checksum":{"algorithm":"SHA-256","value":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"storage_ref":"artifact://uploads/artifact-1","created_at":"2026-08-04T03:00:00Z","processing_status":"RECEIVED","derived_artifacts":[],"sensitivity":"PHI","retention_class":"POLICY_REQUIRED"},
-  "EvidencePack":{"contract_version":"1.0.0","evidence_pack_id":"evidence-pack-1","knowledge_release_id":"knowledge-2026-08","created_at":"2026-08-04T03:03:00Z","claims":[{"claim_id":"claim-1","text":"A fictional reviewed source supports this informational statement.","claim_type":"MEDICAL_EVIDENCE","support_status":"SUPPORTED","citation_refs":["source-1"],"applicability":"GENERAL","limitations":["Fixture text is not medical guidance."]},{"claim_id":"claim-2","text":"Follow the separately governed safety policy.","claim_type":"SAFETY_RULE","support_status":"NOT_REQUIRED","citation_refs":[],"applicability":"GENERAL","limitations":[]}],"sources":[{"source_id":"source-1","source_type":"GUIDELINE","title":"Fictional reviewed source","publisher":null,"release_or_version":"1.0.0","jurisdiction":null,"valid_from":null,"valid_to":null,"locator":"urn:aidoctor:source:source-1#section-1","span":"Short fictional excerpt.","license":null,"retrieved_at":"2026-08-04T03:00:00Z"}],"conflicts":[],"limitations":["This structural fixture is not clinical validation."]},
-  "ToolContext":{"contract_version":"1.0.0","envelope":{"contract_name":"ToolContext","contract_version":"1.0.0","message_id":"msg-tool-1","correlation_id":"corr-1","trace_id":"trace-1","created_at":"2026-08-04T03:00:00Z","producer":"diagnosis-service","capability_id":"clinical-parsing","capability_version":"1.0.0"},"actor":{"actor_id":"agent-1","actor_type":"AGENT"},"identifiers":{"contract_version":"1.0.0","cdp_id":"1001","patient_id":"patient-fictional-1","session_id":"session-1"},"capability":{"capability_id":"clinical-parsing","capability_version":"1.0.0"},"current_state_ref":{"cdp_id":"1001","version":1,"read_fields":["/patient_state/chief_complaint"]},"authorization_scope":{"granted":["CDP_READ","EVIDENCE_READ"],"requested":["CDP_READ"]},"deadline":"2026-08-04T03:05:00Z","locale":"zh-CN","requested_operation":"NORMALIZE_PATIENT_FACT","input_refs":[{"ref_type":"ARTIFACT","ref_id":"artifact-1","ref_version":1}]},
-  "ToolResult":{"contract_version":"1.0.0","envelope":{"contract_name":"ToolResult","contract_version":"1.0.0","message_id":"msg-result-1","correlation_id":"corr-1","trace_id":"trace-1","created_at":"2026-08-04T03:00:02Z","producer":"clinical-parsing-service","capability_id":"clinical-parsing","capability_version":"1.0.0"},"tool_name":"clinical-parser","tool_version":"1.0.0","invocation_id":"invocation-1","status":"SUCCEEDED","output":[{"name":"normalized_symptom","value":"fictional symptom text"}],"suggested_patches":[{"contract_version":"1.0.0","envelope":{"contract_name":"StatePatch","contract_version":"1.0.0","message_id":"msg-patch-tool-1","correlation_id":"corr-1","trace_id":"trace-1","created_at":"2026-08-04T03:00:02Z","producer":"clinical-parsing-service","capability_id":"clinical-parsing","capability_version":"1.0.0"},"cdp_id":"1001","base_version":1,"patch_id":"patch-tool-1","idempotency_key":"idem-tool-1","operations":[{"op":"REPLACE","path":"/patient_state/chief_complaint","value":"fictional symptom text","source":"PATIENT_FACT","sensitivity":"PHI"}],"reason_code":"NORMALIZE_PATIENT_FACT","evidence_refs":[],"producer":"clinical-parsing-service","created_at":"2026-08-04T03:00:02Z"}],"evidence_refs":["evidence-pack-1"],"errors":[],"started_at":"2026-08-04T03:00:00Z","completed_at":"2026-08-04T03:00:02Z"},
-  "PatientDeliveryView":{"contract_version":"1.0.0","delivery_id":"delivery-1","delivery_version":1,"cdp_id":"1001","review_status":"CLINICIAN_APPROVED","generated_at":"2026-08-04T03:05:00Z","summary":"This fictional patient-facing summary is informational.","safety_notice":[{"notice_id":"notice-1","level_ref":"POLICY_REVIEW_REQUIRED","message":"Follow the separately approved safety instructions."}],"recommended_actions":["Discuss this information with a qualified clinician."],"evidence_sections":[{"section_id":"section-1","title":"Evidence summary","cards":[{"card_id":"card-1","card_type":"MEDICAL_EVIDENCE","title":"Fictional evidence","body":"A fictional source supports this informational statement.","citation_refs":["source-1"],"applicability":"GENERAL","limitations":["Not medical guidance."]},{"card_id":"card-2","card_type":"EVIDENCE_CONFLICT","title":"Evidence conflict","body":"A fictional conflict remains unresolved.","citation_refs":[],"applicability":"UNKNOWN","limitations":["Clinician review is required."]}]}],"limitations":["This view does not replace clinician assessment."],"follow_up":["Use the authorized follow-up channel."],"version_bindings":{"delivery_version":1,"contract_version":"1.0.0","cdp_version":2,"review_decision_version":1,"knowledge_release_id":"knowledge-2026-08","knowledge_release_version":"1.0.0"}}
+  "SourceArtifact": {
+    "contract_version": "1.0.0", "artifact_id": "artifact-1", "artifact_type": "UPLOAD",
+    "owner_ref": "patient-fictional-1", "content_type": "application/pdf",
+    "original_filename": "fictional-report.pdf", "size_bytes": 128,
+    "checksum": {"algorithm": "SHA-256", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    "storage_ref": "artifact://uploads/artifact-1", "created_at": "2026-08-04T03:00:00Z",
+    "processing_status": "RECEIVED", "derived_artifacts": [], "sensitivity": "PHI",
+    "retention_class": "POLICY_REQUIRED"
+  },
+  "EvidencePack": {
+    "contract_version": "1.0.0", "evidence_pack_id": "evidence-pack-1",
+    "knowledge_release_id": "knowledge-2026-08", "created_at": "2026-08-04T03:03:00Z",
+    "claims": [
+      {"claim_id": "claim-1", "text": "A fictional reviewed source supports this informational statement.", "claim_type": "MEDICAL_EVIDENCE", "support_status": "SUPPORTED", "citation_refs": ["source-1"], "applicability": "GENERAL", "limitations": ["Fixture text is not medical guidance."]},
+      {"claim_id": "claim-2", "text": "Follow the separately governed safety policy.", "claim_type": "SAFETY_RULE", "support_status": "NOT_REQUIRED", "citation_refs": [], "applicability": "GENERAL", "limitations": []}
+    ],
+    "sources": [
+      {"source_id": "source-1", "source_type": "GUIDELINE", "title": "Fictional reviewed source", "publisher": null, "release_or_version": "1.0.0", "jurisdiction": null, "valid_from": null, "valid_to": null, "locator": "urn:aidoctor:source:source-1#section-1", "span": "Short fictional excerpt.", "license": null, "retrieved_at": "2026-08-04T03:00:00Z"}
+    ],
+    "conflicts": [],
+    "limitations": ["This structural fixture is not clinical validation."]
+  },
+  "ToolContext": {
+    "contract_version": "1.0.0",
+    "envelope": {"contract_name": "ToolContext", "contract_version": "1.0.0", "message_id": "msg-tool-1", "correlation_id": "corr-1", "trace_id": "trace-1", "created_at": "2026-08-04T03:00:00Z", "producer": "diagnosis-service", "capability_id": "clinical-parsing", "capability_version": "1.0.0"},
+    "actor": {"actor_id": "agent-1", "actor_type": "AGENT"},
+    "identifiers": {"contract_version": "1.0.0", "cdp_id": "1001", "patient_id": "patient-fictional-1", "session_id": "session-1"},
+    "capability": {"capability_id": "clinical-parsing", "capability_version": "1.0.0"},
+    "current_state_ref": {"cdp_id": "1001", "version": 1, "read_fields": ["/patient_state/chief_complaint"]},
+    "authorization_scope": {"granted": ["CDP_READ", "EVIDENCE_READ"], "requested": ["CDP_READ"]},
+    "deadline": "2026-08-04T03:05:00Z", "locale": "zh-CN", "requested_operation": "NORMALIZE_PATIENT_FACT",
+    "input_refs": [{"ref_type": "ARTIFACT", "ref_id": "artifact-1", "ref_version": 1}]
+  },
+  "ToolResult": {
+    "contract_version": "1.0.0",
+    "envelope": {"contract_name": "ToolResult", "contract_version": "1.0.0", "message_id": "msg-result-1", "correlation_id": "corr-1", "trace_id": "trace-1", "created_at": "2026-08-04T03:00:02Z", "producer": "clinical-parsing-service", "capability_id": "clinical-parsing", "capability_version": "1.0.0"},
+    "tool_name": "clinical-parser", "tool_version": "1.0.0", "invocation_id": "invocation-1",
+    "status": "SUCCEEDED", "reason_code": "COMPLETED", "retryable": false,
+    "output": [{"name": "normalized_symptom", "value": "fictional symptom text"}],
+    "suggested_patches": [{"contract_version": "1.0.0", "envelope": {"contract_name": "StatePatch", "contract_version": "1.0.0", "message_id": "msg-patch-tool-1", "correlation_id": "corr-1", "trace_id": "trace-1", "created_at": "2026-08-04T03:00:02Z", "producer": "clinical-parsing-service", "capability_id": "clinical-parsing", "capability_version": "1.0.0"}, "cdp_id": "1001", "base_version": 1, "patch_id": "patch-tool-1", "idempotency_key": "idem-tool-1", "operations": [{"op": "REPLACE", "path": "/patient_state/chief_complaint", "value": "fictional symptom text", "source": "PATIENT_FACT", "sensitivity": "PHI"}], "reason_code": "NORMALIZE_PATIENT_FACT", "evidence_refs": [], "producer": "clinical-parsing-service", "created_at": "2026-08-04T03:00:02Z"}],
+    "evidence_refs": ["evidence-pack-1"], "errors": [],
+    "started_at": "2026-08-04T03:00:00Z", "completed_at": "2026-08-04T03:00:02Z"
+  },
+  "PatientDeliveryView": {
+    "contract_version": "1.0.0", "delivery_id": "delivery-1", "delivery_version": 1,
+    "delivery_status": "READY", "cdp_id": "1001", "review_status": "CLINICIAN_APPROVED",
+    "generated_at": "2026-08-04T03:05:00Z", "title": "Fictional reviewed information",
+    "summary": "This fictional patient-facing summary is informational.",
+    "safety_notice": [{"notice_id": "notice-1", "level_ref": "POLICY_REVIEW_REQUIRED", "message": "Follow the separately approved safety instructions."}],
+    "recommended_actions": ["Discuss this information with a qualified clinician."],
+    "evidence_sections": [{
+      "section_id": "section-1", "title": "Evidence summary", "description": "Reviewed fictional evidence.", "display_order": 1,
+      "cards": [
+        {
+          "card_id": "card-1", "claim_id": "claim-1", "basis_type": "MEDICAL_EVIDENCE",
+          "patient_friendly_claim": "A fictional source supports this informational statement.",
+          "rationale_summary": "A reviewed fictional source was linked.", "evidence_status": "SUPPORTED",
+          "certainty_label": "STRONGER_BASIS", "related_patient_fact_ids": ["fact-1"],
+          "sources": [{"citation_id": "citation-1", "source_id": "source-1", "title": "Fictional reviewed source", "organization": "Fictional organization", "publication_date": null, "source_version": "1.0.0", "source_type": "GUIDELINE", "applicable_population": null, "region": null, "patient_friendly_excerpt": "Fictional excerpt.", "access_url": null, "link_policy": "NO_EXTERNAL_LINK", "freshness_status": "CURRENT"}],
+          "conflict_summary": {"exists": true, "patient_friendly_message": "Two fictional claims require clinician interpretation.", "affected_claim_ids": ["claim-1", "claim-2"], "requires_clinician_review": true},
+          "applicability": {"population_match": "UNKNOWN", "region_match": "UNKNOWN", "patient_friendly_message": "Applicability requires clinician review."},
+          "limitations": [{"code": "CLINICIAN_REVIEW_REQUIRED", "message": "Clinician interpretation is required.", "severity": "WARNING"}],
+          "clinician_reviewed": true, "reviewed_at": "2026-08-04T03:04:00Z", "display_priority": "HIGH", "expandable": true
+        },
+        {
+          "card_id": "card-2", "claim_id": "claim-2", "basis_type": "PATIENT_FACT",
+          "patient_friendly_claim": "A fictional patient fact is included for context.",
+          "rationale_summary": null, "evidence_status": "NOT_REQUIRED", "certainty_label": null,
+          "related_patient_fact_ids": ["fact-1"], "sources": [], "conflict_summary": null,
+          "applicability": null, "limitations": [], "clinician_reviewed": true,
+          "reviewed_at": "2026-08-04T03:04:00Z", "display_priority": "NORMAL", "expandable": false
+        }
+      ]
+    }],
+    "limitations": [{"code": "CAPABILITY_SCOPE_LIMIT", "message": "This view does not replace clinician assessment.", "severity": "INFO"}],
+    "follow_up": ["Use the authorized follow-up channel."],
+    "version_bindings": {"delivery_version": 1, "contract_version": "1.0.0", "cdp_version": 2, "review_decision_version": 1, "knowledge_release_id": "knowledge-2026-08", "knowledge_release_version": "1.0.0"}
+  }
 }

@@ -12,5 +12,8 @@
   {"schema":"TraceRef","base":"TraceRef","mutation":{"op":"remove","path":"/trace_id"},"expected":{"validator":"required","path":"/","category":"MISSING_REQUIRED_FIELD","reason":"trace_id is mandatory"}},
   {"schema":"TraceRef","base":"TraceRef","mutation":{"op":"add","path":"/raw_input","value":"fictional patient payload"},"expected":{"validator":"additionalProperties","path":"/","category":"PHI_BOUNDARY","reason":"trace references cannot carry raw input"}},
   {"schema":"AuditRef","base":"AuditRef","mutation":{"op":"remove","path":"/audit_type"},"expected":{"validator":"required","path":"/","category":"MISSING_REQUIRED_FIELD","reason":"audit_type is mandatory"}},
-  {"schema":"AuditRef","base":"AuditRef","mutation":{"op":"replace","path":"/audit_type","value":"ARBITRARY"},"expected":{"validator":"enum","path":"/audit_type","category":"UNKNOWN_ENUM","reason":"audit types are closed"}}
+  {"schema":"AuditRef","base":"AuditRef","mutation":{"op":"replace","path":"/audit_type","value":"ARBITRARY"},"expected":{"validator":"enum","path":"/audit_type","category":"UNKNOWN_ENUM","reason":"audit types are closed"}},
+  {"schema":"StatePatch","base":"StatePatch","mutation":{"op":"replace","path":"/operations/0/path","value":"/patient_state"},"expected":{"validator":"pattern","path":"/operations/0/path","category":"AGGREGATE_PARENT_PATH","reason":"a patch must target a specific leaf path"}},
+  {"schema":"StatePatch","base":"StatePatch","mutation":{"op":"replace","path":"/envelope/contract_name","value":"CommitResult"},"expected":{"validator":"const","path":"/envelope/contract_name","category":"ENVELOPE_TYPE_MISMATCH","reason":"StatePatch envelope name must match its payload"}},
+  {"schema":"CommitResult","base":"CommitResult","mutation":{"op":"remove","path":"/reason_code"},"expected":{"validator":"required","path":"/","category":"STATUS_REASON_REQUIRED","reason":"every commit outcome carries a controlled reason code"}}
 ]

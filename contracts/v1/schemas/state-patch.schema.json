@@ -1,6 +1,6 @@
 {
   "$schema":"https://json-schema.org/draft/2020-12/schema",
-  "$id":"https://schemas.aidoctor.dev/contracts/v1/state-patch.schema.json",
+  "$id":"https://schemas.aidoctor.dev/contracts/1.0.0/state-patch.schema.json",
   "title":"StatePatch",
   "description":"Atomic proposal for a future State Committer; this contract never represents an already committed state change.",
   "type":"object",
@@ -8,9 +8,9 @@
   "required":["contract_version","envelope","cdp_id","base_version","patch_id","idempotency_key","operations","reason_code","evidence_refs","producer","created_at"],
   "properties":{
     "contract_version":{"const":"1.0.0"},
-    "envelope":{"$ref":"contract-envelope.schema.json"},
+    "envelope":{"allOf":[{"$ref":"contract-envelope.schema.json"},{"properties":{"contract_name":{"const":"StatePatch"}}}]},
     "cdp_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
-    "base_version":{"type":"integer","minimum":0},
+    "base_version":{"type":"integer","minimum":0,"maximum":9007199254740991},
     "patch_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
     "idempotency_key":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
     "operations":{"type":"array","minItems":1,"maxItems":64,"items":{"$ref":"#/$defs/operation"}},
@@ -25,7 +25,7 @@
       "required":["op","path","source","sensitivity"],
       "properties":{
         "op":{"enum":["ADD","REPLACE","REMOVE","TEST"]},
-        "path":{"allOf":[{"$ref":"contract-envelope.schema.json#/$defs/jsonPointer"},{"pattern":"^/(patient_state|ddx|evidence_graph|workup_plan|management_plan|triage|uncertainty|health_state_assessment|wellness_plan|status)(/.*)?$"}]},
+        "path":{"allOf":[{"$ref":"contract-envelope.schema.json#/$defs/jsonPointer"},{"pattern":"^/(patient_state|ddx|evidence_graph|workup_plan|management_plan|triage|uncertainty|health_state_assessment|wellness_plan)/.+$"}]},
         "value":{"$ref":"#/$defs/controlledValue"},
         "expected_current_value":{"$ref":"#/$defs/controlledValue","description":"Optional compare-before-write value; absence means no value-level precondition beyond base_version."},
         "source":{"enum":["PATIENT_FACT","MEDICAL_EVIDENCE","CLINICIAN_DECISION","SAFETY_RULE","TOOL_OUTPUT"]},
@@ -33,6 +33,6 @@
       },
       "allOf":[{"if":{"properties":{"op":{"enum":["ADD","REPLACE","TEST"]}}},"then":{"required":["value"]}},{"if":{"properties":{"op":{"const":"REMOVE"}}},"then":{"not":{"required":["value"]}}}]
     },
-    "controlledValue":{"anyOf":[{"type":"string","maxLength":4000},{"type":"number"},{"type":"integer"},{"type":"boolean"},{"type":"null"},{"type":"array","maxItems":64,"items":{"anyOf":[{"type":"string","maxLength":1000},{"type":"number"},{"type":"integer"},{"type":"boolean"},{"type":"null"}]}}]}
+    "controlledValue":{"anyOf":[{"type":"string","maxLength":4000},{"type":"number","minimum":-9007199254740991,"maximum":9007199254740991},{"type":"boolean"},{"type":"null"},{"type":"array","maxItems":64,"items":{"anyOf":[{"type":"string","maxLength":1000},{"type":"number","minimum":-9007199254740991,"maximum":9007199254740991},{"type":"boolean"},{"type":"null"}]}}]}
   }
 }

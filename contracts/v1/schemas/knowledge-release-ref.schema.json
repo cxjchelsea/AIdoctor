@@ -1,6 +1,6 @@
 {
   "$schema":"https://json-schema.org/draft/2020-12/schema",
-  "$id":"https://schemas.aidoctor.dev/contracts/v1/knowledge-release-ref.schema.json",
+  "$id":"https://schemas.aidoctor.dev/contracts/1.0.0/knowledge-release-ref.schema.json",
   "title":"KnowledgeReleaseRef",
   "description":"Reference to a knowledge release. It does not implement a release registry or approve sources.",
   "type":"object","additionalProperties":false,
@@ -16,5 +16,9 @@
     "withdrawn_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
     "superseded_by":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"}
   },
-  "allOf":[{"if":{"properties":{"status":{"const":"WITHDRAWN"}}},"then":{"required":["withdrawn_at"]}},{"if":{"properties":{"status":{"const":"SUPERSEDED"}}},"then":{"required":["superseded_by"]}}]
+  "allOf":[
+    {"if":{"properties":{"status":{"enum":["DRAFT","ACTIVE"]}}},"then":{"not":{"anyOf":[{"required":["withdrawn_at"]},{"required":["superseded_by"]}]}}},
+    {"if":{"properties":{"status":{"const":"WITHDRAWN"}}},"then":{"required":["withdrawn_at"],"not":{"required":["superseded_by"]}}},
+    {"if":{"properties":{"status":{"const":"SUPERSEDED"}}},"then":{"required":["superseded_by"],"not":{"required":["withdrawn_at"]}}}
+  ]
 }

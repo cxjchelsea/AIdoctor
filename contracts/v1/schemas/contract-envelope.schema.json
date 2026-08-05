@@ -1,6 +1,6 @@
 {
   "$schema":"https://json-schema.org/draft/2020-12/schema",
-  "$id":"https://schemas.aidoctor.dev/contracts/v1/contract-envelope.schema.json",
+  "$id":"https://schemas.aidoctor.dev/contracts/1.0.0/contract-envelope.schema.json",
   "title":"ContractEnvelope",
   "description":"Shared routing and provenance metadata. It never carries prompts, private reasoning, or provider responses.",
   "type":"object",

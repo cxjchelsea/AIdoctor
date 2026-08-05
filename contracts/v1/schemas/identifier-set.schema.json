@@ -1,6 +1,6 @@
 {
   "$schema":"https://json-schema.org/draft/2020-12/schema",
-  "$id":"https://schemas.aidoctor.dev/contracts/v1/identifier-set.schema.json",
+  "$id":"https://schemas.aidoctor.dev/contracts/1.0.0/identifier-set.schema.json",
   "title":"IdentifierSet",
   "description":"Optional opaque business identifiers. Existing numeric database IDs are serialized as decimal strings without changing storage types.",
   "type":"object",
