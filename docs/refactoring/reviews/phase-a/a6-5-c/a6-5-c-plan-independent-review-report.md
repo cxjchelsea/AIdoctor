@@ -3,6 +3,7 @@
 Document status: **Independent planning review**
 Review branch: `agent/phase-a6-5-c-plan-independent-review`
 Reviewed planning Head: `ee26dfd1d3c577d54d3b46e3a2fbc29e7cd3bf83`
+Review Head: `d460da7e12534efcc188872b68ed09c13c16234b`
 Planning PR: `#19`
 Enterprise base: `356be01f1c86cccdfea87f856e152d858793e5a2`
 Review execution: `A65C-PLAN-REVIEW-20260806-EE26DFD`
@@ -37,19 +38,19 @@ Planning package under review (PR #19):
 
 ```text
 docs/refactoring/plans/phase-a/a6-5/
-├── a6-5-c-non-clinical-contract-observability-plan.md
-├── a6-5-c-non-clinical-target-register.csv
-├── a6-5-c-plan-validation-matrix.csv
-├── a6-5-c-risk-register.csv
-└── a6-5-c-open-decisions.md
+鈹溾攢鈹€ a6-5-c-non-clinical-contract-observability-plan.md
+鈹溾攢鈹€ a6-5-c-non-clinical-target-register.csv
+鈹溾攢鈹€ a6-5-c-plan-validation-matrix.csv
+鈹溾攢鈹€ a6-5-c-risk-register.csv
+鈹斺攢鈹€ a6-5-c-open-decisions.md
 ```
 
 Independent review artifacts added on this branch:
 
 ```text
 docs/refactoring/reviews/phase-a/a6-5-c/
-├── a6-5-c-plan-independent-review-findings.csv
-└── a6-5-c-plan-independent-review-report.md
+鈹溾攢鈹€ a6-5-c-plan-independent-review-findings.csv
+鈹斺攢鈹€ a6-5-c-plan-independent-review-report.md
 ```
 
 ## 3. Independent Recalculation
@@ -98,7 +99,7 @@ B04: BLOCKED
 Required order retained:
 
 ```text
-B01 → C01 → C03
+B01 鈫?C01 鈫?C03
 ```
 
 ### 3.3 Contract semantics
@@ -165,8 +166,8 @@ Blocking open: 0
 
 | Finding | Severity | Status | Summary |
 | --- | --- | --- | --- |
-| F-A65C-P12 | P2 | FIXED | Complete C03 observability mapping schema fields added to plan §25.2 |
-| F-A65C-P13 | P2 | FIXED | Complete C03 test matrix schema fields added to plan §25.3 |
+| F-A65C-P12 | P2 | FIXED | Complete C03 observability mapping schema fields added to plan 搂25.2 |
+| F-A65C-P13 | P2 | FIXED | Complete C03 test matrix schema fields added to plan 搂25.3 |
 | F-A65C-P15 | P2 | FIXED | Matrix/Gate-C0 planning-vs-Evidence/CI boundary clarified |
 | F-A65C-P01 | P3 | NOT_APPLICABLE | Cardinality/dependency/scope recalculation found no defect |
 
@@ -239,10 +240,10 @@ Next authorized sequence only:
 
 ```text
 Merge this Review PR into the planning branch by merge commit
-→ re-verify updated planning Head
-→ convert PR #19 from Draft to Ready
-→ merge PR #19 into Enterprise by merge commit
-→ separately authorize TASK-C01 implementation
+鈫?re-verify updated planning Head
+鈫?convert PR #19 from Draft to Ready
+鈫?merge PR #19 into Enterprise by merge commit
+鈫?separately authorize TASK-C01 implementation
 ```
 
 Do **not**:
