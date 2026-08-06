@@ -379,7 +379,7 @@ NOT privacy/runtime/production approval
 
 Validation:
 implementation execution A65B-CORE-20260806-28947DF preserved
-review checks appended under A65B-CORE-REVIEW-20260806-E3A959
+review checks appended under A65B-CORE-REVIEW-20260806-E3A959 (52 rows)
 ```
 
 Independent recomputation summary:

@@ -44,3 +44,27 @@ A65B-CORE-REVIEW-20260806-E3A959,A65B-R-G-EXT,GLOBAL,external_model_api_calls,CO
 A65B-CORE-REVIEW-20260806-E3A959,A65B-R-G-B04,GLOBAL,task_b04_blocked,ENUM,BLOCKED,BLOCKED,PASS,a6-5-b-access-manifest.csv,2026-08-06T07:30:33Z,independent_reviewer,
 A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B02-ENUM,TASK-B02,b02_invalid_license_enum,COUNT,0,0,PASS,a6-5-b-governance-evidence.csv,2026-08-06T07:30:33Z,independent_reviewer,
 A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B02-FORB,TASK-B02,b02_forbidden_approval_enums,COUNT,0,0,PASS,a6-5-b-governance-evidence.csv,2026-08-06T07:30:33Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-GATE-UNK-TASK,Gate-B0,unknown_task_id,COUNT,0,0,PASS,a6-5-b-access-manifest.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-GATE-UNK-CLASS,Gate-B0,unknown_access_class,COUNT,0,0,PASS,a6-5-b-access-manifest.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-GATE-BROKEN-EREF,Gate-B0,broken_evidence_reference,COUNT,0,0,PASS,a6-5-b-access-manifest.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B01-UNIQ,TASK-B01,b01_unique_evidence_id,UNIQUENESS,55,55,PASS,legacy-design-code-evidence.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B01-MISS,TASK-B01,b01_missing_targets,COUNT,0,0,PASS,legacy-design-code-evidence.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B01-INV,TASK-B01,b01_broken_inventory_refs,COUNT,0,0,PASS,legacy-design-code-evidence.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B01-REC,TASK-B01,b01_record_count_mismatches,RECOMPUTE,0,0,PASS,legacy-design-code-evidence.csv,2026-08-06T07:45:14Z,independent_reviewer,prior_independent_recompute_confirmed
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B02-PROV,TASK-B02,b02_invalid_provenance_enum,COUNT,0,0,PASS,a6-5-b-governance-evidence.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B02-PRIV,TASK-B02,b02_invalid_privacy_enum,COUNT,0,0,PASS,a6-5-b-governance-evidence.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B02-CLIN,TASK-B02,b02_invalid_clinical_enum,COUNT,0,0,PASS,a6-5-b-governance-evidence.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B02-INV,TASK-B02,b02_broken_inventory_refs,COUNT,0,0,PASS,a6-5-b-governance-evidence.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B02-OWN,TASK-B02,b02_invented_owner,COUNT,0,0,PASS,a6-5-b-governance-evidence.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B02-MISS,TASK-B02,b02_missing_targets,COUNT,0,0,PASS,a6-5-b-governance-evidence.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B03-DUPPAIR,TASK-B03,b03_duplicate_normalized_pairs,COUNT,0,0,PASS,a6-5-b-duplication-conflict-register.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B03-ASSET,TASK-B03,b03_broken_asset_refs,COUNT,0,0,PASS,a6-5-b-duplication-conflict-register.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-B03-MUT,TASK-B03,b03_target_file_mutations,GIT_SCOPE,0,0,PASS,git_diff_name_only,2026-08-06T07:45:14Z,independent_reviewer,no_target_asset_paths_in_review_diff
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-G-DUP-EID,GLOBAL,duplicate_evidence_ids,COUNT,0,0,PASS,b-core-evidence,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-G-TASK,GLOBAL,broken_task_references,COUNT,0,0,PASS,b-core-evidence,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-G-ENUM,GLOBAL,unknown_enum_values,COUNT,0,0,PASS,a6-5-b-governance-evidence.csv,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-G-SCOPE,GLOBAL,out_of_scope_files,GIT_SCOPE,0,0,PASS,git_diff_name_only,2026-08-06T07:45:14Z,independent_reviewer,review_branch_files_limited_to_evidence_and_reviews
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-G-DIFFCHECK,GLOBAL,git_diff_check,COMMAND,clean,clean,PASS,git_diff_check,2026-08-06T07:45:14Z,independent_reviewer,reconfirmed_after_this_commit
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-G-VALIDATOR,GLOBAL,a6_validator,COMMAND,11/25/5/0,11/25/5/0,PASS,capabilities/validator/validate_capability.py,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-G-PYTEST,GLOBAL,a6_pytest,COMMAND,59 passed,59 passed,PASS,capabilities/tests/test_capability.py,2026-08-06T07:45:14Z,independent_reviewer,
+A65B-CORE-REVIEW-20260806-E3A959,A65B-R-G-PIP,GLOBAL,pip_check,COMMAND,No broken requirements found,No broken requirements found,PASS,python -m pip check,2026-08-06T07:45:14Z,independent_reviewer,

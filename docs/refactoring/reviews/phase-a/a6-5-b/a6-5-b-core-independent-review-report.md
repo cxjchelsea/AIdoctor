@@ -266,7 +266,7 @@ Unreproducible overlaps: 0 (none required fail-closed downgrade).
 Hypothesis H-A65B-01: CONFIRMED_FINDING
 Implementation rows preserved under A65B-CORE-20260806-28947DF
 Review rows appended under A65B-CORE-REVIEW-20260806-E3A959
-Review validation rows appended: 28
+Review validation rows appended: 52
 False PASS for unexecuted checks: 0
 ```
 
@@ -333,12 +333,19 @@ Asset-specific license applicability: UNVERIFIED (by design)
 
 ## 24. A6 Regression
 
-Recorded after remediations in the review worktree (see final agent report):
+Recorded after narrow validation-completion remediation on the review branch:
 
 ```text
-pip check / validator / pytest expected pass
+pip check: No broken requirements found
+A6 validator: 11 schemas / 25 assets / 5 eval cases / 0 issues
+A6 pytest: 59 passed
+git diff --check: clean
+Out-of-scope files: 0
 CI: NO_CI_CONFIGURED
 ```
+
+Review Validation Evidence total under `A65B-CORE-REVIEW-20260806-E3A959`: `52` rows.
+Implementation Validation Evidence under `A65B-CORE-20260806-28947DF`: `17` rows.
 
 ## 25. Git and Scope Verification
 
