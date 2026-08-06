@@ -23,7 +23,7 @@ A6.5-C
 A7
 ```
 
-Authorization source: Explicit Repository Owner authorization for B-Core execution  
+Authorization source: Explicit Repository Owner authorization for B-Core execution
 Authorization date: 2026-08-06
 
 ## 2. Exact Enterprise Base
@@ -282,7 +282,7 @@ DATA-KG001..003 remain inventory-level RUNTIME_COUPLING_BLOCKER under existing l
 
 ## 18. Validation Evidence
 
-Artifact: `a6-5-b-validation-evidence.csv`  
+Artifact: `a6-5-b-validation-evidence.csv`
 Execution ID: `A65B-CORE-20260806-28947DF`
 
 Gate-B0 / B01 / B02 / B03 / global checks recorded with expected PASS outcomes for cardinality, redaction, blocked B04, and zero approval/external-call claims.
@@ -302,8 +302,8 @@ Local verification is not CI PASS.
 
 ## 20. Git and Scope Verification
 
-Intended changed files limited to B-Core Evidence artifacts under `docs/refactoring/evidence/phase-a/a6-5/`.  
-No Capability/Contract/Runtime/application source mutations.  
+Intended changed files limited to B-Core Evidence artifacts under `docs/refactoring/evidence/phase-a/a6-5/`.
+No Capability/Contract/Runtime/application source mutations.
 No target clinical/prompt/corpus file mutations.
 
 Planning CSV historical status rows: not rewritten (`DEFERRED_SCHEMA_WRITEBACK` for backlog PLANNED snapshot rows).
