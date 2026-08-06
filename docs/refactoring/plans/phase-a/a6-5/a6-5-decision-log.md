@@ -26,7 +26,7 @@ Independent review: risk calibration and OD fail-closed fields added
 | --- | --- | --- | --- |
 | Evidence enum completeness | Roadmap vs mapping doc | Use mapping-doc full set | RESOLVED (planning) |
 | Retention decision enum | Roadmap vs matrices | Planning enums + mapping table | RESOLVED (planning) |
-| Batch naming `A6.5-F` | Coverage Matrix | Fold into D/E with deliverable retention table | RESOLVED (planning) pending OD-007 human confirm |
+| Batch naming `A6.5-F` | Coverage Matrix | Fold into D/E with deliverable retention table | ACKNOWLEDGED (OD-007 human confirm during A6.5-A authorization) |
 | Title wording Asset vs Design Asset | PR title vs normative docs | Treat as aliases; normative phrase retained in plan | RESOLVED (planning) |
 | README narrative lag | README vs phase evidence | Prefer phase evidence for baseline facts | RESOLVED (planning) |
 
@@ -128,7 +128,7 @@ Independent review: risk calibration and OD fail-closed fields added
 | --- | --- |
 | decision_id | OD-007 |
 | question | Confirm Coverage Matrix A6.5-F deliverables are fully retained by D/E |
-| current_status | NEEDS_HUMAN_DECISION |
+| current_status | ACKNOWLEDGED |
 | owner_role | architecture owner role |
 | reviewer_roles | architecture |
 | blocking_batches | A6.5-D; A6.5-E (naming confirmation only; deliverables already mapped) |
@@ -136,6 +136,7 @@ Independent review: risk calibration and OD fail-closed fields added
 | required_evidence | human ack of retention table below |
 | decision_deadline_or_phase_gate | before plan Ready / before A6.5-A |
 | impact_if_unresolved | implementation may use A–E only after ack; deliverables still mandatory |
+| acknowledgement_record | Repository-owner authorization for A6.5-A confirmed that: evaluation-suite and legacy-eval inventory deliverables remain in A6.5-D; decommission and matrix-write-back deliverables remain in A6.5-E. Retention table below is unchanged and mandatory. |
 
 #### A6.5-F deliverable retention table
 
