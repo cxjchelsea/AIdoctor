@@ -353,3 +353,42 @@ Production: BLOCKED
 B01 programmatically parsed version-controlled target bytes under structure-only redaction controls.
 
 No raw clinical, prompt, medical, or patient content was persisted to Evidence, logs, reports, commits, or PR metadata.
+
+## Independent Review Remediation Notes
+
+Independent review execution: `A65B-CORE-REVIEW-20260806-E3A959`
+
+Remediations applied on the review branch (do not interpret as clinical/legal approval):
+
+```text
+License evidence:
+observed_scope + asset_license_applicability=UNVERIFIED
+repository root license != asset-specific applicability
+
+Jinja B01 rows:
+LIMITED_STRUCTURE_SCANNER
+NO_TEMPLATE_SEMANTIC_VALIDATION
+
+B03 relationships:
+relationship_basis + path/consumer_hash pointers
+unreproducible consumer_overlap fail-closed
+
+AUTHORIZED_METADATA_ONLY:
+repo metadata inspection only
+NOT privacy/runtime/production approval
+
+Validation:
+implementation execution A65B-CORE-20260806-28947DF preserved
+review checks appended under A65B-CORE-REVIEW-20260806-E3A959 (52 rows)
+```
+
+Independent recomputation summary:
+
+```text
+B01 hash_mismatch: 0
+B01 schema_mismatch: 0
+B01 record_mismatch: 0
+B02 license scope rows clarified: 46
+B03 relationships annotated/fail-closed: 7
+B03 unreproducible fail-closed: 0
+```
