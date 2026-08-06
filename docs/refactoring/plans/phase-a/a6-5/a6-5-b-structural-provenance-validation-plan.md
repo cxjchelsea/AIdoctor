@@ -1,10 +1,10 @@
 # Phase A6.5-B Structural, Provenance and Clinical Evidence Review Plan
 
-Document status: **Draft planning**  
-Planning branch: `agent/phase-a6-5-b-structural-provenance-validation-plan`  
-Enterprise base: `90cdc686a2991156c97445c7a6958203ce70e348`  
-A6.5-A status: `A6_5_A_MERGED_AND_VERIFIED`  
-A6.5-B status: `NOT_STARTED`  
+Document status: **Draft planning**
+Planning branch: `agent/phase-a6-5-b-structural-provenance-validation-plan`
+Enterprise base: `90cdc686a2991156c97445c7a6958203ce70e348`
+A6.5-A status: `A6_5_A_MERGED_AND_VERIFIED`
+A6.5-B status: `NOT_STARTED`
 TASK-B04 status: `BLOCKED`
 
 ## 1. Objective
@@ -16,7 +16,7 @@ The batch is split into:
 - **B-Core**: Gate-B0 + TASK-B01 + TASK-B02 + TASK-B03.
 - **B04**: separately unlocked, human-supervised clinical-policy candidate extraction.
 
-B-Core may proceed independently. TASK-B04 remains blocked until a clinical owner role and scoped content-access authorization exist.
+B-Core is dependency-separable from TASK-B04, but remains `NOT_STARTED` until separately authorized by the Repository Owner. This planning document does **not** grant `AUTHORIZED_FOR_IMPLEMENTATION` to TASK-B01/B02/B03. TASK-B04 remains `BLOCKED` until clinical-owner, human-reviewer, and scoped content-access authorization conditions are all met.
 
 ## 2. Current baseline
 
@@ -65,6 +65,31 @@ F-A65A-R09: OPEN / P2 / NON_BLOCKING
 DATA-KG001..003 retain inventory-level RUNTIME_COUPLING_BLOCKER.
 ```
 
+B-Core may collect structural or governance evidence for DATA-KG001..003 but must not mark F-A65A-R09 resolved without a separate Architecture Decision.
+
+### 2.1 Current vs future task status
+
+Current actual status (planning PR does not change this):
+
+```text
+TASK-B01: PLANNED / NOT_STARTED
+TASK-B02: PLANNED / NOT_STARTED
+TASK-B03: PLANNED / NOT_STARTED
+TASK-B04: BLOCKED
+B-Core: NOT_STARTED
+A6.5-B implementation: NOT_STARTED
+```
+
+Future Gate-B0 may record `AUTHORIZED_FOR_IMPLEMENTATION` for B01–B03 only after explicit Repository Owner authorization of B-Core. Until then, Access Manifest rows for B01–B03 remain `authorization_status=NOT_YET_AUTHORIZED`.
+
+### 2.2 Historical planning snapshots
+
+`a6-5-implementation-backlog.csv` and `a6-5-decision-log.md` retain historical planning text such as `status=PLANNED` for A-batch tasks and Decision Log headers stating `planning only` / earlier Enterprise bases. Those are historical snapshots:
+
+- A6.5-A actual completion is defined by merged A6.5-A Evidence (`A6_5_A_MERGED_AND_VERIFIED`).
+- Gate-B0 must add a Current Implementation Status Addendum that reconciles backlog/decision-log historical rows to verified evidence without deleting or rewriting history.
+- OD-001..OD-006 remain unresolved/fail-closed; OD-007 remains `ACKNOWLEDGED`.
+
 ## 3. Governing tasks
 
 ### TASK-B01 — Structural parse
@@ -85,16 +110,20 @@ Human-supervised extraction of candidate clinical policy text. This is not appro
 
 ## 4. Gate-B0 — status and access reconciliation
 
+Gate-B0 is the first step of a future B-Core implementation. Planning review must not execute Gate-B0.
+
 Before reading or parsing target content:
 
-1. Reconcile implementation status:
-   - TASK-A01/A02/A03 → `MERGED_AND_VERIFIED`.
-   - TASK-B01/B02/B03 → `AUTHORIZED_FOR_IMPLEMENTATION` only after explicit authorization.
+1. Reconcile implementation status into a Current Implementation Status Addendum:
+   - TASK-A01/A02/A03 → `MERGED_AND_VERIFIED` (from A6.5-A Evidence; backlog may still show historical `PLANNED`).
+   - TASK-B01/B02/B03 → `AUTHORIZED_FOR_IMPLEMENTATION` only after explicit Repository Owner B-Core authorization; otherwise remain `NOT_STARTED` / `NOT_YET_AUTHORIZED`.
    - TASK-B04 → `BLOCKED`.
-2. Preserve OD-001..OD-006 as unresolved/fail-closed.
-3. Create an access manifest for every B-Core target.
-4. Confirm PHI runtime paths remain `NO_CONTENT_ACCESS`.
-5. Confirm external downloads, external models, paid APIs and live/staging access are forbidden.
+2. Preserve OD-001..OD-006 as unresolved/fail-closed; preserve OD-007 as `ACKNOWLEDGED`.
+3. Preserve RISK-001..005 and RISK-008 as `OPEN`; preserve F-A65A-R09 as `OPEN` / P2 / NON_BLOCKING.
+4. Create an access manifest for every B-Core target and every B04 candidate (B04 rows stay blocked).
+5. Confirm PHI runtime paths remain `NO_CONTENT_ACCESS`.
+6. Confirm external downloads, external models, paid APIs and live/staging access are forbidden.
+7. Do not read clinical rule bodies, prompt bodies, medical corpus records, or patient data during Gate-B0.
 
 Recommended artifact:
 
@@ -110,10 +139,12 @@ asset_id
 path
 task_id
 access_class
+authorization_status
 allowed_operation
 forbidden_operation
 executor_role
 required_reviewer_role
+raw_content_persistence
 output_redaction
 external_access
 patient_data_risk
@@ -122,6 +153,25 @@ status
 evidence_reference
 notes
 ```
+
+Distinguish:
+
+```text
+plan status          (this document / backlog planning labels)
+authorization_status (NOT_YET_AUTHORIZED | AUTHORIZED | BLOCKED)
+execution status     (NOT_STARTED | IN_PROGRESS | COMPLETED | STOPPED)
+```
+
+At planning time and until B-Core is separately authorized:
+
+```text
+B01-B03 authorization_status: NOT_YET_AUTHORIZED
+B04 authorization_status: BLOCKED
+access_class HUMAN_SUPERVISED_CLINICAL_READ: inactive / not executable
+raw_content_persistence: no
+```
+
+Planning PR rows must not claim `AUTHORIZED`, `ACTIVE`, or `EXECUTED`.
 
 Allowed access classes:
 
@@ -133,6 +183,8 @@ HUMAN_SUPERVISED_CLINICAL_READ
 NO_CONTENT_ACCESS
 EXTERNAL_ACCESS_FORBIDDEN
 ```
+
+`HUMAN_SUPERVISED_CLINICAL_READ` is listed only for future TASK-B04 scoping. It remains inactive for planning review and for all B-Core tasks.
 
 ## 5. B-Core scope
 
@@ -173,6 +225,46 @@ DOC-003
 
 Expected total: **7 duplication/conflict targets**.
 
+These are **7 targets**, not 7 comparison pairs. Suspected-duplicate relationships must be generated from known relations, shared consumers, shared responsibility, shared configuration keys, shared AST/template structure, or manual architecture candidates. Do not treat all C(7,2)=21 pairwise combinations as meaningful behavior comparisons by default.
+
+Cross-task asset overlap among B01/B02/B03 is expected and must not be misread as Inventory duplication.
+
+### 5.4 Dependency graph (planning)
+
+Backlog dependencies (authoritative):
+
+```text
+TASK-B01 depends on TASK-A01
+TASK-B02 depends on TASK-A02
+TASK-B03 depends on TASK-B01
+TASK-B04 depends on TASK-A03 and TASK-B01
+TASK-C01 depends on TASK-B01
+TASK-C02 depends on TASK-B01 and TASK-B04
+TASK-C03 depends on TASK-C01
+```
+
+Execution shape after separate B-Core authorization:
+
+```text
+Gate-B0
+├── TASK-B01
+└── TASK-B02
+
+TASK-B01
+└── TASK-B03
+
+TASK-A03 + TASK-B01 + Clinical Owner + scoped authorization
+└── TASK-B04
+```
+
+Notes:
+
+- B02 need not formally wait for B01 completion.
+- B03 must wait for B01.
+- B04 is not unlocked by merging this planning PR or by completing B-Core alone.
+- B04 blocks TASK-C02; it must not be described as automatically blocking all A6.5-C tasks.
+- This plan does not authorize any A6.5-C task.
+
 ## 6. Content-access boundary
 
 ### Allowed
@@ -182,19 +274,20 @@ Expected total: **7 duplication/conflict targets**.
 - Parse JSON using standard parsers.
 - Parse CSV/TSV in streaming mode and emit only header/schema/row-count metadata.
 - Parse XML using streaming/iterative parsing and emit element/attribute structure only.
-- Parse Jinja templates and emit block/variable/filter structure only.
-- Read repository-contained LICENSE, README and provenance declarations.
-- Hash files and compare normalized structure.
+- Parse Jinja templates and emit block/variable/filter **counts and hashes** only.
+- Read repository-contained LICENSE, README and provenance declarations for identifier/path/hash metadata only (no full license-text copy into Evidence; no legal opinion).
+- Hash files and compare normalized structure counts/hashes.
 
 ### Forbidden
 
 - `eval`, `exec`, importing or running target business modules.
 - Starting services or connecting to databases, Redis, Neo4j, object storage, logs or upload directories.
 - Reading live/staging/production patient data.
-- Emitting medical data rows, patient examples, clinical rule bodies, thresholds, prompt bodies or diagnosis logic into evidence artifacts.
+- Emitting medical data rows, patient examples, clinical rule bodies, thresholds, prompt bodies, diagnosis logic, raw string literals, raw clinical identifiers, raw headings, or content excerpts into evidence artifacts.
 - Running DR.KNOWS, downloading weights/data or making model/API calls.
 - Treating parse success as clinical correctness.
 - Treating a LICENSE file as product-use approval.
+- Activating `HUMAN_SUPERVISED_CLINICAL_READ` outside a separately authorized B04 task.
 
 Mandatory statements:
 
@@ -207,16 +300,37 @@ External model/API called: no
 
 ## 7. TASK-B01 implementation model
 
-Recommended parsers:
+Recommended parsers and redacted outputs:
 
 ```text
 .py      -> ast.parse
-.yaml    -> yaml.safe_load
-.json    -> json.load
-.csv/tsv -> csv parser; header/schema/record count only
-.xml     -> iterparse; element/attribute structure only
-.jinja2  -> Jinja parser; blocks/variables/filters only
-.md/txt  -> encoding/headings/references only
+           allow: parse status; AST/node/function/class/assignment/import counts; content hash
+           forbid: raw string literals; rule expressions; thresholds; bodies; comments; docstrings;
+                   raw clinical-meaning function/class names
+           if identifiers needed: identifier_count / identifier_hashes / allowlisted non-clinical only
+.yaml/.json -> safe parsers
+           allow: parse status; top-level type; field count; nesting depth; value-type distribution; schema hash
+           forbid: raw values; rule text; thresholds; prompt fragments; medical terms; samples
+.csv/tsv -> streaming parser
+           allow: encoding; delimiter; column count; record count; schema hash
+           forbid: row samples; cell values; medical entries; patient identifiers
+.xml     -> streaming/iterparse
+           allow: encoding; element count; attribute count; schema hash
+           forbid: raw XML text; medical entries; patient identifiers
+.jinja2  -> Jinja parser
+           allow: parse status; node-type counts; block/variable/filter counts; template hash
+           forbid: Prompt Body; clinical semantic variable names; literal text; clinical instruction fragments
+.md/txt  -> structure-only
+           allow: encoding; line count; heading count; link count; structure hash
+           forbid: raw headings; medical paragraphs; rule text; clinical recommendations
+```
+
+Principle:
+
+```text
+parse content locally
+persist structure only
+emit no clinical/medical content
 ```
 
 Recommended artifact:
@@ -224,6 +338,8 @@ Recommended artifact:
 ```text
 docs/refactoring/evidence/phase-a/a6-5/legacy-design-code-evidence.csv
 ```
+
+Backlog lists this as a partial deliverable. B01 creates the initial version. Later phases may only append or update by stable primary key (`evidence_id`); they must not invent incompatible same-name schemas or overwrite historical rows. Each update records `execution_id` or an equivalent version field.
 
 Recommended fields:
 
@@ -236,18 +352,30 @@ format
 parser
 encoding
 parse_status
-schema_summary
-top_level_symbols
-reference_count
+top_level_type
+structural_counts
+schema_hash
+content_hash
 record_count
+raw_identifier_output
+string_literal_output
 content_excerpt_emitted
 external_dependency_required
 failure_class
 quarantine_action
-evidence_hash
 reviewer_role
 notes
 ```
+
+Mandatory Evidence values for every B01 row:
+
+```text
+raw_identifier_output=no
+string_literal_output=no
+content_excerpt_emitted=no
+```
+
+Use `top_level_symbol_count` / `top_level_symbol_hashes` inside `structural_counts` when needed. Do not persist raw `top_level_symbols`.
 
 Allowed `parse_status` values:
 
@@ -264,6 +392,8 @@ Acceptance:
 
 ```text
 55/55 targets have a structural conclusion
+raw_identifier_output=no for every target
+string_literal_output=no for every target
 content_excerpt_emitted=no for every target
 parse failures remain fail-closed
 external model/API calls=0
@@ -272,11 +402,23 @@ clinical correctness claims=0
 
 ## 8. TASK-B02 implementation model
 
+B02 must keep three layers distinct:
+
+```text
+Observed Evidence
+Provisional Classification
+Human Decision
+```
+
+B02 may complete the first two layers. It must not pretend human Legal/Clinical/Product approval is complete.
+
 Recommended artifact:
 
 ```text
 docs/refactoring/evidence/phase-a/a6-5/a6-5-b-governance-evidence.csv
 ```
+
+Primary key: `governance_id` (globally unique within the artifact). Append/update by stable key only.
 
 Recommended fields:
 
@@ -302,6 +444,19 @@ status
 notes
 ```
 
+License/README reads may record only:
+
+```text
+source path
+license identifier
+publisher/version if present
+evidence hash
+missing fields
+review required
+```
+
+Do not copy full License Text into Evidence and do not issue legal opinions.
+
 ### License states
 
 ```text
@@ -313,6 +468,8 @@ LICENSE_NOT_FOUND
 NOT_APPLICABLE
 ```
 
+Do **not** auto-emit `LEGAL_APPROVED`, `PRODUCT_APPROVED`, or `ELIGIBLE_FOR_KNOWLEDGE_RELEASE` unless independent human Legal Decision Evidence already exists.
+
 ### Provenance states
 
 ```text
@@ -321,6 +478,8 @@ PROVENANCE_PARTIAL
 PROVENANCE_UNKNOWN
 DERIVED_SOURCE_CHAIN_INCOMPLETE
 ```
+
+`PROVENANCE_COMPLETE` means provenance fields are complete. It does not mean medical correctness or product usability.
 
 ### Privacy states
 
@@ -331,6 +490,8 @@ PRIVACY_REVIEW_REQUIRED
 AUTHORIZED_METADATA_ONLY
 ```
 
+PHI paths remain path-level only. Do not access Runtime Stores to “verify” privacy states.
+
 ### Clinical states
 
 ```text
@@ -339,6 +500,8 @@ STRUCTURALLY_REVIEWED_ONLY
 NOT_CLINICALLY_VALIDATED
 NOT_APPLICABLE
 ```
+
+Do **not** use `CLINICALLY_VALIDATED` or `CLINICALLY_APPROVED`.
 
 ### Record status
 
@@ -356,7 +519,8 @@ Rules:
 
 - Do not invent personal owner names.
 - `assigned_owner=UNASSIGNED` is allowed; `required_owner_role` must remain explicit.
-- B02 may add evidence but must not automatically close RISK-001..RISK-005 or OD-001..OD-006.
+- `owner_role=UNASSIGNED` / `assigned_owner=UNASSIGNED` does **not** mean “no owner required”.
+- B02 may add evidence and containment notes but must not automatically close RISK-001..RISK-005, RISK-008, OD-001..OD-006, or F-A65A-R09.
 - Approved medical source count remains 0 unless a separate human legal/clinical governance process records approval.
 
 ## 9. TASK-B03 implementation model
@@ -367,10 +531,30 @@ Recommended methods:
 SHA-256 exact hash
 normalized text hash
 AST structural hash
-function/class/template-variable set comparison
+template structure hash
+symbol-count comparison (counts/hashes only; no raw clinical identifiers)
 consumer/reference overlap
 configuration-key comparison
 manual architecture difference note
+```
+
+Relationship generation for the 7 targets:
+
+```text
+known relations
+same consumer
+same responsibility
+same configuration key
+same AST/template structure
+manual architecture candidate
+```
+
+Hard distinctions:
+
+```text
+text similarity != behavior equivalence
+structure similarity != clinical equivalence
+hash mismatch != distinct responsibility
 ```
 
 Recommended artifact:
@@ -378,6 +562,8 @@ Recommended artifact:
 ```text
 docs/refactoring/evidence/phase-a/a6-5/a6-5-b-duplication-conflict-register.csv
 ```
+
+Primary key: `conflict_id` (globally unique within the artifact).
 
 Recommended fields:
 
@@ -394,11 +580,25 @@ consumer_overlap
 behavior_equivalence
 conflict_type
 sot_candidate
-decision_status
+sot_decision_status
+decision_owner_role
 required_owner_role
 required_evidence
 status
 notes
+```
+
+Defaults and allowed values:
+
+```text
+behavior_equivalence default: NOT_EVALUATED
+  (change only with separate non-clinical behavior evidence)
+
+sot_candidate / sot_decision_status:
+  CANDIDATE
+  CONFLICTING
+  INSUFFICIENT_EVIDENCE
+  DISTINCT
 ```
 
 Allowed conclusions:
@@ -412,15 +612,17 @@ DISTINCT
 INSUFFICIENT_EVIDENCE
 ```
 
-Do not silently merge, delete or modify duplicate implementations.
+Do not silently merge, delete, or modify duplicate implementations. Do not modify Prompts or model behavior. Do not select a production SoT.
 
 ## 10. TASK-B04 unlock gate
 
-TASK-B04 remains `BLOCKED` until all conditions are met:
+TASK-B04 remains `BLOCKED` until **all** conditions are met:
 
-1. An accountable clinical owner role is explicitly assigned.
-2. Written content-access authorization exists.
-3. Access scope is limited to exactly nine registered assets:
+1. Repository Owner separately authorizes TASK-B04 (distinct from B-Core authorization).
+2. An accountable Clinical Owner Role is explicitly assigned.
+3. A Human Clinical Reviewer Role is explicitly assigned.
+4. Written content-access authorization exists.
+5. Access scope is limited to exactly these nine registered assets:
 
 ```text
 CLIN-020
@@ -434,14 +636,24 @@ PROMPT-004
 PROMPT-008
 ```
 
-4. B01 has structurally validated all nine files.
-5. A human clinical-review template and reviewer role are defined.
-6. Patient-data access is explicitly excluded.
-7. Capability Package mutation is explicitly excluded.
-8. Approved rules/thresholds/hypotheses/sources remain 0.
-9. A separate B04 branch and Draft PR are created.
+6. B01 has structurally validated all nine files.
+7. No step requires patient-data access.
+8. Capability Package mutation is explicitly forbidden.
+9. Approved rules/thresholds/hypotheses/sources remain 0.
+10. A separate B04 branch and Draft PR are created.
+11. Exit and stop conditions for B04 are explicit; work is human-supervised.
 
-Repository-owner technical authorization alone does not satisfy the clinical-owner requirement.
+Hard distinction:
+
+```text
+Repository Owner technical authorization
+!=
+Clinical Owner approval
+```
+
+`HUMAN_SUPERVISED_CLINICAL_READ` may be activated only by that separately authorized B04 task. Planning review and B-Core must keep it inactive.
+
+B04 must not be appended to the B-Core implementation PR. Planning review must not create `legacy-clinical-policy-extraction.md`.
 
 When unlocked, the B04 artifact is:
 
@@ -483,7 +695,27 @@ docs/refactoring/plans/phase-a/a6-5/
 └── a6-5-legacy-asset-inventory.csv
 ```
 
-Updates are limited to execution status, evidence pointers, owner/license/provenance/privacy states, risk containment and open-decision evidence.
+Updates are limited to execution status, evidence pointers, owner/license/provenance/privacy states, risk containment and open-decision evidence. Do not delete historical rows; append or update by stable keys only.
+
+### 11.1 Stable Evidence keys
+
+```text
+Access Manifest:        access_id
+Structural Evidence:    evidence_id
+Governance Evidence:    governance_id
+Conflict Register:      conflict_id
+Validation Evidence:    execution_id + validation_id
+```
+
+Integrity rules:
+
+```text
+IDs globally unique within artifact
+asset_id references Inventory
+task_id references Backlog
+evidence_reference resolves
+no overwrite of historical Evidence without version/execution_id
+```
 
 ## 12. Explicitly out of scope
 
@@ -666,16 +898,19 @@ This phase does not claim:
 ## 18. Recommended sequence
 
 ```text
-1. Merge and verify this planning PR.
-2. Separately authorize B-Core only.
-3. Execute Gate-B0.
-4. Execute TASK-B01.
-5. Execute TASK-B02.
-6. Execute TASK-B03.
+1. Complete independent plan review / remediation merge into the planning branch.
+2. Human-approve and merge the planning PR to Enterprise; verify.
+3. Separately authorize B-Core only (does not authorize B04).
+4. Execute Gate-B0 (Current Implementation Status Addendum + Access Manifest).
+5. Execute TASK-B01 and TASK-B02 (B02 may proceed without waiting on B01).
+6. Execute TASK-B03 after B01.
 7. Perform independent B-Core review.
-8. Merge B-Core to Enterprise and verify.
-9. Assess clinical owner and B04 authorization separately.
+8. Merge B-Core to Enterprise and verify → A6_5_B_CORE_MERGED_AND_VERIFIED;
+   A6.5-B Overall remains PARTIALLY_COMPLETE while TASK-B04 is BLOCKED.
+9. Assess Repository Owner + Clinical Owner + Human Reviewer + scoped B04 authorization separately.
 10. Keep TASK-B04 BLOCKED until every unlock condition is satisfied.
+11. Only after B-Core and B04 are both independently reviewed, merged and verified:
+    A6_5_B_MERGED_AND_VERIFIED.
 ```
 
 ## 19. Planning recommendation
@@ -684,4 +919,4 @@ This phase does not claim:
 READY_FOR_A6_5_B_PLAN_REVIEW
 ```
 
-This recommendation authorizes review of this plan only. It does not authorize B-Core implementation or TASK-B04.
+This recommendation authorizes review of this plan only. It does not authorize B-Core implementation or TASK-B04. After independent review remediation lands on the planning branch, the human reviewer may treat the planning PR as ready for approval review; implementation remains `NOT_STARTED`.
