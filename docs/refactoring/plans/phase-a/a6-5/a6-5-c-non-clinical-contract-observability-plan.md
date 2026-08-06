@@ -124,6 +124,10 @@ Patient-data access required: no
 Contract mutation required: no
 ```
 
+These Gate-C0 `pass` marks are **planning-eligibility checks for this planning package only**.
+They are not TASK-C01/C03 implementation Evidence, not Shared Contract runtime
+compatibility proof, and not `CI PASS`.
+
 Failure status: `GATE_C0_FAILED`.
 
 ## 8. Dependency Graph
@@ -565,15 +569,162 @@ Creating any of the above in this planning task is `A6_5_C_IMPLEMENTATION_STARTE
 
 ## 25. Future Validation Artifacts
 
+### 25.1 Planning Validation Matrix boundary
+
 See `a6-5-c-plan-validation-matrix.csv` for Gate-C0, C01 Plan, C03 Plan, and Global checks.
 
-Future observability mapping ID pattern:
+Every matrix row is a **PLAN_DEFINITION** of a future or planning-gate check.
+`status=PLANNED` means the check is defined, not that C01/C03 implementation Evidence
+has been executed. Local A6/Contracts regression recorded in the Draft PR is baseline
+hygiene only and is not `CI PASS`.
+
+### 25.2 Future Observability Mapping Schema
+
+Future file (must not be created in this planning PR):
+
+```text
+docs/refactoring/evidence/phase-a/a6-5/a6-5-c-observability-mapping.csv
+```
+
+Fields:
+
+```text
+observability_mapping_id
+execution_id
+task_id
+asset_id
+path
+component_role
+capture_trigger
+trace_identifier_source
+parent_context_source
+propagation_transport
+propagation_header
+span_or_trace_semantics
+audit_semantics
+payload_capture_behavior
+exception_behavior
+failure_isolation
+retry_behavior
+fallback_behavior
+phi_capture_risk
+redaction_boundary
+retention_dependency
+candidate_contract
+candidate_otel_concept
+coexistence_required
+legacy_path_retained
+runtime_cutover_authorized
+evidence_reference
+status
+notes
+```
+
+Deterministic ID:
 
 ```text
 A65C-C03-<ASSET_ID>
 ```
 
-Future observability mapping fields and enums are defined in this plan package and must be used unchanged unless a later planning revision is authorized.
+Allowed `component_role`:
+
+```text
+AOP_ASPECT
+ANNOTATION
+HTTP_INTERCEPTOR
+TRACE_ENTITY
+PYTHON_DECORATOR
+```
+
+Allowed `failure_isolation`:
+
+```text
+FAIL_ISOLATED
+FAIL_OPEN_OBSERVABILITY_ONLY
+FAIL_CLOSED_WORKFLOW
+UNKNOWN_REQUIRES_TEST
+```
+
+Allowed `phi_capture_risk`:
+
+```text
+NONE_STATIC_ONLY
+IDENTIFIER_ONLY
+METADATA_CAPABLE
+PAYLOAD_CAPABLE
+UNKNOWN_HIGH_RISK
+```
+
+Allowed `status`:
+
+```text
+MAPPED_STRUCTURALLY
+GAP_RECORDED
+NEEDS_SECURITY_REVIEW
+NEEDS_ARCHITECTURE_REVIEW
+NEEDS_PRIVACY_REVIEW
+INSUFFICIENT_EVIDENCE
+NOT_APPLICABLE
+```
+
+Forbidden statuses:
+
+```text
+PHI_APPROVED
+PRODUCTION_READY
+OTEL_MIGRATED
+```
+
+### 25.3 Future Observability Test Matrix Schema
+
+Future file (must not be created in this planning PR):
+
+```text
+docs/refactoring/evidence/phase-a/a6-5/a6-5-c-observability-test-matrix.csv
+```
+
+Fields:
+
+```text
+test_id
+task_id
+asset_ids
+test_category
+scenario
+synthetic_input_class
+expected_trace_behavior
+expected_business_behavior
+expected_redaction_behavior
+expected_failure_isolation
+external_dependency_required
+runtime_store_required
+patient_data_required
+planned_test_level
+blocking
+status
+notes
+```
+
+Required `test_category` coverage remains:
+
+```text
+Failure Isolation
+Feign Propagation
+PHI and Redaction
+Trace/Audit Separation
+OTel Candidate Mapping
+Coexistence and Rollback
+```
+
+Defaults for unauthorized work:
+
+```text
+external_dependency_required=no
+runtime_store_required=no
+patient_data_required=no
+runtime_cutover_authorized=no
+legacy_path_retained=yes
+```
 
 ## 26. Access and Safety Boundary
 
