@@ -6,6 +6,8 @@ Batch: `A6.5-A`
 
 ## Boundary
 
+Candidate register status: `REGISTERED_PATH_ONLY` (not clinically validated).
+
 ```text
 Clinical content extracted: no
 Clinical rules approved: 0
