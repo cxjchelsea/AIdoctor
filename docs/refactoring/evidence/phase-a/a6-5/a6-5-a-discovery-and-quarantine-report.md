@@ -208,8 +208,8 @@ Fail-closed metadata quarantine applied for:
 - DR.KNOWS-related assets (`DOC-019`, `MODEL-008`, `DATA-DR001`..`DATA-DR006`)
 
 ```text
-Quarantine register rows: 91
-Unique quarantined assets: 85
+Quarantine register rows: 90
+Unique quarantined assets: 87
 Read-only exceptions (KEEP_READ_ONLY_EXCEPTION): 0
 ```
 
@@ -236,6 +236,9 @@ TASK-B04: BLOCKED
 Evidence: `a6-5-a-clinical-policy-candidate-path-register.md`.
 
 ## 16. Quarantine Results
+
+Independent review remediation updated quarantine business keys to `(asset_id, risk_id)` uniqueness; rows 91->90, unique assets 85->87. RISK-003 membership expanded to include DATA-S*, DATA-DR*, DR.KNOWS docs/tools, and KG medical-source license aspects. RISK-004 quarantine rows added for path-injection assets. Validation methods and unblock evidence specialized by risk domain. Risks remain OPEN; no approvals granted.
+
 
 ```text
 Status used: QUARANTINED_AT_PATH_LEVEL

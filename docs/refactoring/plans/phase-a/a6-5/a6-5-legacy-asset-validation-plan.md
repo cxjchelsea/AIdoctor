@@ -16,7 +16,7 @@ This plan delivers:
 - a 203-row legacy asset inventory;
 - L0–L5 validation model and 259 planned validation matrix rows;
 - risk register (18) and decision log;
-- implementation backlog (12 tasks) across batches A–E;
+- implementation backlog (13 tasks) across batches A–E;
 - explicit non-claims and stop conditions.
 
 It does **not** implement A6.5-A through A6.5-E.
