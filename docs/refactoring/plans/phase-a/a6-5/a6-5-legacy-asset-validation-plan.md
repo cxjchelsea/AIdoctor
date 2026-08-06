@@ -1,9 +1,9 @@
 # Phase A6.5 Legacy Asset Validation Plan
 
-Document status: **Draft planning**  
-Planning branch: `agent/phase-a6-5-legacy-asset-validation-plan`  
-Enterprise base: `b4a1714506ac7b05ce2d8c7b6ecae3bd7bb2e836` (PR #8 merge commit)  
-A6 status: `PHASE_A6_MERGED_AND_VERIFIED`  
+Document status: **Draft planning**
+Planning branch: `agent/phase-a6-5-legacy-asset-validation-plan`
+Enterprise base: `b4a1714506ac7b05ce2d8c7b6ecae3bd7bb2e836` (PR #8 merge commit)
+A6 status: `PHASE_A6_MERGED_AND_VERIFIED`
 A6.5 status: `NOT_STARTED` (this PR plans only)
 
 ## 1. Executive Summary
