@@ -172,4 +172,3 @@ It does not copy rule bodies, thresholds, prompt text, or medical conclusions.
 - Blocking decision: `no_content_extraction_in_A6_5_A; TASK-B04_BLOCKED`
 - Allowed next phase: `A6.5-B TASK-B04 content extraction only after unblock`
 - Evidence ID: `DISC-077`
-
