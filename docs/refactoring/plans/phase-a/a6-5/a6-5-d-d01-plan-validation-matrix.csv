@@ -1,0 +1,46 @@
+validation_id,task_id,category,check_name,method,expected_result,blocking,status,evidence_reference,notes
+A65D-D01-PVAL-001,TASK-D01,Baseline,enterprise_exact_head,GIT_REV_PARSE,5b7b143b979fb5f3bc81e62b95642b88b9b0a4cc,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-002,TASK-D01,Baseline,c01_merged_and_verified,PHASE_STATE,MERGED_AND_VERIFIED,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-003,TASK-D01,Baseline,c03_merged_and_verified,PHASE_STATE,MERGED_AND_VERIFIED,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-004,TASK-D01,Baseline,d01_dependency_model,BACKLOG,dependency=TASK-C01,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-005,TASK-D01,Baseline,c02_not_required,BACKLOG,C02 not in D01 dependency,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-006,TASK-D01,Baseline,b04_not_required,BACKLOG,B04 not in D01 dependency,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-007,TASK-D01,Baseline,d01_existing_branch_absent,GIT_BRANCH,no prior D01 planning/impl branch,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-008,TASK-D01,Baseline,d01_implementation_artifact_absent,ARTIFACT_ABSENCE,legacy-eval-asset-inventory.csv absent,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-009,TASK-D01,Target,target_count_six,COUNT,6,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-010,TASK-D01,Target,target_ids_unique,SET,6 unique asset IDs,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-011,TASK-D01,Target,target_paths_resolved_or_fail_closed,INVENTORY,paths from inventory; missing suites fail-closed,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-012,TASK-D01,Target,authoritative_inventory_references,DOC,a6-5-legacy-asset-inventory.csv cited,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-013,TASK-D01,Target,data_ev_assets_boundary,BOUNDARY,CONTENT_READ_BLOCKED_UNTIL_SYNTHETIC_PROVEN,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-014,TASK-D01,Target,wf_assets_boundary,BOUNDARY,symbol/path metadata only; no patient payload,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-015,TASK-D01,Target,prompt001_boundary,BOUNDARY,PROMPT_BODY_NOT_AUTHORIZED,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-016,TASK-D01,Target,supporting_reference_scope,SCOPE,REFERENCE_ONLY extras not new targets,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-017,TASK-D01,Suite,static_suite_defined,PLAN,STATIC definition present,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-018,TASK-D01,Suite,interactive_suite_defined,PLAN,INTERACTIVE definition present,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-019,TASK-D01,Suite,trajectory_suite_defined,PLAN,TRAJECTORY definition present,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-020,TASK-D01,Suite,all_target_suite_pairs_classified,COUNT,>=18 dispositions,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-021,TASK-D01,Suite,coverage_status_enum_defined,ENUM,allowed coverage statuses listed,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-022,TASK-D01,Suite,gap_taxonomy_defined,ENUM,gap types listed,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-023,TASK-D01,Suite,fixture_taxonomy_defined,ENUM,allowed/forbidden fixtures listed,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-024,TASK-D01,Suite,oracle_taxonomy_defined,ENUM,allowed/forbidden oracles listed,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-025,TASK-D01,Suite,determinism_taxonomy_defined,ENUM,determinism classes listed,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-026,TASK-D01,Suite,a6_5_f_writeback_boundary_defined,PLAN,future write-back only; not completed,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-027,TASK-D01,Safety,synthetic_only_required,POLICY,SYNTHETIC_ONLY required,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-028,TASK-D01,Safety,real_patient_forbidden,POLICY,REAL_PATIENT forbidden,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-029,TASK-D01,Safety,deidentified_patient_forbidden,POLICY,DEIDENTIFIED forbidden,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-030,TASK-D01,Safety,clinical_gold_forbidden,POLICY,clinical gold forbidden,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-031,TASK-D01,Safety,medical_correctness_oracle_forbidden,POLICY,medical correctness oracle forbidden,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-032,TASK-D01,Safety,prompt_body_not_authorized,BOUNDARY,PROMPT-001 body not authorized,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-033,TASK-D01,Safety,runtime_store_not_required,BOUNDARY,runtime store not required,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-034,TASK-D01,Safety,external_model_not_required,BOUNDARY,external model not required,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-035,TASK-D01,Safety,clinical_content_not_required,BOUNDARY,clinical content not required for planning,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-036,TASK-D01,Safety,approved_counts_zero,COUNT,0/0/0/0,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-037,TASK-D01,Safety,c02_b04_scope_zero,SCOPE,C02/B04 untouched,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-038,TASK-D01,Artifact,future_inventory_schema_defined,PLAN,schema fields locked in plan,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-039,TASK-D01,Artifact,future_inventory_id_defined,PLAN,A65D-D01-EVAL-<ASSET>-<SUITE>-<NN>,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-040,TASK-D01,Artifact,future_inventory_status_defined,ENUM,INVENTORIED..NOT_APPLICABLE,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-041,TASK-D01,Artifact,open_decisions_defined,DOC,A65D-OD-001..010,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-042,TASK-D01,Artifact,risk_register_defined,CSV,A65D-RISK-001..012 OPEN,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-043,TASK-D01,Artifact,gate_di0_defined,PLAN,GDI0-01..21 defined; NOT_AUTHORIZED,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-044,TASK-D01,Artifact,implementation_not_started,ARTIFACT_ABSENCE,no legacy-eval-asset-inventory.csv,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
+A65D-D01-PVAL-045,TASK-D01,Artifact,planning_changed_file_scope,GIT_SCOPE,exactly 6 planning files,yes,DEFINED,a6-5-d-d01-synthetic-regression-plan.md,PLAN_DEFINITION_CHECK; not IMPLEMENTATION_PASS
