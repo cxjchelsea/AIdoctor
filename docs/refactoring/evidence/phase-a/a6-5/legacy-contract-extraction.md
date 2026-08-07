@@ -259,10 +259,10 @@ runtime_compatibility_claimed: no
 ## 20. Gap Summary
 
 ```text
-total_gap_rows: 91
-unique_gap_ids: 91
+total_gap_rows: 110
+unique_gap_ids: 110
 duplicate_gap_ids: 0
-OPEN: 91
+OPEN: 110
 NOT_APPLICABLE: 0
 closed_substantive_gaps: 0
 non_compatible_mappings_without_required_gap: 0
@@ -327,7 +327,7 @@ overall_c01_c03_report_created: no
 
 ```text
 required_validation_checks: 54
-validation_rows: 54
+validation_rows: 126
 missing_required_checks: 0
 duplicate_required_check_names: 0
 fail_rows: 0
@@ -349,4 +349,31 @@ Adapter required != Adapter authorized
 contract_mutation_required evidence != contract_mutation_authorized
 AuditRef != TraceRef
 status: READY_FOR_A6_5_C_C01_INDEPENDENT_REVIEW
+```
+
+
+## 27. Independent Review Remediation Note
+
+```text
+review_execution_id: A65C-C01-REVIEW-20260807-A8B910B
+reviewed_implementation_head: a8b910bb66af0e79391012ea21749b6a4666ca72
+independent_review: yes
+implementation_generator_reused: no
+
+post_review_mapping_rows: 106
+post_review_gap_rows: 110
+COMPATIBLE_AS_IS_after_review: 1
+EXACT_after_review: 0
+MAJOR_VERSION_REQUIRED_after_review: 0
+REQUIREDNESS_MISMATCH_gaps: 4
+NULLABILITY_MISMATCH_gaps: 5
+IDENTIFIER_SEMANTICS_MISMATCH_gaps: 14
+
+Remediation summary:
+- Downgraded opaqueIdentifier COMPATIBLE_AS_IS overclaims to ADAPTER_REQUIRED
+- Downgraded EXACT boxed Integer version mapping
+- Downgraded MAJOR_VERSION_REQUIRED overclaims to CONTRACT_EXTENSION_CANDIDATE
+- Downgraded unjustified CONTRACT_EXTENSION_CANDIDATE agent/legacy-only fields to DOCUMENTED_ONLY
+- Added REQUIREDNESS_MISMATCH / NULLABILITY_MISMATCH / IDENTIFIER_SEMANTICS_MISMATCH gaps
+- Implementation validation rows (54) preserved under A65C-C01-20260807-FD246A2
 ```
