@@ -11,7 +11,7 @@ Gate-DI0: AUTHORIZED (A65D-GATE-DI0-20260807-D6BED5A)
 
 Independent Evidence Review reconstructed six Targets and 21 Planning Coverage Obligations from authoritative backlog / legacy inventory / merged Planning. Implementation CSV was treated as REVIEW_SUBJECT only.
 
-Findings: **5** (P0=0, P1=0, P2=5, P3=0). All FIXED via inventory metadata narrow remediation. No false EXISTING / COVERED / execution claims. No patient/clinical/prompt/runtime/API boundary violations.
+Findings: **5** (P0=0, P1=0, P2=5, P3=0). FIXED=5 · OPEN=0 · Blocking open=0. Inventory metadata narrow remediation completed (runtime/external atomicity, fixture_source lifecycle, fixture_class planned-type clarification, determinism planned-design notes). No false EXISTING / COVERED / execution claims. No patient/clinical/prompt/runtime/API boundary violations.
 
 ## 2. Exact Review Target
 
