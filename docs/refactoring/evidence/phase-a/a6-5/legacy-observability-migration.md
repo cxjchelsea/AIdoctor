@@ -150,10 +150,18 @@ No new Runtime path was created by C03. Future shadow-only OTel path remains a m
 | Skip paths | client null / annotation null / cdpId null → `joinPoint.proceed()` |
 | Payload | optional via `traceInput`/`traceOutput`; sanitize records types only |
 | Errors | records `errorMessage=e.getMessage()` then rethrows |
-| Failure isolation | `UNKNOWN_REQUIRES_TEST` (`recordEvent` before proceed not wrapped) |
-| PHI risk | `PAYLOAD_CAPABLE` |
-| Status | `NEEDS_PRIVACY_REVIEW` |
+| Failure isolation | `FAIL_CLOSED_WORKFLOW` (Independent Review remediation) |
+| PHI risk | `METADATA_CAPABLE` (emitted START/END are type metadata; unsanitized error text) |
+| Status | `NEEDS_SECURITY_REVIEW` |
 | Contracts | TraceRef; AuditRef; ContractEnvelope; IdentifierSet |
+
+Independent Review static control-flow (CURRENT_STATIC_PATH):
+
+1. `recordEvent(start)` before `proceed` — observability throw prevents business invocation.
+2. `recordEvent(end)` after successful `proceed` inside same `try` — observability throw enters `catch` and rethrows, converting success into failure.
+3. `recordEvent(error)` before `throw e` — observability throw may mask the original business exception.
+
+Desired migration posture remains `FAIL_OPEN_OBSERVABILITY_ONLY` (not claimed as current).
 
 ## 11. WF-011 TraceExecution Analysis
 
@@ -180,20 +188,20 @@ No new Runtime path was created by C03. Future shadow-only OTel path remains a m
 | Skip | client null or cdpId null → return |
 | Events | `FEIGN_CALL_START` only in this asset |
 | Retry | `NO_EXPLICIT_STATIC_EVIDENCE` |
-| Failure isolation | `UNKNOWN_REQUIRES_TEST` |
+| Failure isolation | `FAIL_CLOSED_WORKFLOW` (Independent Review remediation) |
 | PHI risk | `METADATA_CAPABLE` |
-| Status | `NEEDS_ARCHITECTURE_REVIEW` |
+| Status | `NEEDS_SECURITY_REVIEW` |
 | Contracts | TraceRef; IdentifierSet; ContractEnvelope |
 
 ### Actual header literals (static)
 
-| Observed literal | Source of value | Normative contract |
-|---|---|---|
-| `X-CDP-Id` | `TraceContext.getCdpId()` | `UNRESOLVED_C_OD_007` |
-| `X-Service-Name` | `template.feignTarget().name()` | `UNRESOLVED_C_OD_007` |
-| `X-Method-Name` | `extractMethodFromUrl(url)` | `UNRESOLVED_C_OD_007` |
-| `X-Trace-Id` | `UUID.randomUUID()` | `UNRESOLVED_C_OD_007` |
-| `X-Start-Time` | `System.currentTimeMillis()` | `UNRESOLVED_C_OD_007` |
+| Observed literal | Source of value | Normative contract | Setting order |
+|---|---|---|---|
+| `X-CDP-Id` | `TraceContext.getCdpId()` | `UNRESOLVED_C_OD_007` | BEFORE `recordEvent(start)` |
+| `X-Service-Name` | `template.feignTarget().name()` | `UNRESOLVED_C_OD_007` | AFTER `recordEvent(start)` |
+| `X-Method-Name` | `extractMethodFromUrl(url)` | `UNRESOLVED_C_OD_007` | AFTER `recordEvent(start)` |
+| `X-Trace-Id` | `UUID.randomUUID()` | `UNRESOLVED_C_OD_007` | AFTER `recordEvent(start)` |
+| `X-Start-Time` | `System.currentTimeMillis()` | `UNRESOLVED_C_OD_007` | AFTER `recordEvent(start)` |
 
 Classification:
 
@@ -202,6 +210,8 @@ Observed literal: STATICALLY_OBSERVED
 Normative contract: UNRESOLVED_C_OD_007
 NOT: APPROVED_HEADER_CONTRACT
 ```
+
+If `recordEvent(start)` throws: interceptor exception can abort the outbound Feign call; the four post-event headers are never set. Feign duplicate/caller header library semantics remain `UNKNOWN_REQUIRES_TEST` (separate from this control-flow fact).
 
 ## 13. WF-013 ExecutionTrace Analysis
 
@@ -231,13 +241,20 @@ Candidate contracts: TraceRef; AuditRef; ContractConflict
 | API | `trace_execution(service, module="")` |
 | Context | `ContextVar` `_cdp_id` via `set_cdp_id` / `get_cdp_id` |
 | Client | `TraceClient.record_event` → POST `{TRACE_SERVICE_URL}/api/v1/trace/events` |
-| Failure | `record_event` catches Exception, logs, does not re-raise |
+| Failure | LAYER_A: `record_event` catches Exception, logs, does not re-raise |
 | Business errors | error event attempted, then original exception re-raised |
 | Skip | missing `cdp_id` → call function directly |
 | Payload | no args/return capture statically; `errorMessage=str(e)` |
-| Failure isolation | `FAIL_OPEN_OBSERVABILITY_ONLY` (observability HTTP only; NOT patient-safety fail-open) |
+| Sync wrapper | `loop.run_until_complete(async_wrapper)` — already-running loop can prevent business execution |
+| Failure isolation | `UNKNOWN_REQUIRES_TEST` (whole-asset; HTTP send isolated but sync wrapper not whole-asset fail-open) |
 | PHI risk | `METADATA_CAPABLE` |
 | Status | `NEEDS_SECURITY_REVIEW` |
+
+```text
+LAYER_A TRACE_HTTP_SEND_FAILURE_ISOLATED: yes
+Whole-asset FAIL_OPEN_OBSERVABILITY_ONLY: no (overclaim remediated)
+NOT PATIENT_SAFETY_FAIL_OPEN
+```
 
 ## 15. Trace Identifier Sources
 
@@ -316,22 +333,27 @@ ExecutionTrace != AUDIT_SOURCE_OF_TRUTH
 
 ## 21. Failure Isolation Analysis
 
+Post Independent Review (asset-level CURRENT_STATIC_PATH):
+
 | Asset | Classification | Rationale |
 |---|---|---|
-| WF-010 | `UNKNOWN_REQUIRES_TEST` | `recordEvent` before `proceed` not wrapped |
-| WF-011 | `UNKNOWN_REQUIRES_TEST` | no runtime control flow |
-| WF-012 | `UNKNOWN_REQUIRES_TEST` | `recordEvent` not wrapped |
+| WF-010 | `FAIL_CLOSED_WORKFLOW` | START blocks proceed; END can convert success to failure; ERROR can mask business exception |
+| WF-011 | `UNKNOWN_REQUIRES_TEST` | annotation has no runtime control flow |
+| WF-012 | `FAIL_CLOSED_WORKFLOW` | `recordEvent(start)` throw can abort Feign outbound call |
 | WF-013 | `UNKNOWN_REQUIRES_TEST` | entity has no failure path |
-| ENG-006 | `FAIL_OPEN_OBSERVABILITY_ONLY` | explicit catch in `record_event` |
+| ENG-006 | `UNKNOWN_REQUIRES_TEST` | HTTP send isolated (LAYER_A); sync_wrapper running-loop path can break workflow |
 
 ```text
 FAIL_OPEN_OBSERVABILITY_ONLY
 =
-observability failure must not silently alter business/clinical workflow result
+desired migration posture / HTTP-layer note
+!=
+current whole-asset classification for WF-010/WF-012/ENG-006
 !=
 PATIENT_SAFETY_FAIL_OPEN
 
 Runtime failure behavior verified: no
+C-RISK-006: remains OPEN with stronger static Evidence
 ```
 
 ## 22. Retry / Fallback Analysis
@@ -410,16 +432,18 @@ No Runtime retention config or DB records were accessed.
 Artifact: `a6-5-c-observability-test-matrix.csv`
 
 ```text
-Rows: 37
+Rows: 40 (pre-review 37; +TST-038/039/040 from Independent Review)
 Status: PLANNED (= definition exists; != test executed; != runtime PASS)
 Required categories: 6/6
 Feign scenario families: 7/7
 PHI scenario families: 6/6
+ENG-006 running-loop scenario: A65C-C03-TST-040 present
 external_dependency_required=yes: 0
 runtime_store_required=yes: 0
 patient_data_required=yes: 0
 Target without test coverage: 0
 Runtime test execution claimed: no
+PHI expected_redaction_behavior: FUTURE_TARGET (not current implemented guarantee)
 ```
 
 ## 28. OTel Candidate Mapping
@@ -539,16 +563,16 @@ Directly relevant and still OPEN:
 Artifact: `a6-5-c-observability-validation-evidence.csv`
 
 ```text
-Required checks: 60
-Validation rows: 65 (60 required + 5 extras)
-Missing required checks: 0
+Implementation Execution A65C-C03-20260807-1B559FE rows preserved: 65
+Independent Review Execution A65C-C03-REVIEW-20260807-BD1EE50 rows: 72
+Total validation rows: 137
+Missing required review checks: 0
 Duplicate validation IDs: 0
-False PASS: 0
 Runtime behavior verified: no
 Production behavior verified: no
 ```
 
-LOCAL_C03_IMPLEMENTATION_VERIFICATION (not CI PASS):
+LOCAL_C03_REVIEW_VERIFICATION (not CI PASS):
 
 ```text
 pip check: No broken requirements found
@@ -613,22 +637,31 @@ These references are **not** additional Mapping Targets.
 ```text
 Observability mapping rows: 5
 Unique Mapping IDs: 5
-Test Matrix rows: 37
+Test Matrix rows: 40
 Test categories: 6/6
 Feign required scenario families: 7/7
 PHI required scenario families: 6/6
-Validation rows: >=60
-Required validation checks: 60
-Missing required validation checks: 0
-False PASS: 0
+Implementation Validation preserved: 65
+Independent Review Validation: 72
+Total Validation: 137
+runtime_cutover_authorized: no (all rows)
+
+Failure isolation post-review:
+FAIL_CLOSED_WORKFLOW: 2 (WF-010, WF-012)
+UNKNOWN_REQUIRES_TEST: 3 (WF-011, WF-013, ENG-006)
+FAIL_OPEN_OBSERVABILITY_ONLY: 0
+FAIL_ISOLATED: 0
+
+PHI post-review:
+METADATA_CAPABLE: 4
+PAYLOAD_CAPABLE: 1 (WF-013)
 
 Runtime behavior verified: no
 Production behavior verified: no
 OTel deployed: no
-runtime_cutover_authorized: no (all rows)
 
-Final status target:
-READY_FOR_A6_5_C_C03_INDEPENDENT_REVIEW
+Post Independent Review status target:
+READY_FOR_A6_5_C_C03_REVIEW_INTEGRATION
 ```
 
-C03 Evidence Implementation is complete as static/synthetic Evidence only. Independent Review and Enterprise Merge require separate authorization.
+C03 Evidence remains static/synthetic only. Review Integration and Enterprise Merge of PR #23 require separate authorization.
