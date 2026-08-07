@@ -11,7 +11,7 @@ Status (post-remediation target): READY_FOR_A6_5_D_D01_PLANNING_REVIEW_INTEGRATI
 
 Independent Planning Review reconstructed TASK-D01 targets, suite dispositions, and safety boundaries from authoritative backlog / legacy asset inventory / Coverage Matrix / read-only source metadata. Planning CSVs were treated as REVIEW_SUBJECT only.
 
-Findings: **11** (P0=0, P1=6, P2=4, P3=1). Narrow planning remediation applied. Gate-DI0 remains **DEFINED / NOT_AUTHORIZED**. `legacy-eval-asset-inventory.csv` remains **ABSENT**.
+Findings: **11** (P0=0, P1=6, P2=4, P3=1). All FIXED. Narrow planning remediation applied. Gate-DI0 remains **DEFINED / NOT_AUTHORIZED** (23 checks). Coverage rows remain **21**. Plan Validation rows **48**. `legacy-eval-asset-inventory.csv` remains **ABSENT**.
 
 ## 2. Exact Review Target
 
@@ -89,7 +89,8 @@ Concrete suites are **missing**. `评估验证体系.md` is a **reference docume
 ## 10. Missing Asset Semantics
 
 ```text
-Documentation path treated as concrete suite (pre-remediation): risk YES → Finding P01
+Documentation path treated as concrete suite (pre-remediation): risk YES → Finding P01 → FIXED
+Post-remediation: concrete_eval_asset_path=ABSENT; reference_document_path separated
 Missing assets fabricated: no
 COVERED_EXISTING_SYNTHETIC for DATA-EV: correctly avoided (GAP_NO_FIXTURE)
 ```
@@ -126,12 +127,14 @@ TRAJECTORY clinical semantics: GAP_BLOCKED_CLINICAL_GOLD
 
 ```text
 Pre-review coverage rows: 21
+Post-review coverage rows: 21
 Required (asset,suite) pairs: 18
-Present pre-review: 18/18
+Present: 18/18
 Missing pairs: 0
 Duplicate semantic obligations: 0 (extra behavior rows are distinct)
 DATA-EV001 N/A for INTERACTIVE/TRAJECTORY: justified by asset role (static_case_eval_suite), not merely missing fixture
 STATIC != INTERACTIVE != TRAJECTORY: preserved
+Path-only STATIC rows reclassified to INSUFFICIENT_EVIDENCE
 ```
 
 ## 19–21. Fixture / Oracle / Determinism
@@ -152,7 +155,7 @@ Coverage Matrix contains DESIGNED static/interactive/trajectory eval rows (A6.5-
 
 ## 26. Future Inventory Schema Review
 
-Pre schema insufficient for provenance/content-read/oracle-execution distinction → Finding P03; remediated with additional fields and EXISTING rules.
+Pre schema insufficient for provenance/content-read/oracle-execution distinction → Finding P03 FIXED. Post schema adds `synthetic_provenance`, `content_read_state`, `oracle_execution_state`, `fixture_source`, `fixture_generator`, plus EXISTING/INVENTORIED rules.
 
 ## 27. Open Decisions Review
 
@@ -177,11 +180,11 @@ A65D-RISK-001..012 remain **OPEN**. No blocking risk trigger activated (no real 
 
 ## 29. Gate-DI0 Review
 
-Pre: 21 slogan checks. Post-remediation: expanded criteria + GDI0-22/23. Gate remains **NOT_AUTHORIZED**. Implementation **NOT_STARTED**.
+Pre: 21 slogan checks. Post-remediation: **23** checks with method/evidence/pass criteria + GDI0-22/23. Gate remains **NOT_AUTHORIZED**. Implementation **NOT_STARTED**.
 
 ## 30. Planning Validation Review
 
-Pre: 45 DEFINED. Post: may increase for new schema/gate definition checks. Status values remain DEFINED / NOT_DEFINED / NOT_APPLICABLE only. Invalid PASS claims: **0**.
+Pre: 45 DEFINED. Post: **48** DEFINED (added PVAL-046..048). Status values remain DEFINED only. Invalid PASS claims: **0**.
 
 ## 31. Review Hypotheses
 
@@ -210,22 +213,24 @@ P0: 0
 P1: 6
 P2: 4
 P3: 1
+FIXED: 11
+OPEN: 0
+DEFERRED_BLOCKING: 0
+Blocking open: 0
 ```
-
-Initial commit records findings OPEN; remediation commit sets FIXED for remediated items. Success requires P0/P1/Blocking OPEN = 0.
 
 ## 33. Remediation
 
-Narrow edits to planning files only (schema/semantics/Gate/OD/coverage classifications). No implementation artifacts.
+Narrow edits to all 6 planning files (path semantics, provenance, clinical-gold Interpretation A, runtime/external authorization wording, inventory schema, Gate-DI0 criteria, OD-002/003/006, coverage reclassification). No implementation artifacts.
 
 ## 34. Pre/Post Planning Counts
 
-| Metric | Pre | Post (target) |
+| Metric | Pre | Post |
 |---|---|---|
 | Targets | 6 | 6 |
-| Coverage rows | 21 | ≥21 (triad intact) |
-| Plan Validation | 45 | ≥45 |
-| Gate-DI0 checks | 21 | ≥23 |
+| Coverage rows | 21 | 21 |
+| Plan Validation | 45 | 48 |
+| Gate-DI0 checks | 21 | 23 |
 | Open Decisions | 10 | 10 |
 | Risks OPEN | 12 | 12 |
 

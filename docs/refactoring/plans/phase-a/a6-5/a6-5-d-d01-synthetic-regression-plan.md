@@ -138,14 +138,31 @@ If only clinical oracles could evaluate an asset → `NO_SAFE_ORACLE` + gap.
 
 ## 10. Authorized Target Inventory
 
-| Asset | Resolved path | Status |
-|---|---|---|
-| DATA-EV001 | `docs/AI医生/项目文档/12.性能与评估/评估验证体系.md [static_case_eval_suite MISSING_DATASET]` | PARTIALLY_PLANNABLE |
-| DATA-EV002 | `... [interactive_interview_eval_suite MISSING_DATASET]` | PARTIALLY_PLANNABLE |
-| DATA-EV003 | `... [trajectory_replay_eval_suite MISSING_DATASET]` | PARTIALLY_PLANNABLE |
-| WF-001 | `diagnosis-service/.../DiagnosisWorkflowOrchestrator.java` | READY_FOR_SYNTHETIC_PLANNING |
-| WF-002 | `diagnosis-service/.../AgentLoop.java` | READY_FOR_SYNTHETIC_PLANNING |
-| PROMPT-001 | `common/aidoctor_llm/prompt_manager.py` | PARTIALLY_PLANNABLE |
+| Asset | concrete_eval_asset_path | reference_document_path | Status |
+|---|---|---|---|
+| DATA-EV001 | **ABSENT** | `docs/AI医生/项目文档/12.性能与评估/评估验证体系.md` | PARTIALLY_PLANNABLE |
+| DATA-EV002 | **ABSENT** | same documentation path | PARTIALLY_PLANNABLE |
+| DATA-EV003 | **ABSENT** | same documentation path | PARTIALLY_PLANNABLE |
+| WF-001 | `diagnosis-service/.../DiagnosisWorkflowOrchestrator.java` | n/a | READY_FOR_SYNTHETIC_PLANNING |
+| WF-002 | `diagnosis-service/.../AgentLoop.java` | n/a | READY_FOR_SYNTHETIC_PLANNING |
+| PROMPT-001 | `common/aidoctor_llm/prompt_manager.py` | n/a | PARTIALLY_PLANNABLE |
+
+Path semantics (remediation for Independent Review Finding P01):
+
+```text
+reference_document_path
+  = design/documentation citation only
+  ≠ Evaluation Dataset
+  ≠ concrete suite fixture
+
+concrete_eval_asset_path
+  = ABSENT for DATA-EV001..003
+  = TRACKED_FILE path for WF-001 / WF-002 / PROMPT-001
+
+resolved_path for DATA-EV
+  = ABSENT_CONCRETE_SUITE;see_reference_document_path
+  must NOT be treated as an existing suite path
+```
 
 ```text
 Target count: 6
@@ -157,12 +174,34 @@ Unknown: 0
 
 See `a6-5-d-d01-eval-target-register.csv`.
 
+## 10a. Synthetic Provenance Proof (without content-first inspection)
+
+`CONTENT_READ_BLOCKED_UNTIL_SYNTHETIC_PROVEN` must not create a circular open-file-first loop.
+
+Safe provenance proof sources (any one or combination, recorded before content use):
+
+```text
+authoritative inventory/metadata declaring synthetic generation
+fixture-generation provenance (generator id + seed/recipe)
+explicit synthetic marker in trusted manifest
+generator source under repo governance
+trusted synthetic manifest signed/owned by evaluation
+```
+
+Unsafe / forbidden as first step:
+
+```text
+open candidate file and inspect patient-like content to decide if synthetic
+```
+
+If safe provenance cannot be established → treat as blocked / create new MINIMAL_SYNTHETIC fixtures instead of reading unknown content.
+
 ## 11. DATA-EV001 Analysis Boundary
 
-- Documented static case eval suite; concrete files **MISSING_EXPECTED_ASSET**.
-- Content read: `CONTENT_READ_BLOCKED_UNTIL_SYNTHETIC_PROVEN`.
+- Documented static case eval suite; concrete files **MISSING_EXPECTED_ASSET** / `concrete_eval_asset_path=ABSENT`.
+- Content read: blocked until synthetic proven via safe provenance (not content-first inspection).
 - Primary planned suite: STATIC synthetic schema/invariant fixtures.
-- INTERACTIVE / TRAJECTORY: explicit `NOT_APPLICABLE` dispositions for this static-suite asset.
+- INTERACTIVE / TRAJECTORY: explicit `NOT_APPLICABLE` by **asset role** (`static_case_eval_suite`), not merely because fixture is currently missing.
 
 ## 12. DATA-EV002 Analysis Boundary
 
@@ -180,21 +219,39 @@ See `a6-5-d-d01-eval-target-register.csv`.
 
 - Path exists (`DiagnosisWorkflowOrchestrator.java`, blob `4405be7c…`).
 - Plan STATIC symbol/reference integrity, INTERACTIVE mocked tool/state-patch, TRAJECTORY multi-step orchestration.
-- No clinical correctness; no runtime store required by default.
+- No clinical correctness.
+- `runtime_required=no_for_authorized_scope` means authorized D01 Evidence may not require Runtime Store — **not** that local harness independence is already proven (`harness_feasibility=INSUFFICIENT_EVIDENCE` until Implementation).
+- If only Runtime works → `GAP_RUNTIME_DEPENDENCY` / inventory `BLOCKED_RUNTIME_DEPENDENCY`.
 
 ## 15. WF-002 Analysis Boundary
 
 - Path exists (`AgentLoop.java`, blob `3f5dcd0a…`).
 - Plan STATIC structure, INTERACTIVE pause/resume/retry with mocks, TRAJECTORY seeded/mocked paths.
-- External LLM → `NONDETERMINISTIC_BLOCKED`.
+- INTERACTIVE/TRAJECTORY Evidence rows require an explicit **mock seam** or local substitute before claiming local evaluation.
+- External LLM without seam → `NONDETERMINISTIC_BLOCKED` (do not expand authorization).
+- `external_dependency_required=no_for_authorized_scope` is an authorization boundary, not a proof that AgentLoop is model-independent.
 
 ## 16. PROMPT-001 Analysis Boundary
 
 - Path exists (`prompt_manager.py`, blob `dd1c1d89…`).
 - Authorized: path, file type, symbol/reference, structural role, consumer relationship, hash, synthetic-test relevance.
-- **Not authorized:** prompt text dump, clinical instruction extraction, medical recommendation extraction.
+- Structural scan may detect `INLINE_PROMPT_CONTENT_PRESENT` (long literals in manager). Record presence only; **do not** copy/extract clinical prompt text.
+- **Not authorized:** prompt text dump, clinical instruction extraction, medical recommendation extraction, embedded-literal body read.
 - Clinical prompt semantics: `GAP_BLOCKED_CLINICAL_GOLD` / `NO_SAFE_ORACLE`.
 - If body were required to proceed → `PROMPT_BODY_REQUIRED_FOR_D01` + BLOCKED (not claimed here).
+
+### 16a. `clinical_gold_required` field semantics (Interpretation A — locked)
+
+```text
+clinical_gold_required=no
+  = authorized D01 execution must not require clinical gold
+
+GAP_BLOCKED_CLINICAL_GOLD
+  = desired clinical-semantic coverage cannot be safely evaluated
+    without a separately authorized clinical oracle
+```
+
+These are compatible. Interpretation B (“obligation intrinsically needs no gold” vs blocked-gold status) is **rejected** as a reading of the coverage-plan fields.
 
 ## 17. Static Suite Definition
 
@@ -252,14 +309,33 @@ GAP_NO_ORACLE
 GAP_NO_HARNESS
 GAP_BLOCKED_PHI
 GAP_BLOCKED_CLINICAL_GOLD
+GAP_RUNTIME_DEPENDENCY
 NOT_APPLICABLE
 INSUFFICIENT_EVIDENCE
 ```
 
-Also planning-noted runtime gap label (not a coverage_status enum value for inventory overclaim):
+Semantics:
 
 ```text
-GAP_RUNTIME_DEPENDENCY
+COVERED_EXISTING_SYNTHETIC
+  = existing safe synthetic artifact + proven synthetic_provenance
+  ≠ planning intent
+  ≠ reference document existence
+
+PARTIALLY_COVERED
+  = some relevant non-executed planning/reference inputs exist
+  ≠ COVERED_EXISTING_SYNTHETIC
+  ≠ TEST_PASS / RUNTIME_PASS
+
+INSUFFICIENT_EVIDENCE
+  = path/metadata/reference only; no D01 fixture/harness yet
+```
+
+Runtime gap mapping:
+
+```text
+coverage_status / gap_type: GAP_RUNTIME_DEPENDENCY
+inventory status: BLOCKED_RUNTIME_DEPENDENCY
 ```
 
 Forbidden:
@@ -272,7 +348,7 @@ PATIENT_VALIDATED
 
 ## 22. Gap Taxonomy
 
-Gaps record missing fixtures, oracles, harnesses, PHI/clinical blocks, insufficient evidence, or N/A suite applicability. Missing DATA-EV suites are recorded as `GAP_NO_FIXTURE` (or N/A for non-primary suites), not fabricated datasets.
+Gaps record missing fixtures, oracles, harnesses, PHI/clinical blocks, runtime dependency blocks, insufficient evidence, or N/A suite applicability. Missing DATA-EV suites are recorded as `GAP_NO_FIXTURE` (or role-based `NOT_APPLICABLE`), not fabricated datasets. Documentation path existence must never upgrade a missing suite to EXISTING / COVERED_EXISTING_SYNTHETIC.
 
 ## 23. Fixture Taxonomy
 
@@ -342,13 +418,26 @@ D01 prefers the first three. Must not attach external LLM to gain “coverage”
 
 ## 26. Runtime / External Dependency Boundary
 
+Coverage-plan fields:
+
+```text
+runtime_required=no_for_authorized_scope
+external_dependency_required=no_for_authorized_scope
+```
+
+mean **PLANNED AUTHORIZATION BOUNDARY**, not **PROVEN IMPLEMENTATION FEASIBILITY**.
+
 Future D01 Evidence Implementation must not require:
 
 production; staging patient traffic; patient/clinical DB; Redis/Neo4j runtime stores; production tracing backend; external LLM/model API; third-party evaluation SaaS.
 
 Allowed to plan: local unit-level; local synthetic integration; mocked service; in-memory harness; static validator.
 
-If coverage only possible with true Runtime → record gap; do not expand authorization.
+Harness feasibility remains `INSUFFICIENT_EVIDENCE` until Implementation proves a local seam.
+
+If coverage only possible with true Runtime → record `GAP_RUNTIME_DEPENDENCY`; do not expand authorization.
+
+If AgentLoop control flow requires external model without mock seam → `NONDETERMINISTIC_BLOCKED`.
 
 ## 27. C03 Evidence Reuse Boundary
 
@@ -423,9 +512,14 @@ behavior_domain
 suite_class
 fixture_reference
 fixture_class
+fixture_source
+fixture_generator
 oracle_class
+oracle_execution_state
 determinism_class
 synthetic_only
+synthetic_provenance
+content_read_state
 phi_present
 clinical_gold_present
 runtime_dependency
@@ -439,6 +533,38 @@ owner_role
 reviewer_role
 status
 notes
+```
+
+Field rules (Independent Review remediation):
+
+```text
+synthetic_only=yes
+  ≠ sufficient provenance by itself
+
+synthetic_provenance
+  = required when synthetic_only=yes and fixture is EXISTING or content will be read
+  = one of: AUTHORITATIVE_METADATA | GENERATOR_PROVENANCE | EXPLICIT_MARKER |
+            GENERATOR_SOURCE | TRUSTED_MANIFEST | NEW_MINIMAL_SYNTHETIC_CREATED
+
+content_read_state
+  = NOT_READ | READ_AFTER_PROVENANCE | BLOCKED_UNPROVEN
+
+oracle_execution_state
+  = PROPOSED | EXECUTABLE_LOCAL | NOT_EXECUTABLE
+
+planned_or_existing
+  PLANNED = inventory/planning row only
+  EXISTING = artifact actually exists AND safe provenance established
+  DATA-EV missing concrete suites must not be EXISTING
+
+status
+  INVENTORIED = inventory row exists
+  ≠ fixture implemented
+  ≠ test executed
+  ≠ PASS
+
+  Also allowed: GAP_RECORDED | BLOCKED_PHI | BLOCKED_CLINICAL_GOLD |
+                BLOCKED_RUNTIME_DEPENDENCY | INSUFFICIENT_EVIDENCE | NOT_APPLICABLE
 ```
 
 ## 31. Future ID Rules
@@ -491,33 +617,35 @@ Gate-DI0: DEFINED
 Gate-DI0 authorization: NOT_AUTHORIZED
 ```
 
-### Required checks (21)
+### Required checks (23)
 
-| ID | Check |
-|---|---|
-| GDI0-01 | Enterprise exact planning base verified |
-| GDI0-02 | D01 planning merged and verified |
-| GDI0-03 | D01 independent planning review complete |
-| GDI0-04 | six target assets reconciled |
-| GDI0-05 | no unresolved blocking target path conflict |
-| GDI0-06 | synthetic-only policy defined |
-| GDI0-07 | real/deidentified patient fixture prohibition defined |
-| GDI0-08 | clinical gold-label prohibition defined |
-| GDI0-09 | safe oracle taxonomy defined |
-| GDI0-10 | fixture taxonomy defined |
-| GDI0-11 | suite taxonomy defined |
-| GDI0-12 | all 6×3 suite dispositions planned |
-| GDI0-13 | future inventory schema defined |
-| GDI0-14 | PROMPT-001 body access not required |
-| GDI0-15 | runtime store not required |
-| GDI0-16 | external model/API not required |
-| GDI0-17 | C02/B04 remain untouched |
-| GDI0-18 | approved counts remain zero |
-| GDI0-19 | baseline A6 regression passes |
-| GDI0-20 | baseline Contracts regression passes |
-| GDI0-21 | git scope clean |
+| ID | Check | Method | Evidence source | Pass criterion |
+|---|---|---|---|---|
+| GDI0-01 | Enterprise exact planning base verified | GIT_REV_PARSE | enterprise branch | equals authorized Enterprise Head for the Gate assessment |
+| GDI0-02 | D01 planning merged and verified | PR/merge audit | Planning PR + Enterprise | planning review-integrated and Enterprise-merged as required by Gate assessment prompt |
+| GDI0-03 | D01 independent planning review complete | PR audit | Review PR | Independent Review merged/integrated; blocking findings 0 |
+| GDI0-04 | six target assets reconciled | COUNT/SET | backlog+inventory | exactly DATA-EV001..003,WF-001,WF-002,PROMPT-001 |
+| GDI0-05 | no unresolved blocking target path conflict | PATH_RECONCILE | Target Register vs inventory | DATA-EV concrete_eval_asset_path=ABSENT or proven; WF/PROMPT TRACKED_FILE paths exist; no doc-path-as-suite |
+| GDI0-06 | synthetic-only policy defined | DOC | Plan §7 | SYNTHETIC_ONLY required; forbidden classes listed |
+| GDI0-07 | real/deidentified patient fixture prohibition defined | DOC+ENUM | Plan fixture taxonomy | REAL/DEIDENTIFIED/PSEUDONYMIZED/PRODUCTION_LOG_DERIVED forbidden |
+| GDI0-08 | clinical gold-label prohibition defined | DOC+ENUM | Plan oracle taxonomy | clinical oracles forbidden; Interpretation A locked |
+| GDI0-09 | safe oracle taxonomy defined | DOC | Plan §24 | allowed/forbidden oracle lists present |
+| GDI0-10 | fixture taxonomy defined | DOC | Plan §23 | allowed/forbidden fixture lists present |
+| GDI0-11 | suite taxonomy defined | DOC | Plan §17-19 | STATIC≠INTERACTIVE≠TRAJECTORY |
+| GDI0-12 | all 6×3 suite dispositions planned | SET | coverage CSV | 18/18 (asset,suite) pairs present; missing=0 |
+| GDI0-13 | future inventory schema defined | DOC | Plan §30 | schema includes synthetic_provenance + content_read_state |
+| GDI0-14 | PROMPT-001 body access not required | BOUNDARY | Target Register + coverage | structural obligations only; body/embedded literals not required |
+| GDI0-15 | runtime store not required | BOUNDARY | coverage runtime_required | authorized scope forbids Runtime Store; gaps use GAP_RUNTIME_DEPENDENCY |
+| GDI0-16 | external model/API not required | BOUNDARY | coverage external_dependency | authorized scope forbids external model; else NONDETERMINISTIC_BLOCKED |
+| GDI0-17 | C02/B04 remain untouched | SCOPE | git/phase state | no C02/B04 authorization or clinical extraction |
+| GDI0-18 | approved counts remain zero | COUNT | phase state | 0/0/0/0 |
+| GDI0-19 | baseline A6 regression passes | LOCAL_TEST | validator+pytest | 11/25/5/0 and 59 passed (local ≠ CI PASS) |
+| GDI0-20 | baseline Contracts regression passes | LOCAL_TEST | validator+pytest | 13/13/33 and 110 passed |
+| GDI0-21 | git scope clean | GIT_DIFF | Evidence PR scope | out-of-scope=0; source/contracts untouched |
+| GDI0-22 | synthetic provenance proof defined | DOC | Plan §10a + schema | safe provenance sources listed; open-file-first forbidden |
+| GDI0-23 | missing DATA-EV assets cannot be marked EXISTING | SCHEMA_RULE | Plan §30 planned_or_existing | ABSENT concrete suites ⇒ PLANNED/GAP only; never EXISTING/COVERED_EXISTING_SYNTHETIC without artifact+provenance |
 
-This planning PR defines Gate-DI0; it does **not** authorize it.
+This planning package defines Gate-DI0; it does **not** authorize it.
 
 ## 36. Independent Planning Review Requirements
 
@@ -538,7 +666,7 @@ Only after review integration + Gate-DI0 assessment may D01 Evidence Implementat
 See `a6-5-d-d01-plan-validation-matrix.csv`.
 
 ```text
-Required planning definition checks: 45
+Required planning definition checks: 48 (post Independent Review remediation)
 Status values: DEFINED (not PASS)
 False implementation PASS claims: 0
 ```
@@ -563,15 +691,14 @@ Planning is complete for Independent Planning Review when:
 - six planning artifacts exist
 - six targets reconciled
 - ≥18 suite dispositions present
-- Gate-DI0 defined with 21 checks
+- Gate-DI0 defined with 23 checks (method/evidence/pass criteria + provenance/EXISTING controls)
 - baseline A6/Contracts local verification green
-- git scope exactly 6 planning files
-- implementation artifact absent
+- planning remediation scoped; implementation artifact absent
 
 ## 40. Recommendation
 
 ```text
-READY_FOR_A6_5_D_D01_PLANNING_REVIEW
+READY_FOR_A6_5_D_D01_PLANNING_REVIEW_INTEGRATION
 ```
 
-Next authorized step (separate prompt): **TASK-D01 Independent Planning Review**.
+(Planning Review Integration is a separate authorized step. Gate-DI0 remains NOT_AUTHORIZED.)
