@@ -26,9 +26,9 @@ Findings or planning notes ≠ Decision closure.
 | decision_id | A65D-OD-002 |
 | status | UNRESOLVED / FAIL_CLOSED |
 | question | When may DATA-EV suite contents be read for D01? |
-| current_evidence | Inventory marks concrete suites `MISSING_EXPECTED_ASSET`; documentation path exists; synthetic/PHI/gold status of any future located datasets unknown |
-| fail_closed_rule | `CONTENT_READ_BLOCKED_UNTIL_SYNTHETIC_PROVEN`; forbid real/deidentified patient fixtures |
-| notes | Planning continues with gap rows; Implementation may invent new synthetic fixtures without reading forbidden content |
+| current_evidence | Inventory marks concrete suites `MISSING_EXPECTED_ASSET`; documentation path exists and is NOT a dataset; synthetic/PHI/gold status of any future located datasets unknown |
+| fail_closed_rule | `CONTENT_READ_BLOCKED_UNTIL_SYNTHETIC_PROVEN_VIA_SAFE_PROVENANCE`; forbid real/deidentified patient fixtures; forbid open-file-first inspection |
+| notes | Safe provenance proof sources: authoritative metadata; fixture-generation provenance; explicit synthetic marker; generator source; trusted manifest. Planning continues with gap rows; Implementation may create new MINIMAL_SYNTHETIC fixtures without reading unknown content. Decision remains UNRESOLVED until Implementation proves provenance for any reused asset. |
 
 ---
 
@@ -39,9 +39,9 @@ Findings or planning notes ≠ Decision closure.
 | decision_id | A65D-OD-003 |
 | status | ACKNOWLEDGED |
 | question | Can D01 plan PROMPT-001 evaluation without reading prompt body? |
-| current_evidence | Target is `common/aidoctor_llm/prompt_manager.py`; clinical prompt extraction blocked by B04/C02 posture |
-| fail_closed_rule | Path/type/symbol/hash/consumer relationship only; `PROMPT_BODY_NOT_AUTHORIZED`; clinical semantics → `NO_SAFE_ORACLE` / `GAP_BLOCKED_CLINICAL_GOLD` |
-| notes | Target inclusion ≠ body-read authorization |
+| current_evidence | Target is `common/aidoctor_llm/prompt_manager.py`; clinical prompt extraction blocked by B04/C02 posture; structural scan may show INLINE_PROMPT_CONTENT_PRESENT |
+| fail_closed_rule | Path/type/symbol/hash/consumer relationship only; `PROMPT_BODY_NOT_AUTHORIZED` including manager-embedded literals; clinical semantics → `NO_SAFE_ORACLE` / `GAP_BLOCKED_CLINICAL_GOLD` |
+| notes | Target inclusion ≠ body-read authorization. Record INLINE_PROMPT_CONTENT_PRESENT without extracting clinical text. |
 
 ---
 
@@ -78,9 +78,9 @@ Findings or planning notes ≠ Decision closure.
 | decision_id | A65D-OD-006 |
 | status | UNRESOLVED / FAIL_CLOSED |
 | question | Which behaviors require only local harness vs true runtime? |
-| current_evidence | WF-001/WF-002 are runtime-coupled assets; D01 default forbids prod/staging/DB/Redis/Neo4j/trace backends |
-| fail_closed_rule | Prefer local unit / mocked / in-memory; if only runtime works → `GAP_RUNTIME_DEPENDENCY` (not authorization expansion) |
-| notes | Gate-DI0 requires runtime store not required for authorized Evidence Implementation |
+| current_evidence | WF-001/WF-002 are RUNTIME_COUPLING_BLOCKER assets; D01 default forbids prod/staging/DB/Redis/Neo4j/trace backends; harness feasibility currently INSUFFICIENT_EVIDENCE |
+| fail_closed_rule | Prefer local unit / mocked / in-memory; WF-002 INTERACTIVE/TRAJECTORY require explicit mock seam or local substitute; if only runtime works → `GAP_RUNTIME_DEPENDENCY` / inventory `BLOCKED_RUNTIME_DEPENDENCY` (not authorization expansion); if external model required without seam → `NONDETERMINISTIC_BLOCKED` |
+| notes | `runtime_required=no_for_authorized_scope` is authorization boundary ≠ proven independence. Gate-DI0 still NOT_AUTHORIZED. |
 
 ---
 
