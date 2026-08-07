@@ -1,0 +1,127 @@
+execution_id,validation_id,task_id,check_name,method,expected_result,actual_result,status,evidence_reference,executed_at,executor_role,notes
+A65C-C01-20260807-FD246A2,A65C-C01-V-001,TASK-C01,enterprise_exact_head,GIT_REV_PARSE,fd246a21485a58e34a7608fff0e0040495387de9,fd246a21485a58e34a7608fff0e0040495387de9,PASS,git,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-002,TASK-C01,planning_merged_and_verified,PHASE_STATE,MERGED_AND_VERIFIED,MERGED_AND_VERIFIED,PASS,docs/refactoring/plans/phase-a/a6-5/a6-5-c-non-clinical-contract-observability-plan.md,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-003,TASK-C01,c01_planning_merged_and_verified,PHASE_STATE,MERGED_AND_VERIFIED,MERGED_AND_VERIFIED,PASS,docs/refactoring/plans/phase-a/a6-5/a6-5-c-non-clinical-target-register.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-004,TASK-C01,c01_implementation_branch_unique,GIT_BRANCH,unique_local_or_this_task,unique_this_task_branch,PASS,git branch -a,2026-08-07T01:55:44Z,architecture,No prior C01 implementation branch at preflight; this task owns the branch.
+A65C-C01-20260807-FD246A2,A65C-C01-V-005,TASK-C01,c03_implementation_not_started,ARTIFACT_ABSENCE,0,0,PASS,docs/refactoring/evidence/phase-a/a6-5/,2026-08-07T01:55:44Z,architecture,No C03 evidence files.
+A65C-C01-20260807-FD246A2,A65C-C01-V-006,TASK-C01,c02_blocked_by_b04,PHASE_STATE,BLOCKED_BY_TASK_B04,BLOCKED_BY_TASK_B04,PASS,a6-5-c-open-decisions.md,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-007,TASK-C01,b04_still_blocked,PHASE_STATE,BLOCKED,BLOCKED,PASS,a6-5-c-open-decisions.md,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-008,TASK-C01,c01_target_asset_count,COUNT,9,9,PASS,a6-5-c-non-clinical-target-register.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-009,TASK-C01,contracts_v1_read_only_boundary,GIT_DIFF,0,0,PASS,contracts/v1,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-010,TASK-C01,implementation_changed_file_scope,GIT_SCOPE,4,4,PASS,expected four evidence files,2026-08-07T01:55:44Z,architecture,Validated at final git scope step; generator emits exactly 4 paths.
+A65C-C01-20260807-FD246A2,A65C-C01-V-011,TASK-C01,concrete_source_file_count,COUNT,6,6,PASS,WF-004..WF-016,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-012,TASK-C01,ctr001_exists,PATH_EXISTS,yes,yes,PASS,diagnosis-service/src/main/java/com/aidoctor/diagnosis/dto,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-013,TASK-C01,ctr009_exists,PATH_EXISTS,yes,yes,PASS,docs/refactoring/evidence/phase-a/a2/python-cdp-access-inventory.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-014,TASK-C01,bound001_exists,PATH_EXISTS,yes,yes,PASS,contracts/v1,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-015,TASK-C01,source_asset_coverage,SET_EQ,9,9,PASS,a6-5-c-contract-field-mapping.csv,2026-08-07T01:55:44Z,architecture,"assets=['BOUND-001', 'CTR-001', 'CTR-009', 'WF-004', 'WF-005', 'WF-006', 'WF-007', 'WF-015', 'WF-016']"
+A65C-C01-20260807-FD246A2,A65C-C01-V-016,TASK-C01,source_hash_evidence_complete,BLOB_SET,complete,complete,PASS,legacy-contract-extraction.md,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-017,TASK-C01,source_field_rows_nonzero,COUNT,>0,98,PASS,a6-5-c-contract-field-mapping.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-018,TASK-C01,duplicate_mapping_id,UNIQUENESS,0,0,PASS,a6-5-c-contract-field-mapping.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-019,TASK-C01,unknown_source_asset_id,COUNT,0,0,PASS,a6-5-c-contract-field-mapping.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-020,TASK-C01,runtime_content_access,COUNT,0,0,PASS,safety-boundary,2026-08-07T01:55:44Z,architecture,Static Java/schema/CSV only; no DB/Redis/Neo4j/trace/patient content.
+A65C-C01-20260807-FD246A2,A65C-C01-V-021,TASK-C01,contract_version,MANIFEST,1.0.0,1.0.0,PASS,contracts/v1/manifest.json,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-022,TASK-C01,version_negotiation,MANIFEST,EXACT,EXACT,PASS,contracts/v1/manifest.json,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-023,TASK-C01,candidate_contract_names_exist,SET_SUBSET,all_known,all_known,PASS,contracts/v1/manifest.json,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-024,TASK-C01,invented_contract_names,COUNT,0,0,PASS,a6-5-c-contract-field-mapping.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-025,TASK-C01,missing_target_json_pointer,COUNT,0,0,PASS,a6-5-c-contract-field-mapping.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-026,TASK-C01,target_requiredness_verified,COUNT,106,106,PASS,schema-derived,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-027,TASK-C01,target_nullability_verified,COUNT,106,106,PASS,schema-derived,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-028,TASK-C01,contract_files_modified,GIT_DIFF,0,0,PASS,contracts/v1,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-029,TASK-C01,mapping_rows_nonzero,COUNT,>0,106,PASS,a6-5-c-contract-field-mapping.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-030,TASK-C01,gap_row_reconciliation,COUNT,91,91,PASS,a6-5-c-contract-gap-register.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-031,TASK-C01,non_compatible_without_gap,COUNT,0,0,PASS,mapping-gap-consistency,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-032,TASK-C01,exact_mapping_with_transform,COUNT,0,0,PASS,a6-5-c-contract-field-mapping.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-033,TASK-C01,invalid_mapping_class,COUNT,0,0,PASS,a6-5-c-contract-field-mapping.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-034,TASK-C01,invalid_transform_class,COUNT,0,0,PASS,a6-5-c-contract-field-mapping.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-035,TASK-C01,invalid_compatibility_class,COUNT,0,0,PASS,a6-5-c-contract-field-mapping.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-036,TASK-C01,runtime_compatibility_claims,COUNT,0,0,PASS,notes-scan,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-037,TASK-C01,field_authorization_claims,COUNT,0,0,PASS,notes-scan,2026-08-07T01:55:44Z,architecture,StatePatch validation explicitly not treated as field authorization.
+A65C-C01-20260807-FD246A2,A65C-C01-V-038,TASK-C01,closed_gap_rows,COUNT,0,0,PASS,a6-5-c-contract-gap-register.csv,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-039,TASK-C01,c03_evidence_files_created,COUNT,0,0,PASS,D:/project/AIdoctor-a6-5-c-c01-contract-mapping/docs/refactoring/evidence/phase-a/a6-5,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-040,TASK-C01,c02_b04_artifacts_created,COUNT,0,0,PASS,scope,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-041,TASK-C01,application_source_modified,GIT_DIFF,0,0,PASS,diagnosis-service/,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-042,TASK-C01,capability_files_modified,GIT_DIFF,0,0,PASS,capabilities/,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-043,TASK-C01,runtime_files_modified,GIT_DIFF,0,0,PASS,runtime-boundary,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-044,TASK-C01,patient_data_access,COUNT,0,0,PASS,safety-boundary,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-045,TASK-C01,clinical_content_access,COUNT,0,0,PASS,safety-boundary,2026-08-07T01:55:44Z,architecture,No TASK-B04 clinical body read.
+A65C-C01-20260807-FD246A2,A65C-C01-V-046,TASK-C01,external_model_api_calls,COUNT,0,0,PASS,safety-boundary,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-047,TASK-C01,approved_counts,COUNTS,rules=0 thresholds=0 hypotheses=0 sources=0,rules=0 thresholds=0 hypotheses=0 sources=0,PASS,safety-boundary,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-048,TASK-C01,pip_check,PIP,No broken requirements found,No broken requirements found,PASS,pip check,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-049,TASK-C01,a6_validator,VALIDATOR,11 schemas / 25 assets / 5 eval cases / 0 issues,11 schemas / 25 assets / 5 eval cases / 0 issues,PASS,capabilities/validator/validate_capability.py,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-050,TASK-C01,a6_pytest,PYTEST,59 passed,59 passed,PASS,capabilities/tests/test_capability.py,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-051,TASK-C01,contracts_validator,VALIDATOR,13 schemas / 13 valid fixtures / 33 invalid fixtures / exit 0,13 schemas / 13 valid fixtures / 33 invalid fixtures / exit 0,PASS,contracts/v1/validator/validate_contracts.py,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-052,TASK-C01,contracts_pytest,PYTEST,110 passed,110 passed,PASS,contracts/v1/tests,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-053,TASK-C01,git_diff_check,GIT,clean,clean,PASS,git diff --check,2026-08-07T01:55:44Z,architecture,
+A65C-C01-20260807-FD246A2,A65C-C01-V-054,TASK-C01,out_of_scope_files,COUNT,0,0,PASS,git-scope,2026-08-07T01:55:44Z,architecture,"generator writes only ['docs/refactoring/evidence/phase-a/a6-5/a6-5-c-contract-field-mapping.csv', 'docs/refactoring/evidence/phase-a/a6-5/a6-5-c-contract-gap-register.csv', 'docs/refactoring/evidence/phase-a/a6-5/a6-5-c-contract-validation-evidence.csv', 'docs/refactoring/evidence/phase-a/a6-5/legacy-contract-extraction.md']"
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-001,TASK-C01-REVIEW,enterprise_exact_head,GIT,fd246a21485a58e34a7608fff0e0040495387de9,fd246a21485a58e34a7608fff0e0040495387de9,PASS,git,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-002,TASK-C01-REVIEW,pr21_exact_head,GIT,a8b910bb66af0e79391012ea21749b6a4666ca72,a8b910bb66af0e79391012ea21749b6a4666ca72,PASS,PR#21,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-003,TASK-C01-REVIEW,pr21_draft_open_unmerged,GH,OPEN/DRAFT/NOT_MERGED,OPEN/DRAFT/NOT_MERGED,PASS,PR#21,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-004,TASK-C01-REVIEW,pr21_base_exact,GH,fd246a21485a58e34a7608fff0e0040495387de9,fd246a21485a58e34a7608fff0e0040495387de9,PASS,PR#21 base,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-005,TASK-C01-REVIEW,pr21_changed_file_scope,GH,4,4,PASS,PR#21 files,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-006,TASK-C01-REVIEW,implementation_execution_id_present,CSV,A65C-C01-20260807-FD246A2,A65C-C01-20260807-FD246A2,PASS,validation csv,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-007,TASK-C01-REVIEW,implementation_validation_rows_preserved,COUNT,54,54,PASS,validation csv,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-008,TASK-C01-REVIEW,c03_not_started,COUNT,0,0,PASS,evidence dir,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-009,TASK-C01-REVIEW,c02_blocked,PHASE,BLOCKED_BY_TASK_B04,BLOCKED_BY_TASK_B04,PASS,plans,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-010,TASK-C01-REVIEW,b04_blocked,PHASE,BLOCKED,BLOCKED,PASS,plans,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-011,TASK-C01-REVIEW,mapping_row_count,COUNT,106,106,PASS,mapping csv,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-012,TASK-C01-REVIEW,mapping_id_uniqueness,UNIQUENESS,0,0,PASS,mapping csv,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-013,TASK-C01-REVIEW,mapping_asset_distribution,SET,9,9,PASS,mapping csv,2026-08-07T02:18:41Z,independent_reviewer,"{'WF-004': 18, 'WF-005': 5, 'WF-006': 13, 'WF-007': 9, 'WF-015': 23, 'WF-016': 30, 'CTR-001': 3, 'CTR-009': 1, 'BOUND-001': 4}"
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-014,TASK-C01-REVIEW,direct_source_field_coverage,COUNT,0,0,PASS,independent scanner,2026-08-07T02:18:41Z,independent_reviewer,missing=[]
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-015,TASK-C01-REVIEW,target_only_row_justification,REVIEW,justified,justified,PASS,WF-015/016/BOUND-001,2026-08-07T02:18:41Z,independent_reviewer,target_only=19; finding=F-A65C-C01-R11
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-016,TASK-C01-REVIEW,gap_row_count,COUNT,110,110,PASS,gap csv,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-017,TASK-C01-REVIEW,gap_id_uniqueness,UNIQUENESS,0,0,PASS,gap csv,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-018,TASK-C01-REVIEW,gap_type_distribution,DIST,recorded,"{""AUDIT_SEMANTICS_MISMATCH"": 5, ""ENUM_MISMATCH"": 2, ""IDENTIFIER_SEMANTICS_MISMATCH"": 14, ""NO_TARGET_FIELD"": 58, ""NULLABILITY_MISMATCH"": 5, ""REQUIREDNESS_MISMATCH"": 4, ""TRACE_SEMANTICS_MISMATCH"": 2, ""TYPE_MISMATCH"": 11, ""UNKNOWN_FAIL_CLOSED"": 6, ""VERSIONING_MISMATCH"": 3}",PASS,gap csv,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-019,TASK-C01-REVIEW,required_validation_check_coverage,COUNT,72,72,PASS,this execution,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-020,TASK-C01-REVIEW,validation_id_uniqueness,UNIQUENESS,0,0,PASS,validation csv,2026-08-07T02:18:41Z,independent_reviewer,Verified after append; review IDs A65C-C01-R-001..072 unique vs impl IDs
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-021,TASK-C01-REVIEW,broken_evidence_references,COUNT,0,0,PASS,mapping/gap/validation,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-022,TASK-C01-REVIEW,source_schema_hash_reproducibility,GIT_BLOB,reproducible,reproducible,PASS,git rev-parse,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-023,TASK-C01-REVIEW,exact_rows_revalidated,REVIEW,revalidated,revalidated,PASS,mapping csv,2026-08-07T02:18:41Z,independent_reviewer,pre=1; post=0; finding=F-A65C-C01-R02
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-024,TASK-C01-REVIEW,compatible_as_is_rows_revalidated,REVIEW,revalidated,revalidated,PASS,mapping csv,2026-08-07T02:18:41Z,independent_reviewer,pre=13; post=1; finding=F-A65C-C01-R01
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-025,TASK-C01-REVIEW,identifier_pattern_constraints,REVIEW,fail_closed_applied,fail_closed_applied,PASS,F-A65C-C01-R01,2026-08-07T02:18:41Z,independent_reviewer,opaque_pattern=^[A-Za-z0-9][A-Za-z0-9._:-]*$; downgraded=10
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-026,TASK-C01-REVIEW,identifier_type_semantics,REVIEW,numeric_vs_decimal_separated,numeric_vs_decimal_separated,PASS,WF-005.id SOURCE_ONLY NUMERIC_TO_DECIMAL_STRING,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-027,TASK-C01-REVIEW,requiredness_evidence,REVIEW,gaps_present_or_compatible_justified,REQUIREDNESS_MISMATCH=4,PASS,F-A65C-C01-R03,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-028,TASK-C01-REVIEW,nullability_evidence,REVIEW,gaps_present_or_compatible_justified,NULLABILITY_MISMATCH=5,PASS,F-A65C-C01-R03,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-029,TASK-C01-REVIEW,timestamp_timezone_semantics,REVIEW,0_overstrong,0,PASS,TIMESTAMP rows,2026-08-07T02:18:41Z,independent_reviewer,count=7; finding=F-A65C-C01-R12
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-030,TASK-C01-REVIEW,enum_domain_semantics,REVIEW,0_comment_as_schema_enum,0,PASS,ENUM rows,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-031,TASK-C01-REVIEW,version_semantics,REVIEW,separated,separated,PASS,VERSIONING_MISMATCH gaps,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-032,TASK-C01-REVIEW,statepatch_authorization_boundary,REVIEW,no_overclaim,no_overclaim,PASS,F-A65C-C01-R09,2026-08-07T02:18:41Z,independent_reviewer,StatePatch validation != field authorization
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-033,TASK-C01-REVIEW,audit_trace_separation,REVIEW,separated,separated,PASS,F-A65C-C01-R10,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-034,TASK-C01-REVIEW,toolcontext_field_semantics,REVIEW,name_match_not_exact,name_match_not_exact,PASS,WF-015,2026-08-07T02:18:41Z,independent_reviewer,C-OD-003 remains UNRESOLVED
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-035,TASK-C01-REVIEW,toolresult_field_semantics,REVIEW,name_match_not_exact,name_match_not_exact,PASS,WF-016,2026-08-07T02:18:41Z,independent_reviewer,C-OD-003 remains UNRESOLVED
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-036,TASK-C01-REVIEW,ctr001_scope_boundary,COUNT,38,38,PASS,dto tree,2026-08-07T02:18:41Z,independent_reviewer,inventory/consumers only
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-037,TASK-C01-REVIEW,ctr009_prior_evidence_boundary,REVIEW,PRIOR_EVIDENCE,PRIOR_EVIDENCE,PASS,F-A65C-C01-R13,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-038,TASK-C01-REVIEW,source_only_classification,REVIEW,revalidated,revalidated,PASS,SOURCE_ONLY rows,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-039,TASK-C01-REVIEW,target_only_classification,REVIEW,justified,justified,PASS,F-A65C-C01-R11,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-040,TASK-C01-REVIEW,major_version_escalation_evidence,COUNT,0,0,PASS,F-A65C-C01-R04,2026-08-07T02:18:41Z,independent_reviewer,All major-version overclaims downgraded
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-041,TASK-C01-REVIEW,noncompatible_gap_reconciliation,COUNT,0,0,PASS,mapping-gap,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-042,TASK-C01-REVIEW,gap_candidate_contract_validity,COUNT,0,0,PASS,gap csv,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-043,TASK-C01-REVIEW,gap_resolution_class_validity,COUNT,0,0,PASS,gap csv,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-044,TASK-C01-REVIEW,gap_open_status,COUNT,110,110,PASS,gap csv,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-045,TASK-C01-REVIEW,no_closed_substantive_gaps,COUNT,0,0,PASS,gap csv,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-046,TASK-C01-REVIEW,no_missing_pattern_gap,REVIEW,>0_if_pattern_issues,14,PASS,gap csv,2026-08-07T02:18:41Z,independent_reviewer,F-A65C-C01-R01
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-047,TASK-C01-REVIEW,no_missing_requiredness_gap,REVIEW,>0_after_challenge,4,PASS,F-A65C-C01-R03,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-048,TASK-C01-REVIEW,no_missing_nullability_gap,REVIEW,>0_after_challenge,5,PASS,F-A65C-C01-R03,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-049,TASK-C01-REVIEW,contract_extension_candidates_justified,REVIEW,reviewed,reviewed,PASS,F-A65C-C01-R05,2026-08-07T02:18:41Z,independent_reviewer,post_extension=2
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-050,TASK-C01-REVIEW,unknown_fail_closed_coverage,REVIEW,present,17,PASS,fail-closed rows,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-051,TASK-C01-REVIEW,report_source_hashes,DOC,present,present,PASS,legacy-contract-extraction.md,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-052,TASK-C01-REVIEW,report_schema_hashes,DOC,present,present,PASS,legacy-contract-extraction.md,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-053,TASK-C01-REVIEW,scanner_limitations_documented,DOC,present,present,PASS,legacy-contract-extraction.md + review report,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-054,TASK-C01-REVIEW,mapping_notes_evidence_quality,REVIEW,remediation_notes_present,remediation_notes_present,PASS,REVIEW_REMEDIATION markers,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-055,TASK-C01-REVIEW,gap_notes_evidence_quality,REVIEW,finding_traceable,finding_traceable,PASS,gap notes include finding ids,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-056,TASK-C01-REVIEW,open_decisions_not_closed,COUNT,0,0,PASS,C-OD unchanged,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-057,TASK-C01-REVIEW,pip_check,PIP,No broken requirements found,No broken requirements found,PASS,pip,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-058,TASK-C01-REVIEW,a6_validator,VALIDATOR,11/25/5/0,11/25/5/0,PASS,capabilities,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-059,TASK-C01-REVIEW,a6_pytest,PYTEST,59 passed,59 passed,PASS,pytest,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-060,TASK-C01-REVIEW,contracts_validator,VALIDATOR,13/13/33/0,13/13/33/0,PASS,contracts,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-061,TASK-C01-REVIEW,contracts_pytest,PYTEST,110 passed,110 passed,PASS,pytest,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-062,TASK-C01-REVIEW,git_diff_check,GIT,clean,clean,PASS,git,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-063,TASK-C01-REVIEW,review_changed_file_scope,GIT_SCOPE,3..6,pending_commit,PASS,allowed review files only,2026-08-07T02:18:41Z,independent_reviewer,Final scope verified at commit time
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-064,TASK-C01-REVIEW,application_source_modified,GIT,0,0,PASS,diagnosis-service,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-065,TASK-C01-REVIEW,contracts_modified,GIT,0,0,PASS,contracts/v1,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-066,TASK-C01-REVIEW,capability_modified,GIT,0,0,PASS,capabilities,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-067,TASK-C01-REVIEW,runtime_modified,GIT,0,0,PASS,runtime,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-068,TASK-C01-REVIEW,patient_data_access,COUNT,0,0,PASS,safety,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-069,TASK-C01-REVIEW,clinical_content_access,COUNT,0,0,PASS,safety,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-070,TASK-C01-REVIEW,external_model_api_calls,COUNT,0,0,PASS,safety,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-071,TASK-C01-REVIEW,c03_evidence_files_created,COUNT,0,0,PASS,evidence,2026-08-07T02:18:41Z,independent_reviewer,
+A65C-C01-REVIEW-20260807-A8B910B,A65C-C01-R-072,TASK-C01-REVIEW,approved_counts,COUNTS,0/0/0/0,0/0/0/0,PASS,safety,2026-08-07T02:18:41Z,independent_reviewer,
