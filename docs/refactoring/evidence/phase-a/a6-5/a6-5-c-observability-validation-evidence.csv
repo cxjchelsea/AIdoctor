@@ -1,0 +1,66 @@
+execution_id,validation_id,task_id,check_name,method,expected_result,actual_result,status,evidence_reference,executed_at,executor_role,notes
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-001,TASK-C03,enterprise_exact_head,GIT_REV_PARSE,1b559fe99c1bdd8c7cbc080568392c52eec75221,1b559fe99c1bdd8c7cbc080568392c52eec75221,PASS,git,2026-08-07T03:10:00Z,architecture,Base commit for C03 branch
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-002,TASK-C03,gate_ci1_authorized,PHASE_STATE,AUTHORIZED,AUTHORIZED,PASS,Gate-CI1 assessment,2026-08-07T03:10:00Z,architecture,Prior assessment AUTHORIZED Evidence-only
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-003,TASK-C03,c01_merged_and_verified,PHASE_STATE,MERGED_AND_VERIFIED,MERGED_AND_VERIFIED,PASS,PR #21 merge 1b559fe,2026-08-07T03:10:00Z,architecture,C01 prerequisite closed
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-004,TASK-C03,c03_target_cardinality,COUNT,5,5,PASS,a6-5-c-non-clinical-target-register.csv,2026-08-07T03:10:00Z,architecture,TASK-C03 rows
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-005,TASK-C03,c03_target_assets_exist,PATH_EXISTS,5/5,5/5,PASS,WF-010..ENG-006 paths,2026-08-07T03:10:00Z,architecture,All targets readable
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-006,TASK-C03,c03_branch_unique,GIT_BRANCH,agent/phase-a6-5-c-c03-observability-mapping,agent/phase-a6-5-c-c03-observability-mapping,PASS,git branch,2026-08-07T03:10:00Z,architecture,Created this task; none pre-existing
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-007,TASK-C03,c03_pr_absent_at_start,GH_PR_LIST,NONE,NONE,PASS,gh pr list,2026-08-07T03:10:00Z,architecture,Only unrelated Draft PR #1 at preflight
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-008,TASK-C03,c03_evidence_absent_at_start,ARTIFACT_ABSENCE,0,0,PASS,docs/refactoring/evidence/phase-a/a6-5/,2026-08-07T03:10:00Z,architecture,No observability evidence before this task
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-009,TASK-C03,c02_b04_still_blocked,PHASE_STATE,C02=BLOCKED_BY_TASK_B04;B04=BLOCKED,C02=BLOCKED_BY_TASK_B04;B04=BLOCKED,PASS,a6-5-c-open-decisions.md,2026-08-07T03:10:00Z,architecture,Untouched
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-010,TASK-C03,human_supervised_clinical_read_inactive,PHASE_STATE,inactive,inactive,PASS,phase state,2026-08-07T03:10:00Z,architecture,No clinical body read
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-011,TASK-C03,observability_mapping_rows,COUNT,5,5,PASS,a6-5-c-observability-mapping.csv,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-012,TASK-C03,observability_mapping_id_uniqueness,COUNT,5 unique,5 unique,PASS,a6-5-c-observability-mapping.csv,2026-08-07T03:10:00Z,architecture,A65C-C03-<ASSET>
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-013,TASK-C03,asset_coverage,SET,WF-010;WF-011;WF-012;WF-013;ENG-006,WF-010;WF-011;WF-012;WF-013;ENG-006,PASS,mapping csv,2026-08-07T03:10:00Z,architecture,Missing=0
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-014,TASK-C03,component_role_enum,ENUM,AOP_ASPECT|ANNOTATION|HTTP_INTERCEPTOR|TRACE_ENTITY|PYTHON_DECORATOR,all valid,PASS,mapping csv,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-015,TASK-C03,failure_isolation_enum,ENUM,allowed four values,all valid,PASS,mapping csv,2026-08-07T03:10:00Z,architecture,Prefer UNKNOWN when unproven
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-016,TASK-C03,phi_capture_risk_enum,ENUM,allowed five values,all valid,PASS,mapping csv,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-017,TASK-C03,status_enum,ENUM,allowed seven values,all valid,PASS,mapping csv,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-018,TASK-C03,forbidden_status_values,ABSENCE,PHI_APPROVED|PRODUCTION_READY|OTEL_MIGRATED count=0,0,PASS,mapping csv,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-019,TASK-C03,candidate_contract_names_exist,SCHEMA_EXISTS,TraceRef|AuditRef|ContractEnvelope|IdentifierSet|ContractConflict,present in contracts/v1,PASS,contracts/v1/schemas,2026-08-07T03:10:00Z,architecture,Read-only
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-020,TASK-C03,runtime_cutover_authorized_zero,COUNT,yes=0,yes=0,PASS,mapping csv,2026-08-07T03:10:00Z,architecture,All rows no
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-021,TASK-C03,source_hash_evidence_complete,HASH_SET,5 target blobs,5 recorded,PASS,legacy-observability-migration.md#source-hash,2026-08-07T03:10:00Z,architecture,WF-010=a94e9ef866a8c43d97f64aa5605663f97bc2add0; WF-011=4dd1f00c7341290045c8395783e27df07f94b888; WF-012=3d7f501267660d7ec3952570d141ffedfec4c529; WF-013=d204e10eb2e45dff601b00b83f419da92513e537; ENG-006=88971899099a25ebd642fa4046a1a5af847e8a92
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-022,TASK-C03,schema_hash_evidence_complete,HASH_SET,manifest+primary schemas,recorded,PASS,legacy-observability-migration.md#source-hash,2026-08-07T03:10:00Z,architecture,manifest=d8cb373804d9fda3894741dd3964c69c2bb16607; trace-ref=8ab3bef870442afd6c0efc4f9cb7b6be115ea6f0; audit-ref=4854b2cc2c1965398ce6aa7944afff1b00bfeea6; contract-envelope=c2039eb7a5b4c30a0aec1055cd5fb2a07df29d2d; identifier-set=821351057699ecbf78099c6ad28738176e2c3a95; contract-conflict=9b930223b61ecbea9f5775622a26809bea84483e; evidence-pack=862d5da346355e49bdea81dbcd2c678818ce2257
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-023,TASK-C03,trace_audit_separation,STATIC_ANALYSIS,TraceRef!=AuditRef,preserved in mapping+report,PASS,mapping audit_semantics,2026-08-07T03:10:00Z,architecture,C-OD-006 remains open
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-024,TASK-C03,trace_not_audit_authorization,STATIC_ANALYSIS,propagation!=authorization,preserved,PASS,mapping+test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-025,TASK-C03,trace_collection_not_payload_permission,STATIC_ANALYSIS,collection!=payload permission,preserved,PASS,TST-025,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-026,TASK-C03,feign_header_literals_statically_extracted,STATIC_SCAN,literals from WF-012,X-CDP-Id;X-Service-Name;X-Method-Name;X-Trace-Id;X-Start-Time,PASS,WF-012 source,2026-08-07T03:10:00Z,architecture,NON_NORMATIVE
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-027,TASK-C03,feign_trace_id_scenario,TEST_MATRIX,present,A65C-C03-TST-009,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-028,TASK-C03,feign_correlation_id_scenario,TEST_MATRIX,present,A65C-C03-TST-010,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-029,TASK-C03,feign_parent_context_scenario,TEST_MATRIX,present,A65C-C03-TST-011,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-030,TASK-C03,feign_duplicate_header_scenario,TEST_MATRIX,present,A65C-C03-TST-012,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-031,TASK-C03,feign_caller_header_scenario,TEST_MATRIX,present,A65C-C03-TST-013,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-032,TASK-C03,feign_malformed_retry_scenarios,TEST_MATRIX,malformed+retry present,TST-014;TST-015,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-033,TASK-C03,failure_isolation_categories_present,TEST_MATRIX,Failure Isolation scenarios>=6,8 rows category,PASS,TST-001..008,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-034,TASK-C03,unknown_runtime_behavior_fail_closed,STATIC_ANALYSIS,UNKNOWN_REQUIRES_TEST used when unproven,used; no RUNTIME_VERIFIED claim,PASS,mapping+matrix,2026-08-07T03:10:00Z,architecture,Not runtime PASS
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-035,TASK-C03,raw_request_body_exclusion_scenario,TEST_MATRIX,present,A65C-C03-TST-016,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-036,TASK-C03,raw_response_body_exclusion_scenario,TEST_MATRIX,present,A65C-C03-TST-017,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-037,TASK-C03,prompt_provider_exclusion_scenario,TEST_MATRIX,present,A65C-C03-TST-018,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-038,TASK-C03,patient_identifier_redaction_scenario,TEST_MATRIX,present,A65C-C03-TST-019,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-039,TASK-C03,exception_sanitization_scenario,TEST_MATRIX,present,A65C-C03-TST-020,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-040,TASK-C03,metadata_allowlist_scenario,TEST_MATRIX,present,A65C-C03-TST-021,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-041,TASK-C03,required_test_categories_present,TEST_MATRIX,6/6,6/6,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-042,TASK-C03,otel_candidate_mapping_only,STATIC_ANALYSIS,candidate only,candidate only; no SDK,PASS,mapping candidate_otel_concept,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-043,TASK-C03,otel_dependency_added_zero,GIT_DIFF,0 OTel deps,0,PASS,pom/requirements unchanged,2026-08-07T03:10:00Z,architecture,No install
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-044,TASK-C03,legacy_path_retention,MAPPING,legacy_path_retained!=no deletion,all yes,PASS,mapping csv,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-045,TASK-C03,dual_write_authorized_zero,DOC_CHECK,authorized=no,no,PASS,migration report,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-046,TASK-C03,legacy_path_deleted_zero,GIT_DIFF,0 deletions of targets,0,PASS,git diff name-only,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-047,TASK-C03,application_source_modified,GIT_DIFF,0,0,PASS,git diff vs 1b559fe -- diagnosis-service execution-trace-service common,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-048,TASK-C03,contracts_modified,GIT_DIFF,0,0,PASS,contracts/v1,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-049,TASK-C03,capability_modified,GIT_DIFF,0,0,PASS,capabilities,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-050,TASK-C03,runtime_modified,PHASE_STATE,NOT_IMPLEMENTED,NOT_IMPLEMENTED,PASS,phase state,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-051,TASK-C03,patient_data_access,ACCESS_LOG,no,no,PASS,safety boundary,2026-08-07T03:10:00Z,architecture,Synthetic-only
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-052,TASK-C03,runtime_store_access,ACCESS_LOG,no,no,PASS,safety boundary,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-053,TASK-C03,clinical_content_access,ACCESS_LOG,no,no,PASS,safety boundary,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-054,TASK-C03,external_model_api_calls,ACCESS_LOG,no,no,PASS,safety boundary,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-055,TASK-C03,approved_counts,COUNT,0/0/0/0,0/0/0/0,PASS,phase state,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-056,TASK-C03,pip_check,PIP_CHECK,No broken requirements found,No broken requirements found,PASS,LOCAL_C03_IMPLEMENTATION_VERIFICATION,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-057,TASK-C03,a6_validator,VALIDATOR,11/25/5/0,11/25/5/0,PASS,LOCAL_C03_IMPLEMENTATION_VERIFICATION,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-058,TASK-C03,a6_pytest,PYTEST,59 passed,59 passed,PASS,LOCAL_C03_IMPLEMENTATION_VERIFICATION,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-059,TASK-C03,contracts_validator_and_pytest,VALIDATOR_PYTEST,13/13/33 + 110 passed,13/13/33 + 110 passed,PASS,LOCAL_C03_IMPLEMENTATION_VERIFICATION,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-060,TASK-C03,git_diff_check_and_out_of_scope,GIT_SCOPE,4 evidence files; out-of-scope=0,4;0,PASS,git diff --name-only 1b559fe...HEAD,2026-08-07T03:10:00Z,architecture,Validated at final scope step
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-061,TASK-C03,test_matrix_rows,COUNT,>=1,37,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-062,TASK-C03,target_test_coverage,COVERAGE,5/5 assets,5/5,PASS,test matrix asset_ids,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-063,TASK-C03,dependency_flags_all_no,COUNT,external/runtime/patient yes=0,0,PASS,test matrix,2026-08-07T03:10:00Z,architecture,
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-064,TASK-C03,c01_evidence_unmodified,GIT_DIFF,0,0,PASS,C01 evidence paths,2026-08-07T03:10:00Z,architecture,Not modified by C03
+A65C-C03-20260807-1B559FE,A65C-C03-VAL-065,TASK-C03,ci_not_claimed_pass,CI_LABEL,NO_CI_CONFIGURED,NO_CI_CONFIGURED,PASS,workflows absent,2026-08-07T03:10:00Z,architecture,Local verification only
