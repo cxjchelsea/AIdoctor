@@ -167,3 +167,40 @@ Independent review: risk calibration and OD fail-closed fields added
 
 Independent remediation targets: `READY_FOR_A6_5_PLAN_REMEDIATION_MERGE` for the review PR only.
 PR #10 remains Draft; A6.5-A remains NOT_STARTED.
+
+## 7. A7-NC implementation-order decision addendum
+
+> Decision ID: `A7-NC-ORDER-001`
+>
+> Decision status: `PLANNED_PENDING_INDEPENDENT_REVIEW`
+>
+> Architecture classification: `IMPLEMENTATION_ORDER_AMENDMENT`
+
+### Decision
+
+Permit a controlled non-clinical A7-NC planning and, only after separate authorization, implementation lane before A6.5 Exit. The historical `A6 → A6.5 → A7` route remains the normal baseline.
+
+### Reason
+
+TASK-B04 is blocked by an external clinical-governance dependency: only 6/11 unlock conditions are satisfied; Clinical Owner and Human Clinical Reviewer roles are not assigned; written content-access authorization is absent. Platform mechanics can be isolated without reading clinical content or changing clinical behavior.
+
+### Boundaries
+
+```text
+Architecture: unchanged
+Execution order: amended
+Architecture Refreeze: NOT_REQUIRED
+A6.5: INCOMPLETE_BLOCKED_DEPENDENCY
+A7-NC implementation: NOT_STARTED
+A7-CL: BLOCKED_BY_A6_5_CLINICAL_LANE
+A7 overall: NOT_COMPLETE
+Clinical activation: BLOCKED
+Clinical Runtime: NOT_ENABLED
+Production: BLOCKED
+```
+
+State ownership, the unique State Committer write path, Mandatory Safety, Triage, Capability governance, the single Model Gateway, provider abstraction and the clinical write boundary remain frozen. Shared Contract and Capability semantic mutations are forbidden. Real-provider access, clinical Prompt content, patient data and clinical gold are outside A7-NC.
+
+### Rejoin and authorization
+
+The clinical lane must complete `B04 → C02 → E01 → E02 → A6.5 Exit`; A7-NC must separately pass its Exit Gate; ownership, review and governance evidence must exist before A7-CL. Planning completion is not implementation authorization. The authoritative scope, stop conditions and gates are recorded in [the A7-NC Roadmap Amendment](../a7-non-clinical-roadmap-amendment.md).
