@@ -148,7 +148,7 @@ Stable Platform
 
 首个场景为 `adult_respiratory_v1`。它用于验证通用平台，不是永久限制到呼吸道。
 
-A6 已建立 `adult_respiratory_v1` 的 `DRAFT` 结构骨架（`PARTIALLY_VALIDATED`）：可解析、可校验、可评审，但临床内容仍为 `REQUIRES_CLINICAL_REVIEW`，runtime 未接入，生产资格为 `BLOCKED`。详见 [A6 Evidence](./evidence/phase-a/a6/capability-package-skeleton-report.md)。A6.5/A7 未开始；A5 三语言 binding 仍为 A11 前置缺口。
+A6 已建立 `adult_respiratory_v1` 的 `DRAFT` 结构骨架（`PARTIALLY_VALIDATED`）：可解析、可校验、可评审，但临床内容仍为 `REQUIRES_CLINICAL_REVIEW`，runtime 未接入，生产资格为 `BLOCKED`。详见 [A6 Evidence](./evidence/phase-a/a6/capability-package-skeleton-report.md)。A6.5 已完成 A、B-Core、非临床 C 与 D01 等合并验证工作，但 `B04 → C02 → E01 → E02 → A6.5 Exit` 临床治理链仍 fail-closed，A6.5 状态为 `INCOMPLETE_BLOCKED_DEPENDENCY`。A7 overall 为 `NOT_COMPLETE`；[A7-NC 路线修订规划](./plans/phase-a/a7-non-clinical-roadmap-amendment.md)已引入，但 implementation 仍为 `NOT_STARTED`，未获得实现授权。A5 三语言 binding 仍为 A11 前置缺口。
 
 新增场景必须考虑 Scope、Terminology、Observation、Safety、Question、Hypothesis、Knowledge、Prompt、Model Route、Tool/Skill、Delivery 和 Eval，不允许只更换 Prompt。
 
@@ -336,7 +336,7 @@ A1 Java 基线
 → A11 Frozen Baseline Review
 ```
 
-A1–A5 已完成基线与 Shared Contracts 结构包。A6 Capability Package 骨架已建立但未临床批准、未接入 runtime、未升级 Frozen Baseline。下一步是 A6 评审通过后进入 A6.5 Legacy Design Asset Validation；不得跳过临床/许可门禁直接填充阈值或规则。
+A1–A5 已形成基线与 Shared Contracts v1 结构包；A6 Capability Package 骨架已建立但未临床批准、未接入 runtime、未升级 Frozen Baseline。历史执行顺序继续保留。当前状态由 [Phase A Current-State Addendum](./plans/phase-a/phase-a-current-state-addendum.md) 记录：A6.5 的临床治理链仍阻塞，A7-NC Roadmap Amendment 为 `PLANNED_PENDING_INDEPENDENT_REVIEW`，A7-NC implementation 为 `NOT_STARTED`，A7-CL 为 `BLOCKED_BY_A6_5_CLINICAL_LANE`，A7 overall 为 `NOT_COMPLETE`。不得跳过临床/许可门禁直接填充阈值、规则、Prompt 或 route eligibility。
 
 ---
 
@@ -362,4 +362,4 @@ Legacy Asset / Target Capability
 
 ## 15. 当前下一步
 
-正式执行 Phase A，从 A1 Java 基线开始。A1 完成后先审核真实命令、成功项、失败项、阻塞项和证据，再进入 A2。
+下一步仅允许对 [A7-NC Roadmap Amendment](./plans/phase-a/a7-non-clinical-roadmap-amendment.md) 执行独立评审。该 planning change 不是 Model Runtime 实现授权：不得实现 A7-NC，不得启动 A7-CL，也不得解锁 B04/C02。历史 Phase A 证据与当前控制状态分别由原 evidence 和 [current-state addendum](./plans/phase-a/phase-a-current-state-addendum.md) 维护。
