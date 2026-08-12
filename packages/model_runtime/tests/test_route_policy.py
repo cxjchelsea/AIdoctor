@@ -108,3 +108,34 @@ def test_provider_model_reference_requires_explicit_version():
     data["primary_model"]["model_version"] = "latest"
     with pytest.raises(ValidationError):
         ModelRoutePolicy.model_validate(data)
+
+
+def test_eligible_route_requires_primary_model():
+    data = route_data()
+    data.update(status="ELIGIBLE", eligible=True, primary_model=None, fallback_models=[])
+    with pytest.raises(ValidationError, match="eligible route requires a primary model"):
+        ModelRoutePolicy.model_validate(data)
+
+
+def test_fallback_models_require_primary_model():
+    data = route_data()
+    fallback = data["fallback_models"][0]
+    data.update(primary_model=None, fallback_models=[fallback])
+    with pytest.raises(ValidationError, match="fallback models require a primary model"):
+        ModelRoutePolicy.model_validate(data)
+
+
+def test_duplicate_fallback_references_are_rejected():
+    data = route_data()
+    fallback = data["fallback_models"][0]
+    data["fallback_models"] = [fallback, fallback]
+    with pytest.raises(ValidationError):
+        ModelRoutePolicy.model_validate(data)
+
+
+def test_blocked_targetless_unknown_and_clinical_policies_remain_valid():
+    data = route_data()
+    data.update(category="UNKNOWN", primary_model=None, fallback_models=[])
+    assert ModelRoutePolicy.model_validate(data).eligible is False
+    data["category"] = "CLINICAL"
+    assert ModelRoutePolicy.model_validate(data).eligible is False

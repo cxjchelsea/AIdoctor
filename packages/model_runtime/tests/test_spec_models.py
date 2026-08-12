@@ -115,6 +115,80 @@ def test_prompt_rejects_unknown_output_contract_reference():
     data["output_contract_id"] = "invented-clinical-output"
     with pytest.raises(ValidationError):
         PromptSpec.model_validate(data)
+
+
+@pytest.mark.parametrize(
+    "version",
+    ["0.0.0", "1.0.0", "10.20.30", "1.0.0-alpha", "1.0.0-alpha.1", "1.0.0+build.1", "1.0.0-alpha+build"],
+)
+def test_semver_accepts_supported_forms(version):
+    data = model_data()
+    data["version"] = version
+    assert ModelSpec.model_validate(data).version == version
+
+
+@pytest.mark.parametrize(
+    "version",
+    ["01.0.0", "1.00.0", "1.0.00", "1.0.0-01", "latest", "v1.0.0", "1", "1.0", "", " 1.0.0"],
+)
+def test_semver_rejects_invalid_and_implicit_versions(version):
+    data = model_data()
+    data["version"] = version
+    with pytest.raises(ValidationError):
+        ModelSpec.model_validate(data)
+
+
+def test_shared_contract_reference_requires_existing_id_and_version_pair():
+    assert PromptSpec.model_validate(prompt_data()).output_contract_version == "1.0.0"
+    data = prompt_data()
+    data["output_contract_version"] = "999.0.0"
+    with pytest.raises(ValidationError):
+        PromptSpec.model_validate(data)
+    data = prompt_data()
+    data["output_contract_id"] = "unknown-contract"
+    with pytest.raises(ValidationError):
+        PromptSpec.model_validate(data)
+
+
+def test_metadata_is_recursively_immutable():
+    data = prompt_data()
+    data["metadata"] = {"nested": {"x": 1}, "items": [1, {"y": 2}]}
+    spec = PromptSpec.model_validate(data)
+    with pytest.raises(TypeError):
+        spec.metadata["x"] = "changed"
+    with pytest.raises(TypeError):
+        spec.metadata["nested"]["x"] = "changed"
+    with pytest.raises(AttributeError):
+        spec.metadata["items"].append(3)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [object(), lambda: None, {1, 2}, b"bytes", bytearray(b"bytes"), complex(1, 2), float("nan"), float("inf"), float("-inf")],
+)
+def test_metadata_rejects_non_json_and_non_finite_values(value):
+    data = prompt_data()
+    data["metadata"] = {"value": value}
+    with pytest.raises(ValidationError):
+        PromptSpec.model_validate(data)
+
+
+def test_metadata_key_order_is_canonical_and_round_trip_is_stable():
+    left = prompt_data()
+    left["metadata"] = {"b": 2, "a": {"d": 4, "c": [3, 2, 1]}}
+    right = prompt_data()
+    right["metadata"] = {"a": {"c": [3, 2, 1], "d": 4}, "b": 2}
+    left_json = PromptSpec.model_validate(left).model_dump_json()
+    right_json = PromptSpec.model_validate(right).model_dump_json()
+    assert left_json == right_json
+    assert PromptSpec.model_validate_json(left_json).model_dump_json() == left_json
+
+
+def test_checksum_error_describes_both_accepted_formats():
+    data = prompt_data()
+    data["checksum"] = "invalid"
+    with pytest.raises(ValidationError, match=r"64-character.*or sha256:<digest>"):
+        PromptSpec.model_validate(data)
     data = prompt_data()
     data["variables"] *= 2
     with pytest.raises(ValidationError):

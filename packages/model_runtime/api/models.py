@@ -8,14 +8,15 @@ from __future__ import annotations
 
 import re
 from enum import Enum
-from typing import Annotated, Any
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, StrictStr, field_validator
 
+from .types import FrozenJsonObject, validate_identifier, validate_semver
 
-IDENTIFIER_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$")
-VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
+
 CHECKSUM_PATTERN = re.compile(r"^(?:sha256:)?[0-9a-f]{64}$")
+SHARED_CONTRACT_V1_VERSION = "1.0.0"
 SHARED_CONTRACT_V1_IDS = frozenset(
     {
         "audit-ref",
@@ -44,18 +45,6 @@ class StructuralModel(BaseModel):
     """Strict immutable base for deterministic structural metadata."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
-
-
-def _validate_identifier(value: str) -> str:
-    if not IDENTIFIER_PATTERN.fullmatch(value):
-        raise ValueError("must be a stable lowercase identifier")
-    return value
-
-
-def _validate_version(value: str) -> str:
-    if value.lower() == "latest" or not VERSION_PATTERN.fullmatch(value):
-        raise ValueError("must be an explicit semantic version; implicit latest is forbidden")
-    return value
 
 
 class ModelLifecycle(str, Enum):
@@ -103,16 +92,16 @@ class ModelSpec(StructuralModel):
     cost_metadata: CostMetadata
     status: ModelLifecycle = ModelLifecycle.DRAFT
 
-    _provider_id = field_validator("provider_id")(_validate_identifier)
-    _model_id = field_validator("model_id")(_validate_identifier)
-    _version = field_validator("version")(_validate_version)
+    _provider_id = field_validator("provider_id")(validate_identifier)
+    _model_id = field_validator("model_id")(validate_identifier)
+    _version = field_validator("version")(validate_semver)
 
     @field_validator("capabilities")
     @classmethod
     def validate_capabilities(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         if not value:
             raise ValueError("at least one explicit capability is required")
-        validated = tuple(_validate_identifier(item) for item in value)
+        validated = tuple(validate_identifier(item) for item in value)
         if len(set(validated)) != len(validated):
             raise ValueError("capabilities must be unique")
         return validated
@@ -123,7 +112,7 @@ class PromptVariable(StructuralModel):
     value_type: Annotated[StrictStr, Field(pattern=r"^(string|integer|number|boolean|object|array)$")]
     required: StrictBool = True
 
-    _name = field_validator("name")(_validate_identifier)
+    _name = field_validator("name")(validate_identifier)
 
 
 class PromptSpec(StructuralModel):
@@ -132,13 +121,13 @@ class PromptSpec(StructuralModel):
     variables: tuple[PromptVariable, ...]
     output_contract_id: Identifier
     output_contract_version: Version
-    checksum: Annotated[StrictStr, Field(min_length=64, max_length=71)]
-    metadata: dict[StrictStr, Any] = Field(default_factory=dict)
+    checksum: StrictStr
+    metadata: FrozenJsonObject = Field(default_factory=FrozenJsonObject)
     status: PromptLifecycle = PromptLifecycle.DRAFT
 
-    _prompt_id = field_validator("prompt_id")(_validate_identifier)
-    _output_contract_id = field_validator("output_contract_id")(_validate_identifier)
-    _version = field_validator("version", "output_contract_version")(_validate_version)
+    _prompt_id = field_validator("prompt_id")(validate_identifier)
+    _output_contract_id = field_validator("output_contract_id")(validate_identifier)
+    _version = field_validator("version", "output_contract_version")(validate_semver)
 
     @field_validator("variables")
     @classmethod
@@ -155,9 +144,16 @@ class PromptSpec(StructuralModel):
             raise ValueError("must reference an existing Shared Contracts v1 identifier")
         return value
 
+    @field_validator("output_contract_version")
+    @classmethod
+    def validate_output_contract_version(cls, value: str) -> str:
+        if value != SHARED_CONTRACT_V1_VERSION:
+            raise ValueError(f"must equal the existing Shared Contracts v1 version {SHARED_CONTRACT_V1_VERSION}")
+        return value
+
     @field_validator("checksum")
     @classmethod
     def validate_checksum(cls, value: str) -> str:
         if not CHECKSUM_PATTERN.fullmatch(value):
-            raise ValueError("checksum must be a lowercase SHA-256 digest")
+            raise ValueError("checksum must be a lowercase 64-character SHA-256 digest or sha256:<digest>")
         return value
