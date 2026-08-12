@@ -1,6 +1,14 @@
 # Phase A7-NC Non-Clinical Model Runtime Roadmap Amendment
 
-> Amendment status: `PLANNED_PENDING_INDEPENDENT_REVIEW`
+> Amendment status: `MERGED_AND_VERIFIED`
+>
+> Merged Enterprise commit: `2c9dbf866c2c6b064f68fcab1f557635e64a73d2`
+>
+> Reviewed Head: `87e9780220e0fa219f1d0e0e91c2f06dea79b21d`
+>
+> PR: `#29`
+>
+> A7-NC implementation authorization: `NOT_GRANTED`
 >
 > A7-NC implementation: `NOT_STARTED`
 >
@@ -258,14 +266,17 @@ A7-CL: BLOCKED_BY_A6_5_CLINICAL_LANE
 A7 overall: NOT_COMPLETE
 ```
 
-Current state:
+Current control state after verified merge:
 
 ```text
-A7-NC amendment planning: COMPLETE when this planning change is complete
-A7-NC Roadmap Amendment: PLANNED_PENDING_INDEPENDENT_REVIEW
+A7-NC amendment planning: COMPLETE
+A7-NC Roadmap Amendment: MERGED_AND_VERIFIED
+A7-NC implementation authorization: NOT_GRANTED
 A7-NC implementation: NOT_STARTED
 A7-CL: BLOCKED_BY_A6_5_CLINICAL_LANE
 A7: NOT_COMPLETE
+Clinical Runtime: NOT_ENABLED
+Production: BLOCKED
 ```
 
 Planning completion is not implementation authorization. Even if A7-NC later becomes `COMPLETE`, A7 remains `NOT_COMPLETE` until A7-CL and Full A7 Exit pass.
@@ -318,10 +329,12 @@ The dependency shape is `P1 → P2 → P3 → P4 → P5/P6 → P7`. Implementati
 
 ## 22. Review and authorization process
 
-1. Complete this planning change with status `PLANNED_PENDING_INDEPENDENT_REVIEW`.
-2. Perform an A7-NC Roadmap Amendment Independent Review covering scope completeness, clinical leakage, dependencies, architecture-freeze compatibility, exit/rejoin gates and documentation consistency.
-3. Perform a separate Amendment Merge Review.
-4. Merge and post-merge verify the amendment against Enterprise.
-5. Only then may a separate A7-NC Implementation Authorization task be considered.
+The amendment followed this completed governance history:
 
-This planning PR must remain Draft. It carries no Model Runtime implementation authorization and cannot start A7-CL, B04 or C02.
+1. Planning completed with the historical status `PLANNED_PENDING_INDEPENDENT_REVIEW`.
+2. Independent Review passed against reviewed Head `87e9780220e0fa219f1d0e0e91c2f06dea79b21d`.
+3. A separate Amendment Merge Review passed against the same reviewed Head.
+4. PR #29 merged through standard merge commit `2c9dbf866c2c6b064f68fcab1f557635e64a73d2`; graph, tree and exact six-file scope were post-merge verified.
+5. A separate A7-NC Implementation Authorization Assessment may now be considered, but authorization remains `NOT_GRANTED`.
+
+The planning PR remained Draft until Independent Review passed and was subsequently reviewed and merged as PR #29. Neither that merge nor this status reconciliation grants Model Runtime implementation authorization or permits A7-CL, B04 or C02 to start.

@@ -1,10 +1,12 @@
 # Phase A Current-State Addendum
 
-> Snapshot base: `2b4e4f3679b0a12ff9d9c3f2d9e99cc0bd733f71`
+> Snapshot base: `2c9dbf866c2c6b064f68fcab1f557635e64a73d2`
 >
 > Purpose: current-state reconciliation without rewriting historical backlog rows
 >
-> A7-NC amendment planning status after this planning change: `PLANNED_PENDING_INDEPENDENT_REVIEW`
+> A7-NC Roadmap Amendment: `MERGED_AND_VERIFIED`
+>
+> A7-NC implementation authorization: `NOT_GRANTED`
 
 ## 1. Interpretation
 
@@ -38,14 +40,15 @@ TASK-E01: NOT_ELIGIBLE
 TASK-E02: NOT_ELIGIBLE
 A6.5: INCOMPLETE_BLOCKED_DEPENDENCY
 
-A7-NC Roadmap Amendment: PLANNED_PENDING_INDEPENDENT_REVIEW
+A7-NC Roadmap Amendment: MERGED_AND_VERIFIED
 A7-NC amendment planning: COMPLETE
+A7-NC implementation authorization: NOT_GRANTED
 A7-NC implementation: NOT_STARTED
 A7-CL: BLOCKED_BY_A6_5_CLINICAL_LANE
 A7: NOT_COMPLETE
 ```
 
-The amendment status does not become `AUTHORIZED_FOR_IMPLEMENTATION` through this planning change.
+The verified amendment merge does not grant implementation authorization. A separate `A7-NC Implementation Authorization Assessment` is required.
 
 ## 4. Safety state
 
@@ -69,7 +72,7 @@ Production: BLOCKED
 
 ## 5. Dependency and parallel-lane state
 
-The clinical lane remains `B04 → C02 → E01 → E02 → A6.5 Exit`. The planning amendment introduces a future A7-NC non-clinical platform lane, but this snapshot does not authorize or start its implementation. A7-CL cannot begin until the Full A7 Rejoin Gate in [the amendment](./a7-non-clinical-roadmap-amendment.md) passes.
+The clinical lane remains `B04 → C02 → E01 → E02 → A6.5 Exit`. The merged and verified amendment establishes the planned A7-NC non-clinical platform lane, but this snapshot does not authorize or start its implementation. A7-CL cannot begin until the Full A7 Rejoin Gate in [the amendment](./a7-non-clinical-roadmap-amendment.md) passes.
 
 ## 6. Historical backlog policy
 
@@ -91,4 +94,4 @@ D01 does not authorize future A7-NC fixtures.
 
 ## 8. Next authorization boundary
 
-The next permitted task is an A7-NC Roadmap Amendment Independent Review. Implementation authorization can be considered only after the amendment is planned, independently reviewed, merge-reviewed, merged and post-merge verified.
+The next permitted task is an `A7-NC Implementation Authorization Assessment`. It must independently decide whether authorization can be granted; until then, authorization is `NOT_GRANTED` and implementation remains `NOT_STARTED`.
