@@ -172,7 +172,13 @@ PR #10 remains Draft; A6.5-A remains NOT_STARTED.
 
 > Decision ID: `A7-NC-ORDER-001`
 >
-> Decision status: `PLANNED_PENDING_INDEPENDENT_REVIEW`
+> Decision status: `MERGED_AND_VERIFIED`
+>
+> PR: `#29`
+>
+> Reviewed Head: `87e9780220e0fa219f1d0e0e91c2f06dea79b21d`
+>
+> Enterprise merge: `2c9dbf866c2c6b064f68fcab1f557635e64a73d2`
 >
 > Architecture classification: `IMPLEMENTATION_ORDER_AMENDMENT`
 
@@ -191,6 +197,8 @@ Architecture: unchanged
 Execution order: amended
 Architecture Refreeze: NOT_REQUIRED
 A6.5: INCOMPLETE_BLOCKED_DEPENDENCY
+A7-NC Roadmap Amendment: MERGED_AND_VERIFIED
+A7-NC implementation authorization: NOT_GRANTED
 A7-NC implementation: NOT_STARTED
 A7-CL: BLOCKED_BY_A6_5_CLINICAL_LANE
 A7 overall: NOT_COMPLETE
