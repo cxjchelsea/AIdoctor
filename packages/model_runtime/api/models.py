@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Any, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, StrictStr, field_validator
 
@@ -45,6 +45,20 @@ class StructuralModel(BaseModel):
     """Strict immutable base for deterministic structural metadata."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
+
+    def model_copy(self, *, update: dict[str, Any] | None = None, deep: bool = False) -> Self:
+        """Return a fully revalidated copy, including all functional updates.
+
+        Pydantic's default update path intentionally skips validation. Structural
+        contracts cannot allow that escape hatch, so every copy is reconstructed
+        through the concrete subclass validation pipeline. ``deep`` remains API
+        compatible; reconstruction already creates independent immutable state.
+        """
+
+        data = self.model_dump(mode="python", round_trip=True)
+        if update:
+            data.update(update)
+        return type(self).model_validate(data)
 
 
 class ModelLifecycle(str, Enum):
