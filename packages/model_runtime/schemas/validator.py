@@ -60,8 +60,9 @@ class SharedContractValidator:
     __slots__ = ("_registry", "_contracts_root", "_shared", "_manifest", "_schemas", "_schema_registry")
 
     def __init__(self, registry: OutputSchemaRegistry) -> None:
-        if not isinstance(registry, OutputSchemaRegistry):
-            raise TypeError("registry must be an OutputSchemaRegistry")
+        # REREV-F003：拒绝 subclass / duck-typed registry
+        if type(registry) is not OutputSchemaRegistry:
+            raise TypeError("registry must be exact OutputSchemaRegistry")
         if len(registry) != 13:
             raise SchemaRegistryError(
                 SchemaRegistryErrorCode.CONTRACT_REGISTRY_INVALID,

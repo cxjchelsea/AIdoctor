@@ -229,4 +229,210 @@ def test_eg09_offline_gateway_path():
     result = gateway.validate_output(prepared, valid_tool_result_payload())
     assert result.valid is True
     assert prepared.provenance.prompt_checksum
+    assert prepared.provenance.rendered_prompt_digest
+    assert prepared.request_snapshot.variables["color_name"] == "blue"
     assert prepared.timeout_policy.timeout_ms == 1000
+
+
+def _dual_eligible_gateway():
+    primary = ModelReference(
+        provider_id="synthetic-provider", model_id="primary-model", model_version="1.0.0"
+    )
+    fallback = ModelReference(
+        provider_id="synthetic-provider", model_id="fallback-model", model_version="1.0.0"
+    )
+    route = eligible_route(primary=primary, fallbacks=(fallback,))
+    models = (model_spec(model_id="primary-model"), model_spec(model_id="fallback-model"))
+    return build_gateway(routes=(route,), models=models), primary, fallback
+
+
+def test_rerev_f001_forged_non_winner_rejected_honest_fallback_pass():
+    from packages.model_runtime.api.models import ModelLifecycle
+    from packages.model_runtime.gateway.models import PreparedInvocation
+
+    gateway, primary, fallback = _dual_eligible_gateway()
+    honest = gateway.prepare(gateway_request())
+    assert honest.selected_model == primary
+    assert honest.provenance.selection_index == 0
+
+    # primary/fallback 均 eligible 时 forged fallback winner 必须 REJECT
+    forged = PreparedInvocation(
+        request_id=honest.request_id,
+        route_id=honest.route_id,
+        route_version=honest.route_version,
+        selected_model=fallback,
+        rendered_prompt=honest.rendered_prompt,
+        output_contract_id=honest.output_contract_id,
+        output_contract_version=honest.output_contract_version,
+        timeout_policy=honest.timeout_policy,
+        provenance=honest.provenance.model_copy(
+            update={
+                "selected_model": fallback,
+                "selection_index": 1,
+                "fallback_used": True,
+            }
+        ),
+        candidate_models=honest.candidate_models,
+        request_snapshot=honest.request_snapshot,
+    )
+    with pytest.raises(GatewayRuntimeError) as forged_error:
+        gateway.validate_output(forged, valid_tool_result_payload())
+    assert forged_error.value.code is GatewayErrorCode.PROVENANCE_INVALID
+
+    # primary 不可用时 honest fallback PASS
+    for status in (ModelLifecycle.DISABLED, ModelLifecycle.DEPRECATED):
+        gw_fallback = build_gateway(
+            routes=(eligible_route(primary=primary, fallbacks=(fallback,)),),
+            models=(
+                model_spec(model_id="primary-model", status=status),
+                model_spec(model_id="fallback-model"),
+            ),
+        )
+        prepared = gw_fallback.prepare(gateway_request())
+        assert prepared.selected_model == fallback
+        assert gw_fallback.validate_output(prepared, valid_tool_result_payload()).valid is True
+
+    # capability / structured-output mismatch → fallback
+    gw_cap = build_gateway(
+        routes=(eligible_route(primary=primary, fallbacks=(fallback,)),),
+        models=(
+            model_spec(model_id="primary-model", supports_structured_output=False),
+            model_spec(model_id="fallback-model"),
+        ),
+    )
+    prepared_cap = gw_cap.prepare(gateway_request())
+    assert prepared_cap.selected_model == fallback
+    assert gw_cap.validate_output(prepared_cap, valid_tool_result_payload()).valid is True
+
+    # all ineligible → prepare fail closed
+    with pytest.raises(GatewayRuntimeError):
+        build_gateway(
+            routes=(eligible_route(primary=primary, fallbacks=(fallback,)),),
+            models=(
+                model_spec(model_id="primary-model", status=ModelLifecycle.DISABLED),
+                model_spec(model_id="fallback-model", status=ModelLifecycle.DISABLED),
+            ),
+        ).prepare(gateway_request())
+
+
+def test_rerev_f002_timeout_forgery_rejected():
+    from packages.model_runtime.api.models import TimeoutPolicy
+    from packages.model_runtime.gateway.models import PreparedInvocation
+
+    gateway = build_gateway()
+    honest = gateway.prepare(gateway_request())
+    assert honest.timeout_policy.timeout_ms == 1000
+    forged = PreparedInvocation(
+        request_id=honest.request_id,
+        route_id=honest.route_id,
+        route_version=honest.route_version,
+        selected_model=honest.selected_model,
+        rendered_prompt=honest.rendered_prompt,
+        output_contract_id=honest.output_contract_id,
+        output_contract_version=honest.output_contract_version,
+        timeout_policy=TimeoutPolicy(timeout_ms=9999),
+        provenance=honest.provenance,
+        candidate_models=honest.candidate_models,
+        request_snapshot=honest.request_snapshot,
+    )
+    with pytest.raises(GatewayRuntimeError) as error:
+        gateway.validate_output(forged, valid_tool_result_payload())
+    assert error.value.code is GatewayErrorCode.PROVENANCE_INVALID
+    # model_copy 可构造结构合法但 timeout 错配的对象；compatibility 边界必须 REJECT
+    copied = honest.model_copy(update={"timeout_policy": TimeoutPolicy(timeout_ms=9999)})
+    with pytest.raises(GatewayRuntimeError) as copy_error:
+        gateway.validate_output(copied, valid_tool_result_payload())
+    assert copy_error.value.code is GatewayErrorCode.PROVENANCE_INVALID
+
+
+def test_rerev_f003_registry_subclass_impossible():
+    with pytest.raises(TypeError):
+
+        class FakeRegistry(OutputSchemaRegistry):  # type: ignore[misc]
+            pass
+
+    # 正常 exact registry 仍可注入
+    assert build_gateway(output_schema_registry=OutputSchemaRegistry())
+
+
+def test_rerev_f004_rendered_message_and_variables_binding():
+    from packages.model_runtime.gateway.models import PreparedInvocation, compute_rendered_prompt_digest
+
+    gateway = build_gateway()
+    honest = gateway.prepare(gateway_request())
+    payload = valid_tool_result_payload()
+    assert gateway.validate_output(honest, payload).valid is True
+
+    forged_messages = tuple(
+        message.model_copy(update={"content": "SYNTHETIC_FORGED_PROMPT_CONTENT_XYZ"})
+        for message in honest.rendered_prompt.messages
+    )
+    forged_rendered = honest.rendered_prompt.model_copy(update={"messages": forged_messages})
+    # digest 必须与 forged rendered 一致才能通过模型层；Gateway 仍应因 re-render 不一致 REJECT
+    forged_digest = compute_rendered_prompt_digest(forged_rendered)
+    forged = PreparedInvocation(
+        request_id=honest.request_id,
+        route_id=honest.route_id,
+        route_version=honest.route_version,
+        selected_model=honest.selected_model,
+        rendered_prompt=forged_rendered,
+        output_contract_id=honest.output_contract_id,
+        output_contract_version=honest.output_contract_version,
+        timeout_policy=honest.timeout_policy,
+        provenance=honest.provenance.model_copy(update={"rendered_prompt_digest": forged_digest}),
+        candidate_models=honest.candidate_models,
+        request_snapshot=honest.request_snapshot,
+    )
+    with pytest.raises(GatewayRuntimeError) as content_error:
+        gateway.validate_output(forged, payload)
+    assert content_error.value.code is GatewayErrorCode.PROVENANCE_INVALID
+
+    # 仅改 variables，不改 rendered → REJECT
+    changed_snapshot = honest.request_snapshot.model_copy(
+        update={"variables": {"color_name": "red"}}
+    )
+    vars_forged = PreparedInvocation(
+        request_id=honest.request_id,
+        route_id=honest.route_id,
+        route_version=honest.route_version,
+        selected_model=honest.selected_model,
+        rendered_prompt=honest.rendered_prompt,
+        output_contract_id=honest.output_contract_id,
+        output_contract_version=honest.output_contract_version,
+        timeout_policy=honest.timeout_policy,
+        provenance=honest.provenance,
+        candidate_models=honest.candidate_models,
+        request_snapshot=changed_snapshot,
+    )
+    with pytest.raises(GatewayRuntimeError) as vars_error:
+        gateway.validate_output(vars_forged, payload)
+    assert vars_error.value.code is GatewayErrorCode.PROVENANCE_INVALID
+
+    # route task/tag snapshot mismatch → REJECT
+    tag_snapshot = honest.request_snapshot.model_copy(update={"tags": ()})
+    tag_forged = PreparedInvocation(
+        request_id=honest.request_id,
+        route_id=honest.route_id,
+        route_version=honest.route_version,
+        selected_model=honest.selected_model,
+        rendered_prompt=honest.rendered_prompt,
+        output_contract_id=honest.output_contract_id,
+        output_contract_version=honest.output_contract_version,
+        timeout_policy=honest.timeout_policy,
+        provenance=honest.provenance,
+        candidate_models=honest.candidate_models,
+        request_snapshot=tag_snapshot,
+    )
+    with pytest.raises(GatewayRuntimeError) as tag_error:
+        gateway.validate_output(tag_forged, payload)
+    assert tag_error.value.code is GatewayErrorCode.PROVENANCE_INVALID
+
+    # digest 篡改 → 模型层或 compatibility REJECT
+    with pytest.raises(ValidationError):
+        honest.model_copy(
+            update={
+                "provenance": honest.provenance.model_copy(
+                    update={"rendered_prompt_digest": "0" * 64}
+                )
+            }
+        )

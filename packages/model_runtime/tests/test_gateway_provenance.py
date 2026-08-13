@@ -54,8 +54,11 @@ def test_provenance_model_copy_rejects_invalid_updates():
     gateway = build_gateway()
     provenance = gateway.prepare(gateway_request()).provenance
     assert isinstance(provenance, GatewayProvenance)
+    assert len(provenance.rendered_prompt_digest) == 64
     with pytest.raises(ValidationError):
         provenance.model_copy(update={"prompt_checksum": "not-a-digest"})
+    with pytest.raises(ValidationError):
+        provenance.model_copy(update={"rendered_prompt_digest": "not-a-digest"})
     with pytest.raises(ValidationError):
         provenance.model_copy(update={"fallback_used": True})
     with pytest.raises(ValidationError):

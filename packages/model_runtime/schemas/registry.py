@@ -113,6 +113,10 @@ class OutputSchemaRegistry:
 
     __slots__ = ("_entries", "_contract_ids", "_manifest_names")
 
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        # REREV-F003：禁止 subclass；exact catalog 不是 polymorphic extension point
+        raise TypeError("OutputSchemaRegistry is sealed and cannot be subclassed")
+
     def __init__(self) -> None:
         # F002：唯一 public 构造路径直接物化 exact 13@1.0.0 catalog
         entries, names = _build_exact_shared_contracts_v1_catalog()

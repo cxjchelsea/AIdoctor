@@ -7,7 +7,7 @@ from types import MappingProxyType
 from typing import Any
 
 from ..api.models import ModelSpec
-from ..prompts import PromptBuilder, PromptLoader, PromptRegistry, PromptRuntimeError, compute_prompt_checksum
+from ..prompts import PromptBuilder, PromptLoader, PromptRegistry, PromptRuntimeError
 from ..routing.policies import ModelRoutePolicy
 from ..schemas import (
     OutputSchemaRegistry,
@@ -21,11 +21,11 @@ from .models import (
     GatewayRequest,
     OutputValidationResult,
     PreparedInvocation,
+    compute_rendered_prompt_digest,
 )
 from .selection import (
     assert_route_eligible,
     assert_route_match,
-    model_is_structurally_eligible,
     select_structural_model,
 )
 
@@ -77,17 +77,17 @@ class ModelGateway:
         if not isinstance(prompt_builder, PromptBuilder):
             raise TypeError("prompt_builder must be a PromptBuilder")
 
-        # F002/F006：Schema 权威唯一链 — exact registry → Gateway-owned validator
+        # REREV-F003：Schema 权威必须是 sealed exact OutputSchemaRegistry（禁止 subclass）
         if output_schema_registry is None:
             schema_registry = OutputSchemaRegistry()
         else:
-            if not isinstance(output_schema_registry, OutputSchemaRegistry):
-                raise TypeError("output_schema_registry must be an OutputSchemaRegistry")
+            if type(output_schema_registry) is not OutputSchemaRegistry:
+                raise TypeError("output_schema_registry must be exact OutputSchemaRegistry")
             if len(output_schema_registry) != 13:
                 raise ValueError("output_schema_registry must be the exact Shared Contracts v1 catalog")
             schema_registry = output_schema_registry
 
-        # F005：Prompt 权威唯一链 — registry → Gateway-owned loader → builder
+        # Prompt 权威唯一链 — registry → Gateway-owned loader → builder
         prompt_loader = PromptLoader(prompt_registry)
         shared_validator = SharedContractValidator(schema_registry)
 
@@ -147,6 +147,7 @@ class ModelGateway:
             )
 
         rendered = self._prompt_builder.build(document, dict(request.variables))
+        rendered_digest = compute_rendered_prompt_digest(rendered)
         provenance = GatewayProvenance(
             request_id=request.request_id,
             route_id=request.route_id,
@@ -155,6 +156,7 @@ class ModelGateway:
             prompt_id=rendered.prompt_id,
             prompt_version=rendered.version,
             prompt_checksum=rendered.resource_checksum,
+            rendered_prompt_digest=rendered_digest,
             output_contract_id=request.output_contract_id,
             output_contract_version=request.output_contract_version,
             selection_index=selection_index,
@@ -172,12 +174,20 @@ class ModelGateway:
             timeout_policy=selected_spec.timeout_policy,
             provenance=provenance,
             candidate_models=topology,
+            request_snapshot=request,
         )
 
     def _assert_prepared_compatible(self, prepared: PreparedInvocation) -> None:
-        """F007：PreparedInvocation 必须与当前 Gateway 不可变配置相容。"""
+        """证明 PreparedInvocation 可由当前 Gateway 配置重新独立准备得到。"""
 
-        route_key = (prepared.route_id, prepared.route_version)
+        if not isinstance(prepared, PreparedInvocation):
+            raise GatewayRuntimeError(
+                GatewayErrorCode.REQUEST_INVALID,
+                "prepared must be PreparedInvocation",
+            )
+
+        snapshot = prepared.request_snapshot
+        route_key = (snapshot.route_id, snapshot.route_version)
         policy = self._routes.get(route_key)
         if policy is None:
             raise GatewayRuntimeError(
@@ -191,77 +201,116 @@ class ModelGateway:
                 GatewayErrorCode.PROVENANCE_INVALID,
                 f"prepared route is not eligible in current Gateway: {exc.detail}",
             ) from exc
+        try:
+            assert_route_match(policy, snapshot)
+        except GatewayRuntimeError as exc:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                f"prepared request_snapshot does not match current route: {exc.detail}",
+            ) from exc
 
-        if policy.primary_model is None:
+        # REREV-F001：复用 authoritative selection，禁止仅检查 topology 成员资格
+        try:
+            (
+                expected_selected_reference,
+                expected_selected_spec,
+                expected_topology,
+                expected_selection_index,
+            ) = select_structural_model(policy, dict(self._models))
+        except GatewayRuntimeError as exc:
             raise GatewayRuntimeError(
                 GatewayErrorCode.PROVENANCE_INVALID,
-                "prepared route lacks primary model in current Gateway",
+                f"current Gateway cannot recompute selection for prepared artifact: {exc.detail}",
+            ) from exc
+
+        if prepared.candidate_models != expected_topology:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared candidate topology does not match current deterministic selection",
             )
-        topology = (policy.primary_model, *policy.fallback_models)
-        if prepared.candidate_models != topology:
+        if prepared.selected_model != expected_selected_reference:
             raise GatewayRuntimeError(
                 GatewayErrorCode.PROVENANCE_INVALID,
-                "prepared candidate topology does not match current route policy",
+                "prepared selected_model is not the current deterministic winner",
             )
-        if prepared.selected_model not in topology:
+        if prepared.provenance.selected_model != expected_selected_reference:
             raise GatewayRuntimeError(
                 GatewayErrorCode.PROVENANCE_INVALID,
-                "prepared selected_model is outside current route topology",
+                "prepared provenance.selected_model is not the current deterministic winner",
             )
-        selected_index = topology.index(prepared.selected_model)
-        if prepared.provenance.selection_index != selected_index:
+        if prepared.provenance.selection_index != expected_selection_index:
             raise GatewayRuntimeError(
                 GatewayErrorCode.PROVENANCE_INVALID,
-                "prepared selection_index does not match current topology",
+                "prepared selection_index does not match current deterministic winner",
+            )
+        if prepared.provenance.fallback_used != (expected_selection_index > 0):
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared fallback_used does not match current deterministic winner",
+            )
+        if prepared.provenance.candidate_model_count != len(expected_topology):
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared candidate_model_count does not match current topology",
             )
 
-        identity = (
-            prepared.selected_model.provider_id,
-            prepared.selected_model.model_id,
-            prepared.selected_model.model_version,
-        )
-        selected_spec = self._models.get(identity)
-        if selected_spec is None:
+        # REREV-F002：timeout 必须绑定当前 deterministic selected ModelSpec
+        if prepared.timeout_policy != expected_selected_spec.timeout_policy:
             raise GatewayRuntimeError(
                 GatewayErrorCode.PROVENANCE_INVALID,
-                "prepared selected model is not present in current Gateway ModelSpec catalog",
-            )
-        if not model_is_structurally_eligible(selected_spec, policy.required_capabilities):
-            raise GatewayRuntimeError(
-                GatewayErrorCode.PROVENANCE_INVALID,
-                "prepared selected model is not structurally eligible in current Gateway",
+                "prepared timeout_policy does not match current selected ModelSpec",
             )
 
         try:
             self._output_schema_registry.get(
-                prepared.output_contract_id, prepared.output_contract_version
+                snapshot.output_contract_id, snapshot.output_contract_version
             )
         except SchemaRegistryError as exc:
             raise GatewayRuntimeError(
                 GatewayErrorCode.PROVENANCE_INVALID,
                 "prepared output contract is not in current exact schema registry",
             ) from exc
-
-        try:
-            document = self._prompt_loader.load(
-                prepared.rendered_prompt.prompt_id,
-                prepared.rendered_prompt.version,
+        if (
+            prepared.output_contract_id != snapshot.output_contract_id
+            or prepared.output_contract_version != snapshot.output_contract_version
+        ):
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared output contract diverges from request_snapshot",
             )
+
+        # REREV-F004：加载当前 Prompt，并完整 re-render 后比较 RenderedPrompt
+        try:
+            document = self._prompt_loader.load(snapshot.prompt_id, snapshot.prompt_version)
         except PromptRuntimeError as exc:
             raise GatewayRuntimeError(
                 GatewayErrorCode.PROVENANCE_INVALID,
                 "prepared prompt is not loadable from current Gateway Prompt authority",
             ) from exc
-        current_checksum = compute_prompt_checksum(document)
-        if current_checksum != prepared.rendered_prompt.resource_checksum:
+        if (
+            document.spec.output_contract_id != snapshot.output_contract_id
+            or document.spec.output_contract_version != snapshot.output_contract_version
+        ):
             raise GatewayRuntimeError(
                 GatewayErrorCode.PROVENANCE_INVALID,
-                "prepared prompt checksum does not match current Prompt authority",
+                "current prompt output contract does not match prepared request_snapshot",
             )
-        if prepared.provenance.prompt_checksum != prepared.rendered_prompt.resource_checksum:
+        expected_rendered = self._prompt_builder.build(document, dict(snapshot.variables))
+        if expected_rendered != prepared.rendered_prompt:
             raise GatewayRuntimeError(
                 GatewayErrorCode.PROVENANCE_INVALID,
-                "prepared provenance checksum is incoherent",
+                "prepared rendered_prompt does not match current Gateway re-render",
+            )
+        expected_digest = compute_rendered_prompt_digest(expected_rendered)
+        if prepared.provenance.rendered_prompt_digest != expected_digest:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared rendered_prompt_digest does not match current re-render",
+            )
+        if prepared.provenance.prompt_checksum != expected_rendered.resource_checksum:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared prompt_checksum does not match current Prompt authority",
             )
 
     def validate_output(
@@ -279,6 +328,7 @@ class ModelGateway:
                 GatewayErrorCode.REQUEST_INVALID,
                 "prepared must be PreparedInvocation",
             )
+        # 先证明 configuration-bound provenance，再进入 candidate schema validation
         self._assert_prepared_compatible(prepared)
         if contract_id is not None or contract_version is not None:
             if (

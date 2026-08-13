@@ -78,6 +78,13 @@ def test_f002_empty_or_subset_constructor_impossible():
         )  # type: ignore[call-arg]
 
 
+def test_rerev_f003_output_schema_registry_sealed_against_subclass():
+    with pytest.raises(TypeError, match="cannot be subclassed"):
+
+        class SpoofRegistry(OutputSchemaRegistry):  # type: ignore[misc]
+            pass
+
+
 def test_f001_public_custom_root_impossible_and_sentinel_not_executed(tmp_path: Path):
     """恶意 temp contracts_root 不得被接受，sentinel validator 不得执行。"""
 

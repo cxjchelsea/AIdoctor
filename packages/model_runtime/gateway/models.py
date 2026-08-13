@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Annotated
 
 from pydantic import Field, StrictBool, StrictInt, StrictStr, field_validator, model_validator
@@ -17,6 +19,22 @@ from ..api.models import (
 from ..api.types import FrozenJsonObject, validate_identifier, validate_semver
 from ..prompts.models import RenderedPrompt
 from ..routing.policies import ModelReference
+
+
+def compute_rendered_prompt_digest(rendered: RenderedPrompt) -> str:
+    """Deterministic offline SHA-256 over complete RenderedPrompt canonical JSON."""
+
+    if not isinstance(rendered, RenderedPrompt):
+        raise TypeError("rendered must be RenderedPrompt")
+    payload = rendered.model_dump(mode="json")
+    canonical = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 class GatewayRequest(StructuralModel):
@@ -75,6 +93,7 @@ class GatewayProvenance(StructuralModel):
     prompt_id: Identifier
     prompt_version: Version
     prompt_checksum: Annotated[StrictStr, Field(pattern=r"^[0-9a-f]{64}$")]
+    rendered_prompt_digest: Annotated[StrictStr, Field(pattern=r"^[0-9a-f]{64}$")]
     output_contract_id: Identifier
     output_contract_version: Version
     selection_index: StrictInt = Field(ge=0)
@@ -127,6 +146,8 @@ class PreparedInvocation(StructuralModel):
     timeout_policy: TimeoutPolicy
     provenance: GatewayProvenance
     candidate_models: tuple[ModelReference, ...]
+    # REREV-F004：完整不可变请求快照，供 Gateway 重新证明 preparation
+    request_snapshot: GatewayRequest
 
     _request_id = field_validator("request_id")(validate_identifier)
     _route_id = field_validator("route_id")(validate_identifier)
@@ -185,6 +206,27 @@ class PreparedInvocation(StructuralModel):
             raise ValueError("provenance.selection_index must match selected model position")
         if self.provenance.fallback_used != (selected_index > 0):
             raise ValueError("provenance.fallback_used must match selection position")
+
+        # request_snapshot 与顶层 convenience 字段不得分裂
+        snapshot = self.request_snapshot
+        if snapshot.request_id != self.request_id:
+            raise ValueError("request_snapshot.request_id must equal request_id")
+        if snapshot.route_id != self.route_id or snapshot.route_version != self.route_version:
+            raise ValueError("request_snapshot route identity must match prepared invocation")
+        if (
+            snapshot.output_contract_id != self.output_contract_id
+            or snapshot.output_contract_version != self.output_contract_version
+        ):
+            raise ValueError("request_snapshot output contract must match prepared invocation")
+        if snapshot.prompt_id != self.rendered_prompt.prompt_id:
+            raise ValueError("request_snapshot.prompt_id must match rendered prompt")
+        if snapshot.prompt_version != self.rendered_prompt.version:
+            raise ValueError("request_snapshot.prompt_version must match rendered prompt")
+
+        # rendered_prompt_digest 与完整 RenderedPrompt 必须一致
+        expected_digest = compute_rendered_prompt_digest(self.rendered_prompt)
+        if self.provenance.rendered_prompt_digest != expected_digest:
+            raise ValueError("provenance.rendered_prompt_digest must match rendered prompt digest")
         return self
 
 

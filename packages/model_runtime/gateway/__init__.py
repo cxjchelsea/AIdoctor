@@ -7,6 +7,7 @@ from .models import (
     GatewayRequest,
     OutputValidationResult,
     PreparedInvocation,
+    compute_rendered_prompt_digest,
 )
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "ModelGateway",
     "OutputValidationResult",
     "PreparedInvocation",
+    "compute_rendered_prompt_digest",
 ]
