@@ -1,7 +1,7 @@
 {
   "fixture_id": "classify-color-success",
   "provider_id": "synthetic-provider",
-  "outcome": "SUCCESS",
+  "scenario": "SUCCESS",
   "output_contract_id": "tool-result",
   "output_contract_version": "1.0.0",
   "candidate_payload": {

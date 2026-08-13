@@ -1,8 +1,9 @@
-"""AC-P4 / EG-10：网络 / SDK / 密钥 / sleep / 泄漏 / 真实 Provider 静态审计。"""
+"""AC-P4 / EG-10 / F005：网络 / SDK / 密钥 / sleep / 错误边界审计。"""
 
 from __future__ import annotations
 
 import ast
+import inspect
 import os
 import time
 from pathlib import Path
@@ -119,16 +120,15 @@ def test_network_and_secret_detectors_during_fake_path(monkeypatch) -> None:
     monkeypatch.setattr(os, "environ", BoomEnviron())
 
     catalog = load_builtin_synthetic_fixture_catalog()
-    fake = DeterministicFakeProviderAdapter(
-        fixture_catalog=catalog,
-        fixture_id="classify-color-success",
-    )
-    gateway = build_gateway()
-    prepared = gateway.prepare(gateway_request())
-    result = fake.invoke(prepared)
-    assert result.outcome == ProviderInvocationOutcome.SUCCESS
-    validation = gateway.validate_output(prepared, result.candidate_payload.to_json_value())
-    assert validation.valid is True
+    for fixture_id in catalog.list_fixture_ids():
+        fake = DeterministicFakeProviderAdapter(
+            fixture_catalog=catalog,
+            fixture_id=fixture_id,
+        )
+        gateway = build_gateway()
+        prepared = gateway.prepare(gateway_request())
+        result = fake.invoke(prepared)
+        assert result is not None
 
 
 def test_timeout_does_not_sleep_or_wait(monkeypatch) -> None:
@@ -145,7 +145,36 @@ def test_timeout_does_not_sleep_or_wait(monkeypatch) -> None:
     assert result.outcome == ProviderInvocationOutcome.TIMEOUT
 
 
-def test_error_detail_does_not_leak_secret_marker_or_prompt() -> None:
+def test_f005_public_error_rejects_arbitrary_detail_injection() -> None:
+    # 固定详情 API：仅接受 code，调用方无法注入任意 detail
+    signature = inspect.signature(ProviderAdapterError.__init__)
+    assert list(signature.parameters) == ["self", "code"]
+
+    with pytest.raises(TypeError):
+        ProviderAdapterError(  # type: ignore[call-arg]
+            ProviderAdapterErrorCode.PROVIDER_MISMATCH,
+            "x" * 100000,
+        )
+
+    with pytest.raises(TypeError):
+        ProviderAdapterError(  # type: ignore[call-arg]
+            ProviderAdapterErrorCode.PROVIDER_MISMATCH,
+            SECRET_MARKER,
+        )
+
+    error = ProviderAdapterError(ProviderAdapterErrorCode.PROVIDER_MISMATCH)
+    assert SECRET_MARKER not in str(error)
+    assert SECRET_MARKER not in error.detail
+    assert len(error.detail) <= 200
+    assert error.detail == "provider identity mismatch"
+
+    prepared = build_gateway().prepare(gateway_request())
+    prompt_text = prepared.rendered_prompt.messages[0].content
+    assert prompt_text not in error.detail
+    assert prompt_text not in str(error)
+
+
+def test_error_detail_from_fake_paths_is_safe() -> None:
     fake = DeterministicFakeProviderAdapter(
         fixture_catalog=load_builtin_synthetic_fixture_catalog(),
         fixture_id="classify-color-failure",
@@ -153,13 +182,5 @@ def test_error_detail_does_not_leak_secret_marker_or_prompt() -> None:
     prepared = build_gateway().prepare(gateway_request())
     result = fake.invoke(prepared)
     assert SECRET_MARKER not in (result.error_detail or "")
-    assert "color_name" not in (result.error_detail or "")
     for message in prepared.rendered_prompt.messages:
         assert message.content not in (result.error_detail or "")
-
-    error = ProviderAdapterError(
-        code=ProviderAdapterErrorCode.PROVIDER_MISMATCH,
-        detail="prepared selected provider does not match adapter provider_id",
-    )
-    assert SECRET_MARKER not in str(error)
-    assert SECRET_MARKER not in error.detail

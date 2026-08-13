@@ -1,7 +1,7 @@
 {
   "fixture_id": "classify-color-invalid-output",
   "provider_id": "synthetic-provider",
-  "outcome": "INVALID_OUTPUT",
+  "scenario": "INVALID_OUTPUT",
   "output_contract_id": "tool-result",
   "output_contract_version": "1.0.0",
   "candidate_payload": {

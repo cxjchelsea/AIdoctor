@@ -1,7 +1,7 @@
 {
   "fixture_id": "classify-color-timeout",
   "provider_id": "synthetic-provider",
-  "outcome": "TIMEOUT",
+  "scenario": "TIMEOUT",
   "output_contract_id": "tool-result",
   "output_contract_version": "1.0.0",
   "error_code": "SIMULATED_TIMEOUT",

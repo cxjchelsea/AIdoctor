@@ -15,11 +15,23 @@ class ProviderAdapterErrorCode(str, Enum):
     CONTRACT_MISMATCH = "CONTRACT_MISMATCH"
 
 
-class ProviderAdapterError(ValueError):
-    """One stable provider-local failure with a machine-readable code."""
+# 固定安全详情：禁止调用方注入 prompt/payload/secret/路径
+_SAFE_ERROR_DETAILS: dict[ProviderAdapterErrorCode, str] = {
+    ProviderAdapterErrorCode.PROVIDER_MISMATCH: "provider identity mismatch",
+    ProviderAdapterErrorCode.FIXTURE_NOT_FOUND: "fixture is not registered",
+    ProviderAdapterErrorCode.INVALID_FIXTURE: "fixture catalog or fixture row is invalid",
+    ProviderAdapterErrorCode.INVOCATION_RESULT_INVALID: "invocation result is incompatible",
+    ProviderAdapterErrorCode.CONTRACT_MISMATCH: "output contract mismatch",
+}
 
-    def __init__(self, code: ProviderAdapterErrorCode, detail: str) -> None:
+
+class ProviderAdapterError(ValueError):
+    """One stable provider-local failure with a fixed safe detail string."""
+
+    def __init__(self, code: ProviderAdapterErrorCode) -> None:
+        if not isinstance(code, ProviderAdapterErrorCode):
+            raise TypeError("code must be ProviderAdapterErrorCode")
         self.code = code
-        # 错误详情必须有界且确定性，禁止泄漏完整 prompt/payload/路径/密钥
-        self.detail = detail
-        super().__init__(f"{code.value}: {detail}")
+        # 公共构造仅接受 code；详情由内部映射决定，有界且确定性
+        self.detail = _SAFE_ERROR_DETAILS[code]
+        super().__init__(f"{code.value}: {self.detail}")

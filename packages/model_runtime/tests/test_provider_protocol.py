@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+
 from packages.model_runtime.providers import (
     DeterministicFakeProviderAdapter,
     ProviderAdapter,
@@ -19,6 +21,16 @@ def test_fake_is_runtime_checkable_provider_adapter() -> None:
     assert isinstance(fake, ProviderAdapter)
     assert hasattr(fake, "provider_id")
     assert callable(fake.invoke)
+    signature = inspect.signature(DeterministicFakeProviderAdapter.invoke)
+    assert list(signature.parameters) == ["self", "prepared"]
+
+
+def test_protocol_has_no_fake_specific_members() -> None:
+    annotations = getattr(ProviderAdapter, "__annotations__", {})
+    for forbidden_name in ("fixture_id", "scenario", "fixture_catalog"):
+        assert forbidden_name not in annotations
+    source = inspect.getsource(ProviderAdapter)
+    assert "SIMULATED_" not in source
 
 
 def test_invoke_accepts_prepared_invocation_only() -> None:
