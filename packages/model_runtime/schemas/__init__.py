@@ -2,7 +2,7 @@
 
 from .errors import SchemaRegistryError, SchemaRegistryErrorCode
 from .models import OutputSchemaRegistryEntry
-from .registry import OutputSchemaRegistry, build_entries_from_shared_contracts_v1
+from .registry import OutputSchemaRegistry
 from .validator import SharedContractValidator
 
 __all__ = [
@@ -11,5 +11,4 @@ __all__ = [
     "SchemaRegistryError",
     "SchemaRegistryErrorCode",
     "SharedContractValidator",
-    "build_entries_from_shared_contracts_v1",
 ]

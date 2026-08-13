@@ -19,11 +19,13 @@ SchemaRelativePath = Annotated[
 
 
 class OutputSchemaRegistryEntry(StructuralModel):
-    """Exact Shared Contracts v1 identity bound to one fixed schema reference."""
+    """Exact Shared Contracts v1 identity bound to one fixed schema reference.
+
+    manifest_name 不由调用方提供，避免 contract_id/name 交叉错配（F004）。
+    """
 
     contract_id: ContractIdentifier
     version: Version
-    manifest_name: StrictStr
     schema_path: SchemaRelativePath
 
     _contract_id = field_validator("contract_id")(validate_identifier)
@@ -41,13 +43,6 @@ class OutputSchemaRegistryEntry(StructuralModel):
     def validate_shared_contract_version(cls, value: str) -> str:
         if value != SHARED_CONTRACT_V1_VERSION:
             raise ValueError(f"must equal Shared Contracts v1 version {SHARED_CONTRACT_V1_VERSION}")
-        return value
-
-    @field_validator("manifest_name")
-    @classmethod
-    def validate_manifest_name(cls, value: str) -> str:
-        if not value or not value[0].isupper() or not value.replace("_", "").isalnum():
-            raise ValueError("manifest_name must be a non-empty PascalCase Shared Contract name")
         return value
 
     @model_validator(mode="after")

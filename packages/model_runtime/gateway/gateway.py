@@ -7,7 +7,7 @@ from types import MappingProxyType
 from typing import Any
 
 from ..api.models import ModelSpec
-from ..prompts import PromptBuilder, PromptLoader, PromptRegistry, PromptRuntimeError
+from ..prompts import PromptBuilder, PromptLoader, PromptRegistry, PromptRuntimeError, compute_prompt_checksum
 from ..routing.policies import ModelRoutePolicy
 from ..schemas import (
     OutputSchemaRegistry,
@@ -22,7 +22,12 @@ from .models import (
     OutputValidationResult,
     PreparedInvocation,
 )
-from .selection import assert_route_eligible, assert_route_match, select_structural_model
+from .selection import (
+    assert_route_eligible,
+    assert_route_match,
+    model_is_structurally_eligible,
+    select_structural_model,
+)
 
 
 class ModelGateway:
@@ -44,10 +49,8 @@ class ModelGateway:
         routes: Iterable[ModelRoutePolicy],
         models: Iterable[ModelSpec],
         prompt_registry: PromptRegistry,
-        prompt_loader: PromptLoader,
         prompt_builder: PromptBuilder,
-        output_schema_registry: OutputSchemaRegistry,
-        shared_validator: SharedContractValidator,
+        output_schema_registry: OutputSchemaRegistry | None = None,
     ) -> None:
         route_index: dict[tuple[str, str], ModelRoutePolicy] = {}
         for policy in routes:
@@ -71,21 +74,29 @@ class ModelGateway:
 
         if not isinstance(prompt_registry, PromptRegistry):
             raise TypeError("prompt_registry must be a PromptRegistry")
-        if not isinstance(prompt_loader, PromptLoader):
-            raise TypeError("prompt_loader must be a PromptLoader")
         if not isinstance(prompt_builder, PromptBuilder):
             raise TypeError("prompt_builder must be a PromptBuilder")
-        if not isinstance(output_schema_registry, OutputSchemaRegistry):
-            raise TypeError("output_schema_registry must be an OutputSchemaRegistry")
-        if not isinstance(shared_validator, SharedContractValidator):
-            raise TypeError("shared_validator must be a SharedContractValidator")
+
+        # F002/F006：Schema 权威唯一链 — exact registry → Gateway-owned validator
+        if output_schema_registry is None:
+            schema_registry = OutputSchemaRegistry()
+        else:
+            if not isinstance(output_schema_registry, OutputSchemaRegistry):
+                raise TypeError("output_schema_registry must be an OutputSchemaRegistry")
+            if len(output_schema_registry) != 13:
+                raise ValueError("output_schema_registry must be the exact Shared Contracts v1 catalog")
+            schema_registry = output_schema_registry
+
+        # F005：Prompt 权威唯一链 — registry → Gateway-owned loader → builder
+        prompt_loader = PromptLoader(prompt_registry)
+        shared_validator = SharedContractValidator(schema_registry)
 
         object.__setattr__(self, "_routes", MappingProxyType(route_index))
         object.__setattr__(self, "_models", MappingProxyType(model_index))
         object.__setattr__(self, "_prompt_registry", prompt_registry)
         object.__setattr__(self, "_prompt_loader", prompt_loader)
         object.__setattr__(self, "_prompt_builder", prompt_builder)
-        object.__setattr__(self, "_output_schema_registry", output_schema_registry)
+        object.__setattr__(self, "_output_schema_registry", schema_registry)
         object.__setattr__(self, "_shared_validator", shared_validator)
 
     def __setattr__(self, _name: str, _value: object) -> None:
@@ -108,20 +119,13 @@ class ModelGateway:
         assert_route_eligible(policy)
         assert_route_match(policy, request)
 
-        # Output contract must exist in Output Schema Registry before preparation continues
         try:
             self._output_schema_registry.get(request.output_contract_id, request.output_contract_version)
         except SchemaRegistryError as exc:
             if exc.code is SchemaRegistryErrorCode.CONTRACT_UNKNOWN:
-                raise GatewayRuntimeError(
-                    GatewayErrorCode.CONTRACT_UNKNOWN,
-                    exc.detail,
-                ) from exc
+                raise GatewayRuntimeError(GatewayErrorCode.CONTRACT_UNKNOWN, exc.detail) from exc
             if exc.code is SchemaRegistryErrorCode.CONTRACT_VERSION_UNKNOWN:
-                raise GatewayRuntimeError(
-                    GatewayErrorCode.CONTRACT_VERSION_UNKNOWN,
-                    exc.detail,
-                ) from exc
+                raise GatewayRuntimeError(GatewayErrorCode.CONTRACT_VERSION_UNKNOWN, exc.detail) from exc
             raise GatewayRuntimeError(GatewayErrorCode.SELECTION_FAILED, exc.detail) from exc
 
         selected_reference, selected_spec, topology, selection_index = select_structural_model(
@@ -131,7 +135,6 @@ class ModelGateway:
         try:
             document = self._prompt_loader.load(request.prompt_id, request.prompt_version)
         except PromptRuntimeError:
-            # Prompt 错误权威保持 P2 PromptRuntimeError，不改写成 Gateway 码
             raise
 
         if (
@@ -171,6 +174,96 @@ class ModelGateway:
             candidate_models=topology,
         )
 
+    def _assert_prepared_compatible(self, prepared: PreparedInvocation) -> None:
+        """F007：PreparedInvocation 必须与当前 Gateway 不可变配置相容。"""
+
+        route_key = (prepared.route_id, prepared.route_version)
+        policy = self._routes.get(route_key)
+        if policy is None:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared route is not present in current Gateway configuration",
+            )
+        try:
+            assert_route_eligible(policy)
+        except GatewayRuntimeError as exc:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                f"prepared route is not eligible in current Gateway: {exc.detail}",
+            ) from exc
+
+        if policy.primary_model is None:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared route lacks primary model in current Gateway",
+            )
+        topology = (policy.primary_model, *policy.fallback_models)
+        if prepared.candidate_models != topology:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared candidate topology does not match current route policy",
+            )
+        if prepared.selected_model not in topology:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared selected_model is outside current route topology",
+            )
+        selected_index = topology.index(prepared.selected_model)
+        if prepared.provenance.selection_index != selected_index:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared selection_index does not match current topology",
+            )
+
+        identity = (
+            prepared.selected_model.provider_id,
+            prepared.selected_model.model_id,
+            prepared.selected_model.model_version,
+        )
+        selected_spec = self._models.get(identity)
+        if selected_spec is None:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared selected model is not present in current Gateway ModelSpec catalog",
+            )
+        if not model_is_structurally_eligible(selected_spec, policy.required_capabilities):
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared selected model is not structurally eligible in current Gateway",
+            )
+
+        try:
+            self._output_schema_registry.get(
+                prepared.output_contract_id, prepared.output_contract_version
+            )
+        except SchemaRegistryError as exc:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared output contract is not in current exact schema registry",
+            ) from exc
+
+        try:
+            document = self._prompt_loader.load(
+                prepared.rendered_prompt.prompt_id,
+                prepared.rendered_prompt.version,
+            )
+        except PromptRuntimeError as exc:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared prompt is not loadable from current Gateway Prompt authority",
+            ) from exc
+        current_checksum = compute_prompt_checksum(document)
+        if current_checksum != prepared.rendered_prompt.resource_checksum:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared prompt checksum does not match current Prompt authority",
+            )
+        if prepared.provenance.prompt_checksum != prepared.rendered_prompt.resource_checksum:
+            raise GatewayRuntimeError(
+                GatewayErrorCode.PROVENANCE_INVALID,
+                "prepared provenance checksum is incoherent",
+            )
+
     def validate_output(
         self,
         prepared: PreparedInvocation,
@@ -186,6 +279,7 @@ class ModelGateway:
                 GatewayErrorCode.REQUEST_INVALID,
                 "prepared must be PreparedInvocation",
             )
+        self._assert_prepared_compatible(prepared)
         if contract_id is not None or contract_version is not None:
             if (
                 contract_id != prepared.output_contract_id

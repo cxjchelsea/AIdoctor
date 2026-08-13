@@ -1,8 +1,9 @@
-"""NC-08 / P3 adversarial and leakage detectors."""
+"""NC-08 / P3 adversarial detectors + F001/F005/F006/F007 regressions."""
 
 from __future__ import annotations
 
 import ast
+import inspect
 import os
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from pydantic import ValidationError
 
 from packages.model_runtime.gateway import ModelGateway
 from packages.model_runtime.gateway.errors import GatewayErrorCode, GatewayRuntimeError
+from packages.model_runtime.prompts import PromptBuilder, PromptLoader, PromptRegistry, PromptRegistryEntry
 from packages.model_runtime.routing.policies import (
     ModelReference,
     ModelRoutePolicy,
@@ -18,7 +20,15 @@ from packages.model_runtime.routing.policies import (
     RouteMatch,
     RouteStatus,
 )
-from packages.model_runtime.tests.conftest_p3 import build_gateway, gateway_request, model_spec
+from packages.model_runtime.schemas import OutputSchemaRegistry, SharedContractValidator
+from packages.model_runtime.tests.conftest_p3 import (
+    build_gateway,
+    eligible_route,
+    gateway_request,
+    model_spec,
+    prompt_registry,
+    valid_tool_result_payload,
+)
 
 
 P3_SOURCE_DIRS = (
@@ -67,7 +77,6 @@ def test_p3_source_has_no_provider_or_network_implementation():
                 assert root not in FORBIDDEN_IMPORT_NAMES, path
                 assert node.module not in FORBIDDEN_IMPORT_NAMES, path
         for fragment in FORBIDDEN_NAME_FRAGMENTS:
-            # 允许错误/文档字符串中的否定说明；禁止作为实现符号出现在赋值/类定义中
             if fragment in {"os.getenv", "os.environ"}:
                 assert fragment not in source, path
             elif f"class {fragment}" in source or f"def {fragment}" in source:
@@ -108,6 +117,68 @@ def test_gateway_immutable_and_no_invoke_api():
         gateway.foo = 1  # type: ignore[attr-defined]
     for forbidden in ("invoke", "send", "chat", "generate", "complete", "call_provider"):
         assert not hasattr(gateway, forbidden)
+
+
+def test_f005_prompt_loader_injection_impossible():
+    params = inspect.signature(ModelGateway.__init__).parameters
+    assert "prompt_loader" not in params
+    with pytest.raises(TypeError):
+        ModelGateway(
+            routes=(eligible_route(),),
+            models=(model_spec(),),
+            prompt_registry=prompt_registry(),
+            prompt_loader=PromptLoader(prompt_registry()),
+            prompt_builder=PromptBuilder(),
+            output_schema_registry=OutputSchemaRegistry(),
+        )  # type: ignore[call-arg]
+
+
+def test_f006_shared_validator_injection_impossible():
+    params = inspect.signature(ModelGateway.__init__).parameters
+    assert "shared_validator" not in params
+    with pytest.raises(TypeError):
+        ModelGateway(
+            routes=(eligible_route(),),
+            models=(model_spec(),),
+            prompt_registry=prompt_registry(),
+            prompt_builder=PromptBuilder(),
+            output_schema_registry=OutputSchemaRegistry(),
+            shared_validator=SharedContractValidator(OutputSchemaRegistry()),
+        )  # type: ignore[call-arg]
+
+
+def test_f007_foreign_different_config_rejected():
+    gateway_a = build_gateway()
+    prepared = gateway_a.prepare(gateway_request())
+
+    # route 配置不同：当前 Gateway 无该 route
+    gateway_other_route = build_gateway(routes=(eligible_route(route_id="other-color"),))
+    with pytest.raises(GatewayRuntimeError) as route_error:
+        gateway_other_route.validate_output(prepared, valid_tool_result_payload())
+    assert route_error.value.code is GatewayErrorCode.PROVENANCE_INVALID
+
+    # model catalog 不同：selected model 不在当前 Gateway
+    gateway_other_models = build_gateway(models=(model_spec(model_id="other-model"),))
+    with pytest.raises(GatewayRuntimeError) as model_error:
+        gateway_other_models.validate_output(prepared, valid_tool_result_payload())
+    assert model_error.value.code is GatewayErrorCode.PROVENANCE_INVALID
+
+    # prompt authority 不同：无法从当前 PromptRegistry 加载 prepared prompt
+    foreign_prompts = PromptRegistry(
+        [PromptRegistryEntry(prompt_id="other-prompt", version="1.0.0", resource="other-prompt/1.0.0.yaml")]
+    )
+    gateway_other_prompts = build_gateway(prompt_registry_override=foreign_prompts)
+    with pytest.raises(GatewayRuntimeError) as prompt_error:
+        gateway_other_prompts.validate_output(prepared, valid_tool_result_payload())
+    assert prompt_error.value.code is GatewayErrorCode.PROVENANCE_INVALID
+
+
+def test_f007_identical_config_portability_allowed():
+    gateway_a = build_gateway()
+    gateway_b = build_gateway()
+    prepared = gateway_a.prepare(gateway_request())
+    result = gateway_b.validate_output(prepared, valid_tool_result_payload())
+    assert result.valid is True
 
 
 def test_clinical_route_rejected():
@@ -152,13 +223,9 @@ def test_prepared_invocation_model_copy_revalidates():
 
 
 def test_eg09_offline_gateway_path():
-    """EG-09：完整 offline Gateway 路径，无 provider 调用。"""
-
     gateway = build_gateway()
     assert isinstance(gateway, ModelGateway)
     prepared = gateway.prepare(gateway_request())
-    from packages.model_runtime.tests.conftest_p3 import valid_tool_result_payload
-
     result = gateway.validate_output(prepared, valid_tool_result_payload())
     assert result.valid is True
     assert prepared.provenance.prompt_checksum

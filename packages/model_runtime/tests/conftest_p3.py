@@ -7,7 +7,7 @@ from pathlib import Path
 
 from packages.model_runtime.api.models import ModelLifecycle, ModelSpec
 from packages.model_runtime.gateway import GatewayRequest, ModelGateway
-from packages.model_runtime.prompts import PromptBuilder, PromptLoader, PromptRegistry, PromptRegistryEntry
+from packages.model_runtime.prompts import PromptBuilder, PromptRegistry, PromptRegistryEntry
 from packages.model_runtime.routing.policies import (
     ModelReference,
     ModelRoutePolicy,
@@ -15,7 +15,7 @@ from packages.model_runtime.routing.policies import (
     RouteMatch,
     RouteStatus,
 )
-from packages.model_runtime.schemas import OutputSchemaRegistry, SharedContractValidator
+from packages.model_runtime.schemas import OutputSchemaRegistry
 
 
 def valid_tool_result_payload() -> dict:
@@ -104,18 +104,21 @@ def build_gateway(
     *,
     routes=None,
     models=None,
+    prompt_registry_override=None,
+    output_schema_registry=None,
 ) -> ModelGateway:
-    registry = OutputSchemaRegistry.from_shared_contracts_v1()
-    prompts = prompt_registry()
     # 注意：空 tuple 是合法注入，不能用 `or` 回退默认值
     resolved_routes = (eligible_route(),) if routes is None else routes
     resolved_models = (model_spec(),) if models is None else models
-    return ModelGateway(
-        routes=resolved_routes,
-        models=resolved_models,
-        prompt_registry=prompts,
-        prompt_loader=PromptLoader(prompts),
-        prompt_builder=PromptBuilder(),
-        output_schema_registry=registry,
-        shared_validator=SharedContractValidator(registry),
-    )
+    prompts = prompt_registry() if prompt_registry_override is None else prompt_registry_override
+    kwargs = {
+        "routes": resolved_routes,
+        "models": resolved_models,
+        "prompt_registry": prompts,
+        "prompt_builder": PromptBuilder(),
+    }
+    if output_schema_registry is not None:
+        kwargs["output_schema_registry"] = output_schema_registry
+    else:
+        kwargs["output_schema_registry"] = OutputSchemaRegistry()
+    return ModelGateway(**kwargs)
