@@ -12,16 +12,20 @@ from ..api.types import FrozenJsonObject, validate_identifier, validate_semver
 
 
 PLACEHOLDER_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
+# PromptMessage 与 RenderedMessage 共用同一 role 权威约束
+MESSAGE_ROLE_PATTERN = r"^(system|developer|user|assistant)$"
+RESOURCE_CHECKSUM_PATTERN = r"^[0-9a-f]{64}$"
 ResourceIdentifier = Annotated[
     StrictStr,
     Field(pattern=r"^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*/[0-9A-Za-z.+-]+\.yaml$"),
 ]
+MessageRole = Annotated[StrictStr, Field(pattern=MESSAGE_ROLE_PATTERN)]
 
 
 class PromptMessage(StructuralModel):
     """One ordered, non-executable message template."""
 
-    role: Annotated[StrictStr, Field(pattern=r"^(system|developer|user|assistant)$")]
+    role: MessageRole
     content: Annotated[StrictStr, Field(min_length=1)]
 
 
@@ -58,7 +62,9 @@ class PromptRegistryEntry(StructuralModel):
 
 
 class RenderedMessage(StructuralModel):
-    role: StrictStr
+    """Builder-owned rendered message; role contract matches PromptMessage."""
+
+    role: MessageRole
     content: StrictStr
 
 
@@ -67,6 +73,23 @@ class RenderedPrompt(StructuralModel):
 
     prompt_id: StrictStr
     version: StrictStr
-    messages: tuple[RenderedMessage, ...]
-    resource_checksum: StrictStr
+    messages: Annotated[tuple[RenderedMessage, ...], Field(min_length=1)]
+    resource_checksum: Annotated[StrictStr, Field(pattern=RESOURCE_CHECKSUM_PATTERN)]
     manifest: FrozenJsonObject
+
+    _prompt_id = field_validator("prompt_id")(validate_identifier)
+    _version = field_validator("version")(validate_semver)
+
+    @model_validator(mode="after")
+    def validate_manifest_coherence(self) -> "RenderedPrompt":
+        """公开构造也不得绕过 manifest 与顶层字段一致性。"""
+
+        expected = {
+            "prompt_id": self.prompt_id,
+            "prompt_version": self.version,
+            "resource_checksum": self.resource_checksum,
+        }
+        for field_name, expected_value in expected.items():
+            if field_name not in self.manifest or self.manifest[field_name] != expected_value:
+                raise ValueError(f"manifest.{field_name} must equal the corresponding top-level field")
+        return self
