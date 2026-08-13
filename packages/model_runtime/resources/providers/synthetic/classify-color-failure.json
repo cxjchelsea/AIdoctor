@@ -1,0 +1,9 @@
+{
+  "fixture_id": "classify-color-failure",
+  "provider_id": "synthetic-provider",
+  "scenario": "FAILURE",
+  "output_contract_id": "tool-result",
+  "output_contract_version": "1.0.0",
+  "error_code": "SIMULATED_FAILURE",
+  "error_detail": "simulated provider failure"
+}
