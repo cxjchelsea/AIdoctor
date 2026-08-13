@@ -1,0 +1,18 @@
+spec:
+  prompt_id: classify-color
+  version: 1.0.0
+  variables:
+    - name: color_name
+      value_type: string
+      required: true
+  output_contract_id: tool-result
+  output_contract_version: 1.0.0
+  checksum: 759d7994cfddc74fc281f800206fd24ed0313b5d6162651a0b7cc5ef79541b73
+  metadata:
+    purpose: synthetic-color-classification
+  status: DRAFT
+messages:
+  - role: system
+    content: Classify the supplied synthetic color name into basic color categories.
+  - role: user
+    content: "Color: ${color_name}"
