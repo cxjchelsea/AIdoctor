@@ -158,7 +158,7 @@ Independent review: risk calibration and OD fail-closed fields added
 
 ## 5. Unresolved dependencies
 
-- Clinical owner availability for TASK-B04.
+- Clinical owner availability for TASK-B04. SUPERSESSION POINTER (2026-08-14, `A6.5-NONADOPT-001` now `MERGED_AND_VERIFIED`): B04 extraction/migration purpose is `SUPERSEDED_BY_LEGACY_CLINICAL_NON_ADOPTION` / `NOT_REQUIRED_FOR_NEW_RUNTIME_MIGRATION`. Clinical Owner is not required to judge old clinical correctness for rejected assets. Historical dependency text is retained. Do not execute B04 extraction.
 - Legal review for OD-001/OD-002.
 - Privacy authorization for OD-006 if live inspection ever requested.
 - A7 still required for PromptSpec/ModelSpec enablement.
@@ -225,7 +225,9 @@ Historical PR #29 text required `B04 → C02 → E01 → E02 → A6.5 Exit` befo
 >
 > Owner policy: `LEGACY_CLINICAL_ASSETS_WILL_NOT_BE_MIGRATED`
 >
-> Decision status: `IMPLEMENTED_PENDING_INDEPENDENT_REVIEW`
+> Decision status: `MERGED_AND_VERIFIED`
+>
+> Enterprise merge (PR #38): `6ee86cb001aceb8a6cf264c9a6fbd629dddd8dda`
 >
 > Architecture classification: `PLANNING_GOVERNANCE_ONLY`
 >
@@ -278,3 +280,25 @@ Not authorized. Runtime consumers may still exist. Separate decommission gate re
 ### Durable authority
 
 [a6-5-legacy-clinical-non-adoption-strategy.md](./a6-5-legacy-clinical-non-adoption-strategy.md)
+
+## 9. E01 disposition-board implementation addendum (2026-08-14)
+
+> Addendum only. Does not rewrite §8 historical decision text.
+>
+> Branch: `agent/a6-5-e01-disposition-board`
+>
+> Exact Base: `6ee86cb001aceb8a6cf264c9a6fbd629dddd8dda`
+>
+> Implementation state: `IMPLEMENTED_PENDING_INDEPENDENT_REVIEW`
+>
+> Machine backlog `TASK-E01.status`: `PLANNED` (existing enum; no illegal status invented)
+>
+> E02: `NOT_AUTHORIZED` / `NOT_EXECUTED`
+>
+> A6.5: `INCOMPLETE_PENDING_E01_E02_EXIT`
+
+Authoritative E01 population is
+[a6-5-e01-disposition-board.csv](./a6-5-e01-disposition-board.csv).
+Historical `TASK-E01.asset_ids` (40 IDs) remain a `HISTORICAL_SEED_SET` only.
+Current control pointer:
+[phase-a-current-state-reconciliation-2026-08-14-post-pr38.md](../phase-a-current-state-reconciliation-2026-08-14-post-pr38.md).

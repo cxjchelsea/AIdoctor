@@ -8,13 +8,15 @@
 >
 > Owner decision: `LEGACY_CLINICAL_ASSETS_WILL_NOT_BE_MIGRATED`
 >
-> Status: `IMPLEMENTED_PENDING_INDEPENDENT_REVIEW`
+> Status: `MERGED_AND_VERIFIED`
 >
 > Planning state: `PLANNING_GOVERNANCE_ONLY`
 >
-> Authorized Base: `49b0e4467fb4cf96a4893f9158bf23584ab69ee5`
+> Authorized Base (historical planning): `49b0e4467fb4cf96a4893f9158bf23584ab69ee5`
 >
-> Planning branch: `agent/phase-a-nc-closure-roadmap-amendment`
+> Planning branch (historical): `agent/phase-a-nc-closure-roadmap-amendment`
+>
+> Enterprise merge (PR #38): `6ee86cb001aceb8a6cf264c9a6fbd629dddd8dda`
 >
 > Architecture Change: `NO`
 >
@@ -173,6 +175,14 @@ For Legacy Clinical Assets, E01 must not propose ADOPT / ADAPT / MAP as
 new clinical authority. Non-clinical asset disposition semantics are unchanged.
 
 E01 is **not executed** by this planning change.
+
+Post-PR38 current note (2026-08-14): TASK-E01 board implementation is proposed
+on `agent/a6-5-e01-disposition-board` as
+`IMPLEMENTED_PENDING_INDEPENDENT_REVIEW`. Authoritative population is
+[a6-5-e01-disposition-board.csv](./a6-5-e01-disposition-board.csv)
+(not the historical 40-id seed). Machine backlog `status` remains `PLANNED`
+(existing enum). E02 remains `NOT_AUTHORIZED`. A6.5 remains
+`INCOMPLETE_PENDING_E01_E02_EXIT`.
 
 ## 8. E02 treatment
 
