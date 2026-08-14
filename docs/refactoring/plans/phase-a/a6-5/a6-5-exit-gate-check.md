@@ -68,3 +68,17 @@ Production: BLOCKED
 
 Independent Review of this E02 Draft PR.
 Do not execute A6.5 Exit from this file.
+
+## 6. Post-Exit pointer (2026-08-14)
+
+This file remains the E02 **pre-Exit check** artifact. Its header
+`A6.5 Exit: NOT_EXECUTED` is the E02-time meaning and is not rewritten.
+
+Authoritative Exit Review after PR #40:
+
+[a6-5-exit-review-2026-08-14.md](../../../evidence/phase-a/a6-5/a6-5-exit-review-2026-08-14.md)
+
+```text
+A6.5: LEGACY_GOVERNANCE_CLOSED
+A6.5 Exit: PASS_LEGACY_GOVERNANCE_ONLY
+```

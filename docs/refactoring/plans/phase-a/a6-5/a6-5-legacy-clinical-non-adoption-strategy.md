@@ -372,6 +372,10 @@ Planning-branch proposed truth:
 
 ## 18. Next Gate
 
+Historical planning-era Next Gate (PR #38 Combined Independent Review)
+is preserved below as review provenance. It is **not** the current
+control pointer.
+
 ```text
 A6.5 Legacy Clinical Non-Adoption
 + Phase A NC Closure Roadmap Amendment
@@ -379,4 +383,21 @@ Combined Independent Review
 for the exact new PR #38 Head
 ```
 
-Do not treat this document as `MERGED_AND_VERIFIED` from planning implementation alone.
+Header `Status: MERGED_AND_VERIFIED` refers to PR #38 merge of this
+strategy, not to A6 / A7 / Exit. Do not treat planning implementation
+alone as Exit.
+
+Current control pointer (2026-08-14 Exit Closure):
+
+```text
+A6.5: LEGACY_GOVERNANCE_CLOSED
+A6.5 Exit: PASS_LEGACY_GOVERNANCE_ONLY
+```
+
+Authoritative Exit record:
+[a6-5-exit-review-2026-08-14.md](../../../evidence/phase-a/a6-5/a6-5-exit-review-2026-08-14.md)
+
+Next permitted gate: NC-CLOSE-01 Authorization / ADR Foundation planning.
+Not: NC-CLOSE-01 IMPLEMENTATION AUTHORIZED. Not: A7-CL. Not: Phase B.
+
+`A6.5-E01-IR-F001`: `CLOSED_BY_A6_5_EXIT_RECONCILIATION`
