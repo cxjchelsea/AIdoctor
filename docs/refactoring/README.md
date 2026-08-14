@@ -117,8 +117,11 @@ v2.6：临床场景扩展、呼吸道 RAG V1、统一 Prompt/Model Runtime、旧
 → Capability / RAG / Model / Patient Evidence UI 详细设计
 → Inventory / Migration / Coverage / Roadmap / Engineering
 → 四份专题长文
+→ Future Extension Design
 → docs/AI医生/项目文档 等历史设计
 ```
+
+Future Extension Design 只沉淀当前冻结架构之上的未来扩展点，默认状态为 `FUTURE_EXTENSION_DESIGN / NOT_AUTHORIZED`，不得反向覆盖当前 Frozen/Freeze Candidate 架构、Shared Contracts v1 或实施 Scope。
 
 旧文档中的“已完成”描述不能代替代码、测试和运行证据。
 
@@ -363,3 +366,25 @@ Legacy Asset / Target Capability
 ## 15. 当前下一步
 
 下一步仅允许执行 `A7-NC Implementation Authorization Assessment`。Roadmap Amendment 的合并与验证不等于 Model Runtime 实现授权：在单独授权前不得实现 A7-NC，不得启动 A7-CL，也不得解锁 B04/C02。历史 Phase A 证据与当前控制状态分别由原 evidence 和 [current-state addendum](./plans/phase-a/phase-a-current-state-addendum.md) 维护。
+
+---
+
+## 16. Future Extension Design
+
+当前重构之外的未来平台扩展设计统一进入 [extensions/](./extensions/README.md)。
+
+当前已沉淀：
+
+1. [外部健康数据与设备连接扩展方案](./extensions/外部健康数据与设备连接扩展方案.md)  
+   External Health Source、Connector Registry、Device Adapter，以及未来数字脉诊、舌象、Wearable、EHR 的统一接入边界。
+
+2. [结构化医疗知识与专业 Tool 扩展方案](./extensions/结构化医疗知识与专业Tool扩展方案.md)  
+   明确 Medical RAG、Knowledge Graph 与 Structured Medical Provider 的职责边界，并预设计 Drug / Regulatory / Device Intelligence Tool。
+
+3. [vNext 临床 Capability 扩展设计](./extensions/vNext临床Capability扩展设计.md)  
+   预设计 Temporal、Special Population、Chronic 和 Multimodal Capability，并记录 `tcm_four_diagnosis_v1` 等未来候选。
+
+4. [外部产品参考与架构抽象矩阵](./extensions/外部产品参考与架构抽象矩阵.md)  
+   维护 Health、freddy、Fitness AI Connector、DrugBank、Nyquist AI、Rhizome AI、Pregnancy Progress 等外部参考与 AIdoctor 平台抽象的映射。
+
+这些文档均为 `FUTURE_EXTENSION_DESIGN / NOT_AUTHORIZED`。它们用于避免未来再次从零设计，但不改变当前 Phase、Runtime、Contracts、Capability 或生产资格。
