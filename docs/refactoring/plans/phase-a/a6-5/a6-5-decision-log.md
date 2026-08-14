@@ -302,3 +302,24 @@ Authoritative E01 population is
 Historical `TASK-E01.asset_ids` (40 IDs) remain a `HISTORICAL_SEED_SET` only.
 Current control pointer:
 [phase-a-current-state-reconciliation-2026-08-14-post-pr38.md](../phase-a-current-state-reconciliation-2026-08-14-post-pr38.md).
+
+## 10. E02 matrix write-back addendum (2026-08-14)
+
+> Addendum only. Does not rewrite §8 / §9.
+>
+> PR #39: `MERGED` (`3bb48dc538ac83325d7cdd6f460c9da9b0e93bb9`)
+>
+> TASK-E01: `MERGED_AND_VERIFIED`
+>
+> TASK-E02 branch: `agent/a6-5-e02-matrix-writeback`
+>
+> Implementation state: `IMPLEMENTED_PENDING_INDEPENDENT_REVIEW`
+>
+> A6.5 Exit: `NOT_EXECUTED`
+>
+> A6.5: `INCOMPLETE_PENDING_E02_EXIT`
+
+Authoritative write-back:
+[a6-5-e02-matrix-writeback.csv](./a6-5-e02-matrix-writeback.csv).
+Current control pointer:
+[phase-a-current-state-reconciliation-2026-08-14-post-pr39.md](../phase-a-current-state-reconciliation-2026-08-14-post-pr39.md).
