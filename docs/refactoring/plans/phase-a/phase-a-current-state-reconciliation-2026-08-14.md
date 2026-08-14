@@ -7,8 +7,9 @@
 > Purpose: record current control truth without rewriting historical planning rows,
 > PR #29 body, P7 Exit evidence, or `phase-a-current-state-addendum.md` historical meaning
 >
-> Related planning artifact:
+> Related planning artifacts:
 > [phase-a-non-clinical-closure-roadmap-amendment.md](./phase-a-non-clinical-closure-roadmap-amendment.md)
+> [a6-5-legacy-clinical-non-adoption-strategy.md](./a6-5/a6-5-legacy-clinical-non-adoption-strategy.md)
 
 ## 1. Interpretation
 
@@ -21,7 +22,10 @@ Known stale historical planning text (A7-NC `NOT_STARTED` / `NOT_GRANTED` in old
 addendum/README snapshots) remains historical evidence of planning-time state and is
 not rewritten here.
 
-## 2. Current control truth
+## 2. Enterprise current truth (until merge)
+
+This section is **Enterprise / control-plane truth**. Planning-branch proposals
+in §2.1 are **not** official until Independent Review, merge, and verification.
 
 ```text
 A7-NC: COMPLETE
@@ -43,6 +47,9 @@ A7: NOT_COMPLETE
 
 Phase A: Freeze Candidate
 Frozen Baseline: NOT_READY
+FB-11: PRESERVED
+FB-20: PRESERVED
+FB-21: PRESERVED
 
 A8: NOT_AUTHORIZED
 A9: NOT_AUTHORIZED
@@ -59,6 +66,30 @@ Real Provider: FORBIDDEN
 PHI introduced by this planning change: 0
 Clinical content activated by this planning change: 0
 ```
+
+### 2.1 Planning-branch proposed truth (not Enterprise official)
+
+Repository Owner Decision recorded on this branch:
+
+```text
+LEGACY_CLINICAL_ASSETS_WILL_NOT_BE_MIGRATED
+Planning Strategy: IMPLEMENTED_PENDING_INDEPENDENT_REVIEW
+```
+
+```text
+Legacy Clinical: NON_ADOPTION
+B04: SUPERSEDED_BY_POLICY / NOT_REQUIRED_FOR_NEW_RUNTIME_MIGRATION
+     (not EXECUTED_COMPLETE; historical row preserved)
+C02: NOT_REQUIRED_FOR_REJECTED_ASSETS
+     (not EXECUTED_COMPLETE; historical row preserved)
+E01/E02: PRESERVED (not executed)
+FUTURE_NEW_CLINICAL_TRACK: NOT_YET_AUTHORIZED
+A7-CL recommended future label after A6.5 non-adoption Exit:
+  BLOCKED_PENDING_NEW_CLINICAL_CONTENT
+A7-CL machine state until merge: BLOCKED_BY_A6_5_CLINICAL_LANE
+```
+
+Do **not** write Enterprise current state as “B04 superseded officially complete”.
 
 ## 3. Capability truth (unchanged)
 
@@ -90,7 +121,10 @@ Preserved. NC Closure is an `IMPLEMENTATION_ORDER_AMENDMENT` only.
 ## 6. Next Gate
 
 ```text
-Phase A Non-Clinical Closure Roadmap Amendment Independent Review
+A6.5 Legacy Clinical Non-Adoption
++ Phase A NC Closure Roadmap Amendment
+Combined Independent Review
 ```
 
-Do not authorize NC Closure implementation, A8/A9/A10/A11, A7-CL, or Phase B from this note.
+Do not authorize NC Closure implementation, E01/E02 execution, A8/A9/A10/A11,
+A7-CL, new clinical content, or Phase B from this note.

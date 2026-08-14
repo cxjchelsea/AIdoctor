@@ -86,27 +86,54 @@ PR #29 body, historical A7-NC amendment semantics, or P7 Exit evidence.
 
 ## 4. Rationale
 
-`A6.5` / `A7-CL` remain blocked by external clinical-governance dependency
-(`B04 → C02 → E01 → E02`). Meanwhile, Phase A Frozen Baseline still has non-clinical P1 gaps
-that do not require clinical approval (ADR, bindings, CI MVP, Workflow/Trace verification,
+Repository Owner has decided `LEGACY_CLINICAL_ASSETS_WILL_NOT_BE_MIGRATED`.
+The historical clinical **migration** chain `B04 → C02` is therefore **not** the
+future clinical path. A6.5 remaining work is legacy **non-adoption governance**
+(`E01 → E02 → A6.5 Exit`). A7-CL remains blocked by **new** clinical-content
+governance, not by a requirement to extract or map legacy clinical bodies.
+
+Meanwhile, Phase A Frozen Baseline still has non-clinical P1 gaps that do not
+require clinical approval (ADR, bindings, CI MVP, Workflow/Trace verification,
 runtime-evidence accounting, E2E design, coverage/migration reconciliation).
 
-This amendment establishes a controlled parallel execution lane so those gaps can be closed
-under separate batch authorizations, without waiving clinical gates or A11 requirements.
+This amendment establishes a controlled parallel NC Closure lane so those gaps
+can be closed under separate batch authorizations, without waiving A11
+new-clinical baseline gates (FB-11 / FB-21) or treating A6.5 Exit as clinical
+approval.
 
-## 5. Clinical lane (fail-closed; preserved)
+Durable A6.5 authority:
+[a6-5-legacy-clinical-non-adoption-strategy.md](./a6-5/a6-5-legacy-clinical-non-adoption-strategy.md)
+
+## 5. Legacy governance / future clinical / NC tracks
 
 ```text
-B04
-  → C02
-  → E01
-  → E02
+Legacy Governance Track
+Owner Non-Adoption Decision
+  → durable strategy + disposition metadata
+  → E01 disposition board
+  → E02 matrix write-back
   → A6.5 Exit
+
+NC Closure Track
+Roadmap Amendment
+  → separately authorized NC batches
+  → PHASE_A_NC_CLOSURE_EXIT
+
+Future New Clinical Track
+new clinical governance (NOT_YET_AUTHORIZED)
   → A7-CL
   → Full A7 Exit
 ```
 
-Current clinical control state:
+```text
+B04: SUPERSEDED_BY_POLICY / NOT_REQUIRED_FOR_NEW_RUNTIME_MIGRATION
+     (historical row preserved; not EXECUTED_COMPLETE)
+C02: NOT_REQUIRED_FOR_REJECTED_ASSETS
+     (historical row preserved; not EXECUTED_COMPLETE)
+E01/E02: PRESERVED (not executed by this planning change)
+```
+
+Enterprise current truth **until merge** remains:
 
 ```text
 B04: BLOCKED
@@ -118,7 +145,14 @@ A7-CL: BLOCKED_BY_A6_5_CLINICAL_LANE
 A7: NOT_COMPLETE
 ```
 
-FB-20 (A6.5 Exit) and FB-21 (A7 overall) remain Freeze blockers and are **not** deleted or lowered.
+Planning-branch narrative after A6.5 non-adoption Exit later closes:
+remaining A7-CL blocker becomes new clinical content governance
+(`BLOCKED_PENDING_NEW_CLINICAL_CONTENT` as recommended future label).
+Machine state is not changed to A7-CL AUTHORIZED / READY / COMPLETE.
+
+FB-11 (new clinical Safety/Question/Hypothesis approval), FB-20 (A6.5 Exit,
+closable by non-adoption governance), and FB-21 (A7 overall) remain Freeze
+blockers and are **not** deleted or lowered.
 
 ## 6. NC Closure lane
 
@@ -141,19 +175,23 @@ and Explicit Authorization.
 ## 7. A11 rejoin model
 
 ```text
-PHASE_A_NC_CLOSURE Exit
-  + A6.5 Exit
+A6.5 Exit (legacy non-adoption / disposition governance)
+  + PHASE_A_NC_CLOSURE Exit
   + Full A7 Exit
-  + remaining A11 prerequisites
+  + remaining Frozen / A11 prerequisites
   → A11 eligibility
 ```
 
 ```text
 A11 eligibility != A11 PASS
+FB-11 PRESERVED
+FB-20 PRESERVED_WITH_NON_ADOPTION_EXIT
+FB-21 PRESERVED
 ```
 
 A11 still requires separate Authorization Assessment + Explicit Authorization + Independent
 Freeze Review. This amendment does not authorize A11 and does not mark Frozen Baseline.
+Legacy non-adoption does **not** satisfy FB-11 new-clinical baseline approval.
 
 ## 8. Authoritative scope register
 
@@ -276,9 +314,14 @@ PR #29 history, and P7 evidence must be preserved (no rewrite of historical mean
 
 ### 10.1 Clinical
 
-Exact exclude: B04, C02, E01, E02, A6.5 clinical Exit work, A7-CL, CL-01, CL-02, clinical
-Prompt, eligible clinical route, Capability runtime binding, clinical evaluation, clinical
-rules, thresholds, hypotheses, medical-source approval, clinical gold, patient data, PHI.
+Exact exclude from the NC Closure lane: A7-CL, CL-01, CL-02, clinical Prompt, eligible
+clinical route, Capability runtime binding, clinical evaluation, clinical rules,
+thresholds, hypotheses, medical-source approval, clinical gold, patient data, PHI,
+new Safety/Question/Hypothesis authoring, and any B04 extraction or C02 rejected-asset
+mapping.
+
+A6.5 E01/E02 remain **legacy governance** work on the Legacy Governance Track. They are
+**not** NC Closure implementation batches and are **not** authorized here.
 
 ### 10.2 Provider
 
@@ -414,7 +457,11 @@ PHASE_A_NC_CLOSURE: COMPLETE
 Phase A: Freeze Candidate
 Frozen Baseline: NOT_READY_BLOCKED_CLINICAL
 A7: NOT_COMPLETE
-A7-CL: BLOCKED
+A7-CL: BLOCKED_BY_A6_5_CLINICAL_LANE
+       (narrative after A6.5 non-adoption Exit: pending new clinical content)
+FB-11: PRESERVED
+FB-20: PRESERVED
+FB-21: PRESERVED
 ```
 
 ```text
@@ -484,10 +531,11 @@ This planning artifact does not authorize:
 
 A8 ADR decision/approval, A9 CI implementation, A10 Workflow/Trace implementation,
 A5 binding generation, A1–A3 runtime remediation as newly granted authority,
-E2E clinical execution, A11 Freeze Review, A7-CL/CL-01/CL-02, B04/C02/E01/E02,
-Phase B, clinical Prompt/route/Capability/evaluation/rules/thresholds/hypotheses,
-medical-source approval, clinical gold, patient/PHI, real provider, external model/API,
-or production enablement.
+E2E clinical execution, A11 Freeze Review, A7-CL/CL-01/CL-02, B04 extraction,
+C02 rejected-asset mapping, E01/E02 execution, Phase B, clinical Prompt/route/
+Capability/evaluation/rules/thresholds/hypotheses, medical-source approval,
+clinical gold, patient/PHI, real provider, external model/API, or production
+enablement.
 
 ## 17. Current control state after this planning change
 
@@ -496,6 +544,7 @@ A7-NC: COMPLETE
 A7-NC Exit: PASSED
 PHASE_A_NC_CLOSURE Roadmap Amendment: IMPLEMENTED_PENDING_INDEPENDENT_REVIEW
 PHASE_A_NC_CLOSURE implementation: NOT_AUTHORIZED
+A6.5 Legacy Clinical Non-Adoption Strategy: IMPLEMENTED_PENDING_INDEPENDENT_REVIEW
 A6.5: INCOMPLETE_BLOCKED_DEPENDENCY
 A7-CL: BLOCKED_BY_A6_5_CLINICAL_LANE
 A7: NOT_COMPLETE
@@ -508,6 +557,7 @@ Future Extensions: NOT_AUTHORIZED
 CI: NO_CI_CONFIGURED
 ```
 
-Next Gate after this PR is Independent Review only. Do not treat this document as
-`MERGED_AND_VERIFIED` until Independent Review, Merge Review, Explicit Merge Authorization,
-Merge, and Post-Merge Verification complete.
+Next Gate after this PR is Combined Independent Review of NC Closure + A6.5
+non-adoption planning. Do not treat this document as `MERGED_AND_VERIFIED`
+until Independent Review, Merge Review, Explicit Merge Authorization, Merge,
+and Post-Merge Verification complete.

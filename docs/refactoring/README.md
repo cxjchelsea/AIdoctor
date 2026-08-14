@@ -151,7 +151,7 @@ Stable Platform
 
 首个场景为 `adult_respiratory_v1`。它用于验证通用平台，不是永久限制到呼吸道。
 
-A6 已建立 `adult_respiratory_v1` 的 `DRAFT` 结构骨架（`PARTIALLY_VALIDATED`）：可解析、可校验、可评审，但临床内容仍为 `REQUIRES_CLINICAL_REVIEW`，runtime 未接入，生产资格为 `BLOCKED`。详见 [A6 Evidence](./evidence/phase-a/a6/capability-package-skeleton-report.md)。A6.5 已完成 A、B-Core、非临床 C 与 D01 等合并验证工作，但 `B04 → C02 → E01 → E02 → A6.5 Exit` 临床治理链仍 fail-closed，A6.5 状态为 `INCOMPLETE_BLOCKED_DEPENDENCY`。A7 overall 为 `NOT_COMPLETE`；[A7-NC 路线修订规划](./plans/phase-a/a7-non-clinical-roadmap-amendment.md)为历史 Model Runtime parallel-lane authority（PR #29），A7-NC 现为 `COMPLETE` 且 Exit `PASSED`（≠ A7 COMPLETE）。当前控制真值见 [2026-08-14 reconciliation](./plans/phase-a/phase-a-current-state-reconciliation-2026-08-14.md)。Phase A Non-Clinical Closure 路线修订见 [NC Closure amendment](./plans/phase-a/phase-a-non-clinical-closure-roadmap-amendment.md)（`IMPLEMENTATION_ORDER_AMENDMENT`；NC Closure / A8–A11 仍 `NOT_AUTHORIZED`）。A5 三语言 binding 仍为 A11 前置缺口。
+A6 已建立 `adult_respiratory_v1` 的 `DRAFT` 结构骨架（`PARTIALLY_VALIDATED`）：可解析、可校验、可评审，但临床内容仍为 `REQUIRES_CLINICAL_REVIEW`，runtime 未接入，生产资格为 `BLOCKED`。详见 [A6 Evidence](./evidence/phase-a/a6/capability-package-skeleton-report.md)。A6.5 已完成 A、B-Core、非临床 C 与 D01 等合并验证工作。Enterprise 当前真值仍为 `B04 BLOCKED` / `C02 BLOCKED_BY_TASK_B04` / A6.5 `INCOMPLETE_BLOCKED_DEPENDENCY`。规划分支已记录 Owner `LEGACY_CLINICAL_ASSETS_WILL_NOT_BE_MIGRATED`（`A6.5-NONADOPT-001`，`IMPLEMENTED_PENDING_INDEPENDENT_REVIEW`）：B04 提取目的与 C02 拒收资产映射被 supersede，E01/E02 保留；不得写成 B04/C02 EXECUTED_COMPLETE。详见 [non-adoption strategy](./plans/phase-a/a6-5/a6-5-legacy-clinical-non-adoption-strategy.md)。A7 overall 为 `NOT_COMPLETE`；[A7-NC 路线修订规划](./plans/phase-a/a7-non-clinical-roadmap-amendment.md)为历史 Model Runtime parallel-lane authority（PR #29），A7-NC 现为 `COMPLETE` 且 Exit `PASSED`（≠ A7 COMPLETE）。当前控制真值见 [2026-08-14 reconciliation](./plans/phase-a/phase-a-current-state-reconciliation-2026-08-14.md)。Phase A Non-Clinical Closure 路线修订见 [NC Closure amendment](./plans/phase-a/phase-a-non-clinical-closure-roadmap-amendment.md)（`IMPLEMENTATION_ORDER_AMENDMENT`；NC Closure / A8–A11 仍 `NOT_AUTHORIZED`）。A5 三语言 binding 仍为 A11 前置缺口。
 
 新增场景必须考虑 Scope、Terminology、Observation、Safety、Question、Hypothesis、Knowledge、Prompt、Model Route、Tool/Skill、Delivery 和 Eval，不允许只更换 Prompt。
 
@@ -339,7 +339,7 @@ A1 Java 基线
 → A11 Frozen Baseline Review
 ```
 
-A1–A5 已形成基线与 Shared Contracts v1 结构包；A6 Capability Package 骨架已建立但未临床批准、未接入 runtime、未升级 Frozen Baseline。历史执行顺序继续保留。历史 snapshot 见 [Phase A Current-State Addendum](./plans/phase-a/phase-a-current-state-addendum.md)；**当前控制真值**见 [2026-08-14 reconciliation](./plans/phase-a/phase-a-current-state-reconciliation-2026-08-14.md)：A6.5 临床治理链仍阻塞；A7-NC 为 `COMPLETE` / Exit `PASSED`；A7-CL 为 `BLOCKED_BY_A6_5_CLINICAL_LANE`；A7 overall 为 `NOT_COMPLETE`；`PHASE_A_NC_CLOSURE` 与 A8–A11 仍 `NOT_AUTHORIZED`；Clinical Runtime 为 `NOT_ENABLED`；Production 为 `BLOCKED`。不得跳过临床/许可门禁直接填充阈值、规则、Prompt 或 route eligibility。
+A1–A5 已形成基线与 Shared Contracts v1 结构包；A6 Capability Package 骨架已建立但未临床批准、未接入 runtime、未升级 Frozen Baseline。历史执行顺序继续保留。历史 snapshot 见 [Phase A Current-State Addendum](./plans/phase-a/phase-a-current-state-addendum.md)；**当前控制真值**见 [2026-08-14 reconciliation](./plans/phase-a/phase-a-current-state-reconciliation-2026-08-14.md)：Enterprise 上 A6.5 仍 `INCOMPLETE_BLOCKED_DEPENDENCY`，B04/C02 仍为历史 BLOCKED 状态；规划分支提出 Legacy Clinical NON_ADOPTION，但尚未 review/merge。A7-NC 为 `COMPLETE` / Exit `PASSED`；A7-CL 机器状态为 `BLOCKED_BY_A6_5_CLINICAL_LANE`；A7 overall 为 `NOT_COMPLETE`；`PHASE_A_NC_CLOSURE` 与 A8–A11 仍 `NOT_AUTHORIZED`；Clinical Runtime 为 `NOT_ENABLED`；Production 为 `BLOCKED`。不得跳过新临床治理门禁直接填充阈值、规则、Prompt 或 route eligibility。FB-11 / FB-20 / FB-21 保留。
 
 ---
 
@@ -365,7 +365,7 @@ Legacy Asset / Target Capability
 
 ## 15. 当前下一步
 
-下一步仅允许执行 **Phase A Non-Clinical Closure Roadmap Amendment Independent Review**（针对 [NC Closure amendment](./plans/phase-a/phase-a-non-clinical-closure-roadmap-amendment.md)）。该 amendment 的 planning 实现不等于 NC Closure / A8 / A9 / A10 / A11 实现授权；在单独 batch Explicit Authorization 前不得执行 ADR、bindings、CI、Workflow/Trace。A7-NC 已 `COMPLETE`；不得启动 A7-CL，也不得解锁 B04/C02。历史 Phase A 证据、历史 addendum 与 [dated reconciliation](./plans/phase-a/phase-a-current-state-reconciliation-2026-08-14.md) 分别维护。
+下一步仅允许执行 **A6.5 Legacy Clinical Non-Adoption + Phase A NC Closure Combined Independent Review**（针对 PR #38 新 Head）。该 planning 实现不等于 NC Closure / A8 / A9 / A10 / A11 / E01 / E02 实现授权；在单独 batch Explicit Authorization 前不得执行 ADR、bindings、CI、Workflow/Trace。A7-NC 已 `COMPLETE`；不得启动 A7-CL，不得执行 B04 提取或 C02 拒收资产映射，也不得把未来新临床内容塞回 A6.5。历史 Phase A 证据、历史 addendum、PR #29 / P7 与 [dated reconciliation](./plans/phase-a/phase-a-current-state-reconciliation-2026-08-14.md) 分别维护。
 
 ---
 
