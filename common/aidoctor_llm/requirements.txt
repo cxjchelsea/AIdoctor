@@ -1,8 +1,3 @@
-langchain==0.1.0
-langchain-openai==0.0.2
-openai==1.10.0
-jinja2==3.1.2
-pyyaml==6.0.1
-httpx==0.25.1
-pydantic==2.5.0
-
+# A7-NC-P5：legacy facade 已禁用，不再依赖 provider SDK / 网络客户端。
+# 仅保留结构兼容所需的 pydantic。
+pydantic>=2.5.0
