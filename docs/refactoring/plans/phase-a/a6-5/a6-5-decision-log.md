@@ -211,4 +211,70 @@ State ownership, the unique State Committer write path, Mandatory Safety, Triage
 
 ### Rejoin and authorization
 
-The clinical lane must complete `B04 → C02 → E01 → E02 → A6.5 Exit`; A7-NC must separately pass its Exit Gate; ownership, review and governance evidence must exist before A7-CL. Planning completion is not implementation authorization. The authoritative scope, stop conditions and gates are recorded in [the A7-NC Roadmap Amendment](../a7-non-clinical-roadmap-amendment.md).
+Historical PR #29 text required `B04 → C02 → E01 → E02 → A6.5 Exit` before A7-CL. That migration-purpose chain is **superseded** by `A6.5-NONADOPT-001` for legacy clinical content. PR #29 body and P7 evidence are **not rewritten**. Future Full A7 Rejoin planning semantics are recorded in [the non-adoption strategy](./a6-5-legacy-clinical-non-adoption-strategy.md) and the PR #38 remediation.
+
+## 8. Legacy Clinical Non-Adoption Decision
+
+> Decision ID: `A6.5-NONADOPT-001`
+>
+> Date: `2026-08-14`
+>
+> Owner: Repository Owner
+>
+> Decision: `LEGACY_CLINICAL_NON_ADOPTION`
+>
+> Owner policy: `LEGACY_CLINICAL_ASSETS_WILL_NOT_BE_MIGRATED`
+>
+> Decision status: `IMPLEMENTED_PENDING_INDEPENDENT_REVIEW`
+>
+> Architecture classification: `PLANNING_GOVERNANCE_ONLY`
+>
+> Architecture Change: `NO`
+>
+> Architecture Refreeze: `NOT_REQUIRED`
+
+### Decision
+
+Legacy clinical rules, Prompts, triage/risk/diagnostic-reasoning paths, and medical-knowledge assets will **not** be inherited as new-system clinical authority. Future Safety / Red Flags / Triage / Question / Hypothesis / Clinical Prompt / Medical Source / Clinical Evaluation must be rebuilt under a separate, not-yet-authorized track.
+
+### Rationale
+
+Legacy assets lack sufficient governance provenance to become Capability, Safety, Triage, Question, Hypothesis, Prompt Release, clinical gold, or Production clinical behavior. Non-adoption is a governance strategy, not an architecture change and not an immediate delete.
+
+### Scope
+
+CLIN-001..010, CLIN-020..029, PROMPT-001..015, DATA-KG001..006, DATA-K001..031, clinical DOC assets listed in the strategy, WF-003/WF-017 (clinical-authority reject only; non-clinical ADAPT unchanged). Clinical bodies were not read.
+
+### Consequences
+
+```text
+LEGACY_CLINICAL_TRACK: NON_ADOPTED
+FUTURE_NEW_CLINICAL_TRACK: NOT_YET_AUTHORIZED
+NON_ADOPTION != NO_FUTURE_CLINICAL_GOVERNANCE
+NON_ADOPTION != IMMEDIATE_DELETE
+NON_ADOPTION != A6 COMPLETE
+NON_ADOPTION != A7 COMPLETE
+NON_ADOPTION != CLINICAL_RUNTIME_ENABLED
+```
+
+### Superseded task purposes
+
+- TASK-B04 migration/extraction purpose: `SUPERSEDED_BY_LEGACY_CLINICAL_NON_ADOPTION` / `NOT_REQUIRED_FOR_NEW_RUNTIME_MIGRATION`. Historical row preserved. Status remains `BLOCKED`. Not `EXECUTED_COMPLETE`.
+- TASK-C02 rejected-asset Capability mapping: `NOT_REQUIRED_FOR_REJECTED_ASSETS`. Historical row preserved. Status `BLOCKED` (policy). Not `EXECUTED_COMPLETE`.
+
+### Preserved tasks
+
+- TASK-E01 disposition board: preserved; C02 no longer a prerequisite for rejected clinical assets; ADOPT/ADAPT/MAP forbidden as new clinical authority.
+- TASK-E02 matrix write-back: preserved; target labels `NOT_MIGRATED` / `NOT_AUTHORITY` / `NOT_RUNTIME_ADOPTED` / `FUTURE_REBUILD_REQUIRED`.
+
+### Future Clinical Build
+
+Separate. `NOT_YET_AUTHORIZED`. Must not be stuffed into A6.5.
+
+### Physical deletion
+
+Not authorized. Runtime consumers may still exist. Separate decommission gate required later.
+
+### Durable authority
+
+[a6-5-legacy-clinical-non-adoption-strategy.md](./a6-5-legacy-clinical-non-adoption-strategy.md)
