@@ -168,8 +168,17 @@ const DiagnosisInfoPanel: React.FC<DiagnosisInfoPanelProps> = ({
     },
   ]
 
+  // 已收集信息列表的本地结构（level 与 clinical 字段配置一致，wellness 项可缺省）
+  type CollectedInfoListItem = {
+    label: string
+    value?: string
+    collected: boolean
+    level?: 'required' | 'important' | 'optional'
+    field?: string
+  }
+
   // 根据工作态选择显示的信息列表
-  const collectedInfoList = workMode === 'wellness_mode' 
+  const collectedInfoList: CollectedInfoListItem[] = workMode === 'wellness_mode' 
     ? wellnessCollectedInfoList 
     : clinicalCollectedInfoList
 
@@ -575,7 +584,7 @@ const DiagnosisInfoPanel: React.FC<DiagnosisInfoPanelProps> = ({
                       <ClockCircleOutlined style={{ color: '#faad14' }} />
                     )}
                     <Text delete={!item.collected}>{item.label}</Text>
-                    <Tag color={levelTag.color} size="small">
+                    <Tag color={levelTag.color}>
                       {levelTag.text}
                     </Tag>
                     {item.collected && item.value && (

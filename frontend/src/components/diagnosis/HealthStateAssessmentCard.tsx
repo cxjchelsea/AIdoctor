@@ -137,7 +137,6 @@ const HealthStateAssessmentCard: React.FC<HealthStateAssessmentCardProps> = ({ r
                   <Alert
                     message="检测到危险信号"
                     type="error"
-                    size="small"
                     description={
                       <Space direction="vertical" size="small" style={{ marginTop: 8 }}>
                         {entryAssessment.redFlagsList.map((flag, index) => (

@@ -13,7 +13,7 @@ interface WellnessScreeningFlowProps {
   onComplete: () => void
 }
 
-const WellnessScreeningFlow: React.FC<WellnessScreeningFlowProps> = ({ onComplete }) => {
+const WellnessScreeningFlow: React.FC<WellnessScreeningFlowProps> = ({ onComplete: _onComplete }) => {
   const [currentStage, setCurrentStage] = useState<WellnessScreeningStage>('A1_DEMAND_CLASSIFICATION')
   const [demandType, setDemandType] = useState<{
     type: 1 | 2 | 3 | 4
@@ -106,16 +106,7 @@ const WellnessScreeningFlow: React.FC<WellnessScreeningFlowProps> = ({ onComplet
     setCurrentStage('A5_FOLLOW_UP_SETUP')
   }
 
-  const handleA5Complete = () => {
-    // TODO: 调用API进行A5设置随访
-    // 这里模拟API调用
-    const mockFollowUpPlan = {
-      followUpDate: '2025-04-15',
-      reminderContent: '请按时进行健康筛查',
-    }
-    setFollowUpPlan(mockFollowUpPlan)
-    onComplete()
-  }
+  // handleA5Complete 尚未接线到 A5 UI，不在本次类型基线修复中实现或连接
 
   return (
     <div>

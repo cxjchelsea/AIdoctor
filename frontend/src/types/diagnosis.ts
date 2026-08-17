@@ -1,7 +1,15 @@
 // 诊断相关类型定义
 
 export type DiagnosisType = 'symptom' | 'examination' | 'comprehensive'
-export type DiagnosisStatus = 'collecting' | 'questioning' | 'analyzing' | 'completed' | 'cancelled'
+export type DiagnosisStatus =
+  | 'collecting'
+  | 'questioning'
+  | 'analyzing'
+  | 'completed'
+  | 'cancelled'
+  | 'wellness_mode'
+  | 'wellness_mode_pending'
+export type DiagnosisSessionStatus = 'idle' | DiagnosisStatus | 'timeout'
 export type AnswerType = 'symptom' | 'sign' | 'history' | 'other'
 export type WorkMode = 'wellness_mode' | 'clinical_mode'
 export type RiskLevel = 'L1' | 'L2' | 'L3' | 'L4'
@@ -44,6 +52,32 @@ export interface Question {
   required: boolean
   options?: string[]
   priority?: 'required' | 'important' | 'optional' // 优先级（基于信息缺口分级）
+  questionId?: string
+}
+
+export interface WellnessPlanView {
+  riskManagement?: string
+  lifestyleAdvice?: string
+  followUpPlan?: string
+  demand_type?: string
+  profile?: any
+  branch_result?: any
+  unified_result?: any
+  followup_plan?: any
+  next_review_date?: string
+  summary?: string
+}
+
+export interface EntryAssessmentSnapshot {
+  userInput: string
+  hasSymptom: boolean
+  symptomStatus: 'no_symptom' | 'has_symptom' | 'uncertain'
+  clarificationNeeded: boolean
+  clarificationResult?: 'A' | 'B'
+  redFlagsHit: boolean
+  redFlagsList: string[]
+  pathSelected: 'A' | 'B' | 'exit'
+  symptoms?: string[]
 }
 
 export interface DiagnosisResponse {
@@ -59,22 +93,16 @@ export interface DiagnosisResponse {
     question?: string
     message?: string
   }
-  wellnessPlan?: {
-    riskManagement?: string
-    lifestyleAdvice?: string
-    followUpPlan?: string
-    demand_type?: string
-    profile?: any
-    branch_result?: any
-    unified_result?: any
-    followup_plan?: any
-    next_review_date?: string
-    summary?: string
-    [key: string]: any
-  }
+  wellnessPlan?: WellnessPlanView
+  riskLevel?: RiskLevel
+  assessmentReason?: string
+  redFlags?: string[]
+  entryAssessment?: EntryAssessmentSnapshot
 }
 
 export interface UserAnswer {
+  cdpId: string
+  questionId: string
   answer: string
   answerType?: AnswerType
 }
@@ -147,6 +175,7 @@ export interface DiagnosisResult {
   medicalAdvice: MedicalAdvice
   createdAt: string
   completedAt?: string
+  possibilities?: DiseasePossibility[]
 }
 
 export interface DiagnosisRecord {
@@ -191,22 +220,9 @@ export interface HealthStateAssessmentResult {
   riskLevel: RiskLevel
   assessmentReason: string
   redFlags: string[]
-  wellnessPlan?: {
-    riskManagement: string
-    lifestyleAdvice: string
-    followUpPlan: string
-  }
+  wellnessPlan?: WellnessPlanView
   cdpId: string
-  entryAssessment?: {
-    userInput: string
-    hasSymptom: boolean
-    symptomStatus: 'no_symptom' | 'has_symptom' | 'uncertain'
-    clarificationNeeded: boolean
-    clarificationResult?: 'A' | 'B'
-    redFlagsHit: boolean
-    redFlagsList: string[]
-    pathSelected: 'A' | 'B' | 'exit'
-  }
+  entryAssessment?: EntryAssessmentSnapshot
 }
 
 // 入口判定流程（P0模块）相关类型

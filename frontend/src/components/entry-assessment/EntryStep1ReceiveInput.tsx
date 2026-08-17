@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, Input, Space, Button, Tag, Typography } from 'antd'
+import { Card, Input, Space, Button, Typography } from 'antd'
 
 const { TextArea } = Input
 const { Text } = Typography

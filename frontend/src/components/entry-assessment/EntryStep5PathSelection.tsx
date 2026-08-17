@@ -41,7 +41,12 @@ const EntryStep5PathSelection: React.FC<EntryStep5PathSelectionProps> = ({
             <Button
               key="continue"
               type="primary"
-              onClick={() => onNavigateToPath(pathResult.path)}
+              onClick={() => {
+                const selectedPath = pathResult.path
+                if (selectedPath === 'A' || selectedPath === 'B') {
+                  onNavigateToPath(selectedPath)
+                }
+              }}
             >
               开始
             </Button>,

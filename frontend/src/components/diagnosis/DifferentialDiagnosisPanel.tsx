@@ -1,8 +1,8 @@
-import { Card, List, Tag, Space, Typography, Collapse, Button, Tooltip } from 'antd'
+import { Card, List, Tag, Space, Typography, Collapse, Button } from 'antd'
 import { QuestionCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import type { DiseasePossibility } from '@/types/diagnosis'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 const { Panel } = Collapse
 
 interface DifferentialDiagnosisPanelProps {

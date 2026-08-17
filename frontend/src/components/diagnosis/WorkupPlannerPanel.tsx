@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, List, Tag, Space, Typography, Button, Select, Tooltip } from 'antd'
+import { Card, List, Tag, Space, Typography, Select } from 'antd'
 import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import type { ExaminationItem } from '@/types/diagnosis'
 
