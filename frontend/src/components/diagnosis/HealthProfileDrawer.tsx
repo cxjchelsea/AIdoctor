@@ -1,7 +1,5 @@
-import { Drawer, Card, Descriptions, List, Button, Typography, Empty } from 'antd'
+import { Drawer, Card, Descriptions, List, Button } from 'antd'
 import { EditOutlined } from '@ant-design/icons'
-
-const { Text } = Typography
 
 interface HealthProfileDrawerProps {
   visible: boolean

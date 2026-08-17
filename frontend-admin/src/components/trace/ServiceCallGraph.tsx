@@ -8,7 +8,7 @@ import ReactFlow, {
   MarkerType,
 } from 'reactflow'
 import 'reactflow/dist/base.css'
-import { Card, Tag, Typography, Statistic, Row, Col } from 'antd'
+import { Card, Typography, Statistic, Row, Col } from 'antd'
 import type { ExecutionTrace } from '@/types/trace'
 import { filterSuccessfulTraces } from '@/utils/traceFilter'
 
@@ -48,7 +48,6 @@ const ServiceCallGraph: React.FC<ServiceCallGraphProps> = ({ traces }) => {
 
     // 创建服务节点
     let xPosition = 0
-    let yPosition = 0
     const nodeSpacing = 250
     const maxNodesPerRow = 4
 

@@ -20,13 +20,12 @@ import {
 } from 'antd'
 import {
   BookOutlined,
-  FileTextOutlined,
   ReloadOutlined,
   EyeOutlined,
   EditOutlined,
 } from '@ant-design/icons'
 import { bookApi } from '@/services/bookApi'
-import type { BookInfo, BookStructure, Chapter, TocItem, IndexItem } from '@/types/book'
+import type { BookInfo, BookStructure, Chapter, TocItem } from '@/types/book'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -119,6 +118,7 @@ const BookManagementPage: React.FC = () => {
         title: `${item.title} (第${item.page}页)`,
         key: `${item.page}-${item.title}`,
         page: item.page,
+        level: item.level,
       }
       
       // 根据层级调整栈

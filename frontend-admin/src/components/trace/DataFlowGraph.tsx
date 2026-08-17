@@ -31,7 +31,6 @@ const DataFlowGraph: React.FC<DataFlowGraphProps> = ({ traces }) => {
     const edgeList: Edge[] = []
     let yPosition = 0
     const xSpacing = 300
-    const ySpacing = 150
 
     // 按时间排序
     const sortedTraces = [...successfulTraces].sort(
@@ -59,8 +58,6 @@ const DataFlowGraph: React.FC<DataFlowGraphProps> = ({ traces }) => {
       const startTrace = serviceTraces[0]
       const endTrace = serviceTraces[serviceTraces.length - 1]
       const duration = endTrace.duration || 0
-      // 由于已经过滤掉失败的服务，所以这里应该都是成功的
-      const status = 'success'
 
       const node: Node = {
         id: nodeId,
@@ -81,7 +78,7 @@ const DataFlowGraph: React.FC<DataFlowGraphProps> = ({ traces }) => {
                 {new Date(startTrace.timestamp).toLocaleTimeString()}
               </div>
               {duration > 0 && (
-                <Tag color={status === 'error' ? 'red' : 'green'} style={{ marginTop: '4px' }}>
+                <Tag color="green" style={{ marginTop: '4px' }}>
                   {duration}ms
                 </Tag>
               )}
@@ -89,8 +86,8 @@ const DataFlowGraph: React.FC<DataFlowGraphProps> = ({ traces }) => {
           ),
         },
         style: {
-          background: status === 'error' ? '#fff1f0' : '#f6ffed',
-          border: `2px solid ${status === 'error' ? '#ff4d4f' : '#52c41a'}`,
+          background: '#f6ffed',
+          border: '2px solid #52c41a',
           borderRadius: '8px',
           minWidth: 150,
         },

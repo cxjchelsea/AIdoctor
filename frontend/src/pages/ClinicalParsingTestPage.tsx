@@ -235,7 +235,7 @@ const ClinicalParsingTestPage = () => {
                 {result.concepts.length > 0 ? (
                   <List
                     dataSource={result.concepts}
-                    renderItem={(concept, index) => (
+                    renderItem={(concept, _index) => (
                       <List.Item>
                         <Space direction="vertical" style={{ width: '100%' }}>
                           <div>

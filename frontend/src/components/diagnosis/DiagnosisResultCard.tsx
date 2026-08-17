@@ -19,11 +19,7 @@ const DiagnosisResultCard: React.FC<DiagnosisResultCardProps> = ({
   onSave,
   onShare,
 }) => {
-  // 导出报告
-  const handleExport = () => {
-    // TODO: 实现导出功能
-    console.log('导出报告', result)
-  }
+  // 导出报告功能尚未接线，不在本次类型基线修复中实现
 
   // 防御性检查：确保 result 和 conclusion 存在
   if (!result || !result.conclusion || !result.conclusion.type) {
@@ -133,7 +129,7 @@ const DiagnosisResultCard: React.FC<DiagnosisResultCardProps> = ({
 // 保留原有的详细版本（用于抽屉中显示）
 export const DiagnosisResultCardDetailed: React.FC<DiagnosisResultCardProps> = ({
   result,
-  onViewDetail,
+  onViewDetail: _onViewDetail,
   onSave,
   onShare,
 }) => {

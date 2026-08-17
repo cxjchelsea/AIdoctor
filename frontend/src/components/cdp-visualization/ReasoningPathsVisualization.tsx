@@ -17,7 +17,7 @@ interface ReasoningPathsVisualizationProps {
 }
 
 const ReasoningPathsVisualization: React.FC<ReasoningPathsVisualizationProps> = ({
-  cdpId,
+  cdpId: _cdpId,
 }) => {
   // TODO: 从API获取推理路径数据
   const reasoningPaths: ReasoningPath[] = []
