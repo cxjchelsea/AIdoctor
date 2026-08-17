@@ -342,15 +342,15 @@ Current pointer after the separately authorized NC-CLOSE-01A ADR
 decision package:
 
 ```text
-NC-CLOSE-01A ADR decisions: PROPOSED_DECIDED_PENDING_REVIEW
+NC-CLOSE-01A ADR decisions: MERGED_AND_VERIFIED
 ```
 
 Decision package:
 [nc-close-01a-runtime-state-boundaries.md](./nc-close-01a/nc-close-01a-runtime-state-boundaries.md)
 
-Next gate is Combined Independent Review + Merge Review of that
-Draft PR Head. This pointer does **not** authorize NC-CLOSE-01A
-implementation.
+PR #43 is `MERGED_AND_VERIFIED`. This pointer does **not** authorize
+NC-CLOSE-01A implementation. NC-CLOSE-02 bindings, if present, are a
+separate batch and remain unmerged until their own review.
 
 Not authorized:
 
@@ -364,7 +364,7 @@ A8 implementation authorization
 
 ```text
 NC-CLOSE-01:                 NOT_AUTHORIZED as umbrella implementation
-NC-CLOSE-01A ADR Decision:   PROPOSED_DECIDED_PENDING_REVIEW
+NC-CLOSE-01A ADR Decision:   MERGED_AND_VERIFIED
 NC-CLOSE-01A implementation: NOT_AUTHORIZED
 NC-CLOSE-01B:                NOT_AUTHORIZED
 NC-CLOSE-01C:                NOT_AUTHORIZED
@@ -392,7 +392,7 @@ A11 eligibility != A11 PASS
 
 ```text
 NC-CLOSE-01: NOT_AUTHORIZED as umbrella implementation
-NC-CLOSE-01A ADR Decision: PROPOSED_DECIDED_PENDING_REVIEW
+NC-CLOSE-01A ADR Decision: MERGED_AND_VERIFIED
 NC-CLOSE-01A implementation: NOT_AUTHORIZED
 NC-CLOSE-01B / 01C: NOT_AUTHORIZED
 A8 / A9 / A10 / A11: NOT_AUTHORIZED

@@ -1,0 +1,6 @@
+# 绑定构建产物；不进入语义权威树。
+java/target/
+typescript/node_modules/
+**/__pycache__/
+*.pyc
+.pytest_cache/

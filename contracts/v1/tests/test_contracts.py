@@ -190,8 +190,17 @@ def test_no_unbounded_schema_strings_or_arrays(package):
 
 
 def test_no_language_bindings_or_service_changes_in_contract_tree():
+    # NC-CLOSE-02 授权 bindings/ 存放 REVIEWED_BINDING。schema/fixture/validator
+    # 仍不得混入语言源码；generated/ 仍禁止。
     forbidden_suffixes = {".java", ".ts", ".tsx"}
-    assert not [path for path in ROOT.rglob("*") if path.suffix in forbidden_suffixes]
+    bindings_root = ROOT / "bindings"
+    leaked = [
+        path for path in ROOT.rglob("*")
+        if path.suffix in forbidden_suffixes
+        and bindings_root not in path.parents
+        and path != bindings_root
+    ]
+    assert not leaked
     assert not (ROOT / "generated").exists()
 
 
