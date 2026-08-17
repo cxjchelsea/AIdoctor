@@ -83,7 +83,7 @@ const ExaminationSuggestion: React.FC<ExaminationSuggestionProps> = ({
             columns={columns}
             pagination={false}
             size="small"
-            rowKey={(record, index) => `priority-${index}`}
+            rowKey={(_record, index) => `priority-${index}`}
           />
         </TabPane>
 
@@ -100,7 +100,7 @@ const ExaminationSuggestion: React.FC<ExaminationSuggestionProps> = ({
             columns={columns}
             pagination={false}
             size="small"
-            rowKey={(record, index) => `optional-${index}`}
+            rowKey={(_record, index) => `optional-${index}`}
           />
         </TabPane>
       </Tabs>

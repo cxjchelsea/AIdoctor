@@ -28,7 +28,7 @@ const EntryAssessmentFlow: React.FC<EntryAssessmentFlowProps> = ({
     redFlags: Array<{ description: string }>
     safetyMessage?: string
   }>()
-  const [pathResult, setPathResult] = useState<{
+  const [pathResult] = useState<{
     path: 'A' | 'B' | 'exit'
     pathName: string
     nextStep: string
@@ -38,7 +38,10 @@ const EntryAssessmentFlow: React.FC<EntryAssessmentFlowProps> = ({
   const handleStep1Submit = async () => {
     // TODO: 调用API进行Step 2：识别症状/困扰
     // 这里模拟API调用
-    const mockSymptomStatus = {
+    const mockSymptomStatus: {
+      status: 'no_symptom' | 'has_symptom' | 'uncertain'
+      symptoms?: string[]
+    } = {
       status: userInput.includes('痛') || userInput.includes('不舒服')
         ? 'has_symptom'
         : userInput.includes('体检') || userInput.includes('筛查')
@@ -61,7 +64,7 @@ const EntryAssessmentFlow: React.FC<EntryAssessmentFlowProps> = ({
     }
   }
 
-  const handleStep3Clarification = (direction: 'A' | 'B') => {
+  const handleStep3Clarification = (_direction: 'A' | 'B') => {
     // TODO: 调用API进行Step 4：危险信号检查
     const mockRedFlagsCheck = {
       redFlagsHit: false,
@@ -71,16 +74,7 @@ const EntryAssessmentFlow: React.FC<EntryAssessmentFlowProps> = ({
     setCurrentStep(4)
   }
 
-  const handleStep4Next = () => {
-    // TODO: 调用API进行Step 5：输出路径结果
-    const mockPathResult = {
-      path: symptomStatus?.status === 'no_symptom' ? 'A' : 'B',
-      pathName: symptomStatus?.status === 'no_symptom' ? '健康筛查路径' : '症状诊断路径',
-      nextStep: symptomStatus?.status === 'no_symptom' ? 'A1｜需求分类' : '阶段1｜问诊',
-    }
-    setPathResult(mockPathResult)
-    setCurrentStep(5)
-  }
+  // handleStep4Next 尚未接线到 Step 4 UI，不在本次类型基线修复中实现或连接
 
   const handleStep5Navigate = (path: 'A' | 'B') => {
     onComplete(path)

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { ApiResponse, ExecutionTrace, TraceSummary } from '@/types/trace'
+import type { ExecutionTrace, TraceSummary } from '@/types/trace'
 
 // 追踪服务API客户端（独立服务，端口8093）
 const traceApiClient = axios.create({

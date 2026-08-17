@@ -1,5 +1,5 @@
 import { Avatar, Button, Space, Typography, Card } from 'antd'
-import { UserOutlined, MedicineBoxOutlined } from '@ant-design/icons'
+import { MedicineBoxOutlined } from '@ant-design/icons'
 import type { Question } from '@/types/diagnosis'
 
 const { Text } = Typography

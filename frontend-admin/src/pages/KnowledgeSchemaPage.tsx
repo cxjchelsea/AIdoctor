@@ -13,6 +13,7 @@ import {
   Table,
   Descriptions,
 } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -189,8 +190,10 @@ const KnowledgeSchemaPage: React.FC = () => {
     },
   ]
 
+  type SchemaNameRow = { key: string; name: string }
+
   // 搭建结果中的约束表格列（保留原有功能）
-  const constraintColumns = [
+  const constraintColumns: ColumnsType<SchemaNameRow> = [
     {
       title: '约束名称',
       dataIndex: 'name',
@@ -201,9 +204,9 @@ const KnowledgeSchemaPage: React.FC = () => {
       title: '状态',
       key: 'status',
       width: 100,
-      render: (_: any, record: string) => {
-        const isCreated = setupResult?.constraints_created.includes(record) || false
-        const isFailed = setupResult?.constraints_failed.includes(record) || false
+      render: (_: any, record) => {
+        const isCreated = setupResult?.constraints_created.includes(record.name) || false
+        const isFailed = setupResult?.constraints_failed.includes(record.name) || false
         if (isCreated) {
           return <Tag color="success" icon={<CheckCircleOutlined />}>已创建</Tag>
         }
@@ -216,7 +219,7 @@ const KnowledgeSchemaPage: React.FC = () => {
   ]
 
   // 搭建结果中的索引表格列（保留原有功能）
-  const indexColumns = [
+  const indexColumns: ColumnsType<SchemaNameRow> = [
     {
       title: '索引名称',
       dataIndex: 'name',
@@ -227,9 +230,9 @@ const KnowledgeSchemaPage: React.FC = () => {
       title: '状态',
       key: 'status',
       width: 100,
-      render: (_: any, record: string) => {
-        const isCreated = setupResult?.indexes_created.includes(record) || false
-        const isFailed = setupResult?.indexes_failed.includes(record) || false
+      render: (_: any, record) => {
+        const isCreated = setupResult?.indexes_created.includes(record.name) || false
+        const isFailed = setupResult?.indexes_failed.includes(record.name) || false
         if (isCreated) {
           return <Tag color="success" icon={<CheckCircleOutlined />}>已创建</Tag>
         }

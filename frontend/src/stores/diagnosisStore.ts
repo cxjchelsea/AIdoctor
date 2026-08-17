@@ -3,7 +3,7 @@ import { diagnosisApi } from '@/services/diagnosisApi'
 import { dialogApi, type InformationGaps } from '@/services/dialogApi'
 import type {
   DiagnosisRequest,
-  DiagnosisStatus,
+  DiagnosisSessionStatus,
   Question,
   DiagnosisResult,
   HealthStateAssessmentResult,
@@ -27,12 +27,33 @@ const generateMessageId = () => {
   return `msg-${Date.now()}-${messageIdCounter}-${Math.random().toString(36).substr(2, 9)}`
 }
 
+// 从后端 question 字段提取展示文本，避免把 Question 对象赋给 string
+const extractQuestionText = (questionOrText: string | Question | undefined): string | undefined => {
+  if (!questionOrText) {
+    return undefined
+  }
+  if (typeof questionOrText === 'string') {
+    return questionOrText
+  }
+  return questionOrText.question
+}
+
+// 回退问题对象仅补齐前端 Question 已要求、且仓库已使用的默认值
+const buildFallbackQuestion = (questionText: string): Question => {
+  return {
+    question: questionText,
+    questionType: 'text',
+    missingInfoType: 'other',
+    required: false,
+  }
+}
+
 interface DiagnosisState {
   // 状态
   diagnosisId: string | null
   messages: ChatMessage[]
   completeness: number
-  status: 'idle' | DiagnosisStatus
+  status: DiagnosisSessionStatus
   currentQuestion: Question | null
   diagnosisResult: DiagnosisResult | null
   workMode?: 'wellness_mode' | 'clinical_mode' // 工作态（从健康状态判定获取）
@@ -157,9 +178,9 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
       })
 
       // 如果有问题，添加问题消息（支持 nextAction 和 question 两种格式）
-      let questionText = null
+      let questionText: string | undefined
       if (data.question) {
-        questionText = data.question.question || data.question
+        questionText = extractQuestionText(data.question)
       } else if (data.nextAction && data.nextAction.type === 'question') {
         questionText = data.nextAction.question || data.nextAction.message
       }
@@ -170,7 +191,7 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
           type: 'question',
           content: questionText,
           timestamp: new Date(),
-          question: data.question || { question: questionText },
+          question: data.question || buildFallbackQuestion(questionText),
         }
         set((state) => ({
           messages: [...state.messages, questionMessage],
@@ -318,10 +339,8 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
       // 处理问题（支持 nextAction 和 question 两种格式）
       let currentQuestion = data.question || null
       if (!currentQuestion && data.nextAction && data.nextAction.type === 'question') {
-        currentQuestion = {
-          question: data.nextAction.question || data.nextAction.message,
-          questionType: 'text',
-        }
+        const fallbackQuestionText = data.nextAction.question || data.nextAction.message || ''
+        currentQuestion = buildFallbackQuestion(fallbackQuestionText)
       }
 
       // 从响应中提取已收集信息（如果有patientState或structuredData）
@@ -416,9 +435,9 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
       })
 
       // 如果有新问题，添加问题消息（支持 nextAction 和 question 两种格式）
-      let questionText = null
+      let questionText: string | undefined
       if (data.question) {
-        questionText = data.question.question || data.question
+        questionText = extractQuestionText(data.question)
       } else if (data.nextAction && data.nextAction.type === 'question') {
         questionText = data.nextAction.question || data.nextAction.message
       }
@@ -429,7 +448,7 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
           type: 'question',
           content: questionText,
           timestamp: new Date(),
-          question: data.question || { question: questionText },
+          question: data.question || buildFallbackQuestion(questionText),
         }
         set((state) => ({
           messages: [...state.messages, questionMessage],
@@ -797,25 +816,26 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
       }
 
       // 如果有问题，添加问题消息（支持 nextAction 和 question 两种格式）
-      let questionText = null
+      let questionText: string | undefined
       if (data.question) {
-        questionText = data.question.question || data.question
+        questionText = extractQuestionText(data.question)
       } else if (data.nextAction && data.nextAction.type === 'question') {
         questionText = data.nextAction.question || data.nextAction.message
       }
       
       if (questionText) {
+        const fallbackQuestion = data.question || buildFallbackQuestion(questionText)
         const questionMessage: ChatMessage = {
           id: generateMessageId(),
           type: 'question',
           content: questionText,
           timestamp: new Date(),
-          question: data.question || { question: questionText },
+          question: fallbackQuestion,
         }
         set((state) => ({
           messages: [...state.messages, questionMessage],
         }))
-        set({ currentQuestion: data.question || { question: questionText } })
+        set({ currentQuestion: fallbackQuestion })
       }
 
       // 根据工作态，系统会在后续对话中自然引导用户

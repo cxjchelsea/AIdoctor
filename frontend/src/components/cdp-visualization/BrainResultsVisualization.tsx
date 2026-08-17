@@ -26,7 +26,7 @@ interface ToolResultsVisualizationProps {
 }
 
 const ToolResultsVisualization: React.FC<ToolResultsVisualizationProps> = ({
-  cdpId,
+  cdpId: _cdpId,
 }) => {
   // TODO: 从API获取八个工具执行结果数据
   const toolResults: ToolResults = {}

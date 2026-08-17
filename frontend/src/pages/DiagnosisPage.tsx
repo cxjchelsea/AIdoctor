@@ -21,7 +21,7 @@ const DiagnosisPage = () => {
   const [resultDetailDrawerVisible, setResultDetailDrawerVisible] = useState(false)
   const [structuredIntakeVisible, setStructuredIntakeVisible] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const { diagnosisResult, setWorkMode, addSystemMessage, healthAssessmentDone, workMode, cdpId } = useDiagnosisStore()
+  const { diagnosisResult, setWorkMode, addSystemMessage, healthAssessmentDone: _healthAssessmentDone, workMode: _workMode, cdpId: _cdpId } = useDiagnosisStore()
 
   // 从路由 state 获取工作态信息并设置到 store
   useEffect(() => {
