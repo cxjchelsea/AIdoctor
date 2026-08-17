@@ -336,8 +336,29 @@ Authorization Assessment
 ```
 
 This refinement PR's next gate is Combined Independent Review + Merge
-Review of the exact Head. It does **not** authorize NC-CLOSE-01A
-implementation.
+Review of the exact Head. It does **not** authorize NC-CLOSE-01A.
+
+After successful merge + PMV, the next authorization target is:
+
+```text
+NC-CLOSE-01A Authorization / ADR Decision
+```
+
+Not:
+
+```text
+NC-CLOSE-01 umbrella implementation authorization
+NC-CLOSE-01B authorization
+NC-CLOSE-01C authorization
+A8 implementation authorization
+```
+
+```text
+NC-CLOSE-01:  NOT_AUTHORIZED
+NC-CLOSE-01A: NOT_AUTHORIZED until separate explicit authorization
+NC-CLOSE-01B: NOT_AUTHORIZED
+NC-CLOSE-01C: NOT_AUTHORIZED
+```
 
 ## 13. Exit relationship
 

@@ -365,7 +365,7 @@ Legacy Asset / Target Capability
 
 ## 15. 当前下一步
 
-下一步仅允许 **NC-CLOSE-01 ADR Foundation scope refinement 的 Independent Review**，或后续单独的 `NC-CLOSE-01` Explicit Authorization。`NC-CLOSE-01` / `01A` / `01B` / `01C` 仍为 `NOT_AUTHORIZED`（≠ 实施授权）。内部排序与决策深度见 [NC-CLOSE-01 ADR scope refinement](./plans/phase-a/nc-close-01-adr-scope-refinement.md)；lane 范围仍以 [NC Closure scope register](./plans/phase-a/phase-a-non-clinical-closure-scope-register.csv) 为准。A6.5 legacy governance 已关闭；不得因此写成 A6/A7 COMPLETE，不得启动 A7-CL，不得执行 B04 提取或 C02 拒收资产映射，也不得把未来新临床内容塞回 A6.5。历史 Phase A 证据、历史 addendum、PR #29 / P7 与 dated reconciliations 分别维护。
+本 PR 审查期间下一步仅为 **Combined Independent Review + Merge Review**。成功 merge + PMV 之后，下一授权目标仅为 **NC-CLOSE-01A Authorization / ADR Decision**（≠ `NC-CLOSE-01` umbrella 实施授权；≠ 01B / 01C / A8 实施授权）。`NC-CLOSE-01` 仍为 `NOT_AUTHORIZED`；`NC-CLOSE-01A` 在单独显式授权前仍为 `NOT_AUTHORIZED`；`01B` / `01C` 仍为 `NOT_AUTHORIZED`。本 refinement 本身不授权 01A。内部排序与决策深度见 [NC-CLOSE-01 ADR scope refinement](./plans/phase-a/nc-close-01-adr-scope-refinement.md)；lane 范围仍以 [NC Closure scope register](./plans/phase-a/phase-a-non-clinical-closure-scope-register.csv) 为准。A6.5 legacy governance 已关闭；不得因此写成 A6/A7 COMPLETE，不得启动 A7-CL，不得执行 B04 提取或 C02 拒收资产映射，也不得把未来新临床内容塞回 A6.5。历史 Phase A 证据、历史 addendum、PR #29 / P7 与 dated reconciliations 分别维护。
 
 ---
 
