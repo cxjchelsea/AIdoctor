@@ -323,3 +323,20 @@ Authoritative write-back:
 [a6-5-e02-matrix-writeback.csv](./a6-5-e02-matrix-writeback.csv).
 Current control pointer:
 [phase-a-current-state-reconciliation-2026-08-14-post-pr39.md](../phase-a-current-state-reconciliation-2026-08-14-post-pr39.md).
+
+## 11. A6.5 Exit Closure addendum (2026-08-14)
+
+> Addendum only. Does not rewrite §8–§10.
+>
+> PR #40: `MERGED` (`16fe716ebdee82a3b8cf00bfcde1a7f99ae68d2d`)
+>
+> TASK-E02: `MERGED_AND_VERIFIED`
+>
+> A6.5: `LEGACY_GOVERNANCE_CLOSED`
+>
+> A6.5 Exit: `PASS_LEGACY_GOVERNANCE_ONLY`
+
+Authoritative Exit record:
+[a6-5-exit-review-2026-08-14.md](../../../evidence/phase-a/a6-5/a6-5-exit-review-2026-08-14.md).
+Current control pointer:
+[phase-a-current-state-reconciliation-2026-08-14-post-pr40.md](../phase-a-current-state-reconciliation-2026-08-14-post-pr40.md).
