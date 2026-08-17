@@ -1,0 +1,131 @@
+# Phase A CI MVP (NC-CLOSE-03)
+# 本工作流只回答：当前变更是否保住非临床 Freeze Candidate 工程基线。
+# 不回答：临床安全、Clinical Runtime 批准、Phase A Frozen、生产授权。
+# CI 成功不得被解释为上述任一结论。
+name: Phase A CI MVP
+
+on:
+  pull_request:
+    branches:
+      - agent/enterprise-agent-refactoring-plan
+  push:
+    branches:
+      - agent/enterprise-agent-refactoring-plan
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: contracts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            contracts/v1/requirements-test.lock.txt
+            contracts/v1/bindings/python/requirements-dev.txt
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5.7.0
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+      - name: Set up Node 20
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # actions/setup-node v7.0.0
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: contracts/v1/bindings/typescript/package-lock.json
+      - name: Install contract Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r contracts/v1/requirements-test.lock.txt
+          python -m pip install -r contracts/v1/bindings/python/requirements-dev.txt
+      - name: Validate Shared Contracts v1
+        run: python contracts/v1/validator/validate_contracts.py
+      - name: Test contract schemas and Python bindings
+        run: python -m pytest -p no:cacheprovider contracts/v1/tests contracts/v1/bindings/python/tests -q
+      - name: Check binding version drift
+        run: python contracts/v1/bindings/tooling/check_drift.py
+      - name: Test Java bindings
+        run: mvn -f contracts/v1/bindings/java/pom.xml test
+      - name: Install TypeScript binding dependencies
+        run: npm --prefix contracts/v1/bindings/typescript ci --ignore-scripts
+      - name: Test TypeScript bindings
+        run: npm --prefix contracts/v1/bindings/typescript test
+
+  java:
+    name: java
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5.7.0
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+      - name: Test diagnosis-service
+        run: mvn -f diagnosis-service/pom.xml test
+
+  python-safety:
+    name: python-safety
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            capabilities/requirements-test.lock.txt
+            packages/model_runtime/requirements.txt
+            packages/model_runtime/requirements-ci.txt
+      - name: Install bounded Python safety dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r capabilities/requirements-test.lock.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements-ci.txt
+      - name: Validate capability structural package
+        run: python capabilities/validator/validate_capability.py
+      - name: Test capability structural and clinical-block invariants
+        run: python -m pytest capabilities/tests -q
+      - name: Test Model Runtime non-clinical suite
+        run: python -m pytest packages/model_runtime/tests -q
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Node 20
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # actions/setup-node v7.0.0
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            frontend-admin/package-lock.json
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+      - name: Build frontend
+        run: npm --prefix frontend run build
+      - name: Install frontend-admin dependencies
+        run: npm --prefix frontend-admin ci
+      - name: Build frontend-admin
+        run: npm --prefix frontend-admin run build
