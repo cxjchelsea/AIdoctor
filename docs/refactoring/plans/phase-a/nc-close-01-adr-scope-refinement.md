@@ -335,29 +335,39 @@ Authorization Assessment
 → Post-Merge Verification
 ```
 
-This refinement PR's next gate is Combined Independent Review + Merge
-Review of the exact Head. It does **not** authorize NC-CLOSE-01A.
+This refinement artifact remains planning-only. It did not itself
+produce ADR outcomes.
 
-After successful merge + PMV, the next authorization target is:
+Current pointer after the separately authorized NC-CLOSE-01A ADR
+decision package:
 
 ```text
-NC-CLOSE-01A Authorization / ADR Decision
+NC-CLOSE-01A ADR decisions: PROPOSED_DECIDED_PENDING_REVIEW
 ```
 
-Not:
+Decision package:
+[nc-close-01a-runtime-state-boundaries.md](./nc-close-01a/nc-close-01a-runtime-state-boundaries.md)
+
+Next gate is Combined Independent Review + Merge Review of that
+Draft PR Head. This pointer does **not** authorize NC-CLOSE-01A
+implementation.
+
+Not authorized:
 
 ```text
 NC-CLOSE-01 umbrella implementation authorization
+NC-CLOSE-01A implementation
 NC-CLOSE-01B authorization
 NC-CLOSE-01C authorization
 A8 implementation authorization
 ```
 
 ```text
-NC-CLOSE-01:  NOT_AUTHORIZED
-NC-CLOSE-01A: NOT_AUTHORIZED until separate explicit authorization
-NC-CLOSE-01B: NOT_AUTHORIZED
-NC-CLOSE-01C: NOT_AUTHORIZED
+NC-CLOSE-01:                 NOT_AUTHORIZED as umbrella implementation
+NC-CLOSE-01A ADR Decision:   PROPOSED_DECIDED_PENDING_REVIEW
+NC-CLOSE-01A implementation: NOT_AUTHORIZED
+NC-CLOSE-01B:                NOT_AUTHORIZED
+NC-CLOSE-01C:                NOT_AUTHORIZED
 ```
 
 ## 13. Exit relationship
@@ -381,7 +391,10 @@ A11 eligibility != A11 PASS
 ## 14. Resulting control state after this planning change
 
 ```text
-NC-CLOSE-01 / 01A / 01B / 01C: NOT_AUTHORIZED
+NC-CLOSE-01: NOT_AUTHORIZED as umbrella implementation
+NC-CLOSE-01A ADR Decision: PROPOSED_DECIDED_PENDING_REVIEW
+NC-CLOSE-01A implementation: NOT_AUTHORIZED
+NC-CLOSE-01B / 01C: NOT_AUTHORIZED
 A8 / A9 / A10 / A11: NOT_AUTHORIZED
 A7-CL: BLOCKED
 Clinical Runtime: NOT_ENABLED
