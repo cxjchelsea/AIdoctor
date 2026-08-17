@@ -410,6 +410,13 @@ Authorized: NO
 Reasons: high fan-out, Freeze-gate importance, low clinical leakage, reduces downstream rework.
 This recommendation does not authorize NC-CLOSE-01.
 
+Current pointer (2026-08-17): historical `NC-CLOSE-01` wording above is preserved.
+Internal sequencing and decision depth are recorded in
+[nc-close-01-adr-scope-refinement.md](./nc-close-01-adr-scope-refinement.md)
+and [nc-close-01-adr-refinement-register.csv](./nc-close-01-adr-refinement-register.csv).
+Those artifacts do not replace this amendment or the scope register, and they
+do not authorize `NC-CLOSE-01` / `01A` / `01B` / `01C`. See §18.
+
 ### 12.3 Batch governance lifecycle
 
 Each implementation batch must follow:
@@ -561,3 +568,52 @@ Next Gate after this PR is Combined Independent Review of NC Closure + A6.5
 non-adoption planning. Do not treat this document as `MERGED_AND_VERIFIED`
 until Independent Review, Merge Review, Explicit Merge Authorization, Merge,
 and Post-Merge Verification complete.
+
+## 18. NC-CLOSE-01 ADR scope refinement addendum (2026-08-17)
+
+> Additive dated refinement only. Does not rewrite §9.1 / §12 / §16 / §17
+> historical planning text, and does not treat the original NC-CLOSE-01
+> recommendation as invalid at the time it was written.
+>
+> Exact Enterprise Base: `778d79420e59b8acb80cae0a2ef8a17ca2d68be2`
+>
+> Classification: `DOCS-ONLY` / `PLANNING-ONLY` / `NO ADR OUTCOME`
+
+### 18.1 Authority split
+
+| Artifact | Authority |
+|---|---|
+| [phase-a-non-clinical-closure-scope-register.csv](./phase-a-non-clinical-closure-scope-register.csv) | Authoritative for `IN_LANE` / `OUT_OF_LANE` |
+| This amendment (historical body) | Authoritative for lane purpose, exclusions, and umbrella batch `NC-CLOSE-01` |
+| [nc-close-01-adr-scope-refinement.md](./nc-close-01-adr-scope-refinement.md) and [nc-close-01-adr-refinement-register.csv](./nc-close-01-adr-refinement-register.csv) | Authoritative only for `NC-CLOSE-01` internal sequencing and ADR decision depth |
+
+The parent batch ID remains `NC-CLOSE-01`. All 12 ADR scope items remain
+in the umbrella. The scope-register schema is unchanged.
+
+### 18.2 Current sequencing recommendation
+
+```text
+NC-CLOSE-01 umbrella
+  → 01A Runtime & State Boundaries
+  → 01C / downstream structural work
+  → 01B may proceed independently where safe
+  → all required ADR dispositions before NC Closure Exit
+```
+
+```text
+NC-CLOSE-01 / 01A / 01B / 01C: NOT_AUTHORIZED
+implementation_authorized: false
+```
+
+This addendum does not select ADR outcomes, production backends, or
+implementation branches.
+
+### 18.3 Resulting control reminder
+
+```text
+A8 / A9 / A10 / A11: NOT_AUTHORIZED
+A7-CL: BLOCKED
+Clinical Runtime: NOT_ENABLED
+Production: BLOCKED
+Phase B: NOT_AUTHORIZED
+```
