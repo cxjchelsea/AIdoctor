@@ -78,8 +78,14 @@ Parent batch NC-CLOSE-06:
 | 03 | PR #45 MERGED_AND_VERIFIED | CI MVP | engineering baseline only | CI_VERIFIED | YES | no full runtime/E2E/deploy CI | CI MVP satisfies that Exit bullet |
 | 04 | PR #48 MERGED_AND_VERIFIED | WF VERIFIED; TRACE PARTIAL | **PARTIALLY_VALIDATED** | TEST_VERIFIED characterization | YES | see §7 | UNKNOWN_REQUIRES_EXIT_REVIEW |
 | 05 | PR #49 MERGED_AND_VERIFIED | ACCOUNTING_COMPLETE | ≠ ALL_RUNTIME_PASS | mixed RUNTIME_VERIFIED_LOCAL / FAIL | YES | four A2 current failures | NON_BLOCKING_DEBT |
-| A6.5 | PR #38/#39/#40; Exit 2026-08-14 | LEGACY_GOVERNANCE_CLOSED | Exit PASS_LEGACY_GOVERNANCE_ONLY | DOCUMENTED Exit review | YES | B04/C02 not reopened; deletion 0 | closed for NC |
+| A6.5 | PR #38 policy/non-adoption → PR #39 E01 → PR #40 E02 → PR #41 A6.5 Exit closure (`778d79420e59b8acb80cae0a2ef8a17ca2d68be2`); Exit record dated 2026-08-14 | LEGACY_GOVERNANCE_CLOSED | Exit PASS_LEGACY_GOVERNANCE_ONLY | DOCUMENTED Exit review | YES | B04/C02 not reopened; deletion 0 | closed for NC |
 | A7-NC | P7 Exit PASSED | COMPLETE / CLOSED / STABLE | ≠ A7 COMPLETE | DOCUMENTED Exit | YES | do not reopen Fake/Gateway/containment | closed for NC |
+
+A6.5 durable Exit closure is **PR #41** (`778d79420e59b8acb80cae0a2ef8a17ca2d68be2`).
+PR #38 remains policy / non-adoption provenance only and is **not** the Exit
+closure PR. PR #39 = E01. PR #40 = E02. Exit record dated 2026-08-14.
+Durable state remains `LEGACY_GOVERNANCE_CLOSED` /
+`PASS_LEGACY_GOVERNANCE_ONLY`.
 
 ## 5. Durable control-state table
 
