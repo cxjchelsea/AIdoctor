@@ -1,0 +1,5 @@
+# POSTFREEZE-02 HTTP 传输边界依赖；与 Runtime foundation 依赖分离。
+# 禁止在此加入 provider SDK / LangGraph / 数据库驱动 / 向量库 / 临床 NLP。
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+httpx==0.26.0

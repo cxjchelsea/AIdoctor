@@ -76,6 +76,8 @@ jobs:
           distribution: temurin
           java-version: "8"
           cache: maven
+      - name: Install local Shared Contracts Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
       - name: Test diagnosis-service
         run: mvn -f diagnosis-service/pom.xml test
 
@@ -94,12 +96,14 @@ jobs:
             capabilities/requirements-test.lock.txt
             packages/model_runtime/requirements.txt
             packages/model_runtime/requirements-ci.txt
+            packages/python_runtime/requirements-http.txt
       - name: Install bounded Python safety dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r capabilities/requirements-test.lock.txt
           python -m pip install -r packages/model_runtime/requirements.txt
           python -m pip install -r packages/model_runtime/requirements-ci.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
       - name: Validate capability structural package
         run: python capabilities/validator/validate_capability.py
       - name: Test capability structural and clinical-block invariants
@@ -133,3 +137,66 @@ jobs:
         run: npm --prefix frontend-admin ci
       - name: Build frontend-admin
         run: npm --prefix frontend-admin run build
+
+  java-python-protocol:
+    name: java-python-protocol
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/python_runtime/requirements-http.txt
+            packages/model_runtime/requirements.txt
+            contracts/v1/bindings/python/requirements-dev.txt
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5.7.0
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+      - name: Install required Python protocol dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r contracts/v1/bindings/python/requirements-dev.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+      - name: Install local Shared Contracts Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Start Python Runtime HTTP façade
+        env:
+          PYTHONPATH: contracts/v1/bindings/python
+        run: |
+          mkdir -p logs
+          nohup python -m uvicorn packages.python_runtime.http.app:app --host 127.0.0.1 --port 8099 > logs/python-runtime-http.log 2>&1 &
+          echo $! > logs/python-runtime-http.pid
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8099/api/v1/runtime/health; then
+              echo
+              echo "HEALTH_PASS"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "HEALTH_TIMEOUT"
+          cat logs/python-runtime-http.log
+          exit 1
+      - name: Run PythonRuntimeProtocolIT
+        run: mvn -f diagnosis-service/pom.xml -Dtest=PythonRuntimeProtocolIT test
+      - name: Capture Python Runtime HTTP façade logs
+        if: always()
+        run: |
+          if [ -f logs/python-runtime-http.log ]; then
+            echo "===== python-runtime-http.log ====="
+            cat logs/python-runtime-http.log
+          fi
+      - name: Stop Python Runtime HTTP façade
+        if: always()
+        run: |
+          if [ -f logs/python-runtime-http.pid ]; then
+            kill "$(cat logs/python-runtime-http.pid)" || true
+          fi
