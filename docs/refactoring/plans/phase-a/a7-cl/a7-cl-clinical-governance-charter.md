@@ -62,6 +62,70 @@ Binding sources (not rewritten here):
 Historical PR #29 text is **preserved**. This charter records **current
 effective** status. It does not delete or rewrite PR #29.
 
+## 2A. Current-effective amendment identity
+
+A6.5 non-adoption §13 superseded historical Full A7 Rejoin items
+RG-01 / RG-02 and recorded:
+
+```text
+A7_ROADMAP_AMENDMENT_REQUIRED
+```
+
+for later current-effective Full A7 Rejoin / clinical-rejoin
+semantics. Historical PR #29 remains `HISTORICAL_AUTHORITY_PRESERVED`.
+It is not deleted and is not declared invalid.
+
+Repository Owner later authorized this batch with:
+
+```text
+A7_CL_01_CLINICAL_GOVERNANCE_EXPLICIT_AUTHORIZATION_GRANTED
+```
+
+for Clinical Governance plus the Rejoin / Exit matrix.
+
+Therefore A7-CL-01 is the Repository Owner-authorized
+current-effective A7 roadmap / clinical-rejoin amendment required by
+A6.5 non-adoption §13 (`A7_ROADMAP_AMENDMENT_REQUIRED`).
+
+```text
+A7_CL_01_SATISFIES_A7_ROADMAP_AMENDMENT_REQUIRED
+THE_OWNER_AUTHORIZED_CURRENT_EFFECTIVE_A7_ROADMAP_AND_CLINICAL_REJOIN_AMENDMENT
+```
+
+This amendment preserves historical PR #29 text but, once reviewed
+and merged, supersedes its current-effective execution ordering
+where this charter and matrix explicitly identify it:
+
+```text
+HISTORICAL_AUTHORITY_PRESERVED
+CURRENT_EFFECTIVE_EXECUTION_ORDER_SUPERSEDED_BY_A7_CL_01
+```
+
+Supersession is limited to RG-10 / RG-11 / RG-12 and related Prompt
+registration / route eligibility / Capability binding / evaluation
+sequencing. It does **not** supersede all PR #29 governance.
+
+```text
+A7_CL_01_CHANGES_ORDERING_NOT_SUBSTANTIVE_GATE_REQUIREMENTS
+```
+
+A7-CL-01 changes **WHEN** RG-10 / RG-11 / RG-12 evidence is produced
+and consumed. It does **not** change **WHAT** those gates require.
+The following remain mandatory before A7-CL / Full A7 completion and
+are **not** waived:
+
+- RG-10: Clinical Prompt review complete
+- RG-11: Clinical route evaluation and fallback evidence complete
+- RG-12: Capability binding lifecycle/release evidence complete
+
+Until PR #53 merges, this identity remains:
+
+```text
+AUTHORED_PENDING_REVIEW
+```
+
+It is **not** durable current Enterprise authority.
+
 ## 3. Current durable state
 
 ```text
@@ -93,7 +157,7 @@ A7_CL_GOVERNANCE_DEFINED
 A7_CL_CLINICAL_EXPERT_REVIEW_REQUIRED
 ```
 
-`GOVERNANCE_DEFINED != A7-CL STARTED`.  
+`GOVERNANCE_DEFINED != A7-CL STARTED`.
 `GOVERNANCE_DEFINED != A7-CL-02 AUTHORIZED`.
 
 ## 4. adult_respiratory_v1 scope
@@ -280,35 +344,37 @@ PR #29 §7 / §15 say clinical Prompt **registration**, route
 **evaluation** cannot begin before the Full A7 Rejoin Gate, and they
 list RG-10…RG-12 among the 13 mandatory items.
 
-That reading is circular if RG-10…RG-12 must be complete **before**
-the content they review can be authored.
+That historical ordering is circular if RG-10…RG-12 must be complete
+**before** the content they review can be authored. Circularity
+explains why A6.5 §13 recorded `A7_ROADMAP_AMENDMENT_REQUIRED`. It
+does **not** itself amend PR #29. The current-effective ordering
+below is authorized only by §2A
+(`A7_CL_01_SATISFIES_A7_ROADMAP_AMENDMENT_REQUIRED`).
 
-Current effective reconciliation, supported by:
-
-- A7 amendment §5 sequence: governance/review evidence → A7-CL → Full A7 Exit;
-- non-adoption §13: remaining work is **new A7-CL prerequisites** plus
-  **new clinical governance evidence**, not B04/C02;
-- CL-01 / CL-02 allowed operation: **after** rejoin, register reviewed
-  Prompt / eligibility / binding / evaluation.
-
-Therefore:
+Current effective roles remain:
 
 ```text
 RG-06 / RG-07 / RG-08 = PRE_CONTENT_START_GATE
+RG-09                 = CONTENT_APPROVAL_GATE
 FB-11 S/Q/H           = CONTENT_APPROVAL_GATE
 RG-10 / RG-11 / RG-12 = A7_CL_EXIT_GATE
+CL-01 / CL-02         = A7_CL_EXIT_GATE
 ```
 
-“Cannot begin before Rejoin Gate” is read as: cannot begin
-**activation** (eligible routes, runtime adopt, production
-eligibility) before Owner / Reviewer / written authorization / A6.5
-legacy Exit / A7-NC Exit are in force.
+`A7_CL_01_CHANGES_ORDERING_NOT_SUBSTANTIVE_GATE_REQUIREMENTS`.
+
+“Cannot begin before Rejoin Gate” is read, for current-effective
+execution only, as: cannot begin **activation** (eligible routes,
+runtime adopt, production eligibility) before Owner / Reviewer /
+written authorization / A6.5 legacy Exit / A7-NC Exit are in force.
 
 It is **not** read as: Prompt review, route evaluation, and Capability
 binding must already exist before the content they govern is authored.
 
 Remaining wording tension in historical PR #29 is documented, not
-rewritten. Current effective status is this charter + matrix.
+rewritten (`HISTORICAL_AUTHORITY_PRESERVED`). Current-effective
+execution ordering is superseded only as identified in §2A and the
+matrix (`CURRENT_EFFECTIVE_EXECUTION_ORDER_SUPERSEDED_BY_A7_CL_01`).
 
 ## 12. A7-NC integrity
 
@@ -340,7 +406,7 @@ Clinical Runtime = NOT_ENABLED
 A7-CL / Full A7 evaluation evidence, if required, must use Fake /
 blocked-shell / offline / synthetic material.
 
-Real provider: `PHASE_A_CLINICAL_REAL_PROVIDER_SEPARATE_AUTHORIZATION_REQUIRED`  
+Real provider: `PHASE_A_CLINICAL_REAL_PROVIDER_SEPARATE_AUTHORIZATION_REQUIRED`
 PHI: `PHASE_A_CLINICAL_PHI_SEPARATE_AUTHORIZATION_REQUIRED`
 
 ## 14. Future batch topology
