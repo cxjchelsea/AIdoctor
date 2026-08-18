@@ -24,17 +24,24 @@ from app.utils.dependencies import get_llm_client
 
 _llm_client = None
 _fusion_engine = None
+_diagnosis_service = None
 
 def get_fusion_engine():
-    """获取融合引擎单例（性能优化）"""
+    """按需获取融合引擎单例；导入与 /health 不得构造 LLM 客户端。"""
     global _llm_client, _fusion_engine
     if _fusion_engine is None:
         _llm_client = get_llm_client()
         _fusion_engine = FusionEngine(llm_client=_llm_client)
     return _fusion_engine
 
-diagnosis_service = DiagnosisService()
-fusion_engine = get_fusion_engine()  # 使用单例
+
+def get_diagnosis_service():
+    """按需获取诊断服务；导入与 /health 不得构造 LLM 客户端。"""
+    global _diagnosis_service
+    if _diagnosis_service is None:
+        _diagnosis_service = DiagnosisService()
+    return _diagnosis_service
+
 classifier = ThreeLayerClassifier()
 
 # Neo4j客户端和推理引擎单例（性能优化：避免重复创建连接）
@@ -79,7 +86,7 @@ async def diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     - 证据分析
     """
     try:
-        result = await diagnosis_service.diagnose(request)
+        result = await get_diagnosis_service().diagnose(request)
         return result
     except Exception as e:
         logger.error(f"诊断失败: {str(e)}", exc_info=True)
@@ -90,7 +97,7 @@ async def diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
 async def rule_based_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     """规则引擎诊断"""
     try:
-        result = await fusion_engine.rule_engine.diagnose(request)
+        result = await get_fusion_engine().rule_engine.diagnose(request)
         return result
     except Exception as e:
         logger.error(f"规则引擎诊断失败: {str(e)}", exc_info=True)
@@ -101,7 +108,7 @@ async def rule_based_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]
 async def kg_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     """知识图谱查询"""
     try:
-        result = await fusion_engine.kg_engine.diagnose(request)
+        result = await get_fusion_engine().kg_engine.diagnose(request)
         return result
     except Exception as e:
         logger.error(f"知识图谱查询失败: {str(e)}", exc_info=True)
@@ -112,7 +119,7 @@ async def kg_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
 async def statistical_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     """统计模型推理"""
     try:
-        result = await fusion_engine.statistical_engine.diagnose(request)
+        result = await get_fusion_engine().statistical_engine.diagnose(request)
         return result
     except Exception as e:
         logger.error(f"统计模型推理失败: {str(e)}", exc_info=True)
@@ -123,7 +130,7 @@ async def statistical_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any
 async def llm_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     """大模型推理"""
     try:
-        result = await fusion_engine.llm_engine.diagnose(request)
+        result = await get_fusion_engine().llm_engine.diagnose(request)
         return result
     except Exception as e:
         logger.error(f"大模型推理失败: {str(e)}", exc_info=True)
@@ -134,7 +141,7 @@ async def llm_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
 async def differential_diagnose(request: DiagnosisEngineRequest) -> Dict[str, Any]:
     """鉴别诊断"""
     try:
-        result = await fusion_engine.differential_engine.diagnose(request)
+        result = await get_fusion_engine().differential_engine.diagnose(request)
         return result
     except Exception as e:
         logger.error(f"鉴别诊断失败: {str(e)}", exc_info=True)
@@ -153,7 +160,7 @@ async def three_layer_classify(request: DiagnosisEngineRequest) -> Dict[str, Any
     """
     try:
         # 先执行融合诊断获取候选集
-        fusion_result = await fusion_engine.fuse(request)
+        fusion_result = await get_fusion_engine().fuse(request)
         possibilities = fusion_result.get('possibilities', {})
         
         # 执行三层分类
@@ -242,7 +249,7 @@ async def generate_ddx_candidates(request: Dict[str, Any]) -> Dict[str, Any]:
         )
         
         # 执行融合诊断获取候选集
-        fusion_result = await fusion_engine.fuse(diagnosis_request)
+        fusion_result = await get_fusion_engine().fuse(diagnosis_request)
         possibilities = fusion_result.get('possibilities', {})
         
         # 执行三层分类
@@ -373,7 +380,7 @@ async def invoke_tool_3(tool_context: ToolContext) -> ToolResult:
         )
         
         # 4. 调用现有业务逻辑
-        diagnosis_result = await diagnosis_service.diagnose(diagnosis_request)
+        diagnosis_result = await get_diagnosis_service().diagnose(diagnosis_request)
         
         # 5. 转换为ToolResult格式
         duration_ms = int((time.time() - start_time) * 1000)
