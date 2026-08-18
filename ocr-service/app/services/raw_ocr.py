@@ -114,5 +114,12 @@ class RawOcrEngine:
                 "Unable to decode image bytes for RAW OCR"
             ) from decode_error
 
-        processed_image = self.preprocess_image(decoded_image)
+        try:
+            processed_image = self.preprocess_image(decoded_image)
+        except Exception as preprocess_error:
+            # 仅约束 bytes 识别入口；preprocess_image 本身仍保持历史直接抛出语义。
+            raise RawOcrExecutionFailedError(
+                "RAW OCR preprocessing failed"
+            ) from preprocess_error
+
         return self.recognize_raw_text(processed_image, language=language)

@@ -163,3 +163,26 @@ def test_recognize_from_bytes_uses_engine_path(monkeypatch: pytest.MonkeyPatch) 
     engine = RawOcrEngine()
     raw_text = engine.recognize_from_bytes(image_buffer.getvalue())
     assert raw_text == _SYNTHETIC_OCR_TEXT
+
+
+def test_recognize_from_bytes_wraps_preprocess_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """bytes 识别路径必须把预处理技术失败规范为 RawOcrExecutionFailedError。"""
+
+    def fail_preprocess(self, image: Image.Image) -> Image.Image:
+        raise RuntimeError("synthetic preprocess boom")
+
+    # 使用当前模块对象，避免先前 reload 导致异常类身份不一致。
+    raw_ocr_module = importlib.import_module("app.services.raw_ocr")
+    monkeypatch.setattr(raw_ocr_module.RawOcrEngine, "preprocess_image", fail_preprocess)
+    image_buffer = io.BytesIO()
+    _build_synthetic_rgb_image().save(image_buffer, format="PNG")
+    engine = raw_ocr_module.RawOcrEngine()
+    try:
+        engine.recognize_from_bytes(image_buffer.getvalue())
+    except raw_ocr_module.RawOcrExecutionFailedError as typed_error:
+        assert typed_error.error_code == "RAW_OCR_EXECUTION_FAILED"
+        assert isinstance(typed_error.__cause__, RuntimeError)
+        return
+    raise AssertionError("recognize_from_bytes must raise RawOcrExecutionFailedError")

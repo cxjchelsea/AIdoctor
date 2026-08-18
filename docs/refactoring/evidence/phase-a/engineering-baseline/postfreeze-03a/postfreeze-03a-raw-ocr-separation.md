@@ -93,10 +93,26 @@ Public API in `ocr-service/app/services/raw_ocr.py`:
 - `RawOcrEngine.recognize_raw_text(image: PIL.Image, language=DEFAULT_OCR_LANGUAGE) -> str`
 - `RawOcrEngine.recognize_from_bytes(image_bytes: bytes, language=DEFAULT_OCR_LANGUAGE) -> str`
 
+Boundary roles must not be collapsed:
+
+```text
+preprocess_image
+= reusable historical-equivalent preprocessing primitive;
+direct preprocessing exception semantics preserved for legacy compatibility
+
+recognize_raw_text
+= raw text or typed Tesseract technical failure
+
+recognize_from_bytes
+= raw text or typed technical failure across decode + preprocessing + OCR
+```
+
 Input: `bytes` or `PIL.Image`. No FastAPI `UploadFile`. No `ContractEnvelope`.
 No `ToolResult`. No Python Runtime.
 
-Output: raw text string, or typed technical exception.
+`recognize_from_bytes` output: raw text string, or typed technical exception.
+`preprocess_image` may still raise implementation-specific exceptions when
+called directly; that is intentional legacy compatibility.
 
 Dependencies owned by this module: PIL, pytesseract, cv2, numpy, stdlib.
 
@@ -115,14 +131,17 @@ double-process an image.
 
 ## 5. Technical failures
 
-| Condition | Raw boundary |
-|---|---|
-| Tesseract not found / binary missing | `RawOcrEngineUnavailableError` (`RAW_OCR_ENGINE_UNAVAILABLE`) |
-| Other engine exception / undecodable bytes | `RawOcrExecutionFailedError` (`RAW_OCR_EXECUTION_FAILED`) |
-| Successful OCR with no text | `""` |
+| Condition | `recognize_from_bytes` | `recognize_raw_text` | `preprocess_image` |
+|---|---|---|---|
+| Undecodable bytes | `RawOcrExecutionFailedError` | n/a | n/a |
+| Preprocessing failure | `RawOcrExecutionFailedError` | n/a | implementation-specific (legacy) |
+| Tesseract not found / binary missing | `RawOcrEngineUnavailableError` | same | n/a |
+| Other Tesseract / engine exception | `RawOcrExecutionFailedError` | same | n/a |
+| Successful OCR with no text | `""` | `""` | n/a |
 
-These are distinguishable. The new boundary does not collapse engine failure
-into `""`.
+These are distinguishable. `recognize_from_bytes` does not collapse engine or
+preprocessing failure into `""`. `preprocess_image` is not itself a typed
+recognition boundary.
 
 ## 6. Legacy compatibility strategy
 
@@ -228,7 +247,7 @@ Local isolated Python 3.10:
 ```text
 cd ocr-service
 python -m pytest tests -q
-12 passed
+13 passed
 ```
 
 Coverage:
@@ -244,6 +263,8 @@ Coverage:
 - legacy engine unavailable / execution failed still returns historical empty
   result and does not leak new exceptions
 - clinical extractors remain callable with synthetic engineering text
+- `recognize_from_bytes` wraps preprocess failure as `RawOcrExecutionFailedError`
+  without changing `preprocess_image` direct-call exception semantics
 
 Synthetic content: `HELLO OCR 123` in-memory only. No binary fixture file.
 No medical report images. No real PHI.
