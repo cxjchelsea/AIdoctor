@@ -16,6 +16,12 @@ v2.6：临床场景扩展、呼吸道 RAG V1、统一 Prompt/Model Runtime、旧
 
 当前仍为 **Freeze Candidate**。目标架构和执行体系已经完整；最终 Frozen Baseline 仍需要 Phase A 的真实编译、启动、数据库、旧资产、Prompt、模型、知识和 E2E 验证。
 
+### 1.1 对象分立：原 Frozen vs 工程基线
+
+原 Phase A Frozen Baseline / A11 仍为 `NOT_READY_BLOCKED_CLINICAL` / `NOT_PASSED`。不得把工程冻结写成原 Frozen 通过。
+
+当前产品工程对象 `PHASE_A_ENGINEERING_BASELINE` 由 RESCOPE-01 分立。已审查候选的 durable 记录见 [Engineering Freeze Record V1](./plans/phase-a/engineering-baseline/phase-a-engineering-freeze-record-v1.md) 与 [current-effective gates V1](./plans/phase-a/engineering-baseline/phase-a-engineering-freeze-effective-gates-v1.csv)。历史门禁登记表保持历史真值，不得当作现行判断。该 Freeze Record 在独立审查、标准合并与 post-merge verification 之前，不构成已 durable `FROZEN`。
+
 ```text
 目标架构重构
 ≠ 旧设计全部废弃
