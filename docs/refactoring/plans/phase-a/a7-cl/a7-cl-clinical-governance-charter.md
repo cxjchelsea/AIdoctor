@@ -10,10 +10,14 @@
 >
 > Scope: `adult_respiratory_v1` only
 >
-> Status: `GOVERNANCE_AUTHORED_PENDING_REVIEW`
+> Status: `GOVERNANCE_AMENDMENT_MERGED_AND_VERIFIED`
 >
 > Authorization token:
 > `A7_CL_01_CLINICAL_GOVERNANCE_EXPLICIT_AUTHORIZATION_GRANTED`
+>
+> Later current-product disposition (RESCOPE-01, pending review):
+> proposed `CLINICAL_TRACK = DEFERRED_OUT_OF_CURRENT_PRODUCT_BASELINE`
+> proposed `A7-CL = DEFERRED_OUT_OF_CURRENT_BASELINE`
 >
 > Exact Base: `b03a4d0d915039c4377a98af194dcc45fcb034c9`
 >
@@ -118,13 +122,39 @@ are **not** waived:
 - RG-11: Clinical route evaluation and fallback evidence complete
 - RG-12: Capability binding lifecycle/release evidence complete
 
-Until PR #53 merges, this identity remains:
+PR #53 has merged. This A7-CL-01 amendment identity is durable
+Enterprise authority:
 
 ```text
-AUTHORED_PENDING_REVIEW
+GOVERNANCE_AMENDMENT_MERGED_AND_VERIFIED
 ```
 
-It is **not** durable current Enterprise authority.
+## 2B. Later current-product deferral (RESCOPE-01)
+
+A later Owner resource decision recorded:
+
+```text
+CLINICAL_EXPERT_RESOURCE_MODEL: NOT_AVAILABLE / NOT_PLANNED
+```
+
+RESCOPE-01 (pending review) proposes, for the **current product
+baseline only**:
+
+```text
+CLINICAL_TRACK: DEFERRED_OUT_OF_CURRENT_PRODUCT_BASELINE
+A7-CL:          DEFERRED_OUT_OF_CURRENT_BASELINE
+CLINICAL_TRACK_REENTRY: NOT_PLANNED_EXPLICIT_REAUTHORIZATION_REQUIRED
+```
+
+This does **not** write `A7-CL COMPLETE`. It does **not** waive
+RG-06 / RG-07 / RG-08 / FB-11 / RG-10 / RG-11 / RG-12. Those gates
+remain defined for hypothetical re-entry.
+
+A7-CL-01 remains `GOVERNANCE_AMENDMENT_MERGED_AND_VERIFIED`.
+A7-CL-02 remains `NOT_AUTHORIZED`.
+Durable Enterprise `A7-CL` remains `BLOCKED` until RESCOPE-01 merges.
+
+AI / LLM / synthetic credentials cannot satisfy clinical gates.
 
 ## 3. Current durable state
 
