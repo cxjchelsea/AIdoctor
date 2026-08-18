@@ -106,6 +106,10 @@ jobs:
         run: python -m pytest capabilities/tests -q
       - name: Test Model Runtime non-clinical suite
         run: python -m pytest packages/model_runtime/tests -q
+      - name: Test Python Runtime foundation
+        env:
+          PYTHONPATH: contracts/v1/bindings/python
+        run: python -m pytest packages/python_runtime/tests -q
 
   frontend:
     name: frontend
