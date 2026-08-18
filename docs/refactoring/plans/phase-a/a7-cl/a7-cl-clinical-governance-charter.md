@@ -122,13 +122,12 @@ are **not** waived:
 - RG-11: Clinical route evaluation and fallback evidence complete
 - RG-12: Capability binding lifecycle/release evidence complete
 
-Until PR #53 merges, this identity remains:
+PR #53 has merged. This A7-CL-01 amendment identity is durable
+Enterprise authority:
 
 ```text
-AUTHORED_PENDING_REVIEW
+GOVERNANCE_AMENDMENT_MERGED_AND_VERIFIED
 ```
-
-It is **not** durable current Enterprise authority.
 
 ## 2B. Later current-product deferral (RESCOPE-01)
 
