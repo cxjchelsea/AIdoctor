@@ -238,3 +238,21 @@ def test_python_runtime_does_not_register_raw_ocr_capability():
         if "engineering.ocr.raw" in text:
             violations.append(_repo_relative(path))
     assert violations == []
+
+
+def test_raw_ocr_adapter_remains_injection_only_and_ocr_library_free():
+    """新增适配器必须保持注入式、无 OCR 库、无遗留服务导入、无生产能力标识。"""
+
+    adapter_path = _PYTHON_RUNTIME / "raw_ocr_adapter.py"
+    assert adapter_path.is_file()
+    adapter_text = adapter_path.read_text(encoding="utf-8")
+    assert "engineering.ocr.raw" not in adapter_text
+    imported_modules = _imported_modules(adapter_path)
+    for forbidden in _FORBIDDEN_OCR_RUNTIME_ROOTS:
+        for module_name in imported_modules:
+            assert module_name != forbidden
+            assert not module_name.startswith(f"{forbidden}.")
+    for module_name in imported_modules:
+        assert not module_name.endswith("_service")
+        assert "ocr-service" not in module_name
+        assert module_name != "app" and not module_name.startswith("app.")
