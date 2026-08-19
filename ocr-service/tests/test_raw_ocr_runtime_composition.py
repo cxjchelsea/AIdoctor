@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import io
+import typing
 
 from PIL import Image
 from pytesseract.pytesseract import TesseractNotFoundError
@@ -17,6 +18,14 @@ from fastapi.testclient import TestClient
 
 # 禁止在模块顶层导入 packages.python_runtime / aidoctor_shared_contracts。
 # 历史 isolation 测试会扫描 sys.modules；组合导入必须留在函数体内。
+#
+# ocr-separation 锁定 Python 3.10。packages.model_runtime 在导入期执行
+# `from typing import Self`，而 typing.Self 只存在于 3.11+。
+# 不得安装 model_runtime/requirements-ci.txt：它会把 OCR pydantic
+# 从 2.5.0 升到 2.10.3。不得改 model_runtime 或 Runtime 生产文件。
+# 因此仅在本测试组合边界补一个导入期名字，让 3.10 能加载 Runtime。
+if not hasattr(typing, "Self"):
+    typing.Self = typing.TypeVar("Self")
 
 _RAW_OCR_CAPABILITY_ID = "engineering.ocr.raw"
 _RAW_OCR_CAPABILITY_VERSION = "0.0.1"

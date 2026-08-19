@@ -171,6 +171,15 @@ ocr-service/tests/test_raw_ocr_runtime_composition.py
   (TEST-ONLY composition boundary)
 ```
 
+Python 3.10 composition note:
+
+`packages.model_runtime.api.models` executes `from typing import Self`.
+`typing.Self` exists only on Python 3.11+. `ocr-separation` must stay on 3.10.
+Installing `packages/model_runtime/requirements-ci.txt` would upgrade OCR
+`pydantic==2.5.0` to `pydantic==2.10.3` and is therefore not used.
+The composition test installs a test-only `typing.Self` name if missing.
+This is not a production Runtime change and not a requirements change.
+
 Python Runtime requirements were not changed.
 OCR service requirements were not changed.
 `packages/model_runtime/requirements.txt` was not changed.
@@ -379,10 +388,24 @@ Do not reuse `32219871074`.
 
 The 03B-B Draft PR must have a fresh run on its own Head.
 
-Until that exact-Head run is observed:
+First exact-Head run:
+
+- `32222655598`
+- event = `pull_request`
+- head = `763f32a97593051ced4f07c89a874d55e48ab358`
+- conclusion = `failure`
+- `ocr-separation` historical raw-engine step = success
+- `ocr-separation` composition step = failure
+- cause = `ImportError: cannot import name 'Self' from 'typing'` on Python 3.10
+  while importing `packages.model_runtime`
+
+Remediation stays inside the authorized composition test file: test-only
+`typing.Self` shim. `requirements-ci.txt` is not installed.
+
+Until the remediated Head run succeeds:
 
 ```text
-CI_VERIFIED = PENDING_FRESH_PR_HEAD_CI
+CI_VERIFIED = PENDING_REMEDIATION_CI
 ```
 
 ## 14. Evidence labels
@@ -392,7 +415,7 @@ CI_VERIFIED = PENDING_FRESH_PR_HEAD_CI
 | DOCUMENTED | YES |
 | CODE_CONFIRMED | YES |
 | TEST_VERIFIED | YES |
-| CI_VERIFIED | PENDING_FRESH_PR_HEAD_CI |
+| CI_VERIFIED | PENDING_REMEDIATION_CI |
 | RAW_OCR_TOOL_ADAPTER_IMPLEMENTED | YES |
 | REAL_TOOL_ADAPTER_TEST_VERIFIED | YES |
 | RAW_OCR_PREPROCESSING_INTEGRATION_VERIFIED | YES |
