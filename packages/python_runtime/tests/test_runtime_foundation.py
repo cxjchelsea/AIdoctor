@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
+
 import packages.python_runtime as python_runtime
-from aidoctor_shared_contracts import CONTRACT_VERSION, VERSION_NEGOTIATION, ContractEnvelope
+from aidoctor_shared_contracts import CONTRACT_VERSION, VERSION_NEGOTIATION, ContractEnvelope, ToolContext
 from packages.python_runtime import (
     DeterministicRuntimeExecutor,
     ProtocolValidationError,
@@ -113,3 +115,50 @@ def test_runtime_executor_deterministic_smoke():
     dumped = first.model_dump()
     assert "patient_id" not in dumped
     assert "PHI" not in str(dumped)
+
+
+def test_fake_tool_port_signature_stays_envelope_only():
+    """POSTFREEZE-02 ToolPort 不得被改成消费 ToolContext。"""
+
+    parameters = list(inspect.signature(FakeToolPort.invoke).parameters)
+    assert parameters == ["self", "envelope"]
+    annotations = inspect.get_annotations(FakeToolPort.invoke, eval_str=True)
+    assert annotations["envelope"] is ContractEnvelope
+    assert "context" not in parameters
+
+
+def test_default_executor_has_no_context_router():
+    """默认执行器未注入路由时，ToolContext 路径必须失败关闭。"""
+
+    executor = DeterministicRuntimeExecutor()
+    context_payload = {
+        "contract_version": "1.0.0",
+        "envelope": _synthetic_envelope().model_dump(),
+        "actor": {"actor_id": "python-runtime-smoke", "actor_type": "SERVICE"},
+        "identifiers": {
+            "contract_version": "1.0.0",
+            "cdp_id": "synthetic-cdp-runtime-1",
+        },
+        "capability": {
+            "capability_id": "engineering.synthetic.runtime_smoke",
+            "capability_version": "0.0.1",
+        },
+        "current_state_ref": {
+            "cdp_id": "synthetic-cdp-runtime-1",
+            "version": 1,
+            "read_fields": [],
+        },
+        "authorization_scope": {"granted": [], "requested": []},
+        "deadline": "2026-08-19T00:05:00Z",
+        "locale": "und",
+        "requested_operation": "SYNTHETIC_ECHO",
+        "input_refs": [],
+    }
+    assert context_payload["requested_operation"] == "SYNTHETIC_ECHO"
+    assert context_payload["requested_operation"] != "synthetic_echo"
+    try:
+        executor.execute_context(ToolContext.model_validate(context_payload))
+    except Exception as exc:
+        assert exc.__class__.__name__ == "ToolRoutingError"
+    else:
+        raise AssertionError("expected ToolRoutingError")

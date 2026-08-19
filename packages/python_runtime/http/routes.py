@@ -1,18 +1,23 @@
-"""规范 Runtime HTTP 路由：仅 health 与合成 invoke，不是遗留服务网关。"""
+"""规范 Runtime HTTP 路由：仅 health 与 invoke，不是遗留服务网关。"""
 
 from __future__ import annotations
 
 from typing import Any, Optional
 
-from aidoctor_shared_contracts import CONTRACT_VERSION
+from aidoctor_shared_contracts import CONTRACT_VERSION, ToolContext
 from fastapi import APIRouter, Body, Header, Request
 from fastapi.responses import JSONResponse
+
+from packages.python_runtime.artifacts import ArtifactResolutionError
+from packages.python_runtime.tool_router import ToolRoutingError
 
 from .transport import (
     HEADER_CDP_ID,
     HEADER_TRACE_ID,
-    parse_contract_envelope,
-    require_authorized_synthetic_operation,
+    TransportError,
+    parse_runtime_invoke_payload,
+    require_authorized_capability,
+    require_tool_context_cross_identity,
     require_trace_identity,
 )
 
@@ -31,20 +36,52 @@ def health() -> dict[str, str]:
 
 
 @runtime_router.post("/tools/invoke")
-def invoke_synthetic_tool(
+def invoke_runtime_tool(
     request: Request,
     raw_payload: Any = Body(...),
     x_trace_id: Optional[str] = Header(default=None, alias=HEADER_TRACE_ID),
     x_cdp_id: Optional[str] = Header(default=None, alias=HEADER_CDP_ID),
 ) -> JSONResponse:
-    """仅执行授权合成能力；经 RuntimeExecutor 端口，不直连 Model Runtime。"""
+    """同一路由兼容信封与 ToolContext；经执行器端口，不直连 Model Runtime。"""
 
-    envelope = parse_contract_envelope(raw_payload)
-    require_trace_identity(x_trace_id, envelope)
-    require_authorized_synthetic_operation(envelope)
+    parsed_request = parse_runtime_invoke_payload(raw_payload)
+    authorized_capability_ids = request.app.state.authorized_capability_ids
     runtime_executor = request.app.state.runtime_executor
-    tool_result = runtime_executor.execute(envelope)
-    response_headers = {HEADER_TRACE_ID: envelope.trace_id}
+    try:
+        if isinstance(parsed_request, ToolContext):
+            require_trace_identity(x_trace_id, parsed_request.envelope)
+            require_tool_context_cross_identity(parsed_request)
+            require_authorized_capability(
+                parsed_request.envelope.capability_id,
+                authorized_capability_ids,
+                correlation_id=parsed_request.envelope.correlation_id,
+                trace_id=parsed_request.envelope.trace_id,
+            )
+            tool_result = runtime_executor.execute_context(parsed_request)
+            response_trace_id = parsed_request.envelope.trace_id
+        else:
+            require_trace_identity(x_trace_id, parsed_request)
+            require_authorized_capability(
+                parsed_request.capability_id,
+                authorized_capability_ids,
+                correlation_id=parsed_request.correlation_id,
+                trace_id=parsed_request.trace_id,
+            )
+            tool_result = runtime_executor.execute(parsed_request)
+            response_trace_id = parsed_request.trace_id
+    except ArtifactResolutionError as exc:
+        raise TransportError(
+            exc.error_code,
+            exc.message,
+            http_status=400,
+        ) from exc
+    except ToolRoutingError as exc:
+        raise TransportError(
+            exc.error_code,
+            exc.message,
+            http_status=400,
+        ) from exc
+    response_headers = {HEADER_TRACE_ID: response_trace_id}
     if x_cdp_id:
         # X-CDP-Id 仅作不透明合成相关元数据回显，不做患者权威解释
         response_headers[HEADER_CDP_ID] = x_cdp_id
