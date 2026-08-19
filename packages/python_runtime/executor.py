@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from aidoctor_shared_contracts import ContractEnvelope, ToolResult
 
-from .checkpoint import CheckpointRecord, InMemoryCheckpointPort
+from .checkpoint import CheckpointRecord
+from .ports import CheckpointPort, ToolPort
 from .protocol import validate_envelope
 from .tools import FakeToolPort
 
@@ -14,8 +15,8 @@ class DeterministicRuntimeExecutor:
 
     def __init__(
         self,
-        tool_port: FakeToolPort | None = None,
-        checkpoint_port: InMemoryCheckpointPort | None = None,
+        tool_port: ToolPort | None = None,
+        checkpoint_port: CheckpointPort | None = None,
     ) -> None:
         self._tool_port = FakeToolPort() if tool_port is None else tool_port
         self._checkpoint_port = checkpoint_port

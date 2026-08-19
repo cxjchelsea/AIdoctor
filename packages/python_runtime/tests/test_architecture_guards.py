@@ -26,11 +26,14 @@ _FORBIDDEN_PROVIDER_ROOTS = frozenset(
     }
 )
 
-_ALLOWED_MODEL_RUNTIME_PREFIXES = (
-    "packages.model_runtime",
-    "packages.model_runtime.gateway",
-    "packages.model_runtime.gateway.models",
-    "packages.model_runtime.gateway.errors",
+# 精确已审查模块集合；共享前缀不得自动放行私有子模块（F002）
+# packages.model_runtime.gateway.models 为已接受的 F001 债务
+_APPROVED_MODEL_RUNTIME_MODULES = frozenset(
+    {
+        "packages.model_runtime",
+        "packages.model_runtime.gateway",
+        "packages.model_runtime.gateway.models",
+    }
 )
 
 
@@ -133,32 +136,34 @@ def test_python_runtime_has_no_copied_contract_schemas():
     assert copied == []
 
 
-def test_model_runtime_consumption_uses_public_modules_only():
-    """生产代码只允许经已审查的 model_runtime 公开模块消费。"""
+def is_approved_model_runtime_import(module_name: str) -> bool:
+    """仅允许精确已审查模块，不按 packages.model_runtime.* 前缀自动放行。"""
+
+    return module_name in _APPROVED_MODEL_RUNTIME_MODULES
+
+
+def test_model_runtime_consumption_uses_exact_approved_modules_only():
+    """生产代码只允许精确已审查的 model_runtime 模块；前缀不得自动批准。"""
 
     violations = []
     for path in _iter_production_python(_PYTHON_RUNTIME):
         for module_name in _imported_modules(path):
             if not module_name.startswith("packages.model_runtime"):
                 continue
-            allowed = any(
-                module_name == prefix or module_name.startswith(f"{prefix}.")
-                for prefix in _ALLOWED_MODEL_RUNTIME_PREFIXES
-            )
-            # 顶层 packages.model_runtime 及其公开 gateway 子模块允许
-            if module_name == "packages.model_runtime":
-                allowed = True
-            if module_name.startswith("packages.model_runtime.gateway"):
-                allowed = True
-            if module_name.startswith("packages.model_runtime.resources"):
-                allowed = False
-            if module_name.startswith("packages.model_runtime.architecture"):
-                allowed = False
-            if module_name.startswith("packages.model_runtime.tests"):
-                allowed = False
-            if not allowed:
+            if not is_approved_model_runtime_import(module_name):
                 violations.append(f"{_repo_relative(path)}:{module_name}")
     assert violations == []
+
+
+def test_model_runtime_allowlist_rejects_hypothetical_private_gateway_module():
+    """假设的 gateway 私有模块不得仅因共享前缀而通过。"""
+
+    assert is_approved_model_runtime_import("packages.model_runtime")
+    assert is_approved_model_runtime_import("packages.model_runtime.gateway.models")
+    assert not is_approved_model_runtime_import(
+        "packages.model_runtime.gateway.some_private_module"
+    )
+    assert not is_approved_model_runtime_import("packages.model_runtime.resources.catalog")
 
 
 def test_no_state_committer_implementation():

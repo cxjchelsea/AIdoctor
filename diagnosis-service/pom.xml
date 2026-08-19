@@ -91,6 +91,13 @@
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
 
+        <!-- Shared Contracts v1：仅供规范 Python Runtime 客户端使用，不迁移遗留 Tool DTO -->
+        <dependency>
+            <groupId>com.aidoctor</groupId>
+            <artifactId>shared-contracts</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
         <!-- Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
