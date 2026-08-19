@@ -12,7 +12,8 @@ from aidoctor_shared_contracts import SourceArtifact
 SYNTHETIC_ARTIFACT_PROBE_ID = "artifact-synthetic-probe-1"
 SYNTHETIC_ARTIFACT_PROBE_VERSION = 1
 SYNTHETIC_ARTIFACT_PROBE_BYTES = bytes((0x00, 0x01, 0x02, 0x03, 0xFE, 0xED, 0xFA, 0xCE)) + b"OPAQUE"
-SYNTHETIC_ARTIFACT_PROBE_STORAGE_REF = "logical://engineering.synthetic.artifact_probe/v1"
+# 不透明逻辑引用：必须落在冻结 source-artifact.schema.json 允许的 scheme 内
+SYNTHETIC_ARTIFACT_PROBE_STORAGE_REF = "artifact://engineering-synthetic/artifact-synthetic-probe-1"
 SYNTHETIC_ARTIFACT_PROBE_FILENAME = "synthetic-artifact-probe.bin"
 
 ERROR_ARTIFACT_UNKNOWN = "ARTIFACT_UNKNOWN"

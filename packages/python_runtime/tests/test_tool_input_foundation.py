@@ -23,6 +23,7 @@ from packages.python_runtime.artifacts import (
     ERROR_ARTIFACT_VERSION_MISMATCH,
     SYNTHETIC_ARTIFACT_PROBE_BYTES,
     SYNTHETIC_ARTIFACT_PROBE_ID,
+    SYNTHETIC_ARTIFACT_PROBE_STORAGE_REF,
     SYNTHETIC_ARTIFACT_PROBE_VERSION,
     ArtifactResolutionError,
     StaticAllowlistArtifactPort,
@@ -97,7 +98,7 @@ def _artifact_probe_context_payload() -> dict:
         },
         "deadline": "2026-08-19T00:05:00Z",
         "locale": "und",
-        "requested_operation": "probe_artifact_input",
+        "requested_operation": "PROBE_ARTIFACT_INPUT",
         "input_refs": [
             {
                 "ref_type": "ARTIFACT",
@@ -202,6 +203,8 @@ def test_tool_context_binds_shared_contract_model():
     assert context.capability.capability_version == context.envelope.capability_version
     assert context.input_refs[0].ref_type == "ARTIFACT"
     assert context.input_refs[0].ref_id == SYNTHETIC_ARTIFACT_PROBE_ID
+    assert context.requested_operation == "PROBE_ARTIFACT_INPUT"
+    assert context.requested_operation != "probe_artifact_input"
 
 
 def test_injected_tool_context_artifact_probe_succeeds_without_returning_bytes():
@@ -558,11 +561,16 @@ def test_tool_port_remains_envelope_only_and_context_port_is_distinct():
 
 
 def test_resolver_does_not_treat_storage_ref_or_filename_as_path():
-    """storage_ref 与 original_filename 只是不透明逻辑字段，不得当路径打开。"""
+    """storage_ref 是冻结 v1 允许的不透明逻辑引用，不得当文件系统路径打开。"""
 
     metadata = build_synthetic_probe_metadata()
+    assert not metadata.storage_ref.startswith("logical://")
+    assert metadata.storage_ref.startswith("artifact://")
+    assert metadata.storage_ref == SYNTHETIC_ARTIFACT_PROBE_STORAGE_REF
+    assert metadata.storage_ref == "artifact://engineering-synthetic/artifact-synthetic-probe-1"
     assert not metadata.storage_ref.startswith("/")
+    assert not metadata.storage_ref.startswith("\\")
     assert "\\" not in metadata.storage_ref
+    assert ".." not in metadata.storage_ref
     assert "/" not in metadata.original_filename
     assert "\\" not in metadata.original_filename
-    assert metadata.storage_ref.startswith("logical://")

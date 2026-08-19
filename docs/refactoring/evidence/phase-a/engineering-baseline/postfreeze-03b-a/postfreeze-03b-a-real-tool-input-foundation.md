@@ -6,7 +6,7 @@
 >
 > Batch: `POSTFREEZE-03B-A`
 >
-> Status: `IMPLEMENTED_PENDING_INDEPENDENT_REVIEW`
+> Status: `IMPLEMENTED_PENDING_INDEPENDENT_RE_REVIEW`
 >
 > Authorization token:
 > `POSTFREEZE_03B_A_REAL_TOOL_INPUT_ARTIFACT_RESOLUTION_FOUNDATION_IMPLEMENTATION_EXPLICIT_AUTHORIZATION_GRANTED`
@@ -194,6 +194,13 @@ Evidence wording:
 This batch binds the public Pydantic model. It does not execute
 `contracts/v1/validator/validate_contracts.py` as a Runtime request gate.
 
+Python binding structural acceptance
+!=
+Frozen Shared Contracts v1 schema conformance
+
+Runtime does not rewrite lowercase `requested_operation` values to uppercase.
+Invalid wire values remain invalid.
+
 ## 7. Artifact resolver limitations
 
 First implementation: `StaticAllowlistArtifactPort`
@@ -211,7 +218,11 @@ It does not:
 - become a production blob store
 
 `storage_ref` remains an opaque logical reference
-(`logical://engineering.synthetic.artifact_probe/v1`).
+(`artifact://engineering-synthetic/artifact-synthetic-probe-1`).
+
+This value uses a frozen Shared Contracts v1 scheme (`artifact://`).
+The previous `logical://...` value was accepted by the structural Python
+binding but is not valid under `source-artifact.schema.json`.
 
 `SourceArtifact.original_filename` is not reinterpreted as a path.
 
@@ -308,6 +319,9 @@ Coverage includes:
 - architecture guards: Runtime production code still does not import
   ocr-service, cv2, numpy, PIL, pytesseract, provider SDK, langgraph, or a
   State Committer
+- synthetic `storage_ref` uses frozen `artifact://` and is not `logical://`
+- artifact probe `requested_operation` is `PROBE_ARTIFACT_INPUT`
+- default-executor synthetic context `requested_operation` is `SYNTHETIC_ECHO`
 
 ## 11. CI
 
@@ -315,12 +329,19 @@ Coverage includes:
 
 Existing CI already executes Python Runtime tests under `python-safety`.
 
-Author-time label:
+Reviewed PR run before this remediation:
 
-- `CI_VERIFIED` = `PENDING_AT_AUTHORING`
+- `32218545295`
+- event = `pull_request`
+- conclusion = `success`
+- head = `c3c6592a10e6ef061d85bdf00be433b306a43b10`
 
-Do not claim `CI_VERIFIED` until GitHub Actions actually completes on the exact
-head after push.
+After the remediation commit, new CI must be treated as:
+
+- `CI_VERIFIED` = `PENDING_REMEDIATION_CI`
+
+until the exact new PR Head run succeeds. Do not reuse `32218545295` as
+post-remediation proof.
 
 ## 12. Evidence labels
 
@@ -329,7 +350,7 @@ head after push.
 | DOCUMENTED | YES |
 | CODE_CONFIRMED | YES |
 | TEST_VERIFIED | YES |
-| CI_VERIFIED | PENDING_AT_AUTHORING |
+| CI_VERIFIED | PENDING_REMEDIATION_CI |
 | REAL_TOOL_INPUT_FOUNDATION_ESTABLISHED | YES |
 | TOOL_CONTEXT_STRUCTURAL_BINDING_VERIFIED | YES |
 | ARTIFACT_INPUT_REF_RESOLUTION_VERIFIED | YES |
@@ -414,6 +435,36 @@ Production caller added = 0
 
 ## 16. Author status
 
-`IMPLEMENTED_PENDING_INDEPENDENT_REVIEW`
+`IMPLEMENTED_PENDING_INDEPENDENT_RE_REVIEW`
 
 Do not write `DURABLY_CLOSED` for POSTFREEZE-03B-A in this document.
+
+## 17. Independent review remediation
+
+Reviewed Head before remediation: `c3c6592a10e6ef061d85bdf00be433b306a43b10`
+
+| Finding | Status |
+|---|---|
+| PF03BA-M01 `SYNTHETIC_SOURCE_ARTIFACT_STORAGE_REF_SCHEMA_NONCONFORMANCE` | REMEDIATED |
+| PF03BA-M02 `SYNTHETIC_TOOL_CONTEXT_REQUESTED_OPERATION_SCHEMA_NONCONFORMANCE` | REMEDIATED |
+
+PF03BA-M01: `logical://engineering.synthetic.artifact_probe/v1` replaced by
+`artifact://engineering-synthetic/artifact-synthetic-probe-1`. The URI remains
+opaque. Runtime still does not open, read, or resolve it as a filesystem path.
+No S3 / DB / HTTP storage I/O was added. `contracts/v1` was not modified.
+
+PF03BA-M02: synthetic ToolContext `requested_operation` values are now
+`PROBE_ARTIFACT_INPUT` and `SYNTHETIC_ECHO`. Runtime does not normalize
+lowercase wire values.
+
+```text
+Python binding structural acceptance
+!=
+Frozen Shared Contracts v1 schema conformance
+!=
+FULL_SHARED_CONTRACT_SEMANTIC_VALIDATOR_RUNTIME_VERIFIED
+```
+
+The last label remains NO. This remediation does not install a Runtime-local
+copy of the JSON Schemas and does not run the complete Shared Contracts
+validator on HTTP requests.
