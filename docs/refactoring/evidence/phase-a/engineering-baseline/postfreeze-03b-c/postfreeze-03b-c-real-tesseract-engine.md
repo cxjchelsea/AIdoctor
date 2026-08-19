@@ -162,7 +162,8 @@ This batch does not set `tesseract_cmd` and does not change preprocessing.
 
 ## 7. Default chi_sim+eng primary proof
 
-`RawOcrEngine.DEFAULT_OCR_LANGUAGE` remains `"chi_sim+eng"`.
+`DEFAULT_OCR_LANGUAGE` remains `"chi_sim+eng"` as the module-level
+default used by `RawOcrEngine`.
 
 The primary test:
 
