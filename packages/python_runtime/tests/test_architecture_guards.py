@@ -26,6 +26,20 @@ _FORBIDDEN_PROVIDER_ROOTS = frozenset(
     }
 )
 
+# Runtime 默认进程必须保持 OCR / 图像栈隔离
+_FORBIDDEN_OCR_RUNTIME_ROOTS = frozenset(
+    {
+        "cv2",
+        "numpy",
+        "PIL",
+        "Pillow",
+        "pytesseract",
+        "ocr_service",
+        "app.services.raw_ocr",
+        "app.services.ocr_service",
+    }
+)
+
 # 精确已审查模块集合；共享前缀不得自动放行私有子模块（F002）
 # packages.model_runtime.gateway.models 为已接受的 F001 债务
 _APPROVED_MODEL_RUNTIME_MODULES = frozenset(
@@ -201,3 +215,26 @@ def test_python_runtime_contains_no_java_sources():
 
     java_files = [_repo_relative(path) for path in _PYTHON_RUNTIME.rglob("*.java")]
     assert java_files == []
+
+
+def test_python_runtime_does_not_import_ocr_image_stack_or_legacy_ocr_service():
+    """规范 Runtime 不得导入 ocr-service、OpenCV、NumPy、Pillow 或 pytesseract。"""
+
+    violations = []
+    for path in _iter_production_python(_PYTHON_RUNTIME):
+        for module_name in _imported_modules(path):
+            for forbidden in _FORBIDDEN_OCR_RUNTIME_ROOTS:
+                if module_name == forbidden or module_name.startswith(f"{forbidden}."):
+                    violations.append(f"{_repo_relative(path)}:{module_name}")
+    assert violations == []
+
+
+def test_python_runtime_does_not_register_raw_ocr_capability():
+    """本批不得注册 engineering.ocr.raw。"""
+
+    violations = []
+    for path in _iter_production_python(_PYTHON_RUNTIME):
+        text = path.read_text(encoding="utf-8")
+        if "engineering.ocr.raw" in text:
+            violations.append(_repo_relative(path))
+    assert violations == []

@@ -15,7 +15,9 @@ from packages.python_runtime.http.transport import (
     ERROR_ENVELOPE_INVALID,
     ERROR_IDENTITY_MISMATCH,
     ERROR_OPERATION_NOT_AUTHORIZED,
+    parse_runtime_invoke_payload,
 )
+from packages.python_runtime.tool_router import ARTIFACT_PROBE_CAPABILITY_ID
 
 _FIXTURE_PATH = (
     Path(__file__).resolve().parent / "fixtures" / "runtime_protocol_invoke.json"
@@ -212,3 +214,23 @@ def test_success_has_empty_suggested_patches_and_no_phi():
     assert "diagnosis" not in serialized.lower()
     assert "openai" not in serialized.lower()
     assert "langgraph" not in serialized.lower()
+
+
+def test_golden_fixture_parser_stays_contract_envelope():
+    """金色夹具虽写 contract_name=ToolContext，解析器仍必须当作 ContractEnvelope。"""
+
+    payload = _load_golden_payload()
+    parsed = parse_runtime_invoke_payload(payload)
+    assert isinstance(parsed, ContractEnvelope)
+    assert payload["contract_name"] == "ToolContext"
+    assert "envelope" not in payload
+
+
+def test_default_app_does_not_authorize_artifact_probe():
+    """默认 create_app() 不得授权测试注入用的 artifact_probe。"""
+
+    application = create_app()
+    assert ARTIFACT_PROBE_CAPABILITY_ID not in application.state.authorized_capability_ids
+    assert application.state.authorized_capability_ids == frozenset(
+        {AUTHORIZED_SYNTHETIC_CAPABILITY_ID}
+    )

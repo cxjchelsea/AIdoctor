@@ -15,13 +15,17 @@ from packages.python_runtime.executor import DeterministicRuntimeExecutor
 from packages.python_runtime.ports import RuntimeExecutor
 
 from .routes import runtime_router
-from .transport import TransportError
+from .transport import AUTHORIZED_SYNTHETIC_CAPABILITY_ID, TransportError
 
 PROTOCOL_MODE = "NON_PRODUCTION_ENGINEERING_PROTOCOL_PROOF"
 
 
-def create_app(runtime_executor: RuntimeExecutor | None = None) -> FastAPI:
-    """构造薄 HTTP 门面；默认注入确定性合成 Runtime 执行器。"""
+def create_app(
+    runtime_executor: RuntimeExecutor | None = None,
+    *,
+    authorized_capability_ids: frozenset[str] | None = None,
+) -> FastAPI:
+    """构造薄 HTTP 门面；默认只授权合成 smoke，不启用 artifact_probe。"""
 
     application = FastAPI(
         title="Python Runtime HTTP Protocol Proof",
@@ -33,6 +37,11 @@ def create_app(runtime_executor: RuntimeExecutor | None = None) -> FastAPI:
     application.state.protocol_mode = PROTOCOL_MODE
     application.state.runtime_executor = (
         runtime_executor if runtime_executor is not None else DeterministicRuntimeExecutor()
+    )
+    application.state.authorized_capability_ids = (
+        frozenset({AUTHORIZED_SYNTHETIC_CAPABILITY_ID})
+        if authorized_capability_ids is None
+        else frozenset(authorized_capability_ids)
     )
     application.include_router(runtime_router)
     application.add_exception_handler(TransportError, _handle_transport_error)

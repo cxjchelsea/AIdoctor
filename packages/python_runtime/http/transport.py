@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, Optional
+from collections.abc import Mapping, Set
+from typing import Any, Optional, Union
 
-from aidoctor_shared_contracts import CONTRACT_VERSION, ContractEnvelope
+from aidoctor_shared_contracts import CONTRACT_VERSION, ContractEnvelope, ToolContext
 from pydantic import ValidationError
 
 # POSTFREEZE-02 唯一授权的合成能力标识；其它身份一律失败关闭
@@ -15,6 +15,7 @@ HEADER_CDP_ID = "X-CDP-Id"
 
 ERROR_CONTRACT_VERSION_MISMATCH = "CONTRACT_VERSION_MISMATCH"
 ERROR_ENVELOPE_INVALID = "ENVELOPE_INVALID"
+ERROR_TOOL_CONTEXT_INVALID = "TOOL_CONTEXT_INVALID"
 ERROR_IDENTITY_MISMATCH = "IDENTITY_MISMATCH"
 ERROR_OPERATION_NOT_AUTHORIZED = "OPERATION_NOT_AUTHORIZED"
 
@@ -102,6 +103,109 @@ def parse_contract_envelope(raw_payload: Any) -> ContractEnvelope:
         ) from exc
 
 
+def parse_runtime_invoke_payload(raw_payload: Any) -> Union[ContractEnvelope, ToolContext]:
+    """按结构区分调用体：顶层存在 envelope 对象则走 ToolContext，否则走信封。
+
+    禁止用 contract_name == \"ToolContext\" 作为判别条件：
+    POSTFREEZE-02 金色夹具的 contract_name 就是 ToolContext，但体仍只是 ContractEnvelope。
+    """
+
+    if not isinstance(raw_payload, Mapping):
+        raise TransportError(
+            ERROR_ENVELOPE_INVALID,
+            "request body must be a JSON object",
+            http_status=400,
+        )
+    nested_envelope = raw_payload.get("envelope")
+    if isinstance(nested_envelope, Mapping):
+        return parse_tool_context(raw_payload)
+    return parse_contract_envelope(raw_payload)
+
+
+def parse_tool_context(raw_payload: Mapping[str, Any]) -> ToolContext:
+    """结构绑定 ToolContext；这不是完整 Shared Contracts 语义校验器。"""
+
+    declared_version = raw_payload.get("contract_version")
+    if declared_version is not None and declared_version != CONTRACT_VERSION:
+        raise TransportError(
+            ERROR_CONTRACT_VERSION_MISMATCH,
+            (
+                f"contract_version must be {CONTRACT_VERSION!r} with EXACT negotiation, "
+                f"got {declared_version!r}"
+            ),
+            http_status=400,
+            correlation_id=_optional_identifier(raw_payload.get("correlation_id")),
+            trace_id=_nested_trace_id(raw_payload),
+        )
+    try:
+        return ToolContext.model_validate(dict(raw_payload))
+    except ValidationError as exc:
+        raise TransportError(
+            ERROR_TOOL_CONTEXT_INVALID,
+            "request body is not a valid Shared Contracts v1 ToolContext",
+            http_status=400,
+            correlation_id=_optional_identifier(raw_payload.get("correlation_id")),
+            trace_id=_nested_trace_id(raw_payload),
+        ) from exc
+
+
+def _nested_trace_id(raw_payload: Mapping[str, Any]) -> Optional[str]:
+    """仅在嵌套信封提供字符串 trace_id 时回传，避免写入畸形值。"""
+
+    nested_envelope = raw_payload.get("envelope")
+    if isinstance(nested_envelope, Mapping):
+        return _optional_identifier(nested_envelope.get("trace_id"))
+    return None
+
+
+def require_tool_context_cross_identity(context: ToolContext) -> None:
+    """校验嵌套信封与 capability 块的交叉身份；失败关闭。"""
+
+    if context.envelope.contract_name != "ToolContext":
+        raise TransportError(
+            ERROR_TOOL_CONTEXT_INVALID,
+            "nested envelope.contract_name must be 'ToolContext'",
+            http_status=400,
+            correlation_id=context.envelope.correlation_id,
+            trace_id=context.envelope.trace_id,
+        )
+    if context.capability.capability_id != context.envelope.capability_id:
+        raise TransportError(
+            ERROR_IDENTITY_MISMATCH,
+            "capability.capability_id must equal envelope.capability_id",
+            http_status=400,
+            correlation_id=context.envelope.correlation_id,
+            trace_id=context.envelope.trace_id,
+        )
+    if context.capability.capability_version != context.envelope.capability_version:
+        raise TransportError(
+            ERROR_IDENTITY_MISMATCH,
+            "capability.capability_version must equal envelope.capability_version",
+            http_status=400,
+            correlation_id=context.envelope.correlation_id,
+            trace_id=context.envelope.trace_id,
+        )
+
+
+def require_authorized_capability(
+    capability_id: str,
+    authorized_capability_ids: Set[str],
+    *,
+    correlation_id: Optional[str] = None,
+    trace_id: Optional[str] = None,
+) -> None:
+    """按组合注入的授权集合失败关闭；路由层不得写成能力 switch。"""
+
+    if capability_id not in authorized_capability_ids:
+        raise TransportError(
+            ERROR_OPERATION_NOT_AUTHORIZED,
+            "capability is not authorized for this Runtime composition",
+            http_status=403,
+            correlation_id=correlation_id,
+            trace_id=trace_id,
+        )
+
+
 def require_trace_identity(header_trace_id: Optional[str], envelope: ContractEnvelope) -> None:
     """X-Trace-Id 必须存在且等于信封 trace_id；调用方已提供则不得另造。"""
 
@@ -124,13 +228,11 @@ def require_trace_identity(header_trace_id: Optional[str], envelope: ContractEnv
 
 
 def require_authorized_synthetic_operation(envelope: ContractEnvelope) -> None:
-    """本批只授权合成工程 smoke 能力，其它操作失败关闭。"""
+    """默认组合只授权合成工程 smoke 能力；其它身份失败关闭。"""
 
-    if envelope.capability_id != AUTHORIZED_SYNTHETIC_CAPABILITY_ID:
-        raise TransportError(
-            ERROR_OPERATION_NOT_AUTHORIZED,
-            "only engineering.synthetic.runtime_smoke is authorized in POSTFREEZE-02",
-            http_status=403,
-            correlation_id=envelope.correlation_id,
-            trace_id=envelope.trace_id,
-        )
+    require_authorized_capability(
+        envelope.capability_id,
+        frozenset({AUTHORIZED_SYNTHETIC_CAPABILITY_ID}),
+        correlation_id=envelope.correlation_id,
+        trace_id=envelope.trace_id,
+    )
