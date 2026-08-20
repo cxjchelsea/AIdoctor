@@ -228,7 +228,7 @@ jobs:
           python -c "import cv2, numpy, PIL, pytesseract; print('python', __import__('sys').version); print('cv2', cv2.__version__); print('numpy', numpy.__version__); print('PIL', PIL.__version__); print('pytesseract', getattr(pytesseract, '__version__', 'unknown'))"
       - name: Test OCR raw-engine separation
         working-directory: ocr-service
-        run: python -m pytest tests --ignore=tests/test_raw_ocr_runtime_composition.py --ignore=tests/test_raw_ocr_real_engine.py -q
+        run: python -m pytest tests --ignore=tests/test_raw_ocr_runtime_composition.py --ignore=tests/test_raw_ocr_real_engine.py --ignore=tests/test_raw_ocr_runtime_real_engine.py -q
       - name: Test injected Runtime raw OCR composition
         working-directory: ocr-service
         env:
@@ -270,3 +270,45 @@ jobs:
         env:
           AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
         run: python -m pytest tests/test_raw_ocr_real_engine.py -q
+
+  ocr-runtime-real-engine:
+    name: ocr-runtime-real-engine
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.10
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            ocr-service/requirements.txt
+            packages/model_runtime/requirements.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Install system Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-chi-sim
+      - name: Record Tesseract engine identity
+        run: |
+          python --version
+          which tesseract
+          tesseract --version
+          tesseract --list-langs
+      - name: Install OCR Runtime composition dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ocr-service/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+          python -m pip install pytest
+      - name: Test injected Runtime raw OCR with real Tesseract
+        working-directory: ocr-service
+        env:
+          PYTHONPATH: ../contracts/v1/bindings/python:..
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+        run: python -m pytest tests/test_raw_ocr_runtime_real_engine.py -q
