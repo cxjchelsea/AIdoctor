@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-chi-sim \
     tesseract-ocr-eng \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,4 +23,3 @@ COPY . .
 EXPOSE 8087
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8087"]
-

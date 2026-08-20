@@ -15,6 +15,13 @@ import io
 import shutil
 import subprocess
 import sys
+from pathlib import Path
+
+# 以 `python tests/docker_raw_engine_probe.py` 执行时，sys.path[0] 为 tests/，
+# 需要把镜像 WORKDIR（/app）加入 path，才能导入生产包 app.services.raw_ocr。
+_IMAGE_APP_ROOT = Path(__file__).resolve().parents[1]
+if str(_IMAGE_APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(_IMAGE_APP_ROOT))
 
 from PIL import Image, ImageDraw, ImageFont
 
