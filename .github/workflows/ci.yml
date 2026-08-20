@@ -475,7 +475,8 @@ jobs:
           echo "JAVA_RAW_OCR_REAL_TOOL_LANG_CHI_SIM=YES"
       - name: Assert default Runtime surface and cutover remain unchanged
         run: |
-          grep -q "engineering.synthetic.runtime_smoke" packages/python_runtime/http/app.py
+          grep -q "engineering.synthetic.runtime_smoke" packages/python_runtime/http/transport.py
+          grep -q "AUTHORIZED_SYNTHETIC_CAPABILITY_ID" packages/python_runtime/http/app.py
           if grep -q "engineering.ocr.raw" packages/python_runtime/http/app.py; then
             echo "default create_app leaked engineering.ocr.raw"
             exit 1
