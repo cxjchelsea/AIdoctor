@@ -17,6 +17,7 @@ from .transport import (
     TransportError,
     parse_runtime_invoke_payload,
     require_authorized_capability,
+    require_canonical_contract_instance,
     require_tool_context_cross_identity,
     require_trace_identity,
 )
@@ -51,6 +52,12 @@ def invoke_runtime_tool(
         if isinstance(parsed_request, ToolContext):
             require_trace_identity(x_trace_id, parsed_request.envelope)
             require_tool_context_cross_identity(parsed_request)
+            require_canonical_contract_instance(
+                "ToolContext",
+                raw_payload if isinstance(raw_payload, dict) else parsed_request.model_dump(mode="json", exclude_none=True),
+                correlation_id=parsed_request.envelope.correlation_id,
+                trace_id=parsed_request.envelope.trace_id,
+            )
             require_authorized_capability(
                 parsed_request.envelope.capability_id,
                 authorized_capability_ids,
@@ -61,6 +68,12 @@ def invoke_runtime_tool(
             response_trace_id = parsed_request.envelope.trace_id
         else:
             require_trace_identity(x_trace_id, parsed_request)
+            require_canonical_contract_instance(
+                "ContractEnvelope",
+                raw_payload if isinstance(raw_payload, dict) else parsed_request.model_dump(mode="json", exclude_none=True),
+                correlation_id=parsed_request.correlation_id,
+                trace_id=parsed_request.trace_id,
+            )
             require_authorized_capability(
                 parsed_request.capability_id,
                 authorized_capability_ids,
@@ -69,6 +82,13 @@ def invoke_runtime_tool(
             )
             tool_result = runtime_executor.execute(parsed_request)
             response_trace_id = parsed_request.trace_id
+        require_canonical_contract_instance(
+            "ToolResult",
+            tool_result.model_dump(mode="json", exclude_none=True),
+            output=True,
+            correlation_id=tool_result.envelope.correlation_id,
+            trace_id=tool_result.envelope.trace_id,
+        )
     except ArtifactResolutionError as exc:
         raise TransportError(
             exc.error_code,

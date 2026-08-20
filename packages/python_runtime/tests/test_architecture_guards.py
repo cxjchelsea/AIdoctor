@@ -368,3 +368,40 @@ def test_engineering_process_composition_root_is_unique_and_constrained():
         and "create_engineering_raw_ocr_app" in path.read_text(encoding="utf-8")
     ]
     assert process_roots == [relative]
+
+
+def test_engineering_docker_runtime_is_dedicated_localhost_only():
+    """03C dedicated image 不得 0.0.0.0，也不得替换 legacy OCR Dockerfile。"""
+
+    engineering_dockerfile = _REPO_ROOT / "engineering" / "Dockerfile"
+    legacy_dockerfile = _REPO_ROOT / "ocr-service" / "Dockerfile"
+    assert engineering_dockerfile.is_file()
+    assert legacy_dockerfile.is_file()
+    engineering_text = engineering_dockerfile.read_text(encoding="utf-8")
+    legacy_text = legacy_dockerfile.read_text(encoding="utf-8")
+    assert "NON_PRODUCTION_ENGINEERING_RUNTIME" in engineering_text
+    assert "0.0.0.0" not in engineering_text
+    assert "EXPOSE" not in engineering_text
+    assert "uvicorn app.main:app" not in engineering_text
+    assert "0.0.0.0" in legacy_text
+    assert "uvicorn" in legacy_text
+    assert "app.main:app" in legacy_text
+
+
+def test_runtime_http_does_not_duplicate_canonical_semantic_literals():
+    """Runtime HTTP 不得复制 canonical semantic_errors 文案。"""
+
+    forbidden = (
+        "requested scopes cannot exceed granted scopes",
+        "deadline must not precede envelope.created_at",
+        "completed_at must not precede started_at",
+    )
+    violations = []
+    http_root = _PYTHON_RUNTIME / "http"
+    for path in http_root.glob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        for literal in forbidden:
+            if literal in text:
+                violations.append(f"{_repo_relative(path)}:{literal}")
+    assert violations == []
+

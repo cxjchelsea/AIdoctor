@@ -3,3 +3,5 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 httpx==0.26.0
+# POSTFREEZE-03C：复用 Shared Contracts 请求级 canonical validator，不复制语义规则。
+jsonschema[format]==4.25.1
