@@ -228,7 +228,7 @@ jobs:
           python -c "import cv2, numpy, PIL, pytesseract; print('python', __import__('sys').version); print('cv2', cv2.__version__); print('numpy', numpy.__version__); print('PIL', PIL.__version__); print('pytesseract', getattr(pytesseract, '__version__', 'unknown'))"
       - name: Test OCR raw-engine separation
         working-directory: ocr-service
-        run: python -m pytest tests --ignore=tests/test_raw_ocr_runtime_composition.py --ignore=tests/test_raw_ocr_real_engine.py --ignore=tests/test_raw_ocr_runtime_real_engine.py -q
+        run: python -m pytest tests --ignore=tests/test_raw_ocr_runtime_composition.py --ignore=tests/test_raw_ocr_real_engine.py --ignore=tests/test_raw_ocr_runtime_real_engine.py --ignore=tests/test_engineering_opt_in_raw_ocr_runtime.py -q
       - name: Test injected Runtime raw OCR composition
         working-directory: ocr-service
         env:
