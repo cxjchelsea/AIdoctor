@@ -312,3 +312,34 @@ jobs:
           PYTHONPATH: ../contracts/v1/bindings/python:..
           AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
         run: python -m pytest tests/test_raw_ocr_runtime_real_engine.py -q
+
+  ocr-docker-raw-engine:
+    name: ocr-docker-raw-engine
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Record Docker identity
+        run: |
+          docker --version
+          docker info --format '{{.ServerVersion}}'
+      - name: Build current OCR image from repository Dockerfile
+        run: |
+          docker build \
+            -t aidoctor-ocr:postfreeze-03b-e \
+            ./ocr-service
+      - name: Record built image identity
+        run: |
+          docker image inspect aidoctor-ocr:postfreeze-03b-e \
+            --format 'Id={{.Id}} RepoTags={{json .RepoTags}} RepoDigests={{json .RepoDigests}} Size={{.Size}}'
+      - name: Verify container Python and Tesseract identity
+        run: |
+          docker run --rm aidoctor-ocr:postfreeze-03b-e python --version
+          docker run --rm aidoctor-ocr:postfreeze-03b-e which tesseract
+          docker run --rm aidoctor-ocr:postfreeze-03b-e tesseract --version
+          docker run --rm aidoctor-ocr:postfreeze-03b-e tesseract --list-langs
+      - name: Run stage-closing Docker RawOcrEngine probe
+        run: |
+          docker run --rm \
+            aidoctor-ocr:postfreeze-03b-e \
+            python tests/docker_raw_engine_probe.py
