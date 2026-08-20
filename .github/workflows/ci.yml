@@ -384,4 +384,4 @@ jobs:
         env:
           PYTHONPATH: ../contracts/v1/bindings/python:..
           AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
-        run: python -m pytest tests/test_engineering_opt_in_raw_ocr_runtime.py -q
+        run: python -m pytest tests/test_engineering_opt_in_raw_ocr_runtime.py -q -s
