@@ -41,6 +41,25 @@ public interface PythonRuntimeClient {
     );
 
     /**
+     * 调用工程-only Runtime ToolContext 路径（POSTFREEZE-03B-H）。
+     *
+     * <p>同一 {@code POST /api/v1/runtime/tools/invoke}，请求体为 Shared Contracts
+     * {@code ToolContext}。不得被生产编排、ToolCaller 或 AgentLoop 调用。
+     * 调用方只发送 InputRef，不得附带工件字节或存储实现知识。
+     *
+     * @param traceId 必须与 ToolContext.envelope.trace_id 一致
+     * @param cdpId 可选；仅作不透明工程相关元数据，不是患者权威
+     * @param context Shared Contracts v1 ToolContext
+     * @return 传输包装中的 ToolResult
+     */
+    @PostMapping("/api/v1/runtime/tools/invoke")
+    ResponseEntity<ToolTypes.ToolResult> invokeToolContext(
+            @RequestHeader("X-Trace-Id") String traceId,
+            @RequestHeader(value = "X-CDP-Id", required = false) String cdpId,
+            @RequestBody ToolTypes.ToolContext context
+    );
+
+    /**
      * 仅作用于本 Feign 客户端的工程超时与禁止自动重试。
      * 不加 {@code @Configuration}，避免被组件扫描提升为全局 Feign 默认配置。
      */
