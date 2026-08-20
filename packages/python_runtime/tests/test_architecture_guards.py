@@ -229,15 +229,34 @@ def test_python_runtime_does_not_import_ocr_image_stack_or_legacy_ocr_service():
     assert violations == []
 
 
-def test_python_runtime_does_not_register_raw_ocr_capability():
-    """本批不得注册 engineering.ocr.raw。"""
+# POSTFREEZE-03B-F：唯一允许出现 engineering.ocr.raw 字面量的工程组合模块。
+_ENGINEERING_RAW_OCR_COMPOSITION_MODULE = (
+    Path("packages") / "python_runtime" / "http" / "engineering_raw_ocr.py"
+)
 
+
+def test_python_runtime_does_not_register_raw_ocr_capability():
+    """
+    默认 Runtime 生产树不得泄漏 engineering.ocr.raw。
+
+    唯一窄例外：显式非默认工程组合模块
+    packages/python_runtime/http/engineering_raw_ocr.py
+    """
+
+    allowed_relative = _ENGINEERING_RAW_OCR_COMPOSITION_MODULE.as_posix()
     violations = []
     for path in _iter_production_python(_PYTHON_RUNTIME):
+        relative = _repo_relative(path)
+        if relative == allowed_relative:
+            continue
         text = path.read_text(encoding="utf-8")
         if "engineering.ocr.raw" in text:
-            violations.append(_repo_relative(path))
+            violations.append(relative)
     assert violations == []
+
+    allowed_path = _REPO_ROOT / _ENGINEERING_RAW_OCR_COMPOSITION_MODULE
+    assert allowed_path.is_file()
+    assert "engineering.ocr.raw" in allowed_path.read_text(encoding="utf-8")
 
 
 def test_raw_ocr_adapter_remains_injection_only_and_ocr_library_free():
