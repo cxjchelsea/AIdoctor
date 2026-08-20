@@ -275,3 +275,96 @@ def test_raw_ocr_adapter_remains_injection_only_and_ocr_library_free():
         assert not module_name.endswith("_service")
         assert "ocr-service" not in module_name
         assert module_name != "app" and not module_name.startswith("app.")
+
+
+# POSTFREEZE-03B-G：唯一工程进程 composition root。
+_ENGINEERING_PROCESS_LAUNCHER = Path("engineering") / "raw_ocr_runtime_process.py"
+_FORBIDDEN_LAUNCHER_MODULES = frozenset(
+    {
+        "packages.python_runtime.tool_router",
+        "packages.python_runtime.executor",
+        "packages.python_runtime.http.app",
+    }
+)
+_FORBIDDEN_LAUNCHER_IMPORT_NAMES = frozenset(
+    {
+        "ToolRouter",
+        "DeterministicRuntimeExecutor",
+        "create_app",
+    }
+)
+_FORBIDDEN_PROVIDER_OR_CLINICAL_LAUNCHER_ROOTS = _FORBIDDEN_PROVIDER_ROOTS | frozenset(
+    {
+        "langgraph",
+        "capabilities",
+    }
+)
+
+
+def _imported_names(path: Path):
+    """收集 from-import 绑定名。"""
+
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=path.name)
+    names = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            names.extend(alias.name for alias in node.names)
+    return names
+
+
+def _call_names(path: Path):
+    """收集简单调用名，用于证明工厂被直接调用。"""
+
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=path.name)
+    names = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            names.append(node.func.id)
+    return names
+
+
+def test_engineering_process_composition_root_is_unique_and_constrained():
+    """
+    engineering/raw_ocr_runtime_process.py 是唯一进程 composition root。
+
+    不得放宽 Runtime→OCR 或 legacy service→Runtime 规则。
+    """
+
+    launcher_path = _REPO_ROOT / _ENGINEERING_PROCESS_LAUNCHER
+    assert launcher_path.is_file()
+    relative = _ENGINEERING_PROCESS_LAUNCHER.as_posix()
+    assert relative == "engineering/raw_ocr_runtime_process.py"
+    assert not relative.startswith("packages/python_runtime/")
+    assert not relative.startswith("ocr-service/app/")
+
+    launcher_text = launcher_path.read_text(encoding="utf-8")
+    assert "NON_PRODUCTION_ENGINEERING_LOCALHOST_PROCESS_ENTRYPOINT" in launcher_text
+    assert "127.0.0.1" in launcher_text
+    assert "0.0.0.0" not in launcher_text
+    assert "sys.path.insert" not in launcher_text
+    assert "sys.path.append" not in launcher_text
+    assert "engineering.ocr.raw" not in launcher_text
+    assert "app = " not in launcher_text
+
+    imported_modules = _imported_modules(launcher_path)
+    imported_names = _imported_names(launcher_path)
+    for forbidden in _FORBIDDEN_LAUNCHER_MODULES:
+        assert forbidden not in imported_modules
+    for forbidden in _FORBIDDEN_LAUNCHER_IMPORT_NAMES:
+        assert forbidden not in imported_names
+    assert "create_engineering_raw_ocr_app" in imported_names
+    assert "create_engineering_raw_ocr_app" in _call_names(launcher_path)
+
+    for module_name in imported_modules:
+        for forbidden in _FORBIDDEN_PROVIDER_OR_CLINICAL_LAUNCHER_ROOTS:
+            assert module_name != forbidden
+            assert not module_name.startswith(f"{forbidden}.")
+
+    engineering_root = _REPO_ROOT / "engineering"
+    process_roots = [
+        _repo_relative(path)
+        for path in engineering_root.rglob("*.py")
+        if "tests" not in path.relative_to(engineering_root).parts
+        and "create_engineering_raw_ocr_app" in path.read_text(encoding="utf-8")
+    ]
+    assert process_roots == [relative]
