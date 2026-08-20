@@ -32,7 +32,13 @@ class ToolPort(Protocol):
 
 
 class ArtifactPort(Protocol):
-    """工件解析端口；实现必须是有界允许名单，不得访问外部存储。"""
+    """工件解析端口；实现必须有界且由 composition 显式配置。
+
+    允许 engineering-only 有界本地 sandbox 存储。
+    禁止把 InputRef / storage_ref / original_filename 当作路径或 URL。
+    禁止网络或生产对象存储。
+    接口仅接受 ref_id / ref_version；适配器不得知道存储介质。
+    """
 
     def resolve(self, ref_id: str, ref_version: int) -> ResolvedArtifact:
         """按引用标识与版本解析 SourceArtifact 元数据及字节内容。"""

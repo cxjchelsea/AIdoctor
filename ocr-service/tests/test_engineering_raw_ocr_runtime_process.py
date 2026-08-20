@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-import base64
+import hashlib
 import io
 import json
 import os
@@ -112,8 +112,9 @@ def _require_real_tesseract_or_skip() -> str:
 
 def _render_synthetic_hello_ocr_png_bytes() -> bytes:
     """
-    用仓库已有 Pillow 在内存渲染高对比度工程图。
-    不落盘、不下载字体、不含医学或患者内容。
+    用仓库已有 Pillow 渲染高对比度工程图。
+    不下载字体、不含医学或患者内容。
+    落盘仅发生在调用方提供的 tmp sandbox。
     """
 
     canvas_width = 1600
@@ -275,9 +276,31 @@ def test_default_create_app_surface_unchanged_for_process_stage() -> None:
     print("DEFAULT_RUNTIME_CAPABILITY_SURFACE_UNCHANGED=YES", flush=True)
 
 
-def test_engineering_raw_ocr_runtime_process_real_socket_http() -> None:
+def test_engineering_process_builder_reads_metadata_only(tmp_path: Path) -> None:
+    """composition root 只读 sandbox / size / sha256，不得预读 payload。"""
+
+    from engineering.raw_ocr_runtime_process import (
+        build_engineering_raw_ocr_process_app_from_env,
+    )
+
+    sandbox_root = tmp_path / "aidoctor-03b-i-artifact-sandbox"
+    sandbox_root.mkdir()
+    environ = {
+        "AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_SANDBOX_ROOT": str(sandbox_root.resolve()),
+        "AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SIZE_BYTES": "16",
+        "AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SHA256": "0" * 64,
+    }
+    application = build_engineering_raw_ocr_process_app_from_env(environ)
+    assert application is not None
+    print("ENGINEERING_RAW_OCR_ARTIFACT_BACKEND=SANDBOXED_FILESYSTEM", flush=True)
+    print("ENGINEERING_RAW_OCR_ARTIFACT_SANDBOXED=YES", flush=True)
+    print("ENGINEERING_RAW_OCR_ENV_BASE64_BOOTSTRAP_USED=NO", flush=True)
+
+
+def test_engineering_raw_ocr_runtime_process_real_socket_http(tmp_path: Path) -> None:
     """
     仓库 launcher → localhost 进程 → 真实 socket HTTP → 真 Tesseract。
+    artifact 来自 sandbox 文件，不再使用 env base64。
     不覆盖 language；必须走默认 chi_sim+eng。
     """
 
@@ -298,13 +321,27 @@ def test_engineering_raw_ocr_runtime_process_real_socket_http() -> None:
     )
 
     image_bytes = _render_synthetic_hello_ocr_png_bytes()
+    sandbox_root = tmp_path / "aidoctor-03b-i-artifact-sandbox"
+    payload_path = sandbox_root / "raw-ocr" / "input" / "artifact.png"
+    payload_path.parent.mkdir(parents=True)
+    payload_path.write_bytes(image_bytes)
     port = _allocate_localhost_port()
     process_env = os.environ.copy()
+    process_env.pop("AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_BASE64", None)
     process_env["PYTHONPATH"] = _process_pythonpath()
     process_env["AIDOCTOR_ENGINEERING_RAW_OCR_PORT"] = str(port)
-    process_env["AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_BASE64"] = base64.b64encode(
-        image_bytes
-    ).decode("ascii")
+    process_env["AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_SANDBOX_ROOT"] = str(
+        sandbox_root.resolve()
+    )
+    process_env["AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SIZE_BYTES"] = str(
+        len(image_bytes)
+    )
+    process_env["AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SHA256"] = (
+        hashlib.sha256(image_bytes).hexdigest()
+    )
+    print("ENGINEERING_RAW_OCR_ARTIFACT_BACKEND=SANDBOXED_FILESYSTEM", flush=True)
+    print("ENGINEERING_RAW_OCR_ARTIFACT_SANDBOXED=YES", flush=True)
+    print("ENGINEERING_RAW_OCR_ENV_BASE64_BOOTSTRAP_USED=NO", flush=True)
 
     log_path = _REPO_ROOT / "logs" / "engineering-raw-ocr-runtime-process.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
