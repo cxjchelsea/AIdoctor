@@ -431,6 +431,7 @@ jobs:
         env:
           PYTHONPATH: .:../contracts/v1/bindings/python:..
           AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+          TMPDIR: ${{ runner.temp }}
         run: python -m pytest tests/test_engineering_raw_ocr_runtime_process.py -q -s
 
   java-python-raw-ocr-real-tool:
@@ -502,14 +503,18 @@ jobs:
           PYTHONPATH: ocr-service:contracts/v1/bindings/python:.
           AIDOCTOR_ENGINEERING_RAW_OCR_PORT: "8099"
           AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+          SANDBOX_ROOT: ${{ runner.temp }}/aidoctor-03b-i-artifact-sandbox
         run: |
-          mkdir -p logs
+          mkdir -p logs "${SANDBOX_ROOT}/raw-ocr/input"
           python - <<'PY'
-          import base64
+          import hashlib
           import io
+          import os
           from pathlib import Path
           from PIL import Image, ImageDraw, ImageFont
 
+          sandbox = Path(os.environ["SANDBOX_ROOT"])
+          payload = sandbox / "raw-ocr" / "input" / "artifact.png"
           canvas = Image.new("RGB", (1600, 400), color=(255, 255, 255))
           drawer = ImageDraw.Draw(canvas)
           font = ImageFont.load_default(size=96)
@@ -522,9 +527,17 @@ jobs:
           drawer.text((left, top), text, fill=(0, 0, 0), font=font)
           buffer = io.BytesIO()
           canvas.save(buffer, format="PNG")
-          encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+          content = buffer.getvalue()
+          payload.write_bytes(content)
+          digest = hashlib.sha256(content).hexdigest()
           Path("logs/artifact.env").write_text(
-              "export AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_BASE64=" + encoded + "\n",
+              "export AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_SANDBOX_ROOT="
+              + str(sandbox.resolve())
+              + "\nexport AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SIZE_BYTES="
+              + str(len(content))
+              + "\nexport AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SHA256="
+              + digest
+              + "\n",
               encoding="ascii",
           )
           PY
@@ -533,6 +546,9 @@ jobs:
           . logs/artifact.env
           set +a
           rm -f logs/artifact.env
+          unset AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_BASE64
+          echo "JAVA_RAW_OCR_REAL_TOOL_ARTIFACT_BACKEND=SANDBOXED_FILESYSTEM"
+          echo "JAVA_RAW_OCR_REAL_TOOL_ENV_BASE64_BOOTSTRAP_USED=NO"
           nohup python engineering/raw_ocr_runtime_process.py \
             > logs/engineering-raw-ocr-runtime-process.log 2>&1 &
           echo $! > logs/engineering-raw-ocr-runtime-process.pid
@@ -565,3 +581,28 @@ jobs:
           if [ -f logs/engineering-raw-ocr-runtime-process.pid ]; then
             kill "$(cat logs/engineering-raw-ocr-runtime-process.pid)" || true
           fi
+
+  artifact-storage-sandboxed:
+    name: artifact-storage-sandboxed
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.11"
+      - name: Install focused sandbox test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements-ci.txt
+      - name: Test sandboxed ArtifactPort backend and architecture guards
+        env:
+          PYTHONPATH: contracts/v1/bindings/python
+          AIDOCTOR_REQUIRE_SANDBOX_SYMLINK_TEST: "1"
+        run: |
+          python -m pytest \
+            packages/python_runtime/tests/test_sandboxed_artifact_backend.py \
+            packages/python_runtime/tests/test_architecture_guards.py \
+            -q -s
