@@ -76,6 +76,9 @@ Runtime HTTP:
 
 1. existing Pydantic / identity parse
 2. canonical validation of ToolContext or ContractEnvelope
+   (optional JSON null properties omitted before schema check so
+   Java Feign unset identifier fields remain schema-valid;
+   this is not a copied semantic rule)
 3. authorization unchanged
 4. executor
 5. canonical validation of ToolResult before HTTP 200

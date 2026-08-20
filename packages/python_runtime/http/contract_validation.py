@@ -43,8 +43,31 @@ def _canonical_validator_module():
     return module
 
 
+def _omit_json_null_properties(value: Any) -> Any:
+    """Omit object properties whose JSON value is null.
+
+    Shared Contracts schemas type most optional fields as string/object,
+    not ["string", "null"]. Java Feign and Pydantic dumps may emit explicit
+    nulls for unset optionals. Absent optional means omitted, not null.
+    Array elements are preserved, including schema-allowed explicit nulls.
+    This is JSON instance normalization, not a copied semantic rule.
+    """
+
+    if isinstance(value, Mapping):
+        return {
+            key: _omit_json_null_properties(item)
+            for key, item in value.items()
+            if item is not None
+        }
+    if isinstance(value, list):
+        return [_omit_json_null_properties(item) for item in value]
+    return value
+
+
 def validate_runtime_contract_instance(name: str, instance: Mapping[str, Any]) -> list[str]:
     """Delegate to canonical validate_contract_instance; no local semantic rules."""
 
     validator = _canonical_validator_module()
-    return list(validator.validate_contract_instance(name, dict(instance)))
+    return list(
+        validator.validate_contract_instance(name, _omit_json_null_properties(dict(instance)))
+    )

@@ -307,6 +307,59 @@ def test_engineering_raw_ocr_success_path_remains_valid() -> None:
     assert "OCR" in str(raw_text)
 
 
+def _java_feign_shaped_tool_context(capability_id: str) -> dict:
+    """Reproduce Spring Feign wire JSON: unset IdentifierSet fields as null."""
+
+    payload = _raw_ocr_context_payload()
+    payload["envelope"]["capability_id"] = capability_id
+    payload["envelope"]["capability_version"] = ENGINEERING_RAW_OCR_CAPABILITY_VERSION
+    payload["envelope"]["producer"] = "java-diagnosis-real-tool"
+    payload["capability"]["capability_id"] = capability_id
+    payload["capability"]["capability_version"] = ENGINEERING_RAW_OCR_CAPABILITY_VERSION
+    payload["identifiers"] = {
+        "contract_version": "1.0.0",
+        "cdp_id": "synthetic-cdp-engineering-raw-ocr-java-1",
+        "patient_id": None,
+        "encounter_id": None,
+        "session_id": None,
+        "tenant_id": None,
+        "review_id": None,
+        "delivery_id": None,
+    }
+    return payload
+
+
+def test_java_feign_shaped_optional_null_identifiers_succeed_over_http() -> None:
+    application = create_engineering_raw_ocr_app(
+        raw_ocr_tool_port=RawOcrToolAdapter(_DeterministicHelloEngine()),
+        artifact_port=StaticAllowlistArtifactPort.for_synthetic_probe(),
+    )
+    payload = _java_feign_shaped_tool_context(ENGINEERING_RAW_OCR_CAPABILITY_ID)
+    assert validate_runtime_contract_instance("ToolContext", payload) == []
+    response = TestClient(application).post(
+        "/api/v1/runtime/tools/invoke",
+        json=payload,
+        headers={"X-Trace-Id": payload["envelope"]["trace_id"]},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "SUCCEEDED"
+
+
+def test_java_feign_shaped_unauthorized_capability_remains_403() -> None:
+    application = create_engineering_raw_ocr_app(
+        raw_ocr_tool_port=RawOcrToolAdapter(_DeterministicHelloEngine()),
+        artifact_port=StaticAllowlistArtifactPort.for_synthetic_probe(),
+    )
+    payload = _java_feign_shaped_tool_context(AUTHORIZED_SYNTHETIC_CAPABILITY_ID)
+    response = TestClient(application).post(
+        "/api/v1/runtime/tools/invoke",
+        json=payload,
+        headers={"X-Trace-Id": payload["envelope"]["trace_id"]},
+    )
+    assert response.status_code == 403
+    assert response.json()["error_code"] == ERROR_OPERATION_NOT_AUTHORIZED
+
+
 def test_default_capability_surface_unchanged() -> None:
     application = create_app()
     assert application.state.authorized_capability_ids == frozenset(

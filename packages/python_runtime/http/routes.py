@@ -54,7 +54,7 @@ def invoke_runtime_tool(
             require_tool_context_cross_identity(parsed_request)
             require_canonical_contract_instance(
                 "ToolContext",
-                raw_payload if isinstance(raw_payload, dict) else parsed_request.model_dump(mode="json", exclude_none=True),
+                parsed_request.model_dump(mode="json", exclude_none=True),
                 correlation_id=parsed_request.envelope.correlation_id,
                 trace_id=parsed_request.envelope.trace_id,
             )
@@ -70,7 +70,7 @@ def invoke_runtime_tool(
             require_trace_identity(x_trace_id, parsed_request)
             require_canonical_contract_instance(
                 "ContractEnvelope",
-                raw_payload if isinstance(raw_payload, dict) else parsed_request.model_dump(mode="json", exclude_none=True),
+                parsed_request.model_dump(mode="json", exclude_none=True),
                 correlation_id=parsed_request.correlation_id,
                 trace_id=parsed_request.trace_id,
             )
