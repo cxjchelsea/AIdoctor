@@ -792,14 +792,18 @@ jobs:
           PYTHONPATH: ocr-service:contracts/v1/bindings/python:.
           AIDOCTOR_ENGINEERING_RAW_OCR_PORT: "8099"
           AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+          SANDBOX_ROOT: ${{ runner.temp }}/aidoctor-04-raw-ocr-artifact-sandbox
         run: |
-          mkdir -p logs
+          mkdir -p logs "${SANDBOX_ROOT}/raw-ocr/input"
           python - <<'PY'
-          import base64
+          import hashlib
           import io
+          import os
           from pathlib import Path
           from PIL import Image, ImageDraw, ImageFont
 
+          sandbox = Path(os.environ["SANDBOX_ROOT"])
+          payload = sandbox / "raw-ocr" / "input" / "artifact.png"
           canvas = Image.new("RGB", (1600, 400), color=(255, 255, 255))
           drawer = ImageDraw.Draw(canvas)
           font = ImageFont.load_default(size=96)
@@ -812,9 +816,17 @@ jobs:
           drawer.text((left, top), text, fill=(0, 0, 0), font=font)
           buffer = io.BytesIO()
           canvas.save(buffer, format="PNG")
-          encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+          content = buffer.getvalue()
+          payload.write_bytes(content)
+          digest = hashlib.sha256(content).hexdigest()
           Path("logs/artifact.env").write_text(
-              "export AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_BASE64=" + encoded + "\n",
+              "export AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_SANDBOX_ROOT="
+              + str(sandbox.resolve())
+              + "\nexport AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SIZE_BYTES="
+              + str(len(content))
+              + "\nexport AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SHA256="
+              + digest
+              + "\n",
               encoding="ascii",
           )
           PY
@@ -823,6 +835,9 @@ jobs:
           . logs/artifact.env
           set +a
           rm -f logs/artifact.env
+          unset AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_BASE64
+          echo "JAVA_RAW_OCR_REAL_TOOL_ARTIFACT_BACKEND=SANDBOXED_FILESYSTEM"
+          echo "JAVA_RAW_OCR_REAL_TOOL_ENV_BASE64_BOOTSTRAP_USED=NO"
           nohup python engineering/raw_ocr_runtime_process.py \
             > logs/engineering-raw-ocr-runtime-process.log 2>&1 &
           echo $! > logs/engineering-raw-ocr-runtime-process.pid
