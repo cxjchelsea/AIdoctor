@@ -380,14 +380,31 @@ PBNC-02 synthetic state store
 
 ## 17. Commit
 
-- SHA: `23e3e8c3766a539823870fe4fb4d6f2569907245`
-- tree: `34c23a5f1339bc8e960b8471b93efe132516bd3a`
+Published PR HEAD (content-identical to local worktree HEAD tree
+`3d1974844e6d0ca7c236bf29cdb920e6e4d1bad4`):
+
+- SHA: `e76b810270a2ebb3a63408dde9d35eb167f2d5f3`
+- tree: `3d1974844e6d0ca7c236bf29cdb920e6e4d1bad4`
 - message: `PBNC-01 implement State Committer mechanical core.`
-- A later evidence-only commit may add Draft PR metadata to this file.
+- parent: `c716210715c14b713884091252447b48c28eacd4`
+
+Local worktree also contains the same tree as two local commits
+`23e3e8c3766a539823870fe4fb4d6f2569907245` and
+`b194cd62474d5ad947db2a78c1bd445616f57f04`. Git HTTPS push was
+unavailable in this environment; the branch was published through the
+GitHub Git Data API with a single content-identical commit.
+
+A later evidence-only commit on the same branch may refresh this section
+after Draft PR metadata is known.
 
 ## 18. Draft PR
 
-Recorded after `gh pr create --draft`.
+- number: 73
+- URL: https://github.com/cxjchelsea/AIdoctor/pull/73
+- base: `agent/enterprise-agent-refactoring-plan`
+- head: `agent/pbnc-01-state-committer-mechanical-core`
+- draft: YES
+- head SHA at open: `e76b810270a2ebb3a63408dde9d35eb167f2d5f3`
 
 Must remain Draft. Must not be marked Ready. Must not be merged.
 
