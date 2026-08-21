@@ -158,10 +158,18 @@ final class CommitResultAssembler {
     }
 
     FoundationTypes.AuditRef fallbackAuditRef(String createdAt) {
+        return fallbackAuditRef(createdAt, "STATE_PATCH_REQUESTED");
+    }
+
+    FoundationTypes.AuditRef fallbackCommittedAuditRef(String createdAt) {
+        return fallbackAuditRef(createdAt, "STATE_COMMITTED");
+    }
+
+    private FoundationTypes.AuditRef fallbackAuditRef(String createdAt, String auditType) {
         FoundationTypes.AuditRef auditRef = new FoundationTypes.AuditRef();
         auditRef.contractVersion = ContractVersion.CONTRACT_VERSION;
         auditRef.auditId = "synthetic-audit-fallback";
-        auditRef.auditType = "STATE_PATCH_REQUESTED";
+        auditRef.auditType = auditType;
         auditRef.auditVersion = Integer.valueOf(1);
         auditRef.createdAt = createdAt;
         auditRef.accessLevel = "INTERNAL";

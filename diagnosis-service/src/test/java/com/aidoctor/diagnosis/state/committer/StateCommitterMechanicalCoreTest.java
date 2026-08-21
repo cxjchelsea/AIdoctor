@@ -223,6 +223,108 @@ class StateCommitterMechanicalCoreTest {
     }
 
     @Test
+    void postCommitAuditFailureCannotDowngradeAuthoritativeResult() {
+        StateCommitterTestHarness harness = new StateCommitterTestHarness();
+        harness.audit.failNext();
+        StateTypes.StatePatch patch = SyntheticStatePatchFactory.valid(
+                0,
+                "synthetic-idem-post-commit-audit",
+                "synthetic-patch-post-commit-audit"
+        );
+
+        StateTypes.CommitResult result = harness.committer.commit(patch);
+
+        assertAuthoritativeCommitPreserved(result, harness);
+        assertEquals("STATE_COMMITTED", result.auditRef.auditType);
+        assertEquals("synthetic-audit-fallback", result.auditRef.auditId);
+        assertEquals(1, harness.idempotency.rememberCalls());
+        assertEquals(1, harness.events.events().size());
+    }
+
+    @Test
+    void postCommitIdempotencyFailureCannotDowngradeAuthoritativeResult() {
+        StateCommitterTestHarness harness = new StateCommitterTestHarness();
+        harness.idempotency.failNextRemember();
+        StateTypes.StatePatch patch = SyntheticStatePatchFactory.valid(
+                0,
+                "synthetic-idem-post-commit-idempotency",
+                "synthetic-patch-post-commit-idempotency"
+        );
+
+        StateTypes.CommitResult result = harness.committer.commit(patch);
+
+        assertAuthoritativeCommitPreserved(result, harness);
+        assertEquals(1, harness.idempotency.rememberCalls());
+        assertEquals(1, harness.events.events().size());
+    }
+
+    @Test
+    void postCommitEventFailureCannotDowngradeAuthoritativeResult() {
+        StateCommitterTestHarness harness = new StateCommitterTestHarness();
+        harness.events.failNext();
+        StateTypes.StatePatch patch = SyntheticStatePatchFactory.valid(
+                0,
+                "synthetic-idem-post-commit-event",
+                "synthetic-patch-post-commit-event"
+        );
+
+        StateTypes.CommitResult result = harness.committer.commit(patch);
+
+        assertAuthoritativeCommitPreserved(result, harness);
+        assertEquals(1, harness.idempotency.rememberCalls());
+        assertEquals(0, harness.events.events().size());
+    }
+
+    @Test
+    void replayEventFailureCannotDowngradeOriginalAuthoritativeResult() {
+        StateCommitterTestHarness harness = new StateCommitterTestHarness();
+        StateTypes.StatePatch originalPatch = SyntheticStatePatchFactory.valid(
+                0,
+                "synthetic-idem-replay-event-failure",
+                "synthetic-patch-replay-event-original"
+        );
+        StateTypes.CommitResult original = harness.committer.commit(originalPatch);
+        harness.events.failNext();
+        StateTypes.StatePatch replayPatch = SyntheticStatePatchFactory.valid(
+                0,
+                "synthetic-idem-replay-event-failure",
+                "synthetic-patch-replay-event-retry"
+        );
+
+        StateTypes.CommitResult replayed = harness.committer.commit(replayPatch);
+
+        assertEquals("COMMITTED", original.status);
+        assertEquals(original.status, replayed.status);
+        assertEquals(original.previousVersion, replayed.previousVersion);
+        assertEquals(original.committedVersion, replayed.committedVersion);
+        assertEquals(original.auditRef.auditId, replayed.auditRef.auditId);
+        assertEquals(1, harness.repository.commitCalls());
+        assertEquals(1, harness.repository.currentVersion(SyntheticStatePatchFactory.CDP_ID));
+        assertEquals(1, harness.events.events().size());
+        CommitResultSchemaAssertions.assertValid(replayed);
+    }
+
+    @Test
+    void allPostCommitFailuresStillReturnCommitted() {
+        StateCommitterTestHarness harness = new StateCommitterTestHarness();
+        harness.audit.failNext();
+        harness.idempotency.failNextRemember();
+        harness.events.failNext();
+        StateTypes.StatePatch patch = SyntheticStatePatchFactory.valid(
+                0,
+                "synthetic-idem-post-commit-all",
+                "synthetic-patch-post-commit-all"
+        );
+
+        StateTypes.CommitResult result = harness.committer.commit(patch);
+
+        assertAuthoritativeCommitPreserved(result, harness);
+        assertEquals("STATE_COMMITTED", result.auditRef.auditType);
+        assertEquals(1, harness.idempotency.rememberCalls());
+        assertEquals(0, harness.events.events().size());
+    }
+
+    @Test
     void auditInfrastructureFailureIsFailedWithoutMutation() {
         StateCommitterTestHarness harness = new StateCommitterTestHarness();
         harness.consentPolicy.deny(SyntheticStatePatchFactory.CDP_ID);
@@ -281,6 +383,19 @@ class StateCommitterMechanicalCoreTest {
     void authorizedPathIsTheOnlySyntheticFieldUsed() {
         assertEquals("/patient_state/synthetic_test_value", SyntheticFieldPermissionFake.AUTHORIZED_PATH);
         assertNotEquals("/patient_state/chief_complaint", SyntheticFieldPermissionFake.AUTHORIZED_PATH);
+    }
+
+    private static void assertAuthoritativeCommitPreserved(
+            StateTypes.CommitResult result,
+            StateCommitterTestHarness harness
+    ) {
+        assertEquals("COMMITTED", result.status);
+        assertEquals(CommitReasonCodes.PATCH_COMMITTED, result.reasonCode);
+        assertEquals(Integer.valueOf(0), result.previousVersion);
+        assertEquals(Integer.valueOf(1), result.committedVersion);
+        assertEquals(1, harness.repository.commitCalls());
+        assertEquals(1, harness.repository.currentVersion(SyntheticStatePatchFactory.CDP_ID));
+        CommitResultSchemaAssertions.assertValid(result);
     }
 
     private static void assertRejectedConsent(StateTypes.CommitResult result, StateCommitterTestHarness harness) {

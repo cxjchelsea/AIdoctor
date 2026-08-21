@@ -6,10 +6,13 @@
 >
 > Batch: `PBNC-01` / `B2_STATE_COMMITTER_MECHANICAL_CORE`
 >
-> Status: `IMPLEMENTED_PENDING_INDEPENDENT_REVIEW`
+> Status: `POST_COMMIT_ATOMICITY_REMEDIATED_PENDING_INDEPENDENT_REVIEW`
 >
 > Authorization token:
 > `PBNC_01_STATE_COMMITTER_MECHANICAL_CORE_IMPLEMENTATION_AUTHORIZATION_GRANTED`
+>
+> Remediation authorization token:
+> `PBNC_01_POST_COMMIT_ATOMICITY_REMEDIATION_AUTHORIZATION_GRANTED`
 >
 > Authorized Enterprise baseline:
 > `c716210715c14b713884091252447b48c28eacd4` /
@@ -145,6 +148,10 @@ Deterministic order:
 10. internal non-authoritative event evidence
 11. `CommitResult`
 
+The repository `COMMITTED` outcome is the authoritative commit point. Audit,
+idempotency-result persistence, and internal event evidence occur after that
+point and cannot downgrade the returned status to `FAILED`.
+
 No LLM, Model Runtime, RAG, Tool, or Clinical Safety calls.
 
 No Spring stereotype, controller, Feign, JPA, HTTP endpoint, or
@@ -192,8 +199,12 @@ The core receives already parsed / contract-valid `StatePatch`.
   `retryable = false`.
 - `CONFLICT`: `VERSION_MISMATCH` or `IDEMPOTENCY_MISMATCH`; conflicts
   present; `retryable = true` per frozen schema.
-- `FAILED`: repository or audit infrastructure failure, or invariant
-  failure; errors present; no committed version; no partial mutation.
+- `FAILED`: repository or audit infrastructure failure before authoritative
+  commit, or invariant failure; errors present; no committed version; no
+  partial mutation.
+- Once the repository atomic commit succeeds, the result remains `COMMITTED`
+  even if later synthetic audit, idempotency, or non-authoritative event
+  evidence infrastructure fails.
 - Idempotent replay: same key + same logical patch returns the original
   `CommitResult`. It is not rewritten as `NO_OP`.
 
@@ -258,6 +269,11 @@ Every `CommitResult` has `AuditRef`.
 
 Internal event evidence is non-authoritative, not a new `contracts/v1`
 event type, and not clinical truth.
+
+Post-commit audit failure uses a schema-valid synthetic
+`STATE_COMMITTED` fallback reference. Post-commit idempotency and event sinks
+are isolated as best-effort auxiliary operations. Their failure is not
+reinterpreted as failure of state already committed by the repository.
 
 ## 12. Positive Tests
 
@@ -411,8 +427,9 @@ Must remain Draft. Must not be marked Ready. Must not be merged.
 ## 19. Final Machine State
 
 ```text
-PBNC_01_IMPLEMENTATION = IMPLEMENTED_PENDING_INDEPENDENT_REVIEW
-PBNC-01 = IMPLEMENTED_PENDING_INDEPENDENT_REVIEW
+PBNC_01_IMPLEMENTATION = POST_COMMIT_ATOMICITY_REMEDIATED_PENDING_INDEPENDENT_REVIEW
+PBNC_01_POST_COMMIT_ATOMICITY = REMEDIATED_PENDING_INDEPENDENT_REVIEW
+PBNC-01 = POST_COMMIT_ATOMICITY_REMEDIATED_PENDING_INDEPENDENT_REVIEW
 PBNC-02 = NOT_AUTHORIZED
 B2 = NOT_COMPLETE
 PHASE_B = NOT_AUTHORIZED
@@ -426,3 +443,51 @@ Clinical Runtime = NOT_ENABLED
 Production = BLOCKED
 READY_FOR_PBNC_01_INDEPENDENT_REVIEW = YES
 ```
+
+## 20. POST_COMMIT_FAILURE_CAN_INVERT_AUTHORITATIVE_RESULT Remediation
+
+Remediation baseline:
+
+`fd00546fffe0bcf9aaecba31e20397a4e2fe9bad`
+
+Invariant:
+
+```text
+ONCE_AUTHORITATIVE_COMMIT_SUCCEEDS
+-> COMMIT_RESULT_MUST_NOT_BE_DOWNGRADED_TO_FAILED
+```
+
+Mechanical changes only:
+
+- a failed post-commit audit produces a synthetic `STATE_COMMITTED`
+  fallback `AuditRef`;
+- idempotency remember failure is contained after the authoritative point;
+- non-authoritative event evidence failure is contained after the
+  authoritative point;
+- replay-event evidence failure cannot downgrade the stored original
+  authoritative result;
+- deterministic fakes inject each failure independently and simultaneously;
+- repository failure before the authoritative point still returns `FAILED`
+  with no version mutation;
+- rejection/conflict/pre-commit audit behavior remains unchanged.
+
+Focused remediation validation:
+
+```text
+mvn -f diagnosis-service/pom.xml test -Dtest=StateCommitter*
+-> Tests run: 28, Failures: 0, Errors: 0, Skipped: 0
+
+mvn -f diagnosis-service/pom.xml test
+-> Tests run: 83, Failures: 0, Errors: 0, Skipped: 0
+
+python contracts/v1/validator/validate_contracts.py
+-> A5 CONTRACT VALIDATION PASSED
+   13 schemas, 13 valid fixtures, 33 invalid fixtures
+
+python -m pytest -p no:cacheprovider contracts/v1/tests -q
+-> 110 passed
+```
+
+No production database, Spring/CDPManager wiring, Shared Contracts semantic
+change, PBNC-02 state store, Clinical Runtime, PHI, real-patient data, or
+clinical content was introduced.

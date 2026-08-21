@@ -8,13 +8,22 @@ import java.util.List;
 
 public final class RecordingCommitEventEvidenceFake implements CommitEventEvidencePort {
     private final List<InternalCommitEventEvidence> events = new ArrayList<InternalCommitEventEvidence>();
+    private boolean failNext;
 
     public List<InternalCommitEventEvidence> events() {
         return events;
     }
 
+    public void failNext() {
+        failNext = true;
+    }
+
     @Override
     public void record(InternalCommitEventEvidence evidence) {
+        if (failNext) {
+            failNext = false;
+            throw new IllegalStateException("synthetic event evidence failure");
+        }
         events.add(evidence);
     }
 }

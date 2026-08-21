@@ -133,7 +133,11 @@ public final class StateCommitter {
         IdempotencyPort.IdempotencyRecord existing = idempotency.lookup(patch.idempotencyKey).orElse(null);
         if (existing != null) {
             if (fingerprint.equals(existing.canonicalFingerprint)) {
-                emit(InternalCommitEventEvidence.KIND_REPLAYED, existing.originalResult, now);
+                emitAfterAuthoritativeCommit(
+                        InternalCommitEventEvidence.KIND_REPLAYED,
+                        existing.originalResult,
+                        now
+                );
                 return assembler.copyOf(existing.originalResult);
             }
             return finishConflict(
@@ -308,7 +312,7 @@ public final class StateCommitter {
     ) {
         FoundationTypes.AuditRef auditRef = recordAudit("STATE_COMMITTED", patch, "COMMITTED", CommitReasonCodes.PATCH_COMMITTED, now);
         if (auditRef == null) {
-            return failedAfterAudit(patch, previousVersion, now);
+            auditRef = assembler.fallbackCommittedAuditRef(now);
         }
         StateTypes.CommitResult result = assembler.committed(
                 patch,
@@ -317,9 +321,42 @@ public final class StateCommitter {
                 now,
                 auditRef
         );
-        remember(patch, fingerprint, result);
-        emit(InternalCommitEventEvidence.KIND_COMMITTED, result, now);
+        rememberAfterAuthoritativeCommit(patch, fingerprint, result);
+        emitAfterAuthoritativeCommit(InternalCommitEventEvidence.KIND_COMMITTED, result, now);
         return result;
+    }
+
+    /**
+     * The repository has already committed authoritative state before this
+     * method is reached. Idempotency persistence is auxiliary PBNC-01
+     * evidence and must never downgrade that authoritative result.
+     */
+    private void rememberAfterAuthoritativeCommit(
+            StateTypes.StatePatch patch,
+            String fingerprint,
+            StateTypes.CommitResult result
+    ) {
+        try {
+            remember(patch, fingerprint, result);
+        } catch (RuntimeException ignored) {
+            // Authoritative state already advanced. Preserve COMMITTED.
+        }
+    }
+
+    /**
+     * Internal commit event evidence is explicitly non-authoritative. A sink
+     * failure after the repository commit cannot invert the commit result.
+     */
+    private void emitAfterAuthoritativeCommit(
+            String kind,
+            StateTypes.CommitResult result,
+            String now
+    ) {
+        try {
+            emit(kind, result, now);
+        } catch (RuntimeException ignored) {
+            // Authoritative state already advanced. Preserve COMMITTED.
+        }
     }
 
     private StateTypes.CommitResult finishRejected(

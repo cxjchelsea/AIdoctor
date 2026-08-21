@@ -6,6 +6,8 @@ import java.util.Optional;
 
 /**
  * Lookup / remember of the original authoritative {@link StateTypes.CommitResult}.
+ * Remember is post-commit auxiliary persistence in PBNC-01 and its failure
+ * must not reinterpret an already successful repository commit as FAILED.
  */
 public interface IdempotencyPort {
 

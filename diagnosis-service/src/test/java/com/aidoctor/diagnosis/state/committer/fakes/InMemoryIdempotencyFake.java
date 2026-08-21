@@ -11,6 +11,7 @@ public final class InMemoryIdempotencyFake implements IdempotencyPort {
     private final Map<String, IdempotencyRecord> records = new HashMap<String, IdempotencyRecord>();
     private int lookupCalls;
     private int rememberCalls;
+    private boolean failNextRemember;
 
     public int lookupCalls() {
         return lookupCalls;
@@ -18,6 +19,10 @@ public final class InMemoryIdempotencyFake implements IdempotencyPort {
 
     public int rememberCalls() {
         return rememberCalls;
+    }
+
+    public void failNextRemember() {
+        failNextRemember = true;
     }
 
     @Override
@@ -29,6 +34,10 @@ public final class InMemoryIdempotencyFake implements IdempotencyPort {
     @Override
     public void remember(String idempotencyKey, String canonicalFingerprint, StateTypes.CommitResult originalResult) {
         rememberCalls++;
+        if (failNextRemember) {
+            failNextRemember = false;
+            throw new IllegalStateException("synthetic idempotency remember failure");
+        }
         records.put(idempotencyKey, new IdempotencyRecord(canonicalFingerprint, originalResult));
     }
 }
