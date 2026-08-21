@@ -606,3 +606,60 @@ jobs:
             packages/python_runtime/tests/test_sandboxed_artifact_backend.py \
             packages/python_runtime/tests/test_architecture_guards.py \
             -q -s
+
+  runtime-full-semantic-validator:
+    name: runtime-full-semantic-validator
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/model_runtime/requirements.txt
+            packages/model_runtime/requirements-ci.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Install Runtime semantic validator test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements-ci.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+      - name: Test Runtime full semantic validator over HTTP
+        env:
+          PYTHONPATH: contracts/v1/bindings/python
+        run: |
+          python -m pytest \
+            packages/python_runtime/tests/test_runtime_full_semantic_validator.py \
+            -q -s
+
+  ocr-runtime-engineering-docker-real-tool:
+    name: ocr-runtime-engineering-docker-real-tool
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Record Docker identity
+        run: |
+          docker --version
+          docker info --format '{{.ServerVersion}}'
+      - name: Build dedicated engineering Runtime image
+        run: |
+          docker build \
+            -f engineering/Dockerfile \
+            -t aidoctor-engineering-runtime:postfreeze-03c \
+            .
+          echo "ENGINEERING_DOCKER_RUNTIME_IMAGE_BUILD=PASS"
+      - name: Record engineering image identity
+        run: |
+          docker image inspect aidoctor-engineering-runtime:postfreeze-03c \
+            --format 'Id={{.Id}} RepoTags={{json .RepoTags}} RepoDigests={{json .RepoDigests}} Size={{.Size}}'
+      - name: Run container-internal localhost Runtime real-tool probe
+        run: |
+          docker run --rm \
+            -e AIDOCTOR_ENGINEERING_RAW_OCR_PORT=8099 \
+            aidoctor-engineering-runtime:postfreeze-03c \
+            python engineering/docker_runtime_probe.py

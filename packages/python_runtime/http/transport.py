@@ -18,6 +18,8 @@ ERROR_ENVELOPE_INVALID = "ENVELOPE_INVALID"
 ERROR_TOOL_CONTEXT_INVALID = "TOOL_CONTEXT_INVALID"
 ERROR_IDENTITY_MISMATCH = "IDENTITY_MISMATCH"
 ERROR_OPERATION_NOT_AUTHORIZED = "OPERATION_NOT_AUTHORIZED"
+ERROR_RUNTIME_CONTRACT_SEMANTIC_INVALID = "RUNTIME_CONTRACT_SEMANTIC_INVALID"
+ERROR_RUNTIME_CONTRACT_OUTPUT_INVALID = "RUNTIME_CONTRACT_OUTPUT_INVALID"
 
 
 class TransportError(Exception):
@@ -225,6 +227,53 @@ def require_trace_identity(header_trace_id: Optional[str], envelope: ContractEnv
             correlation_id=envelope.correlation_id,
             trace_id=envelope.trace_id,
         )
+
+
+def require_canonical_contract_instance(
+    name: str,
+    instance: Mapping[str, Any],
+    *,
+    output: bool = False,
+    correlation_id: Optional[str] = None,
+    trace_id: Optional[str] = None,
+) -> None:
+    """Fail closed through the canonical Shared Contracts request-level validator.
+
+    Does not copy semantic rule literals. validate_package() is never invoked.
+    """
+
+    from .contract_validation import validate_runtime_contract_instance
+
+    if not isinstance(instance, Mapping):
+        raise TransportError(
+            ERROR_RUNTIME_CONTRACT_OUTPUT_INVALID if output else ERROR_RUNTIME_CONTRACT_SEMANTIC_INVALID,
+            "canonical Shared Contracts instance must be a JSON object",
+            http_status=400,
+            correlation_id=correlation_id,
+            trace_id=trace_id,
+        )
+    errors = validate_runtime_contract_instance(name, instance)
+    if not errors:
+        return
+    version_failed = any("contract_version is not supported" in item for item in errors)
+    if version_failed and not output:
+        raise TransportError(
+            ERROR_CONTRACT_VERSION_MISMATCH,
+            (
+                f"contract_version must be {CONTRACT_VERSION!r} with EXACT negotiation, "
+                f"got {instance.get('contract_version')!r}"
+            ),
+            http_status=400,
+            correlation_id=correlation_id,
+            trace_id=trace_id,
+        )
+    raise TransportError(
+        ERROR_RUNTIME_CONTRACT_OUTPUT_INVALID if output else ERROR_RUNTIME_CONTRACT_SEMANTIC_INVALID,
+        "canonical Shared Contracts validation failed",
+        http_status=400,
+        correlation_id=correlation_id,
+        trace_id=trace_id,
+    )
 
 
 def require_authorized_synthetic_operation(envelope: ContractEnvelope) -> None:

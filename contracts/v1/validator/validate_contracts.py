@@ -8,6 +8,7 @@ import json
 import re
 import sys
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from urllib.parse import unquote, urljoin, urlsplit
 
@@ -294,6 +295,47 @@ def validate_exact_version(manifest, name, instance):
     if name not in {item["name"] for item in manifest["contracts"]}:
         return ["contract name is not present in manifest"]
     return []
+
+
+@lru_cache(maxsize=1)
+def _request_validation_assets():
+    """Process-lifetime cache of manifest + schemas + registry.
+
+    Intentionally omits valid/invalid fixtures. Request-path validation must
+    not scan the package oracle or call validate_package().
+    """
+
+    manifest = read_json(ROOT / "manifest.json")
+    schemas = {item["name"]: read_json(ROOT / item["path"]) for item in manifest["contracts"]}
+    return manifest, schemas, build_registry(schemas)
+
+
+def validate_contract_instance(name, instance):
+    """Request-level canonical validation for one named contract instance.
+
+    Performs JSON Schema structural validation, exact contract version
+    validation, and semantic_errors(name, instance). Returns a list of
+    machine-readable error strings. Does not mutate fixtures, does not
+    assert package completeness, and does not call validate_package().
+    """
+
+    if not isinstance(instance, dict):
+        return ["instance must be a JSON object"]
+    if not isinstance(name, str) or name == "":
+        return ["contract name must be a non-empty string"]
+    manifest, schemas, registry = _request_validation_assets()
+    errors = []
+    errors.extend(validate_exact_version(manifest, name, instance))
+    schema_errors = []
+    if name in schemas:
+        schema_errors = [
+            f"schema:{err.validator}:{pointer(err.absolute_path)}"
+            for err in validator_for(name, schemas, registry).iter_errors(instance)
+        ]
+        errors.extend(schema_errors)
+    if not schema_errors:
+        errors.extend(semantic_errors(name, instance))
+    return errors
 
 
 def validate_new_delivery_release(delivery, release):
