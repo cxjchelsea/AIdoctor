@@ -85,7 +85,7 @@ v2.6：临床场景扩展、呼吸道 RAG V1、统一 Prompt/Model Runtime、旧
 ### 第五步：照路线实施
 
 14. [可执行实施路线](./可执行实施路线.md)  
-    Phase A-F 的代码、旧资产验证、数据、前端、RAG、Model Runtime、评估、发布和下线任务。
+    Phase A-F 的代码、旧资产验证、数据、前端、RAG、Model Runtime、评估、发布和下线任务。Phase B 非临床续作路径见 [Phase B-NC State Foundation Roadmap Amendment](./plans/phase-b/phase-b-nc-state-foundation-roadmap-amendment.md)（`PROPOSED_NOT_AUTHORIZED`；≠ Phase B authorization）。
 
 15. [数据与基础设施迁移](./数据与基础设施迁移.md)  
     PostgreSQL、旧 CDP、Checkpoint、Schema、pgvector、BM25、Neo4j、OTel 和回滚。
