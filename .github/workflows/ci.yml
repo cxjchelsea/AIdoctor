@@ -708,3 +708,154 @@ jobs:
             -e AIDOCTOR_ENGINEERING_RAW_OCR_PORT=8099 \
             aidoctor-engineering-runtime:postfreeze-03c \
             python engineering/docker_runtime_probe.py
+
+  java-raw-ocr-controlled-runtime-route:
+    name: java-raw-ocr-controlled-runtime-route
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            ocr-service/requirements.txt
+            packages/model_runtime/requirements.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5.7.0
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+      - name: Install system Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-chi-sim
+      - name: Record engine identity
+        run: |
+          java -version
+          python --version
+          which tesseract
+          tesseract --version
+          tesseract --list-langs
+          test "$(which tesseract)" = "/usr/bin/tesseract"
+          tesseract --list-langs 2>&1 | grep -qx eng
+          tesseract --list-langs 2>&1 | grep -qx chi_sim
+      - name: Assert default Java and Python surfaces remain unchanged
+        run: |
+          grep -q "engineering.synthetic.runtime_smoke" packages/python_runtime/http/transport.py
+          grep -q "AUTHORIZED_SYNTHETIC_CAPABILITY_ID" packages/python_runtime/http/app.py
+          if grep -q "engineering.ocr.raw" packages/python_runtime/http/app.py; then
+            echo "default create_app leaked engineering.ocr.raw"
+            exit 1
+          fi
+          if grep -qE "PythonRuntimeClient|ControlledRawOcr" \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/agent/ToolCaller.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/agent/AgentLoop.java; then
+            echo "controlled Raw OCR production wiring detected"
+            exit 1
+          fi
+          if grep -Rql "ControlledRawOcr" examination-service; then
+            echo "examination-service imported controlled Raw OCR gateway"
+            exit 1
+          fi
+          if grep -qE "@Component|@Service|@Configuration|@RestController|@Controller|@Bean|@ConditionalOnProperty|@Profile" \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/ControlledRawOcrGateway.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/ControlledRawOcrRoutePolicy.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/ControlledRawOcrRoute.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/ControlledRawOcrGatewayException.java; then
+            echo "controlled gateway Spring wiring detected"
+            exit 1
+          fi
+          echo "DEFAULT_RUNTIME_CAPABILITY_SURFACE_UNCHANGED=YES"
+          echo "JAVA_DEFAULT_ROUTE_PRESERVED=YES"
+          echo "JAVA_CONTROLLED_GATEWAY_COMPONENT_SCANNED=NO"
+          echo "JAVA_PYTHON_CUTOVER_VERIFIED=NO"
+          echo "CANONICAL_RUNTIME_RAW_OCR_ENABLED=NO"
+          echo "JAVA_PYTHON_RAW_OCR_CONTROLLED_CUTOVER_VERIFIED=NO"
+      - name: Install OCR Runtime engineering process dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ocr-service/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+      - name: Install local Shared Contracts Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Start engineering Raw OCR Runtime process
+        env:
+          PYTHONPATH: ocr-service:contracts/v1/bindings/python:.
+          AIDOCTOR_ENGINEERING_RAW_OCR_PORT: "8099"
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+        run: |
+          mkdir -p logs
+          python - <<'PY'
+          import base64
+          import io
+          from pathlib import Path
+          from PIL import Image, ImageDraw, ImageFont
+
+          canvas = Image.new("RGB", (1600, 400), color=(255, 255, 255))
+          drawer = ImageDraw.Draw(canvas)
+          font = ImageFont.load_default(size=96)
+          text = "HELLO OCR 123"
+          bbox = drawer.textbbox((0, 0), text, font=font)
+          width = bbox[2] - bbox[0]
+          height = bbox[3] - bbox[1]
+          left = max((1600 - width) // 2, 40)
+          top = max((400 - height) // 2, 40)
+          drawer.text((left, top), text, fill=(0, 0, 0), font=font)
+          buffer = io.BytesIO()
+          canvas.save(buffer, format="PNG")
+          encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+          Path("logs/artifact.env").write_text(
+              "export AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_BASE64=" + encoded + "\n",
+              encoding="ascii",
+          )
+          PY
+          set -a
+          # shellcheck disable=SC1091
+          . logs/artifact.env
+          set +a
+          rm -f logs/artifact.env
+          nohup python engineering/raw_ocr_runtime_process.py \
+            > logs/engineering-raw-ocr-runtime-process.log 2>&1 &
+          echo $! > logs/engineering-raw-ocr-runtime-process.pid
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8099/api/v1/runtime/health; then
+              echo
+              echo "JAVA_PYTHON_RUNTIME_REAL_HTTP=YES"
+              echo "HEALTH_PASS"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "HEALTH_TIMEOUT"
+          cat logs/engineering-raw-ocr-runtime-process.log
+          exit 1
+      - name: Run controlled Raw OCR gateway unit and real-tool tests
+        env:
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+        run: |
+          mvn -f diagnosis-service/pom.xml \
+            -Dtest=ControlledRawOcrGatewayTest,ControlledRawOcrGatewayRealToolIT \
+            test
+      - name: Capture engineering Raw OCR Runtime process logs
+        if: always()
+        run: |
+          if [ -f logs/engineering-raw-ocr-runtime-process.log ]; then
+            echo "===== engineering-raw-ocr-runtime-process.log ====="
+            cat logs/engineering-raw-ocr-runtime-process.log
+          fi
+      - name: Stop engineering Raw OCR Runtime process
+        if: always()
+        run: |
+          if [ -f logs/engineering-raw-ocr-runtime-process.pid ]; then
+            kill "$(cat logs/engineering-raw-ocr-runtime-process.pid)" || true
+          fi
+
