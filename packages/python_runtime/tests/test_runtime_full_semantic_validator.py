@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from aidoctor_shared_contracts import ToolResult
+from aidoctor_shared_contracts.models import NamedValue
 from fastapi.testclient import TestClient
 
 from packages.python_runtime.artifacts import (
@@ -23,6 +24,7 @@ from packages.python_runtime.executor import DeterministicRuntimeExecutor
 from packages.python_runtime.http.app import create_app
 from packages.python_runtime.http.contract_validation import (
     _canonical_validator_module,
+    normalize_runtime_contract_instance,
     validate_runtime_contract_instance,
 )
 from packages.python_runtime.http.engineering_raw_ocr import (
@@ -343,6 +345,7 @@ def test_java_feign_shaped_optional_null_identifiers_succeed_over_http() -> None
     )
     assert response.status_code == 200
     assert response.json()["status"] == "SUCCEEDED"
+    print("IR01_FEIGN_OPTIONAL_IDENTIFIER_NULL_COMPATIBILITY=PASS", flush=True)
 
 
 def test_java_feign_shaped_unauthorized_capability_remains_403() -> None:
@@ -358,6 +361,7 @@ def test_java_feign_shaped_unauthorized_capability_remains_403() -> None:
     )
     assert response.status_code == 403
     assert response.json()["error_code"] == ERROR_OPERATION_NOT_AUTHORIZED
+    print("IR01_UNAUTHORIZED_FEIGN_SHAPE_REMAINS_403=YES", flush=True)
 
 
 def test_default_capability_surface_unchanged() -> None:
@@ -384,3 +388,109 @@ def test_runtime_http_does_not_copy_semantic_rule_literals() -> None:
             if literal in text:
                 violations.append(f"{path.name}:{literal}")
     assert violations == []
+
+
+def _canonical_tool_result_with_null_value() -> dict:
+    fixture_path = (
+        _REPO_ROOT / "contracts" / "v1" / "fixtures" / "valid" / "interaction-cases.json"
+    )
+    instance = json.loads(fixture_path.read_text(encoding="utf-8"))["ToolResult"]
+    instance["output"] = [{"name": "nullable_value", "value": None}]
+    return instance
+
+
+class _NullNamedValueTool:
+    """Return a schema-allowed required-null NamedValue over HTTP."""
+
+    def invoke(self, envelope):
+        valid = FakeToolPort().invoke(envelope)
+        return valid.model_copy(
+            update={"output": [NamedValue(name="nullable_value", value=None)]}
+        )
+
+
+def test_canonical_namedvalue_required_null_is_allowed() -> None:
+    instance = _canonical_tool_result_with_null_value()
+    canonical = _canonical_validator_module()
+    assert canonical.validate_contract_instance("ToolResult", instance) == []
+    assert validate_runtime_contract_instance("ToolResult", instance) == []
+    print("IR01_CANONICAL_NAMEDVALUE_REQUIRED_NULL_ALLOWED=YES", flush=True)
+
+
+def test_runtime_normalization_preserves_required_nullable_value() -> None:
+    before = {"name": "nullable_value", "value": None}
+    after = normalize_runtime_contract_instance(
+        "ToolResult",
+        {"output": [before]},
+    )
+    assert after["output"][0] == {"name": "nullable_value", "value": None}
+    print("RUNTIME_NULL_NORMALIZATION_PRESERVES_SCHEMA_ALLOWED_NULLS=YES", flush=True)
+    print("IR01_RUNTIME_PRESERVES_REQUIRED_NULL=YES", flush=True)
+
+
+def test_http_output_preserves_required_nullable_value() -> None:
+    router = ToolRouter()
+    router.register_envelope_tool(AUTHORIZED_SYNTHETIC_CAPABILITY_ID, _NullNamedValueTool())
+    application = create_app(
+        runtime_executor=DeterministicRuntimeExecutor(tool_router=router),
+        authorized_capability_ids=frozenset({AUTHORIZED_SYNTHETIC_CAPABILITY_ID}),
+    )
+    payload = _load_golden_payload()
+    response = TestClient(application).post(
+        "/api/v1/runtime/tools/invoke",
+        json=payload,
+        headers={"X-Trace-Id": payload["trace_id"]},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    null_items = [item for item in body["output"] if item["name"] == "nullable_value"]
+    assert null_items == [{"name": "nullable_value", "value": None}]
+    assert validate_runtime_contract_instance("ToolResult", body) == []
+    print("OUTPUT_SERIALIZATION_PRESERVES_REQUIRED_SCHEMA_ALLOWED_NULL=YES", flush=True)
+    print("IR01_HTTP_RESPONSE_PRESERVES_REQUIRED_NULL=YES", flush=True)
+
+
+def test_all_null_identifierset_still_fails_canonical_any_of() -> None:
+    payload = _java_feign_shaped_tool_context(AUTHORIZED_SYNTHETIC_CAPABILITY_ID)
+    payload["identifiers"] = {
+        "contract_version": "1.0.0",
+        "cdp_id": None,
+        "patient_id": None,
+        "encounter_id": None,
+        "session_id": None,
+        "tenant_id": None,
+        "review_id": None,
+        "delivery_id": None,
+    }
+    normalized = normalize_runtime_contract_instance("ToolContext", payload)
+    assert normalized["identifiers"] == {"contract_version": "1.0.0"}
+    errors = validate_runtime_contract_instance("ToolContext", payload)
+    assert errors
+    assert any(item.startswith("schema:") for item in errors)
+    print("IR01_ALL_NULL_IDENTIFIERSET_STILL_REJECTED=YES", flush=True)
+
+
+def test_array_null_element_is_preserved_by_runtime_normalization() -> None:
+    instance = {
+        "output": [{"name": "items", "value": ["keep", None]}],
+        "tags": [None, "kept"],
+    }
+    normalized = normalize_runtime_contract_instance("ToolResult", instance)
+    assert normalized["output"][0]["value"] == ["keep", None]
+    assert normalized["tags"] == [None, "kept"]
+    assert normalized == instance
+
+
+def test_global_object_null_elision_removed() -> None:
+    source = (
+        Path(__file__).resolve().parents[1] / "http" / "contract_validation.py"
+    ).read_text(encoding="utf-8")
+    routes_source = (
+        Path(__file__).resolve().parents[1] / "http" / "routes.py"
+    ).read_text(encoding="utf-8")
+    assert "_omit_json_null_properties" not in source
+    assert "exclude_none=True" not in routes_source
+    assert "normalize_runtime_contract_instance" in source
+    assert "_normalize_tool_context_identifier_nulls" in source
+    print("IR01_GLOBAL_OBJECT_NULL_ELISION_REMOVED=YES", flush=True)
+    print("IR01_REPAIR_PROTOCOL=PASS", flush=True)

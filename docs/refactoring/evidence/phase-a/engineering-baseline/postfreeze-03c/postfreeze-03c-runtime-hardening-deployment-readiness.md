@@ -76,12 +76,24 @@ Runtime HTTP:
 
 1. existing Pydantic / identity parse
 2. canonical validation of ToolContext or ContractEnvelope
-   (optional JSON null properties omitted before schema check so
-   Java Feign unset identifier fields remain schema-valid;
-   this is not a copied semantic rule)
 3. authorization unchanged
 4. executor
 5. canonical validation of ToolResult before HTTP 200
+   (`model_dump(mode="json")`, no `exclude_none`)
+
+IR-01 repair (authoring-time, not independently closed):
+
+- global object-null elision removed
+- only `ToolContext.identifiers` optional/non-nullable Feign nulls
+  are omitted (`patient_id` etc.); `contract_version` stays
+- schema-allowed `NamedValue.value = null` is preserved
+- previous Independent Review of Head `ee4cec5` remains FAIL
+
+```text
+03C_IR01_IMPLEMENTATION_REPAIR = IMPLEMENTED
+03C_IR01_INDEPENDENTLY_CLOSED = NO
+POSTFREEZE_03C_INDEPENDENT_REVIEW = RE_REVIEW_REQUIRED
+```
 
 Default authorized capability set is unchanged.
 `engineering.ocr.raw` is not registered on default `create_app()`.

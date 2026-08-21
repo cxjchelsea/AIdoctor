@@ -25,6 +25,19 @@ _CANONICAL_VALIDATOR_PATH = (
 )
 _CANONICAL_MODULE_NAME = "aidoctor_canonical_validate_contracts"
 
+# identifier-set.schema.json: optional properties typed as opaqueIdentifier
+# (string), not ["string","null"]. Java Feign emits explicit null for unset
+# optionals. contract_version is required and is never omitted.
+_IDENTIFIER_SET_OPTIONAL_NONNULLABLE_FIELDS = (
+    "cdp_id",
+    "patient_id",
+    "encounter_id",
+    "session_id",
+    "tenant_id",
+    "review_id",
+    "delivery_id",
+)
+
 
 @lru_cache(maxsize=1)
 def _canonical_validator_module():
@@ -43,25 +56,37 @@ def _canonical_validator_module():
     return module
 
 
-def _omit_json_null_properties(value: Any) -> Any:
-    """Omit object properties whose JSON value is null.
+def _normalize_tool_context_identifier_nulls(instance: dict[str, Any]) -> dict[str, Any]:
+    """Omit ToolContext.identifiers optional/non-nullable fields that are null.
 
-    Shared Contracts schemas type most optional fields as string/object,
-    not ["string", "null"]. Java Feign and Pydantic dumps may emit explicit
-    nulls for unset optionals. Absent optional means omitted, not null.
-    Array elements are preserved, including schema-allowed explicit nulls.
-    This is JSON instance normalization, not a copied semantic rule.
+    Justified only by IdentifierSet canonical schema semantics.
+    Does not walk other objects or delete schema-allowed explicit nulls.
+    anyOf (at least one real identifier) remains the canonical validator's job.
     """
 
-    if isinstance(value, Mapping):
-        return {
-            key: _omit_json_null_properties(item)
-            for key, item in value.items()
-            if item is not None
-        }
-    if isinstance(value, list):
-        return [_omit_json_null_properties(item) for item in value]
-    return value
+    identifiers = instance.get("identifiers")
+    if not isinstance(identifiers, dict):
+        return instance
+    normalized_ids = dict(identifiers)
+    changed = False
+    for field in _IDENTIFIER_SET_OPTIONAL_NONNULLABLE_FIELDS:
+        if field in normalized_ids and normalized_ids[field] is None:
+            del normalized_ids[field]
+            changed = True
+    if not changed:
+        return instance
+    normalized = dict(instance)
+    normalized["identifiers"] = normalized_ids
+    return normalized
+
+
+def normalize_runtime_contract_instance(name: str, instance: Mapping[str, Any]) -> dict[str, Any]:
+    """Narrow compatibility normalization. Not a generic JSON-null eraser."""
+
+    raw = dict(instance)
+    if name == "ToolContext":
+        return _normalize_tool_context_identifier_nulls(raw)
+    return raw
 
 
 def validate_runtime_contract_instance(name: str, instance: Mapping[str, Any]) -> list[str]:
@@ -69,5 +94,8 @@ def validate_runtime_contract_instance(name: str, instance: Mapping[str, Any]) -
 
     validator = _canonical_validator_module()
     return list(
-        validator.validate_contract_instance(name, _omit_json_null_properties(dict(instance)))
+        validator.validate_contract_instance(
+            name,
+            normalize_runtime_contract_instance(name, instance),
+        )
     )
