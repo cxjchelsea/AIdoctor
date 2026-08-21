@@ -207,7 +207,7 @@ After a later explicit authorization, PBNC-01 may implement only:
 - source validation
 - consent fail-closed validation
 - idempotency
-- expected / base version validation
+- `StatePatch.base_version` validation against internal `current_version`
 - conflict detection
 - atomic operation semantics
 - audit emission
@@ -220,8 +220,8 @@ After a later explicit authorization, PBNC-01 may implement only:
 After a later explicit authorization, PBNC-02 may implement only:
 
 - synthetic / in-memory versioned state store
-- `base_version`
-- `expected_version`
+- `StatePatch.base_version`
+- internal synthetic-state `current_version`
 - snapshot
 - idempotency replay
 - concurrent conflict
@@ -230,6 +230,30 @@ After a later explicit authorization, PBNC-02 may implement only:
 - synthetic policy fixtures
 - synthetic consent fixtures
 - synthetic source fixtures
+
+PBNC version concurrency uses only existing Shared Contracts v1 fields:
+
+```text
+StatePatch.base_version
+  = caller optimistic-concurrency precondition
+internal current_version
+  = synthetic / in-memory repository current version
+mismatch
+  = CONFLICT
+successful commit
+  = committed version advances exactly once
+CommitResult.previous_version / committed_version
+  = authoritative commit outcome versions
+```
+
+```text
+expected version semantics are represented by StatePatch.base_version;
+there is no expected_version field in Shared Contracts v1 StatePatch.
+```
+
+`expected_version` must not be added as a StatePatch or CommitResult
+field in this lane. `ContractConflict.expected_version` is a different
+existing v1 type and is not a StatePatch input field.
 
 Restart / durable persistence semantics are **out of PBNC-02** unless a
 later separate authorization adds them.
@@ -278,8 +302,8 @@ The initial lane must not implement or author:
 PBNC-01 / PBNC-02 initial design must reuse existing v1 types:
 
 ```text
-StatePatch
-CommitResult
+StatePatch          (includes base_version; no expected_version field)
+CommitResult        (previous_version / committed_version)
 ContractEnvelope
 AuditRef
 ```
@@ -297,6 +321,7 @@ If a later implementation discovers that it must add or change:
 - StatePatch semantics
 - CommitResult semantics
 - ContractEnvelope semantics
+- a standalone `expected_version` field on StatePatch or CommitResult
 
 it must:
 
@@ -402,7 +427,7 @@ following **positive proofs**:
 1. valid `StatePatch` → `COMMITTED`
 2. version increments exactly once
 3. duplicate idempotency key does not double-commit
-4. stale `base_version` → `CONFLICT`
+4. stale `StatePatch.base_version` versus internal `current_version` → `CONFLICT`
 5. unauthorized field → `REJECTED`
 6. invalid capability / policy → `REJECTED`
 7. missing / failed consent → fail closed
@@ -441,7 +466,7 @@ least:
 
 - initial version is deterministic
 - valid commit advances version
-- stale expected version conflicts
+- stale `StatePatch.base_version` versus internal `current_version` conflicts
 - concurrent write produces a deterministic winner / conflict
 - replay with the same idempotency key is safe
 - snapshot remains internally consistent
@@ -584,17 +609,19 @@ Any of the following requires immediate STOP and a separate review.
 Scope must not be expanded inside this lane:
 
 1. Shared Contracts v1 semantic change
-2. Encounter / ClinicalObservation / ObservationCandidate implementation
-3. real medical rules
-4. red-flag / threshold / triage content
-5. Clinical Runtime
-6. real provider
-7. PHI / real patient
-8. production DB
-9. dual write
-10. change to State Committer unique-writer architecture
-11. change to Java / Python ownership
-12. unexplained Enterprise / current-effective governance drift
+2. adding a standalone `expected_version` field to StatePatch or CommitResult
+   (`STOP` / `A5_CONTRACT_SEMANTIC_CHANGE_REQUIRES_SEPARATE_REVIEW`)
+3. Encounter / ClinicalObservation / ObservationCandidate implementation
+4. real medical rules
+5. red-flag / threshold / triage content
+6. Clinical Runtime
+7. real provider
+8. PHI / real patient
+9. production DB
+10. dual write
+11. change to State Committer unique-writer architecture
+12. change to Java / Python ownership
+13. unexplained Enterprise / current-effective governance drift
 
 ---
 
