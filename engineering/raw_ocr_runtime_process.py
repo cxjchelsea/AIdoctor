@@ -2,8 +2,8 @@
 
 分类：NON_PRODUCTION_ENGINEERING_LOCALHOST_PROCESS_ENTRYPOINT
 
-本模块是显式 composition root：把具体 RawOcrEngine 接到已审查的
-create_engineering_raw_ocr_app(...) 工厂。
+本模块是显式 composition root：把具体 RawOcrEngine 接到规范
+create_controlled_raw_ocr_app(...) 组合。
 禁止模块级 FastAPI 应用实例，禁止 import 时绑定套接字或启动 uvicorn。
 禁止 sys.path 改写。禁止公共监听。
 禁止重建内部 Runtime 组合对象或默认应用工厂。
@@ -25,7 +25,10 @@ from packages.python_runtime.artifacts import (
     SandboxedArtifactRecord,
     SandboxedFilesystemArtifactPort,
 )
-from packages.python_runtime.http.engineering_raw_ocr import create_engineering_raw_ocr_app
+from packages.python_runtime.http.controlled_composition import (
+    ControlledRawOcrComposition,
+    create_controlled_raw_ocr_app,
+)
 from packages.python_runtime.raw_ocr_adapter import RawOcrToolAdapter
 
 PROCESS_HOST = "127.0.0.1"
@@ -159,7 +162,7 @@ def build_engineering_raw_ocr_process_app_from_env(
     environ: dict[str, str] | None = None,
 ) -> FastAPI:
     """
-    从工程环境构造进程应用：只读 metadata / sandbox 配置，注入已有工厂。
+    从工程环境构造进程应用：只读 metadata / sandbox 配置，注入规范组合。
 
     不启动网络，不覆盖 OCR language，不打开 storage_ref，不读取 payload 字节。
     """
@@ -179,7 +182,11 @@ def build_engineering_raw_ocr_process_app_from_env(
             )
         },
     )
-    return create_engineering_raw_ocr_app(
+    return create_controlled_raw_ocr_app(
+        composition=ControlledRawOcrComposition(
+            register_raw_ocr=True,
+            authorize_raw_ocr=True,
+        ),
         raw_ocr_tool_port=RawOcrToolAdapter(RawOcrEngine()),
         artifact_port=artifact_port,
     )

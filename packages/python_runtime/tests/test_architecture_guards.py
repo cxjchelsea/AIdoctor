@@ -229,8 +229,11 @@ def test_python_runtime_does_not_import_ocr_image_stack_or_legacy_ocr_service():
     assert violations == []
 
 
-# POSTFREEZE-03B-F：唯一允许出现 engineering.ocr.raw 字面量的工程组合模块。
-_ENGINEERING_RAW_OCR_COMPOSITION_MODULE = (
+# POSTFREEZE-03D：Raw OCR 能力身份字面量只属于规范受控组合模块。
+_CONTROLLED_COMPOSITION_MODULE = (
+    Path("packages") / "python_runtime" / "http" / "controlled_composition.py"
+)
+_ENGINEERING_RAW_OCR_FACTORY_MODULE = (
     Path("packages") / "python_runtime" / "http" / "engineering_raw_ocr.py"
 )
 
@@ -239,11 +242,11 @@ def test_python_runtime_does_not_register_raw_ocr_capability():
     """
     默认 Runtime 生产树不得泄漏 engineering.ocr.raw。
 
-    唯一窄例外：显式非默认工程组合模块
-    packages/python_runtime/http/engineering_raw_ocr.py
+    唯一窄例外：规范受控组合模块
+    packages/python_runtime/http/controlled_composition.py
     """
 
-    allowed_relative = _ENGINEERING_RAW_OCR_COMPOSITION_MODULE.as_posix()
+    allowed_relative = _CONTROLLED_COMPOSITION_MODULE.as_posix()
     violations = []
     for path in _iter_production_python(_PYTHON_RUNTIME):
         relative = _repo_relative(path)
@@ -254,9 +257,13 @@ def test_python_runtime_does_not_register_raw_ocr_capability():
             violations.append(relative)
     assert violations == []
 
-    allowed_path = _REPO_ROOT / _ENGINEERING_RAW_OCR_COMPOSITION_MODULE
+    allowed_path = _REPO_ROOT / _CONTROLLED_COMPOSITION_MODULE
+    factory_path = _REPO_ROOT / _ENGINEERING_RAW_OCR_FACTORY_MODULE
+    app_path = _PYTHON_RUNTIME / "http" / "app.py"
     assert allowed_path.is_file()
     assert "engineering.ocr.raw" in allowed_path.read_text(encoding="utf-8")
+    assert "engineering.ocr.raw" not in factory_path.read_text(encoding="utf-8")
+    assert "engineering.ocr.raw" not in app_path.read_text(encoding="utf-8")
 
 
 def test_raw_ocr_adapter_remains_injection_only_and_ocr_library_free():
@@ -352,8 +359,10 @@ def test_engineering_process_composition_root_is_unique_and_constrained():
         assert forbidden not in imported_modules
     for forbidden in _FORBIDDEN_LAUNCHER_IMPORT_NAMES:
         assert forbidden not in imported_names
-    assert "create_engineering_raw_ocr_app" in imported_names
-    assert "create_engineering_raw_ocr_app" in _call_names(launcher_path)
+    assert "create_controlled_raw_ocr_app" in imported_names
+    assert "create_controlled_raw_ocr_app" in _call_names(launcher_path)
+    assert "create_engineering_raw_ocr_app" not in imported_names
+    assert "create_engineering_raw_ocr_app" not in _call_names(launcher_path)
 
     for module_name in imported_modules:
         for forbidden in _FORBIDDEN_PROVIDER_OR_CLINICAL_LAUNCHER_ROOTS:
@@ -365,7 +374,7 @@ def test_engineering_process_composition_root_is_unique_and_constrained():
         _repo_relative(path)
         for path in engineering_root.rglob("*.py")
         if "tests" not in path.relative_to(engineering_root).parts
-        and "create_engineering_raw_ocr_app" in path.read_text(encoding="utf-8")
+        and "create_controlled_raw_ocr_app" in path.read_text(encoding="utf-8")
     ]
     assert process_roots == [relative]
 
@@ -386,6 +395,51 @@ def test_engineering_docker_runtime_is_dedicated_localhost_only():
     assert "0.0.0.0" in legacy_text
     assert "uvicorn" in legacy_text
     assert "app.main:app" in legacy_text
+
+
+def test_engineering_factory_is_thin_controlled_composition_delegate():
+    """工程兼容工厂不得再自行构造 ToolRouter / executor / create_app。"""
+
+    factory_path = _REPO_ROOT / _ENGINEERING_RAW_OCR_FACTORY_MODULE
+    imported_modules = _imported_modules(factory_path)
+    imported_names = _imported_names(factory_path)
+    assert "packages.python_runtime.tool_router" not in imported_modules
+    assert "packages.python_runtime.executor" not in imported_modules
+    assert "packages.python_runtime.http.app" not in imported_modules
+    assert "ToolRouter" not in imported_names
+    assert "DeterministicRuntimeExecutor" not in imported_names
+    assert "create_app" not in imported_names
+    assert "create_controlled_raw_ocr_app" in imported_names
+    assert "create_controlled_raw_ocr_app" in _call_names(factory_path)
+
+
+def test_controlled_composition_is_composition_only():
+    """规范受控组合不得导入 OCR 实现、绑定网络或解析启用开关。"""
+
+    composition_path = _REPO_ROOT / _CONTROLLED_COMPOSITION_MODULE
+    text = composition_path.read_text(encoding="utf-8")
+    imported_modules = _imported_modules(composition_path)
+    forbidden_modules = _FORBIDDEN_OCR_RUNTIME_ROOTS | frozenset(
+        {
+            "packages.python_runtime.raw_ocr_adapter",
+            "packages.python_runtime.raw_ocr_adapter.RawOcrToolAdapter",
+            "uvicorn",
+            "capabilities",
+        }
+    )
+    for module_name in imported_modules:
+        for forbidden in forbidden_modules:
+            assert module_name != forbidden
+            assert not module_name.startswith(f"{forbidden}.")
+        assert "RawOcrEngine" not in module_name
+        assert "RawOcrToolAdapter" not in module_name
+    assert "uvicorn.run" not in text
+    assert "os.environ" not in text
+    assert "enable_raw_ocr" not in text
+    assert "app = FastAPI" not in text
+    assert "app = create_app()" not in text
+    assert "from packages.python_runtime.http.app import create_app" in text
+    assert "create_app(" in text
 
 
 def test_runtime_http_does_not_duplicate_canonical_semantic_literals():

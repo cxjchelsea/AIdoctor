@@ -636,6 +636,51 @@ jobs:
             packages/python_runtime/tests/test_runtime_full_semantic_validator.py \
             -q -s
 
+  runtime-canonical-raw-ocr-controlled-opt-in:
+    name: runtime-canonical-raw-ocr-controlled-opt-in
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            ocr-service/requirements.txt
+            packages/model_runtime/requirements.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Install system Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-chi-sim
+      - name: Record Tesseract engine identity
+        run: |
+          python --version
+          which tesseract
+          tesseract --version
+          tesseract --list-langs
+      - name: Install canonical controlled opt-in test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ocr-service/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+          python -m pip install pytest
+      - name: Test canonical Runtime controlled Raw OCR opt-in
+        env:
+          PYTHONPATH: ocr-service:contracts/v1/bindings/python:.
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+        run: |
+          python -m pytest \
+            packages/python_runtime/tests/test_canonical_raw_ocr_controlled_opt_in.py \
+            packages/python_runtime/tests/test_architecture_guards.py \
+            -q -s
+
   ocr-runtime-engineering-docker-real-tool:
     name: ocr-runtime-engineering-docker-real-tool
     runs-on: ubuntu-24.04
