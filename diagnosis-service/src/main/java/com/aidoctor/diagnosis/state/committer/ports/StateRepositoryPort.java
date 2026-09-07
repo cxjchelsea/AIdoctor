@@ -1,5 +1,7 @@
 package com.aidoctor.diagnosis.state.committer.ports;
 
+import com.aidoctor.contracts.v1.StateTypes;
+
 /**
  * Minimal authoritative mechanical mutation boundary.
  *
@@ -21,17 +23,20 @@ public interface StateRepositoryPort {
         public final int expectedCurrentVersion;
         public final String patchId;
         public final String idempotencyKey;
+        public final StateTypes.StatePatch patch;
 
         public AtomicCommitCommand(
                 String cdpId,
                 int expectedCurrentVersion,
                 String patchId,
-                String idempotencyKey
+                String idempotencyKey,
+                StateTypes.StatePatch patch
         ) {
             this.cdpId = cdpId;
             this.expectedCurrentVersion = expectedCurrentVersion;
             this.patchId = patchId;
             this.idempotencyKey = idempotencyKey;
+            this.patch = patch;
         }
     }
 
@@ -48,6 +53,7 @@ public interface StateRepositoryPort {
         public final int actualVersion;
         public final String failureCode;
         public final String failureMessage;
+        public final boolean retryable;
 
         private AtomicCommitOutcome(
                 Status status,
@@ -55,7 +61,8 @@ public interface StateRepositoryPort {
                 int committedVersion,
                 int actualVersion,
                 String failureCode,
-                String failureMessage
+                String failureMessage,
+                boolean retryable
         ) {
             this.status = status;
             this.previousVersion = previousVersion;
@@ -63,6 +70,7 @@ public interface StateRepositoryPort {
             this.actualVersion = actualVersion;
             this.failureCode = failureCode;
             this.failureMessage = failureMessage;
+            this.retryable = retryable;
         }
 
         /** Makes an invalid committed version transition unrepresentable. */
@@ -74,7 +82,8 @@ public interface StateRepositoryPort {
                     committedVersion,
                     committedVersion,
                     null,
-                    null
+                    null,
+                    false
             );
         }
 
@@ -85,18 +94,36 @@ public interface StateRepositoryPort {
                     0,
                     actualVersion,
                     null,
-                    null
+                    null,
+                    true
             );
         }
 
         public static AtomicCommitOutcome failed(String failureCode, String failureMessage) {
+            return failedRetryable(failureCode, failureMessage);
+        }
+
+        public static AtomicCommitOutcome failedRetryable(String failureCode, String failureMessage) {
             return new AtomicCommitOutcome(
                     Status.FAILED,
                     0,
                     0,
                     0,
                     failureCode,
-                    failureMessage
+                    failureMessage,
+                    true
+            );
+        }
+
+        public static AtomicCommitOutcome failedNonRetryable(String failureCode, String failureMessage) {
+            return new AtomicCommitOutcome(
+                    Status.FAILED,
+                    0,
+                    0,
+                    0,
+                    failureCode,
+                    failureMessage,
+                    false
             );
         }
     }

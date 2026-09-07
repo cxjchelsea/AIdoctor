@@ -549,6 +549,49 @@ class StateCommitterMechanicalCoreTest {
     }
 
     @Test
+    void expectedCurrentValueIsUnsupportedAndRejectedBeforeMutation() {
+        StateCommitterTestHarness harness = new StateCommitterTestHarness();
+        StateTypes.StatePatch patch = SyntheticStatePatchFactory.valid(
+                0, "synthetic-idem-expected-value", "synthetic-patch-expected-value");
+        patch.operations.get(0).expectedCurrentValue = "alpha";
+
+        StateTypes.CommitResult result = harness.committer.commit(patch);
+
+        assertEquals("REJECTED", result.status);
+        assertEquals(CommitReasonCodes.STATE_OPERATION_SEMANTICS_UNSUPPORTED, result.reasonCode);
+        assertEquals(Boolean.FALSE, result.retryable);
+        assertEquals(0, harness.repository.commitCalls());
+        CommitResultSchemaAssertions.assertValid(result);
+    }
+
+    @Test
+    void topLevelNullAddOrReplaceValueIsUnsupportedAndRejectedBeforeMutation() {
+        StateCommitterTestHarness replaceHarness = new StateCommitterTestHarness();
+        StateTypes.StatePatch replace = SyntheticStatePatchFactory.valid(
+                0, "synthetic-idem-null-replace", "synthetic-patch-null-replace");
+        replace.operations.get(0).value = null;
+
+        StateTypes.CommitResult replaceResult = replaceHarness.committer.commit(replace);
+
+        assertEquals("REJECTED", replaceResult.status);
+        assertEquals(CommitReasonCodes.STATE_OPERATION_SEMANTICS_UNSUPPORTED, replaceResult.reasonCode);
+        assertEquals(0, replaceHarness.repository.commitCalls());
+
+        StateCommitterTestHarness addHarness = new StateCommitterTestHarness();
+        StateTypes.StatePatch add = SyntheticStatePatchFactory.valid(
+                0, "synthetic-idem-null-add", "synthetic-patch-null-add");
+        add.operations.get(0).op = "ADD";
+        add.operations.get(0).value = null;
+
+        StateTypes.CommitResult addResult = addHarness.committer.commit(add);
+
+        assertEquals("REJECTED", addResult.status);
+        assertEquals(CommitReasonCodes.STATE_OPERATION_SEMANTICS_UNSUPPORTED, addResult.reasonCode);
+        assertEquals(0, addHarness.repository.commitCalls());
+        CommitResultSchemaAssertions.assertValid(addResult);
+    }
+
+    @Test
     void reservationFailurePreventsCommit() {
         StateCommitterTestHarness harness = new StateCommitterTestHarness();
         harness.idempotency.failNextReserve();
