@@ -6,13 +6,16 @@
 >
 > Batch: `PBNC-01` / `B2_STATE_COMMITTER_MECHANICAL_CORE`
 >
-> Status: `POST_COMMIT_ATOMICITY_REMEDIATED_PENDING_INDEPENDENT_REVIEW`
+> Status: `BOUNDED_SEMANTIC_CORRECTION_IMPLEMENTED_PENDING_RE_REVIEW`
 >
 > Authorization token:
 > `PBNC_01_STATE_COMMITTER_MECHANICAL_CORE_IMPLEMENTATION_AUTHORIZATION_GRANTED`
 >
 > Remediation authorization token:
 > `PBNC_01_POST_COMMIT_ATOMICITY_REMEDIATION_AUTHORIZATION_GRANTED`
+>
+> Bounded semantic correction authorization token:
+> `PBNC_01_PR73_BOUNDED_SEMANTIC_CORRECTION_EXPLICIT_AUTHORIZATION_GRANTED`
 >
 > Authorized Enterprise baseline:
 > `c716210715c14b713884091252447b48c28eacd4` /
@@ -134,23 +137,25 @@ These ports are PBNC-01 implementation detail. They are not Shared Contracts.
 `StateRepositoryPort` only reads a current version and executes one atomic
 commit attempt. The test fake is a version counter, not a PBNC-02 store.
 
-Deterministic order:
+Corrected deterministic order:
 
-1. contract / version identity
-2. idempotency lookup
+1. bounded StatePatch / envelope validation
+2. completed idempotency replay / key inspection
 3. capability policy
 4. consent
 5. field permission
 6. source validation
 7. current state version
-8. atomic commit
-9. audit
-10. internal non-authoritative event evidence
-11. `CommitResult`
+8. atomic idempotency reservation
+9. successful actual pre-commit audit emission
+10. authoritative mechanical repository commit
+11. `CommitResult` assembly
+12. idempotency completion
+13. internal non-authoritative event evidence
 
-The repository `COMMITTED` outcome is the authoritative commit point. Audit,
-idempotency-result persistence, and internal event evidence occur after that
-point and cannot downgrade the returned status to `FAILED`.
+The repository `COMMITTED` outcome is the authoritative mechanical commit
+point. Audit is a prerequisite gate. Idempotency completion and internal event
+evidence occur after that point and cannot downgrade `COMMITTED`.
 
 No LLM, Model Runtime, RAG, Tool, or Clinical Safety calls.
 
@@ -187,8 +192,10 @@ mismatch -> CONFLICT
 successful commit -> previous_version + 1
 ```
 
-Structural validation authority remains `contracts/v1` validator.
-The core receives already parsed / contract-valid `StatePatch`.
+Structural contract authority remains `contracts/v1`. The core additionally
+performs bounded manual consumer validation on the already parsed Java POJO;
+successful deserialization is not treated as proof that the boundary is valid.
+This is not a claim of full JSON Schema runtime validation.
 
 ## 7. Deterministic Status Mapping
 
@@ -203,8 +210,7 @@ The core receives already parsed / contract-valid `StatePatch`.
   commit, or invariant failure; errors present; no committed version; no
   partial mutation.
 - Once the repository atomic commit succeeds, the result remains `COMMITTED`
-  even if later synthetic audit, idempotency, or non-authoritative event
-  evidence infrastructure fails.
+  if later idempotency completion or non-authoritative event evidence fails.
 - Idempotent replay: same key + same logical patch returns the original
   `CommitResult`. It is not rewritten as `NO_OP`.
 
@@ -240,9 +246,12 @@ same idempotency_key + different logical content
 → no commit
 ```
 
-Canonical fingerprint excludes routing ids such as `patch_id` and
-envelope message ids. Replay may emit non-authoritative replay evidence
-only.
+Canonical fingerprint excludes routing ids such as `patch_id` and envelope
+message ids. The key is atomically reserved before repository mutation. If
+post-commit result completion fails, the reservation remains and retries cannot
+commit again; an exact retry receives `IDEMPOTENCY_RESULT_UNAVAILABLE`, while a
+changed fingerprint receives `IDEMPOTENCY_MISMATCH`. Pre-commit rejections and
+ordinary conflicts are not permanently memoized.
 
 ## 10. Version Semantics
 
@@ -258,6 +267,11 @@ actual_version = internal current_version
 field. `StatePatch.expected_version` was not added.
 
 ## 11. Audit / Event Evidence
+
+Correction notice: the historical audit-fallback statements below are
+superseded by section 21. Current PBNC-01 requires an actual valid pre-commit
+`STATE_PATCH_REQUESTED` audit reference and never uses fallback audit evidence
+for `COMMITTED`.
 
 Every `CommitResult` has `AuditRef`.
 
@@ -444,7 +458,7 @@ Production = BLOCKED
 READY_FOR_PBNC_01_INDEPENDENT_REVIEW = YES
 ```
 
-## 20. POST_COMMIT_FAILURE_CAN_INVERT_AUTHORITATIVE_RESULT Remediation
+## 20. Historical POST_COMMIT_FAILURE_CAN_INVERT_AUTHORITATIVE_RESULT Remediation (superseded)
 
 Remediation baseline:
 
@@ -491,3 +505,74 @@ python -m pytest -p no:cacheprovider contracts/v1/tests -q
 No production database, Spring/CDPManager wiring, Shared Contracts semantic
 change, PBNC-02 state store, Clinical Runtime, PHI, real-patient data, or
 clinical content was introduced.
+
+The later bounded semantic correction supersedes the historical audit-fallback
+design retained above as chronology.
+
+## 21. PR #73 Bounded Semantic Correction
+
+Correction target:
+
+- base: `743ea5456545c545cf651189ad1a25751ef405ac`
+- reviewed head: `5cccab3fc0170519cbcfd4e1beae85c4ac30d3e2`
+- reviewed tree: `b944e602448c5fcf48dc0638f5a5553ee2cf3273`
+
+Corrected guarantees:
+
+- `COMMITTED` means mechanical admission plus authoritative version-boundary
+  commit; it does not mean ADD / REPLACE / REMOVE were applied to state.
+- `TEST` and unsupported operation kinds are rejected before repository commit.
+- `AtomicCommitOutcome.committed(previousVersion)` alone constructs a committed
+  outcome and computes exactly `previousVersion + 1`.
+- only an idempotency reservation winner can attempt mutation; completion
+  failure leaves the reservation fail-safe against a duplicate commit.
+- an actual, complete Shared Contracts v1 `AuditRef` is required before the
+  repository commit attempt; no committed fallback exists.
+- output and conflict identifiers are stable request-derived hashes under fixed
+  deterministic dependencies and state.
+- invariant failures are non-retryable; repository, audit, and idempotency
+  infrastructure failures are retryable. Incomplete idempotency results never
+  re-commit.
+
+Bounded validator evidence:
+
+```text
+STATE_PATCH_BOUNDARY_VALIDATION_TEST_VERIFIED = YES
+FULL_JSON_SCHEMA_RUNTIME_VALIDATION = NO
+```
+
+The validator maps applicable v1 envelope, identity, version, cardinality,
+path, source, sensitivity, reason, evidence, producer, timestamp, and
+controlled-value constraints to the parsed binding. Java null cannot retain
+the distinction between an absent JSON property and an explicitly supplied
+JSON null; that representation limit is not overclaimed.
+
+Focused correction validation:
+
+```text
+mvn -f diagnosis-service/pom.xml -Dtest='StateCommitter*' test
+-> Tests run: 42, Failures: 0, Errors: 0, Skipped: 0
+
+mvn -f diagnosis-service/pom.xml test
+-> Tests run: 97, Failures: 0, Errors: 0, Skipped: 0
+```
+
+Evidence labels:
+
+```text
+STATE_PATCH_BOUNDARY_VALIDATION_TEST_VERIFIED = YES
+IDEMPOTENCY_NO_DOUBLE_COMMIT_TEST_VERIFIED = YES
+PRE_COMMIT_AUDIT_GATE_TEST_VERIFIED = YES
+MECHANICAL_PATCH_ADMISSION_ATOMICITY_VERIFIED = YES
+STATE_COMMITTER_POST_COMMIT_RESULT_STABILITY_TEST_VERIFIED = YES
+STATE_OPERATION_APPLICATION_VERIFIED = NO
+STATE_LEVEL_ATOMICITY_VERIFIED = NO
+TRANSACTIONAL_COMMIT_AND_AUDIT_ATOMICITY = NO
+DURABLE_PRODUCTION_AUDIT_VERIFIED = NO
+PBNC_01_INDEPENDENTLY_REVIEWED = NO
+PBNC_01_MERGE_REVIEWED = NO
+PBNC_01_DURABLY_CLOSED = NO
+PBNC-02 = NOT_AUTHORIZED
+Clinical Runtime = NOT_ENABLED
+Production = BLOCKED
+```

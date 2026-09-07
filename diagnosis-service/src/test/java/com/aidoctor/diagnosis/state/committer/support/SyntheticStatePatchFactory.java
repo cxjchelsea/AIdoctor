@@ -65,6 +65,16 @@ public final class SyntheticStatePatchFactory {
         );
     }
 
+    public static StateTypes.StatePatch withOperation(String operationKind, int baseVersion) {
+        StateTypes.StatePatch patch = valid(
+                baseVersion,
+                "synthetic-idem-operation-" + operationKind.toLowerCase(),
+                "synthetic-patch-operation-" + operationKind.toLowerCase()
+        );
+        patch.operations.get(0).op = operationKind;
+        return patch;
+    }
+
     public static StateTypes.StatePatch withCdp(String cdpId, int baseVersion) {
         return patch(
                 cdpId,
@@ -133,7 +143,7 @@ public final class SyntheticStatePatchFactory {
         return operations;
     }
 
-    private static StateTypes.StatePatchOperation operation(String path, String source) {
+    public static StateTypes.StatePatchOperation operation(String path, String source) {
         StateTypes.StatePatchOperation operation = new StateTypes.StatePatchOperation();
         operation.op = "REPLACE";
         operation.path = path;

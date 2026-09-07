@@ -8,7 +8,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * Builds frozen {@link StateTypes.CommitResult} shapes. Does not invent
@@ -17,8 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 final class CommitResultAssembler {
     private static final ObjectMapper MAPPER = SharedContractsMapper.create();
     private static final String PRODUCER = "state-committer";
-
-    private final AtomicInteger messageSequence = new AtomicInteger(1);
 
     StateTypes.CommitResult copyOf(StateTypes.CommitResult original) {
         return MAPPER.convertValue(MAPPER.valueToTree(original), StateTypes.CommitResult.class);
@@ -84,7 +84,8 @@ final class CommitResultAssembler {
             String createdAt,
             String errorCode,
             String errorMessage,
-            FoundationTypes.AuditRef auditRef
+            FoundationTypes.AuditRef auditRef,
+            boolean retryable
     ) {
         StateTypes.CommitResult result = base(patch, "FAILED", previousVersion, createdAt, auditRef);
         result.reasonCode = errorCode;
@@ -96,7 +97,7 @@ final class CommitResultAssembler {
         error.message = errorMessage;
         errors.add(error);
         result.errors = errors;
-        result.retryable = Boolean.TRUE;
+        result.retryable = Boolean.valueOf(retryable);
         return result;
     }
 
@@ -161,10 +162,6 @@ final class CommitResultAssembler {
         return fallbackAuditRef(createdAt, "STATE_PATCH_REQUESTED");
     }
 
-    FoundationTypes.AuditRef fallbackCommittedAuditRef(String createdAt) {
-        return fallbackAuditRef(createdAt, "STATE_COMMITTED");
-    }
-
     private FoundationTypes.AuditRef fallbackAuditRef(String createdAt, String auditType) {
         FoundationTypes.AuditRef auditRef = new FoundationTypes.AuditRef();
         auditRef.contractVersion = ContractVersion.CONTRACT_VERSION;
@@ -186,7 +183,7 @@ final class CommitResultAssembler {
     ) {
         StateTypes.CommitResult result = new StateTypes.CommitResult();
         result.contractVersion = ContractVersion.CONTRACT_VERSION;
-        result.envelope = envelope(patch, createdAt);
+        result.envelope = envelope(patch, status, createdAt);
         result.patchId = patch == null || isBlank(patch.patchId) ? "synthetic-missing-patch" : patch.patchId;
         result.cdpId = patch == null || isBlank(patch.cdpId) ? "synthetic-missing-cdp" : patch.cdpId;
         result.status = status;
@@ -195,11 +192,19 @@ final class CommitResultAssembler {
         return result;
     }
 
-    private FoundationTypes.ContractEnvelope envelope(StateTypes.StatePatch patch, String createdAt) {
+    private FoundationTypes.ContractEnvelope envelope(
+            StateTypes.StatePatch patch,
+            String status,
+            String createdAt
+    ) {
         FoundationTypes.ContractEnvelope envelope = new FoundationTypes.ContractEnvelope();
         envelope.contractName = "CommitResult";
         envelope.contractVersion = ContractVersion.CONTRACT_VERSION;
-        envelope.messageId = "synthetic-commit-" + messageSequence.getAndIncrement();
+        envelope.messageId = stableId(
+                "synthetic-commit-",
+                status + "|" + safePatchValue(patch == null ? null : patch.patchId)
+                        + "|" + safePatchValue(patch == null ? null : patch.idempotencyKey)
+        );
         envelope.createdAt = createdAt;
         envelope.producer = PRODUCER;
         if (patch != null && patch.envelope != null) {
@@ -234,5 +239,31 @@ final class CommitResultAssembler {
 
     private static String blankToDefault(String value, String defaultValue) {
         return isBlank(value) ? defaultValue : value;
+    }
+
+    String conflictId(StateTypes.StatePatch patch, String type) {
+        return stableId(
+                "synthetic-conflict-",
+                type + "|" + safePatchValue(patch == null ? null : patch.patchId)
+                        + "|" + safePatchValue(patch == null ? null : patch.idempotencyKey)
+        );
+    }
+
+    private static String stableId(String prefix, String source) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(source.getBytes(StandardCharsets.UTF_8));
+            StringBuilder value = new StringBuilder(prefix);
+            for (byte item : bytes) {
+                value.append(String.format("%02x", Integer.valueOf(item & 0xff)));
+            }
+            return value.toString();
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is required", exception);
+        }
+    }
+
+    private static String safePatchValue(String value) {
+        return value == null ? "missing" : value;
     }
 }

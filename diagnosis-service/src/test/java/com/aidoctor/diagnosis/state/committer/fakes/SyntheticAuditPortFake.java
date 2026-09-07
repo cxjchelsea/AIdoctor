@@ -13,26 +13,52 @@ public final class SyntheticAuditPortFake implements AuditPort {
     private final Clock clock;
     private final AtomicInteger sequence = new AtomicInteger(1);
     private final List<AuditCommand> commands = new ArrayList<AuditCommand>();
+    private final List<String> callOrder;
     private boolean failNext;
+    private boolean returnNullNext;
+    private boolean returnMalformedNext;
+    private FoundationTypes.AuditRef lastAuditRef;
 
     public SyntheticAuditPortFake(Clock clock) {
+        this(clock, new ArrayList<String>());
+    }
+
+    public SyntheticAuditPortFake(Clock clock, List<String> callOrder) {
         this.clock = clock;
+        this.callOrder = callOrder;
     }
 
     public void failNext() {
         failNext = true;
     }
 
+    public void returnNullNext() {
+        returnNullNext = true;
+    }
+
+    public void returnMalformedNext() {
+        returnMalformedNext = true;
+    }
+
     public List<AuditCommand> commands() {
         return commands;
+    }
+
+    public FoundationTypes.AuditRef lastAuditRef() {
+        return lastAuditRef;
     }
 
     @Override
     public FoundationTypes.AuditRef record(AuditCommand command) {
         commands.add(command);
+        callOrder.add("audit.record");
         if (failNext) {
             failNext = false;
             throw new IllegalStateException("synthetic audit infrastructure failure");
+        }
+        if (returnNullNext) {
+            returnNullNext = false;
+            return null;
         }
         FoundationTypes.AuditRef auditRef = new FoundationTypes.AuditRef();
         auditRef.contractVersion = ContractVersion.CONTRACT_VERSION;
@@ -42,6 +68,11 @@ public final class SyntheticAuditPortFake implements AuditPort {
         auditRef.createdAt = clock.instant().toString();
         auditRef.accessLevel = "INTERNAL";
         auditRef.phiCapable = Boolean.FALSE;
+        if (returnMalformedNext) {
+            returnMalformedNext = false;
+            auditRef.auditId = "invalid audit id";
+        }
+        lastAuditRef = auditRef;
         return auditRef;
     }
 }

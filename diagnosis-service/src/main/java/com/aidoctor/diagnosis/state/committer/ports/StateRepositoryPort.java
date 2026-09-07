@@ -1,8 +1,12 @@
 package com.aidoctor.diagnosis.state.committer.ports;
 
 /**
- * Minimal repository abstraction for one mechanical commit attempt.
- * Not a clinical state store, Encounter model, or persistence engine.
+ * Minimal authoritative mechanical mutation boundary.
+ *
+ * <p>{@code COMMITTED} means the mutation was atomically admitted and the
+ * version advanced exactly once. {@code CONFLICT}, {@code FAILED}, and an
+ * exception mean no mutation. This does not assert that patch operations were
+ * applied to a clinical record, and is not a clinical state store.
  */
 public interface StateRepositoryPort {
 
@@ -37,17 +41,17 @@ public interface StateRepositoryPort {
         }
 
         public final Status status;
-        public final Integer previousVersion;
-        public final Integer committedVersion;
-        public final Integer actualVersion;
+        public final int previousVersion;
+        public final int committedVersion;
+        public final int actualVersion;
         public final String failureCode;
         public final String failureMessage;
 
         private AtomicCommitOutcome(
                 Status status,
-                Integer previousVersion,
-                Integer committedVersion,
-                Integer actualVersion,
+                int previousVersion,
+                int committedVersion,
+                int actualVersion,
                 String failureCode,
                 String failureMessage
         ) {
@@ -59,12 +63,14 @@ public interface StateRepositoryPort {
             this.failureMessage = failureMessage;
         }
 
-        public static AtomicCommitOutcome committed(int previousVersion, int committedVersion) {
+        /** Makes an invalid committed version transition unrepresentable. */
+        public static AtomicCommitOutcome committed(int previousVersion) {
+            int committedVersion = Math.addExact(previousVersion, 1);
             return new AtomicCommitOutcome(
                     Status.COMMITTED,
-                    Integer.valueOf(previousVersion),
-                    Integer.valueOf(committedVersion),
-                    Integer.valueOf(committedVersion),
+                    previousVersion,
+                    committedVersion,
+                    committedVersion,
                     null,
                     null
             );
@@ -73,9 +79,9 @@ public interface StateRepositoryPort {
         public static AtomicCommitOutcome conflict(int expectedVersion, int actualVersion) {
             return new AtomicCommitOutcome(
                     Status.CONFLICT,
-                    Integer.valueOf(actualVersion),
-                    null,
-                    Integer.valueOf(actualVersion),
+                    actualVersion,
+                    0,
+                    actualVersion,
                     null,
                     null
             );
@@ -84,9 +90,9 @@ public interface StateRepositoryPort {
         public static AtomicCommitOutcome failed(String failureCode, String failureMessage) {
             return new AtomicCommitOutcome(
                     Status.FAILED,
-                    null,
-                    null,
-                    null,
+                    0,
+                    0,
+                    0,
                     failureCode,
                     failureMessage
             );

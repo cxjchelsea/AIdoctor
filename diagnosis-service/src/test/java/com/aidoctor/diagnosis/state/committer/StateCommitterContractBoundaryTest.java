@@ -42,10 +42,46 @@ class StateCommitterContractBoundaryTest {
 
         StateTypes.CommitResult result = harness.committer.commit(patch);
 
-        assertEquals("REJECTED", result.status);
+        assertEquals("FAILED", result.status);
         assertEquals(CommitReasonCodes.CONTRACT_IDENTITY_INVALID, result.reasonCode);
         assertEquals(0, harness.repository.commitCalls());
+        assertEquals(0, harness.audit.commands().size());
+        assertEquals(0, harness.idempotency.reserveCalls());
         CommitResultSchemaAssertions.assertValid(result);
+    }
+
+    @Test
+    void malformedPojoFieldsFailBeforeAnySideEffect() {
+        StateTypes.StatePatch patch = SyntheticStatePatchFactory.valid(
+                0, "synthetic-idem-malformed", "synthetic-patch-malformed");
+        patch.envelope.messageId = "invalid message id";
+        patch.reasonCode = "lower-case";
+        patch.operations.get(0).path = "/unknown/root";
+        StateCommitterTestHarness harness = new StateCommitterTestHarness();
+
+        StateTypes.CommitResult result = harness.committer.commit(patch);
+
+        assertEquals("FAILED", result.status);
+        assertEquals(CommitReasonCodes.CONTRACT_IDENTITY_INVALID, result.reasonCode);
+        assertEquals(Boolean.FALSE, result.retryable);
+        assertEquals(0, harness.idempotency.inspectCalls());
+        assertEquals(0, harness.audit.commands().size());
+        assertEquals(0, harness.repository.commitCalls());
+        CommitResultSchemaAssertions.assertValid(result);
+    }
+
+    @Test
+    void malformedControlledValueFailsBeforeRepository() {
+        StateTypes.StatePatch patch = SyntheticStatePatchFactory.valid(
+                0, "synthetic-idem-value", "synthetic-patch-value");
+        patch.operations.get(0).value = new java.util.HashMap<String, Object>();
+        StateCommitterTestHarness harness = new StateCommitterTestHarness();
+
+        StateTypes.CommitResult result = harness.committer.commit(patch);
+
+        assertEquals("FAILED", result.status);
+        assertEquals(0, harness.repository.commitCalls());
+        assertEquals(0, harness.audit.commands().size());
     }
 
     @Test

@@ -3,9 +3,10 @@ package com.aidoctor.diagnosis.state.committer.ports;
 import com.aidoctor.contracts.v1.FoundationTypes;
 
 /**
- * Fake / non-production audit reference emitter. Not AuditTrail SoR.
- * A failure after the repository authoritative commit must not downgrade the
- * already committed result; the core supplies a synthetic committed fallback.
+ * Pre-commit audit authorization/evidence gate for the mechanical core.
+ * Implementations must return a complete Shared Contracts v1 AuditRef before
+ * repository mutation is attempted. This port is not a claim of durable or
+ * transactional AuditTrail persistence and is not production wiring.
  */
 public interface AuditPort {
 

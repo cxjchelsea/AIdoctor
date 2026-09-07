@@ -4,6 +4,8 @@ import com.aidoctor.diagnosis.state.committer.ports.StateRepositoryPort;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Minimal version-counter fake. Not a PBNC-02 synthetic state store.
@@ -15,12 +17,22 @@ public final class MechanicalVersionRepositoryFake implements StateRepositoryPor
     private boolean failNextRead;
     private boolean failNextCommit;
     private boolean throwOnCommit;
+    private boolean conflictNextCommit;
+    private final List<String> callOrder;
 
-    public void seed(String cdpId, int version) {
+    public MechanicalVersionRepositoryFake() {
+        this(new ArrayList<String>());
+    }
+
+    public MechanicalVersionRepositoryFake(List<String> callOrder) {
+        this.callOrder = callOrder;
+    }
+
+    public synchronized void seed(String cdpId, int version) {
         versions.put(cdpId, Integer.valueOf(version));
     }
 
-    public int currentVersion(String cdpId) {
+    public synchronized int currentVersion(String cdpId) {
         Integer version = versions.get(cdpId);
         return version == null ? 0 : version.intValue();
     }
@@ -45,9 +57,14 @@ public final class MechanicalVersionRepositoryFake implements StateRepositoryPor
         throwOnCommit = true;
     }
 
+    public void conflictNextCommit() {
+        conflictNextCommit = true;
+    }
+
     @Override
-    public int readCurrentVersion(String cdpId) {
+    public synchronized int readCurrentVersion(String cdpId) {
         readCalls++;
+        callOrder.add("repository.read");
         if (failNextRead) {
             failNextRead = false;
             throw new IllegalStateException("synthetic repository read failure");
@@ -56,8 +73,9 @@ public final class MechanicalVersionRepositoryFake implements StateRepositoryPor
     }
 
     @Override
-    public AtomicCommitOutcome attemptAtomicCommit(AtomicCommitCommand command) {
+    public synchronized AtomicCommitOutcome attemptAtomicCommit(AtomicCommitCommand command) {
         commitCalls++;
+        callOrder.add("repository.commit");
         if (throwOnCommit) {
             throwOnCommit = false;
             throw new IllegalStateException("synthetic repository commit exception");
@@ -67,11 +85,15 @@ public final class MechanicalVersionRepositoryFake implements StateRepositoryPor
             return AtomicCommitOutcome.failed("REPOSITORY_INTERNAL_FAILURE", "synthetic repository failure");
         }
         int current = currentVersion(command.cdpId);
+        if (conflictNextCommit) {
+            conflictNextCommit = false;
+            return AtomicCommitOutcome.conflict(command.expectedCurrentVersion, current);
+        }
         if (current != command.expectedCurrentVersion) {
             return AtomicCommitOutcome.conflict(command.expectedCurrentVersion, current);
         }
         int next = current + 1;
         versions.put(command.cdpId, Integer.valueOf(next));
-        return AtomicCommitOutcome.committed(current, next);
+        return AtomicCommitOutcome.committed(current);
     }
 }
