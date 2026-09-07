@@ -92,8 +92,8 @@ public final class MechanicalVersionRepositoryFake implements StateRepositoryPor
         if (current != command.expectedCurrentVersion) {
             return AtomicCommitOutcome.conflict(command.expectedCurrentVersion, current);
         }
-        int next = current + 1;
-        versions.put(command.cdpId, Integer.valueOf(next));
-        return AtomicCommitOutcome.committed(current);
+        AtomicCommitOutcome outcome = AtomicCommitOutcome.committed(current);
+        versions.put(command.cdpId, Integer.valueOf(outcome.committedVersion));
+        return outcome;
     }
 }

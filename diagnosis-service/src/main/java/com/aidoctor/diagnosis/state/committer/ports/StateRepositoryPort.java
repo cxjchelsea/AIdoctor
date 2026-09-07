@@ -5,8 +5,10 @@ package com.aidoctor.diagnosis.state.committer.ports;
  *
  * <p>{@code COMMITTED} means the mutation was atomically admitted and the
  * version advanced exactly once. {@code CONFLICT}, {@code FAILED}, and an
- * exception mean no mutation. This does not assert that patch operations were
- * applied to a clinical record, and is not a clinical state store.
+ * exception mean no mutation. An adapter must establish that the committed
+ * transition is valid and representable before performing its authoritative
+ * mutation. This does not assert that patch operations were applied to a
+ * clinical record, and is not a clinical state store.
  */
 public interface StateRepositoryPort {
 

@@ -576,3 +576,75 @@ PBNC-02 = NOT_AUTHORIZED
 Clinical Runtime = NOT_ENABLED
 Production = BLOCKED
 ```
+
+## 22. PR #73 Second Bounded Semantic Correction
+
+Authorization:
+
+`PBNC_01_PR73_SECOND_BOUNDED_CORRECTION_EXPLICIT_AUTHORIZATION_GRANTED`
+
+Reviewed failure being corrected:
+
+- reviewed head: `486fd9f3f0764169dc595b7e81d246875dfc06e9`
+- reviewed tree: `cb61e0ade2c9a08c45540268ebdfce4e7cdbdb7b`
+- re-review result: `PBNC_01_PR73_CORRECTION_RE_REVIEW_CORRECTION_REQUIRED`
+- stop token: `PBNC_01_PR73_POST_COMMIT_AMBIGUITY_REMAINS`
+- SC-05 before this correction: `PARTIALLY_CLOSED`
+- CR-05 before this correction: `CONFIRMED_PROBLEM / MAJOR`
+- CR-06 before this correction: `CONFIRMED_PROBLEM / MAJOR`
+
+Exact bounded defect:
+
+```text
+current = currentVersion(...)
+next = current + 1
+versions.put(..., next)
+return AtomicCommitOutcome.committed(current)
+```
+
+At `Integer.MAX_VALUE`, the fake could wrap to `Integer.MIN_VALUE`, mutate its
+version map, then throw while constructing the committed outcome. That made a
+repository exception with prior mutation representable in PBNC-01 evidence
+infrastructure.
+
+Bounded fix:
+
+```text
+AtomicCommitOutcome outcome = AtomicCommitOutcome.committed(current)
+versions.put(..., outcome.committedVersion)
+return outcome
+```
+
+The committed transition is now constructed and proven representable before the
+mechanical fake mutates its version map. At `Integer.MAX_VALUE`, construction
+fails before mutation. At `Integer.MAX_VALUE - 1`, the fake commits exactly
+once to `Integer.MAX_VALUE`.
+
+New focused tests:
+
+- `nearIntegerMaxVersionCommitsToIntegerMaxExactlyOnce`
+- `integerMaxVersionFailureDoesNotMutateBeforeFailedResult`
+- `retryAfterIntegerMaxOverflowSeesNoHiddenMutationOrCompletedResult`
+- `committedOutcomeFactoryRefusesIntegerMaxOverflowTransition`
+
+Evidence labels after authoring:
+
+```text
+STATE_CHANGED_BUT_FAILED_OVERFLOW_PATH_REMOVED = YES
+INTEGER_MAX_VERSION_WRAPAROUND_PREVENTED = YES
+REPOSITORY_EXCEPTION_NO_MUTATION_TEST_VERIFIED = YES
+SC_05_SECOND_CORRECTION_IMPLEMENTED = YES
+STATE_COMMITTER_MECHANICAL_CORE_VERIFIED = NO
+PBNC_01_DURABLY_CLOSED = NO
+PBNC-02 = NOT_AUTHORIZED
+B2 = NOT_COMPLETE
+PHASE_B = NOT_AUTHORIZED
+Clinical Runtime = NOT_ENABLED
+Production = BLOCKED
+```
+
+Current authoring status:
+
+```text
+PBNC-01 = SECOND_CORRECTION_IMPLEMENTED_PENDING_RE_REVIEW
+```

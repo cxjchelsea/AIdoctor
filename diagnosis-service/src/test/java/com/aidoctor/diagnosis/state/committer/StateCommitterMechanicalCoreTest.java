@@ -420,6 +420,78 @@ class StateCommitterMechanicalCoreTest {
     }
 
     @Test
+    void nearIntegerMaxVersionCommitsToIntegerMaxExactlyOnce() {
+        StateCommitterTestHarness harness = new StateCommitterTestHarness();
+        harness.repository.seed(SyntheticStatePatchFactory.CDP_ID, Integer.MAX_VALUE - 1);
+
+        StateTypes.CommitResult result = harness.committer.commit(SyntheticStatePatchFactory.valid(
+                Integer.MAX_VALUE - 1, "synthetic-idem-near-max", "synthetic-patch-near-max"));
+
+        assertEquals("COMMITTED", result.status);
+        assertEquals(Integer.valueOf(Integer.MAX_VALUE - 1), result.previousVersion);
+        assertEquals(Integer.valueOf(Integer.MAX_VALUE), result.committedVersion);
+        assertEquals(Integer.MAX_VALUE, harness.repository.currentVersion(SyntheticStatePatchFactory.CDP_ID));
+        assertEquals(1, harness.repository.commitCalls());
+        CommitResultSchemaAssertions.assertValid(result);
+    }
+
+    @Test
+    void integerMaxVersionFailureDoesNotMutateBeforeFailedResult() {
+        StateCommitterTestHarness harness = new StateCommitterTestHarness();
+        harness.repository.seed(SyntheticStatePatchFactory.CDP_ID, Integer.MAX_VALUE);
+
+        StateTypes.CommitResult result = harness.committer.commit(SyntheticStatePatchFactory.valid(
+                Integer.MAX_VALUE, "synthetic-idem-max", "synthetic-patch-max"));
+
+        assertEquals("FAILED", result.status);
+        assertEquals(CommitReasonCodes.REPOSITORY_INTERNAL_FAILURE, result.reasonCode);
+        assertEquals(Integer.valueOf(Integer.MAX_VALUE), result.previousVersion);
+        assertEquals(null, result.committedVersion);
+        assertEquals(null, result.committedAt);
+        assertEquals(Integer.MAX_VALUE, harness.repository.currentVersion(SyntheticStatePatchFactory.CDP_ID));
+        assertNotEquals(Integer.MIN_VALUE, harness.repository.currentVersion(SyntheticStatePatchFactory.CDP_ID));
+        assertEquals(1, harness.repository.commitCalls());
+        assertEquals(1, harness.idempotency.releaseCalls());
+        assertEquals(0, harness.idempotency.completeCalls());
+        CommitResultSchemaAssertions.assertValid(result);
+    }
+
+    @Test
+    void retryAfterIntegerMaxOverflowSeesNoHiddenMutationOrCompletedResult() {
+        StateCommitterTestHarness harness = new StateCommitterTestHarness();
+        harness.repository.seed(SyntheticStatePatchFactory.CDP_ID, Integer.MAX_VALUE);
+        StateTypes.StatePatch first = SyntheticStatePatchFactory.valid(
+                Integer.MAX_VALUE, "synthetic-idem-max-retry", "synthetic-patch-max-retry-a");
+        StateTypes.StatePatch retry = SyntheticStatePatchFactory.valid(
+                Integer.MAX_VALUE, "synthetic-idem-max-retry", "synthetic-patch-max-retry-b");
+
+        StateTypes.CommitResult firstResult = harness.committer.commit(first);
+        StateTypes.CommitResult retryResult = harness.committer.commit(retry);
+
+        assertEquals("FAILED", firstResult.status);
+        assertEquals("FAILED", retryResult.status);
+        assertEquals(CommitReasonCodes.REPOSITORY_INTERNAL_FAILURE, retryResult.reasonCode);
+        assertEquals(Integer.MAX_VALUE, harness.repository.currentVersion(SyntheticStatePatchFactory.CDP_ID));
+        assertEquals(2, harness.repository.commitCalls());
+        assertEquals(2, harness.idempotency.releaseCalls());
+        assertEquals(0, harness.idempotency.completeCalls());
+        CommitResultSchemaAssertions.assertValid(retryResult);
+    }
+
+    @Test
+    void committedOutcomeFactoryRefusesIntegerMaxOverflowTransition() {
+        com.aidoctor.diagnosis.state.committer.ports.StateRepositoryPort.AtomicCommitOutcome nearMax =
+                com.aidoctor.diagnosis.state.committer.ports.StateRepositoryPort.AtomicCommitOutcome.committed(
+                        Integer.MAX_VALUE - 1);
+
+        assertEquals(Integer.MAX_VALUE - 1, nearMax.previousVersion);
+        assertEquals(Integer.MAX_VALUE, nearMax.committedVersion);
+        org.junit.jupiter.api.Assertions.assertThrows(ArithmeticException.class, () ->
+                com.aidoctor.diagnosis.state.committer.ports.StateRepositoryPort.AtomicCommitOutcome.committed(
+                        Integer.MAX_VALUE));
+    }
+
+    @Test
     void actualAuditPrecedesCommitAndCommittedCarriesThatReference() {
         StateCommitterTestHarness harness = new StateCommitterTestHarness();
         StateTypes.CommitResult result = harness.committer.commit(
