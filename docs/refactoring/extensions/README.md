@@ -68,6 +68,22 @@ Future Extension Design
 
 维护“外部产品观察 → 不照搬内容 → 可吸收思想 → AIdoctor 抽象 → 当前/未来状态”的长期映射，避免因看到新产品而重复修改核心架构。
 
+### 2.5 [临床检索智能扩展方案](./临床检索智能扩展方案.md)
+
+吸收现代搜索、推荐、RAG 与 Agentic Retrieval 中可泛化的系统思想，但将互联网式兴趣探索重构为受约束的临床信息选择机制，定义：
+
+- Clinical Query Understanding；
+- Clinical State Contextualization；
+- Retrieval Intent Planning；
+- Medical RAG / Knowledge Graph / Structured Provider / Encounter Evidence 等多路候选召回；
+- Clinical Evidence Reranking；
+- Source Diversity / Redundancy Control；
+- Evidence Sufficiency 与 Evidence Gap Detection；
+- Targeted Re-retrieval 与强制停止条件；
+- Retrieval Trace、独立评估框架与 E0-E6 未来研究路线。
+
+该扩展不引入自由 Search Agent，不允许 unrestricted medical web retrieval，不改变当前 Runtime、`contracts/v1` 或 Clinical Truth 所有权。
+
 ---
 
 ## 3. 文档优先级
@@ -149,6 +165,13 @@ AIdoctor Stable Platform
     │   ├── Drug Intelligence
     │   ├── Regulatory Intelligence
     │   └── Device Intelligence
+    ├── Clinical Retrieval Intelligence
+    │   ├── Query Understanding
+    │   ├── Retrieval Planning
+    │   ├── Multi-route Retrieval
+    │   ├── Clinical Reranking
+    │   ├── Evidence Sufficiency
+    │   └── Targeted Re-retrieval
     └── Advanced Capability Templates
         ├── Temporal / Stage-based
         ├── Chronic Management
