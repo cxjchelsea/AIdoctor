@@ -139,6 +139,16 @@ class StateCommitterArchitectureGuardTest {
     }
 
     @Test
+    void syntheticRepositoryMainCodeDoesNotExposeFailureInjectionControls() throws Exception {
+        Path repository = moduleRoot().resolve(
+                "src/main/java/com/aidoctor/diagnosis/state/committer/SyntheticVersionedStateRepository.java");
+        String source = read(repository);
+
+        assertFalse(source.contains("failNextCommit"));
+        assertFalse(source.contains("throwNextCommit"));
+    }
+
+    @Test
     void syntheticFixturesHaveZeroClinicalPhiAndProviderContent() throws Exception {
         Path committerRoot = moduleRoot().resolve("src");
         final int[] counts = new int[] {0, 0, 0, 0};

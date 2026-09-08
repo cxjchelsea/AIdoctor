@@ -15,6 +15,9 @@ public final class SyntheticStateSnapshot {
     private final Map<String, Object> state;
 
     public SyntheticStateSnapshot(int version, Map<String, Object> state) {
+        if (version < 0) {
+            throw new IllegalArgumentException("synthetic state version must be non-negative");
+        }
         this.version = version;
         this.state = immutableMap(copyMap(state));
     }

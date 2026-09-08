@@ -16,8 +16,6 @@ public final class SyntheticVersionedStateRepository implements StateRepositoryP
     private final Map<String, Record> records = new LinkedHashMap<String, Record>();
     private final SyntheticJsonPointerApplier applier = new SyntheticJsonPointerApplier();
     private int mutationCount;
-    private boolean failNextCommit;
-    private boolean throwNextCommit;
 
     public SyntheticVersionedStateRepository() {
     }
@@ -39,16 +37,6 @@ public final class SyntheticVersionedStateRepository implements StateRepositoryP
 
     @Override
     public synchronized AtomicCommitOutcome attemptAtomicCommit(AtomicCommitCommand command) {
-        if (throwNextCommit) {
-            throwNextCommit = false;
-            throw new IllegalStateException("synthetic repository infrastructure exception");
-        }
-        if (failNextCommit) {
-            failNextCommit = false;
-            return AtomicCommitOutcome.failedRetryable(
-                    CommitReasonCodes.REPOSITORY_INTERNAL_FAILURE,
-                    "Synthetic repository infrastructure failure.");
-        }
         AtomicCommitOutcome invalid = validateCommand(command);
         if (invalid != null) {
             return invalid;
@@ -86,14 +74,6 @@ public final class SyntheticVersionedStateRepository implements StateRepositoryP
 
     public synchronized int mutationCount() {
         return mutationCount;
-    }
-
-    public synchronized void failNextCommit() {
-        failNextCommit = true;
-    }
-
-    public synchronized void throwNextCommit() {
-        throwNextCommit = true;
     }
 
     private AtomicCommitOutcome validateCommand(AtomicCommitCommand command) {

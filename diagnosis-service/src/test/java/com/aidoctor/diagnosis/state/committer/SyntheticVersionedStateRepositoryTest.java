@@ -46,6 +46,30 @@ class SyntheticVersionedStateRepositoryTest {
     }
 
     @Test
+    void negativeSnapshotVersionIsRejected() {
+        assertThrows(IllegalArgumentException.class, new org.junit.jupiter.api.function.Executable() {
+            @Override public void execute() {
+                new SyntheticStateSnapshot(-1, Collections.<String, Object>emptyMap());
+            }
+        });
+    }
+
+    @Test
+    void zeroSnapshotVersionIsAccepted() {
+        SyntheticStateSnapshot snapshot = new SyntheticStateSnapshot(0, Collections.<String, Object>emptyMap());
+
+        assertEquals(0, snapshot.version());
+    }
+
+    @Test
+    void integerMaxSnapshotVersionIsAccepted() {
+        SyntheticStateSnapshot snapshot = new SyntheticStateSnapshot(
+                Integer.MAX_VALUE, Collections.<String, Object>emptyMap());
+
+        assertEquals(Integer.MAX_VALUE, snapshot.version());
+    }
+
+    @Test
     void addMutatesWorkingStateAndCommitsOnce() {
         SyntheticVersionedStateRepository repository = repositoryWithPatientState(0, Collections.<String, Object>emptyMap());
         StateTypes.StatePatch patch = patch("ADD", "/patient_state/test_value", "alpha", 0, "synthetic-idem-add", "synthetic-patch-add");
@@ -288,17 +312,38 @@ class SyntheticVersionedStateRepositoryTest {
     }
 
     @Test
-    void repositoryInfrastructureFailureLeavesStateUnchanged() {
+    void testOnlyBackendFailedOutcomeLeavesStateUnchanged() {
         SyntheticVersionedStateRepository repository = repositoryWithPatientState(0, singleton("test_value", "alpha"));
-        repository.failNextCommit();
+        TestOnlyFailingRepository failing = TestOnlyFailingRepository.returnFailed(repository);
+        StateCommitter committer = committer(failing, new InMemoryIdempotencyFake(), new SyntheticAuditPortFake(StateCommitterTestHarness.CLOCK, new ArrayList<String>()),
+                new RecordingCommitEventEvidenceFake());
         SyntheticStateSnapshot before = repository.snapshot(SyntheticStatePatchFactory.CDP_ID);
 
-        StateRepositoryPort.AtomicCommitOutcome outcome = repository.attemptAtomicCommit(command(
-                patch("REPLACE", "/patient_state/test_value", "beta", 0,
-                        "synthetic-idem-infra-fail", "synthetic-patch-infra-fail")));
+        StateTypes.CommitResult result = committer.commit(patch("REPLACE", "/patient_state/test_value", "beta", 0,
+                "synthetic-idem-infra-fail", "synthetic-patch-infra-fail"));
 
-        assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.FAILED, outcome.status);
-        assertEquals(true, outcome.retryable);
+        assertEquals("FAILED", result.status);
+        assertEquals(CommitReasonCodes.REPOSITORY_INTERNAL_FAILURE, result.reasonCode);
+        assertEquals(Boolean.TRUE, result.retryable);
+        assertEquals(0, repository.mutationCount());
+        assertUnchanged(before, repository);
+    }
+
+    @Test
+    void testOnlyBackendExceptionLeavesStateUnchanged() {
+        SyntheticVersionedStateRepository repository = repositoryWithPatientState(0, singleton("test_value", "alpha"));
+        TestOnlyFailingRepository throwing = TestOnlyFailingRepository.throwing(repository);
+        StateCommitter committer = committer(throwing, new InMemoryIdempotencyFake(), new SyntheticAuditPortFake(StateCommitterTestHarness.CLOCK, new ArrayList<String>()),
+                new RecordingCommitEventEvidenceFake());
+        SyntheticStateSnapshot before = repository.snapshot(SyntheticStatePatchFactory.CDP_ID);
+
+        StateTypes.CommitResult result = committer.commit(patch("REPLACE", "/patient_state/test_value", "beta", 0,
+                "synthetic-idem-infra-throw", "synthetic-patch-infra-throw"));
+
+        assertEquals("FAILED", result.status);
+        assertEquals(CommitReasonCodes.REPOSITORY_INTERNAL_FAILURE, result.reasonCode);
+        assertEquals(Boolean.TRUE, result.retryable);
+        assertEquals(0, repository.mutationCount());
         assertUnchanged(before, repository);
     }
 
@@ -470,7 +515,7 @@ class SyntheticVersionedStateRepositoryTest {
     }
 
     private static StateCommitter committer(
-            SyntheticVersionedStateRepository repository,
+            StateRepositoryPort repository,
             InMemoryIdempotencyFake idempotency,
             SyntheticAuditPortFake audit,
             RecordingCommitEventEvidenceFake events
@@ -489,6 +534,44 @@ class SyntheticVersionedStateRepositoryTest {
                 audit,
                 events,
                 StateCommitterTestHarness.CLOCK);
+    }
+
+    private static final class TestOnlyFailingRepository implements StateRepositoryPort {
+        private enum Mode {
+            RETURN_FAILED,
+            THROW
+        }
+
+        private final SyntheticVersionedStateRepository delegate;
+        private final Mode mode;
+
+        private TestOnlyFailingRepository(SyntheticVersionedStateRepository delegate, Mode mode) {
+            this.delegate = delegate;
+            this.mode = mode;
+        }
+
+        static TestOnlyFailingRepository returnFailed(SyntheticVersionedStateRepository delegate) {
+            return new TestOnlyFailingRepository(delegate, Mode.RETURN_FAILED);
+        }
+
+        static TestOnlyFailingRepository throwing(SyntheticVersionedStateRepository delegate) {
+            return new TestOnlyFailingRepository(delegate, Mode.THROW);
+        }
+
+        @Override
+        public int readCurrentVersion(String cdpId) {
+            return delegate.readCurrentVersion(cdpId);
+        }
+
+        @Override
+        public AtomicCommitOutcome attemptAtomicCommit(AtomicCommitCommand command) {
+            if (mode == Mode.THROW) {
+                throw new IllegalStateException("test-only repository infrastructure exception");
+            }
+            return AtomicCommitOutcome.failedRetryable(
+                    CommitReasonCodes.REPOSITORY_INTERNAL_FAILURE,
+                    "Test-only repository infrastructure failure.");
+        }
     }
 
     private static Thread racer(

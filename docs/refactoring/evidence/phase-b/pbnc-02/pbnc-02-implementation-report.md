@@ -4,7 +4,7 @@
 >
 > Batch: `PBNC-02` / `SYNTHETIC_VERSIONED_STATE_INTEGRATION`
 >
-> Status: `IMPLEMENTED_PENDING_INDEPENDENT_REVIEW`
+> Status: `IMPLEMENTED_PENDING_INDEPENDENT_RE_REVIEW`
 >
 > Authorization token:
 > `PBNC_02_SYNTHETIC_VERSIONED_STATE_INTEGRATION_IMPLEMENTATION_EXPLICIT_AUTHORIZATION_GRANTED`
@@ -340,7 +340,111 @@ DISTRIBUTED_CONCURRENCY_VERIFIED = NO
 
 Fresh PR CI identity is recorded after Draft PR creation.
 
-## 12. Control State
+## 12. Bounded Correction PB2-01 / PB2-02
+
+Authorization token:
+
+`PBNC_02_PR74_BOUNDED_CORRECTION_EXPLICIT_AUTHORIZATION_GRANTED`
+
+Previous independently reviewed Head / Tree:
+
+```text
+e2993b49ee88b97e21556d9cacea604d900c7b17
+61dd6cda8df76d847da738168f8670b53beae8ff
+```
+
+PB2-01 finding:
+
+```text
+public main-code failure-injection API
+Previous verdict = CONFIRMED_PROBLEM
+Previous severity = MAJOR
+```
+
+PB2-01 correction:
+
+- removed main-code `failNextCommit` state
+- removed main-code `throwNextCommit` state
+- removed public `failNextCommit()` method
+- removed public `throwNextCommit()` method
+- removed test-only toggle branches from `attemptAtomicCommit(...)`
+- moved backend failure/exception simulation into a private test-local
+  `StateRepositoryPort` wrapper inside `SyntheticVersionedStateRepositoryTest`
+
+PB2-02 finding:
+
+```text
+negative seeded snapshot version accepted
+Previous verdict = CONFIRMED_PROBLEM
+Previous severity = MAJOR
+```
+
+PB2-02 correction:
+
+- `SyntheticStateSnapshot` is the version invariant owner
+- `version < 0` is rejected at construction
+- `0` remains accepted
+- `Integer.MAX_VALUE` remains accepted as a snapshot state
+- commit overflow from `Integer.MAX_VALUE` remains failed before mutation
+
+Preserved minor debts:
+
+```text
+PB2-03 trusted backend does not independently validate complete StatePatch
+PB2-04 direct repository REMOVE with non-null value
+PB2-05 direct repository arbitrary/unauthorized seeded roots
+
+NOT_FIXED_BY_THIS_BATCH
+```
+
+Focused correction validation:
+
+```text
+mvn -f diagnosis-service/pom.xml -Dtest='StateCommitter*,SyntheticVersionedStateRepositoryTest' test
+
+StateCommitterArchitectureGuardTest: 6
+StateCommitterContractBoundaryTest: 5
+StateCommitterMechanicalCoreTest: 39
+SyntheticVersionedStateRepositoryTest: 34
+
+Total: 84
+Failures: 0
+Errors: 0
+Skipped: 0
+```
+
+Full local correction validation:
+
+```text
+mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+mvn -f diagnosis-service/pom.xml test
+
+Tests run: 139
+Failures: 0
+Errors: 0
+Skipped: 0
+```
+
+Shared Contracts regression:
+
+```text
+python contracts/v1/validator/validate_contracts.py
+A5 CONTRACT VALIDATION PASSED: 13 schemas, 13 valid fixtures, 33 invalid fixtures
+
+python contracts/v1/bindings/tooling/check_drift.py
+drift check passed for 1.0.0 schemas 13
+
+python -m pytest -p no:cacheprovider contracts/v1/tests -q
+110 passed
+
+mvn -f contracts/v1/bindings/java/pom.xml test
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
+```
+
+Fresh post-correction PR CI identity is recorded after the correction commit and
+Draft PR CI complete.
+
+## 13. Control State
 
 ```text
 Engineering Baseline = FROZEN / V1
@@ -350,7 +454,7 @@ A11 = NOT_PASSED
 Clinical Runtime = NOT_ENABLED
 Production = BLOCKED
 PBNC-01 = COMPLETE / DURABLY_CLOSED
-PBNC-02 = IMPLEMENTED_PENDING_INDEPENDENT_REVIEW
+PBNC-02 = BOUNDED_CORRECTION_IMPLEMENTED_PENDING_INDEPENDENT_RE_REVIEW
 B2 = NOT_COMPLETE
 Full Phase B = NOT_AUTHORIZED
 ```
