@@ -1,0 +1,20 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/1.1.0/clinical-state-snapshot.schema.json",
+  "title":"ClinicalStateSnapshot",
+  "description":"Versioned canonical committed state representation. Not legacy CDP, arbitrary state map, runtime checkpoint, agent memory, or patient delivery view.",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["contract_version","envelope","encounter_id","state_version","committed_at","observations"],
+  "properties":{
+    "contract_version":{"const":"1.1.0"},
+    "envelope":{"allOf":[{"$ref":"contract-envelope.schema.json"},{"properties":{"contract_name":{"const":"ClinicalStateSnapshot"}}}]},
+    "encounter_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "state_version":{"type":"integer","minimum":0,"maximum":9007199254740991},
+    "committed_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "observations":{"type":"object","additionalProperties":{"$ref":"clinical-observation.schema.json"},"propertyNames":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},"maxProperties":1024},
+    "audit_ref":{"$ref":"audit-ref.schema.json"},
+    "trace_ref":{"$ref":"trace-ref.schema.json"},
+    "evidence_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"}}
+  }
+}

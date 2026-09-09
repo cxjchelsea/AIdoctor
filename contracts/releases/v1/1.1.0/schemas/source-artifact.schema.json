@@ -1,0 +1,26 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/1.1.0/source-artifact.schema.json",
+  "title":"SourceArtifact",
+  "description":"Metadata for an uploaded or derived artifact. Fixtures never embed file or patient content.",
+  "type":"object","additionalProperties":false,
+  "required":["contract_version","artifact_id","artifact_type","owner_ref","content_type","original_filename","size_bytes","checksum","storage_ref","created_at","processing_status","derived_artifacts","sensitivity","retention_class"],
+  "properties":{
+    "contract_version":{"const":"1.1.0"},
+    "artifact_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "artifact_type":{"enum":["UPLOAD","EXAMINATION_REPORT","OCR_TEXT","OCR_STRUCTURED_DATA","KNOWLEDGE_SOURCE","KNOWLEDGE_DERIVATIVE"]},
+    "owner_ref":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "content_type":{"type":"string","minLength":3,"maxLength":100,"pattern":"^[A-Za-z0-9.+-]+/[A-Za-z0-9.+-]+$"},
+    "original_filename":{"type":"string","minLength":1,"maxLength":255,"pattern":"^[^/\\\\]+$","description":"Display metadata only; never a trusted storage path."},
+    "size_bytes":{"type":"integer","minimum":0,"maximum":1073741824},
+    "checksum":{"type":"object","additionalProperties":false,"required":["algorithm","value"],"properties":{"algorithm":{"const":"SHA-256"},"value":{"type":"string","pattern":"^[A-Fa-f0-9]{64}$"}}},
+    "storage_ref":{"type":"string","minLength":1,"maxLength":500,"pattern":"^(urn:[A-Za-z0-9][A-Za-z0-9._:-]*|(?:artifact|blob|s3)://[A-Za-z0-9][A-Za-z0-9.-]*(?:/(?!\\.{1,2}(?:/|$))[A-Za-z0-9._~-]+)*)$","description":"Opaque logical reference. The semantic validator additionally rejects decoded traversal and unsafe normalization; storage resolvers must repeat those checks."},
+    "created_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "processing_status":{"enum":["RECEIVED","PROCESSING","PROCESSED","FAILED","QUARANTINED"]},
+    "derived_artifacts":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"}},
+    "source_artifact_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier","description":"Required for OCR and other derived artifacts."},
+    "sensitivity":{"enum":["PUBLIC","INTERNAL","INTERNAL_SENSITIVE","PHI"]},
+    "retention_class":{"type":"string","minLength":1,"maxLength":64,"pattern":"^(POLICY_REQUIRED|[A-Z][A-Z0-9_]+)$"}
+  },
+  "allOf":[{"if":{"properties":{"artifact_type":{"enum":["OCR_TEXT","OCR_STRUCTURED_DATA","KNOWLEDGE_DERIVATIVE"]}}},"then":{"required":["source_artifact_id"]}}]
+}

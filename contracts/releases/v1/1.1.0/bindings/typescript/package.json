@@ -1,0 +1,14 @@
+{
+  "name": "@aidoctor/shared-contracts",
+  "version": "1.1.0",
+  "private": true,
+  "description": "REVIEWED_BINDING TypeScript types for Shared Contracts v1. Not imported by production frontend in NC-CLOSE-02.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsc --noEmit && node tests/conformance.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.2.2"
+  }
+}

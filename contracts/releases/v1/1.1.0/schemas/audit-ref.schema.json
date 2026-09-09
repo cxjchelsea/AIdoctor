@@ -1,0 +1,17 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/1.1.0/audit-ref.schema.json",
+  "title":"AuditRef",
+  "description":"Reference to a governed audit event; it does not duplicate audit payloads.",
+  "type":"object","additionalProperties":false,
+  "required":["contract_version","audit_id","audit_type","audit_version","created_at","access_level","phi_capable"],
+  "properties":{
+    "contract_version":{"const":"1.1.0"},
+    "audit_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "audit_type":{"enum":["CONTRACT_RECEIVED","TOOL_INVOKED","STATE_PATCH_REQUESTED","STATE_COMMITTED","PATIENT_DELIVERY_CREATED","REVIEW_DECISION_RECORDED"]},
+    "audit_version":{"type":"integer","minimum":1,"maximum":9007199254740991},
+    "created_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "access_level":{"enum":["INTERNAL","RESTRICTED","SECURITY_REVIEW_REQUIRED"]},
+    "phi_capable":{"type":"boolean"}
+  }
+}

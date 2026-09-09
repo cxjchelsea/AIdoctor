@@ -1,0 +1,7 @@
+# DEV_ONLY 鈥?涓嶈繘鍏ヤ换浣曠敓浜?*-service runtime銆?
+# Assessment baseline is Pydantic v2.5 compatible. 2.5.0 has no cp313 wheel
+# for pydantic-core; pin a later v2 that remains API-compatible.
+pydantic==2.10.3
+pytest==8.4.1
+jsonschema[format]==4.25.1
+referencing==0.37.0

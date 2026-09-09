@@ -1,0 +1,590 @@
+[
+  {
+    "schema": "ContractEnvelope",
+    "base": "ContractEnvelope",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ContractEnvelope",
+    "base": "ContractEnvelope",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "IdentifierSet",
+    "base": "IdentifierSet",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "IdentifierSet",
+    "base": "IdentifierSet",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "StatePatch",
+    "base": "StatePatch",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "StatePatch",
+    "base": "StatePatch",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "CommitResult",
+    "base": "CommitResult",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "CommitResult",
+    "base": "CommitResult",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ContractConflict",
+    "base": "ContractConflict",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ContractConflict",
+    "base": "ContractConflict",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "AuditRef",
+    "base": "AuditRef",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "AuditRef",
+    "base": "AuditRef",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "TraceRef",
+    "base": "TraceRef",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "TraceRef",
+    "base": "TraceRef",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "KnowledgeReleaseRef",
+    "base": "KnowledgeReleaseRef",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "KnowledgeReleaseRef",
+    "base": "KnowledgeReleaseRef",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "SourceArtifact",
+    "base": "SourceArtifact",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "SourceArtifact",
+    "base": "SourceArtifact",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "EvidencePack",
+    "base": "EvidencePack",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "EvidencePack",
+    "base": "EvidencePack",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ToolContext",
+    "base": "ToolContext",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ToolContext",
+    "base": "ToolContext",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ToolResult",
+    "base": "ToolResult",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ToolResult",
+    "base": "ToolResult",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "PatientDeliveryView",
+    "base": "PatientDeliveryView",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "PatientDeliveryView",
+    "base": "PatientDeliveryView",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "Encounter",
+    "base": "Encounter",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "Encounter",
+    "base": "Encounter",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ClinicalObservation",
+    "base": "ClinicalObservation",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ClinicalObservation",
+    "base": "ClinicalObservation",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ClinicalStateSnapshot",
+    "base": "ClinicalStateSnapshot",
+    "mutation": {
+      "path": "/contract_version",
+      "value": "9.9.9"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/contract_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ClinicalStateSnapshot",
+    "base": "ClinicalStateSnapshot",
+    "mutation": {
+      "path": "/extra",
+      "add": "x"
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/extra",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "Encounter",
+    "base": "Encounter",
+    "mutation": {
+      "path": "/encounter_id",
+      "remove": true
+    },
+    "expected": {
+      "validator": "required",
+      "path": "/encounter_id",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "Encounter",
+    "base": "Encounter",
+    "mutation": {
+      "path": "/lifecycle_status",
+      "value": "PAUSED"
+    },
+    "expected": {
+      "validator": "enum",
+      "path": "/lifecycle_status",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ClinicalObservation",
+    "base": "ClinicalObservation",
+    "mutation": {
+      "path": "/value",
+      "value": null
+    },
+    "expected": {
+      "validator": "oneOf",
+      "path": "/value",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ClinicalObservation",
+    "base": "ClinicalObservation",
+    "mutation": {
+      "path": "/value",
+      "value": []
+    },
+    "expected": {
+      "validator": "oneOf",
+      "path": "/value",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ClinicalObservation",
+    "base": "ClinicalObservation",
+    "mutation": {
+      "path": "/status",
+      "value": "DRAFT"
+    },
+    "expected": {
+      "validator": "const",
+      "path": "/status",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ClinicalObservation",
+    "base": "ClinicalObservation",
+    "mutation": {
+      "path": "/provenance_refs",
+      "value": []
+    },
+    "expected": {
+      "validator": "minItems",
+      "path": "/provenance_refs",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ClinicalStateSnapshot",
+    "base": "ClinicalStateSnapshot",
+    "mutation": {
+      "path": "/state_version",
+      "value": -1
+    },
+    "expected": {
+      "validator": "minimum",
+      "path": "/state_version",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "ClinicalStateSnapshot",
+    "base": "ClinicalStateSnapshot",
+    "mutation": {
+      "path": "/patient_state",
+      "add": {}
+    },
+    "expected": {
+      "validator": "additionalProperties",
+      "path": "/patient_state",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "StatePatch",
+    "base": "StatePatch",
+    "mutation": {
+      "path": "/cdp_id",
+      "remove": true
+    },
+    "expected": {
+      "validator": "oneOf",
+      "path": "/cdp_id",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  },
+  {
+    "schema": "CommitResult",
+    "base": "CommitResult",
+    "mutation": {
+      "path": "/cdp_id",
+      "remove": true
+    },
+    "expected": {
+      "validator": "oneOf",
+      "path": "/cdp_id",
+      "category": "NEGATIVE",
+      "reason": "test"
+    }
+  }
+]
