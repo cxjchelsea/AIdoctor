@@ -59,7 +59,8 @@ class StateCommitterArchitectureGuardTest {
             "src/main/java/com/aidoctor/diagnosis/agent/ToolCaller.java",
             "src/main/java/com/aidoctor/diagnosis/service/cdp/CDPManager.java",
             "src/main/java/com/aidoctor/diagnosis/controller/DiagnosisController.java",
-            "src/main/java/com/aidoctor/diagnosis/service/DiagnosisOrchestrationService.java"
+            "src/main/java/com/aidoctor/diagnosis/service/DiagnosisOrchestrationService.java",
+            "src/main/java/com/aidoctor/diagnosis/service/orchestration/DiagnosisWorkflowOrchestrator.java"
     );
     private static final List<String> FORBIDDEN_CONTENT_TOKENS = Arrays.asList(
             "cough",
@@ -108,11 +109,43 @@ class StateCommitterArchitectureGuardTest {
             Path file = module.resolve(PRODUCTION_WIRE_TARGETS.get(index));
             assertTrue(Files.isRegularFile(file), "missing " + file);
             String source = read(file);
-            if (source.contains("state.committer") || source.contains("StateCommitter")) {
+            if (source.contains("state.committer")
+                    || source.contains("StateCommitter")
+                    || source.contains("SyntheticVersionedStateRepository")
+                    || source.contains("StateRepositoryPort")) {
                 violations.add(PRODUCTION_WIRE_TARGETS.get(index));
             }
         }
         assertEquals(0, violations.size(), violations.toString());
+    }
+
+    @Test
+    void productionSourcesDoNotDirectlyConstructSyntheticStateRepository() throws Exception {
+        Path productionRoot = moduleRoot().resolve("src/main/java/com/aidoctor/diagnosis");
+        Path committerRoot = moduleRoot().resolve("src/main/java/com/aidoctor/diagnosis/state/committer");
+        List<String> violations = new ArrayList<String>();
+        for (Path file : javaFiles(productionRoot)) {
+            if (file.startsWith(committerRoot)) {
+                continue;
+            }
+            String source = read(file);
+            if (source.contains("SyntheticVersionedStateRepository")
+                    || source.contains("new StateRepositoryPort.AtomicCommitCommand")
+                    || source.contains(".attemptAtomicCommit(")) {
+                violations.add(file.toString());
+            }
+        }
+        assertEquals(0, violations.size(), violations.toString());
+    }
+
+    @Test
+    void syntheticRepositoryMainCodeDoesNotExposeFailureInjectionControls() throws Exception {
+        Path repository = moduleRoot().resolve(
+                "src/main/java/com/aidoctor/diagnosis/state/committer/SyntheticVersionedStateRepository.java");
+        String source = read(repository);
+
+        assertFalse(source.contains("failNextCommit"));
+        assertFalse(source.contains("throwNextCommit"));
     }
 
     @Test

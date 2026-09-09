@@ -132,6 +132,15 @@ public final class StateCommitter {
                 rejectionReason = CommitReasonCodes.OPERATION_NOT_AUTHORIZED;
                 continue;
             }
+            if (operation.expectedCurrentValue != null
+                    || (("ADD".equals(operation.op) || "REPLACE".equals(operation.op))
+                    && operation.value == null)) {
+                rejected.add(assembler.rejectedOperation(index, CommitReasonCodes.STATE_OPERATION_SEMANTICS_UNSUPPORTED));
+                if (rejectionReason == null) {
+                    rejectionReason = CommitReasonCodes.STATE_OPERATION_SEMANTICS_UNSUPPORTED;
+                }
+                continue;
+            }
             FieldPermissionPort.FieldPermissionDecision fieldDecision =
                     fieldPermission.evaluate(operation.path, capabilityId);
             if (fieldDecision == null || !fieldDecision.authorized) {
@@ -191,7 +200,7 @@ public final class StateCommitter {
         StateRepositoryPort.AtomicCommitOutcome outcome;
         try {
             outcome = stateRepository.attemptAtomicCommit(new StateRepositoryPort.AtomicCommitCommand(
-                    patch.cdpId, patch.baseVersion.intValue(), patch.patchId, patch.idempotencyKey));
+                    patch.cdpId, patch.baseVersion.intValue(), patch.patchId, patch.idempotencyKey, patch));
         } catch (RuntimeException exception) {
             releaseReservation(patch, fingerprint);
             return finishFailedWithAudit(patch, currentVersion, now,
@@ -206,7 +215,7 @@ public final class StateCommitter {
                             ? CommitReasonCodes.REPOSITORY_INTERNAL_FAILURE : outcome.failureCode,
                     outcome == null || isBlank(outcome.failureMessage)
                             ? "Repository atomic commit failed." : outcome.failureMessage,
-                    auditRef, true);
+                    auditRef, outcome == null || outcome.retryable);
         }
         if (outcome.status == StateRepositoryPort.AtomicCommitOutcome.Status.CONFLICT) {
             releaseReservation(patch, fingerprint);
