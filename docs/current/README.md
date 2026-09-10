@@ -10,10 +10,11 @@
 
 1. 当前 `main` 代码、配置、测试、CI、运行证据；
 2. `docs/current/` 中已冻结的当前权威文档；
-3. `docs/refactoring/evidence/`、`reviews/` 等历史工程证据；
-4. `docs/refactoring/` 旧目标设计与迁移方案；
-5. `docs/AI医生/项目文档/` 历史业务与技术设计；
-6. 推断。
+3. `docs/current/00_现状与治理/evidence/` 本轮 Current State Assessment 过程实证稿；
+4. `docs/refactoring/evidence/`、`reviews/` 等历史工程证据；
+5. `docs/refactoring/` 旧目标设计与迁移方案；
+6. `docs/AI医生/项目文档/` 历史业务与技术设计；
+7. 推断。
 
 历史文档中的“已完成”“当前架构”等描述不得覆盖当前代码与 `docs/current/` 的冻结结论。
 
@@ -37,12 +38,15 @@
 
 当前进度：
 
-- Current State Baseline：已完成并冻结；
+- Current State Baseline：V1 已冻结，见 `00_现状与治理/Current_State_Baseline_V1.md`；
+- 重构决策：V1 已冻结为迁移原则与建议路径，见 `00_现状与治理/重构决策_V1.md`；
 - 需求与系统边界：V1 已冻结，等待吸收历史设计后的受控修订；
-- 功能模块划分：V1 Draft Complete，等待吸收历史设计后的受控修订；
-- 系统级状态主干：尚未开始。
+- 功能模块划分：V1 已冻结，等待吸收历史设计后的受控修订；
+- 系统级状态主干：V1 已冻结，见 `03_状态/系统级状态主干_V1.md`；
+- 模块级状态与状态所有权：V1 已冻结，见 `03_状态/模块级状态与状态所有权_V1.md`；
+- 业务闭环：尚未开始。下一正式 SOP 阶段是 Phase 5，不把建议的 Phase R1 当作施工令。
 
-## 3. 历史目录定位
+## 3. 目录定位
 
 ### `docs/AI医生/项目文档/`
 
@@ -61,6 +65,18 @@
 - `plans/`：历史实施计划，保留但不再决定新 SOP 开发顺序；
 - `extensions/`：未来扩展设计，默认 `NOT CURRENT V1 AUTHORITY`；
 - 其他顶层方案：作为目标架构、迁移与治理参考，逐步拆入 `docs/current/`。
+
+### `docs/current/00_现状与治理/evidence/`
+
+定位：`EVIDENCE_KEEP`
+
+保存本轮 Current State Assessment 的摸底与三轮实证盘点。它们是 Baseline 的推导过程，不得覆盖已冻结的现状结论或重构决策。
+
+### `docs/refactor2/`
+
+定位：`SUPERSEDED WORKING FOLDER`
+
+本轮重构工作区。有效结论已拆入 `docs/current/00_现状与治理/`，过程稿已降为上述 evidence。该目录不再作为当前权威。
 
 ## 4. 迁移规则
 

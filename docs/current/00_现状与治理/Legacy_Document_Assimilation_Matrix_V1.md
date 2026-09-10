@@ -153,7 +153,7 @@
 | `前端与业务迁移.md` | ABSORB | `10_前端与交付` + `12_工程与发布/迁移_回滚_下线.md` |
 | `患者端证据与引用UI契约.md` | ABSORB | `10_前端与交付/Patient_Delivery与证据展示.md` |
 | `原设计资产保留、改造与目标架构映射.md` | EVIDENCE_KEEP | 与本矩阵交叉引用，保留历史迁移判断 |
-| `当前系统资产盘点.md` | SUPERSEDED | 新 Current State Baseline 取代其“当前现状”角色 |
+| `当前系统资产盘点.md` | SUPERSEDED | 新 `00_现状与治理/Current_State_Baseline_V1.md` 取代其“当前现状”角色 |
 | `代码、数据与设计资产迁移矩阵.md` | REFERENCE | 后续 Legacy Asset Disposition 更新时吸收 |
 | `目标能力与旧设计资产覆盖矩阵.md` | ABSORB | Capability Coverage / Refactor tracking |
 | `可执行实施路线.md` | SUPERSEDED | 新 SOP 的业务闭环/开发单元路线取代旧 Phase 顺序 |
@@ -217,7 +217,31 @@
 
 ---
 
-# 8. 按新 SOP 阶段的吸收队列
+# 8. `docs/refactor2`
+
+整体状态：`SUPERSEDED WORKING FOLDER`。
+
+本目录是本轮 Current State Assessment 的工作区，不是历史 legacy 设计库。有效结论已拆入 `docs/current/`，过程稿降为 evidence。
+
+| 文件 | 状态 | 吸收/去向 |
+|---|---|---|
+| `AIdoctor Current State Baseline V1 与重构决策.md` | ABSORB | 拆入 `00_现状与治理/Current_State_Baseline_V1.md`（现状与资产处置）和 `00_现状与治理/重构决策_V1.md`（迁移原则与建议路径） |
+| `当前情况摸底.md` | EVIDENCE_KEEP | `00_现状与治理/evidence/当前情况摸底.md` |
+| `第一轮实证盘点.md` | EVIDENCE_KEEP | `00_现状与治理/evidence/第一轮实证盘点.md` |
+| `第二轮实证盘点.md` | EVIDENCE_KEEP | `00_现状与治理/evidence/第二轮实证盘点.md` |
+| `第三轮实证盘点.md` | EVIDENCE_KEEP | `00_现状与治理/evidence/第三轮实证盘点.md` |
+| `AIdoctor 重构需求与系统边界 V1.md` | SUPERSEDED | 已被 `01_需求/需求与系统边界_V1.md` 吸收冻结 |
+| `AIdoctor V1 功能模块划分.md` | SUPERSEDED | 已被 `02_功能/功能模块划分_V1.md` 吸收冻结 |
+
+处理规则：
+
+- 不再把 `docs/refactor2/` 当作第二套 current；
+- 过程稿保留原貌，不回写成新的冻结结论；
+- Phase R1 保持“建议实施路径”，不因本目录吸收而升格为 SOP 施工令。
+
+---
+
+# 9. 按新 SOP 阶段的吸收队列
 
 ## Phase 1 需求与边界
 优先吸收：系统定位、入口判定、临床流程中的产品约束、Must-Exclude、事实来源类型、范围边界、Patient Delivery 边界。
@@ -245,10 +269,11 @@
 
 ---
 
-# 9. 当前执行结论
+# 10. 当前执行结论
 
 1. 不删除 `docs/AI医生/项目文档`；统一降级为 Legacy Design Reference。
 2. 不删除 `docs/refactoring`；其 design/plans 降级，evidence/reviews 保持历史真值，extensions 明确 Future Scope。
-3. 新设计只在 `docs/current/` 冻结。
-4. Phase 1/2 在进入 Phase 3 前进行一次 Legacy Design Assimilation Pass。
-5. 后续每个 SOP 阶段都必须先查看本矩阵指定的历史资产，再冻结该阶段新权威文档。
+3. 不把 `docs/refactor2/` 保留为第二权威；本轮冻结结论只进入 `docs/current/`，过程稿进入 `00_现状与治理/evidence/`。
+4. 新设计只在 `docs/current/` 冻结。
+5. Phase 1/2 在进入 Phase 3 前进行一次 Legacy Design Assimilation Pass。
+6. 后续每个 SOP 阶段都必须先查看本矩阵指定的历史资产，再冻结该阶段新权威文档。
