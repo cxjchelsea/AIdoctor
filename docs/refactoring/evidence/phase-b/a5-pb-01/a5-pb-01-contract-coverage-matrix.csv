@@ -1,0 +1,17 @@
+contract,classification,evidence,remaining_limit
+ContractEnvelope,SEMANTIC_REISSUE,1.1 schema fixture binding validator,no runtime adoption
+IdentifierSet,SEMANTIC_REISSUE,1.1 schema fixture binding validator,identifier semantics remain opaque
+StatePatch,MODIFIED_REISSUE,legacy and canonical operation tests,1.1 runtime adapter deferred
+CommitResult,MODIFIED_REISSUE,target XOR tests,cross-message patch/result validation deferred
+ContractConflict,SEMANTIC_REISSUE,controlled legacy value references,canonical object CAS deferred
+ToolContext,SEMANTIC_REISSUE,binding round trip,no runtime adoption
+ToolResult,SEMANTIC_REISSUE,binding round trip,no runtime adoption
+EvidencePack,SEMANTIC_REISSUE,validator semantic checks,clinical validity not claimed
+SourceArtifact,SEMANTIC_REISSUE,validator checks,storage resolver deferred
+KnowledgeReleaseRef,SEMANTIC_REISSUE,validator checks,runtime registry deferred
+TraceRef,SEMANTIC_REISSUE,binding round trip,payload store not migrated
+AuditRef,SEMANTIC_REISSUE,binding round trip,audit store not migrated
+PatientDeliveryView,SEMANTIC_REISSUE,fixture binding validator,patient UI not implemented
+Encounter,NEW_CONTRACT,lifecycle tests,product workflow states deferred
+ClinicalStateSnapshot,NEW_CONTRACT,keyed observation tests,non-observation body deferred
+ClinicalObservation,NEW_CONTRACT,value variant tests,candidate/lifecycle semantics deferred

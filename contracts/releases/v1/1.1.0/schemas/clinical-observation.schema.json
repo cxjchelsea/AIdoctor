@@ -1,0 +1,33 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/1.1.0/clinical-observation.schema.json",
+  "title":"ClinicalObservation",
+  "description":"One committed canonical observation unit. Not an ObservationCandidate, ToolResult, StatePatch, model output, or unvalidated parser output.",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["contract_version","observation_id","encounter_id","subject_ref","value","recorded_time","status","sensitivity","provenance_refs"],
+  "properties":{
+    "contract_version":{"const":"1.1.0"},
+    "observation_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "encounter_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "subject_ref":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "value":{"$ref":"#/$defs/observationValue"},
+    "recorded_time":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "effective_time":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "status":{"const":"COMMITTED"},
+    "sensitivity":{"enum":["PUBLIC","INTERNAL","INTERNAL_SENSITIVE","PHI"]},
+    "provenance_refs":{"type":"array","minItems":1,"maxItems":64,"uniqueItems":true,"items":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"}},
+    "evidence_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"}}
+  },
+  "$defs":{
+    "boundedToken":{"type":"string","minLength":1,"maxLength":80,"pattern":"^[A-Za-z][A-Za-z0-9._:-]*$"},
+    "observationValue":{"oneOf":[
+      {"type":"object","additionalProperties":false,"required":["kind","value"],"properties":{"kind":{"const":"TEXT"},"value":{"type":"string","minLength":1,"maxLength":4000}}},
+      {"type":"object","additionalProperties":false,"required":["kind","value"],"properties":{"kind":{"const":"NUMBER"},"value":{"type":"number","minimum":-9007199254740991,"maximum":9007199254740991}}},
+      {"type":"object","additionalProperties":false,"required":["kind","value"],"properties":{"kind":{"const":"BOOLEAN"},"value":{"type":"boolean"}}},
+      {"type":"object","additionalProperties":false,"required":["kind","code","system"],"properties":{"kind":{"const":"CODED"},"code":{"type":"string","minLength":1,"maxLength":128},"system":{"type":"string","minLength":1,"maxLength":256},"display":{"type":"string","minLength":1,"maxLength":256}}},
+      {"type":"object","additionalProperties":false,"required":["kind","value","unit"],"properties":{"kind":{"const":"QUANTITY"},"value":{"type":"number","minimum":-9007199254740991,"maximum":9007199254740991},"unit":{"type":"string","minLength":1,"maxLength":64}}},
+      {"type":"object","additionalProperties":false,"required":["kind","reference_type","reference_id"],"properties":{"kind":{"const":"REFERENCE"},"reference_type":{"$ref":"#/$defs/boundedToken"},"reference_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"}}}
+    ]}
+  }
+}

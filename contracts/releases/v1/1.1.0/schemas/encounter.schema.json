@@ -1,0 +1,25 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.aidoctor.dev/contracts/1.1.0/encounter.schema.json",
+  "title":"Encounter",
+  "description":"Structural encounter/session episode boundary. Not a diagnosis result, workflow runtime state, or clinical state snapshot.",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["contract_version","envelope","encounter_id","subject_ref","lifecycle_status","started_at","updated_at","current_state_version"],
+  "properties":{
+    "contract_version":{"const":"1.1.0"},
+    "envelope":{"allOf":[{"$ref":"contract-envelope.schema.json"},{"properties":{"contract_name":{"const":"Encounter"}}}]},
+    "encounter_id":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "subject_ref":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "session_ref":{"$ref":"contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "lifecycle_status":{"enum":["OPEN","CLOSED"]},
+    "started_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "updated_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "closed_at":{"$ref":"contract-envelope.schema.json#/$defs/timestamp"},
+    "current_state_version":{"type":"integer","minimum":0,"maximum":9007199254740991}
+  },
+  "allOf":[
+    {"if":{"properties":{"lifecycle_status":{"const":"OPEN"}}},"then":{"not":{"required":["closed_at"]}}},
+    {"if":{"properties":{"lifecycle_status":{"const":"CLOSED"}}},"then":{"required":["closed_at"]}}
+  ]
+}

@@ -34,6 +34,8 @@ jobs:
           cache-dependency-path: |
             contracts/v1/requirements-test.lock.txt
             contracts/v1/bindings/python/requirements-dev.txt
+            contracts/releases/v1/1.1.0/requirements-test.lock.txt
+            contracts/releases/v1/1.1.0/bindings/python/requirements-dev.txt
       - name: Set up JDK 8
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5.7.0
         with:
@@ -45,12 +47,16 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: contracts/v1/bindings/typescript/package-lock.json
+          cache-dependency-path: |
+            contracts/v1/bindings/typescript/package-lock.json
+            contracts/releases/v1/1.1.0/bindings/typescript/package-lock.json
       - name: Install contract Python dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r contracts/v1/requirements-test.lock.txt
           python -m pip install -r contracts/v1/bindings/python/requirements-dev.txt
+          python -m pip install -r contracts/releases/v1/1.1.0/requirements-test.lock.txt
+          python -m pip install -r contracts/releases/v1/1.1.0/bindings/python/requirements-dev.txt
       - name: Validate Shared Contracts v1
         run: python contracts/v1/validator/validate_contracts.py
       - name: Test contract schemas and Python bindings
@@ -63,6 +69,18 @@ jobs:
         run: npm --prefix contracts/v1/bindings/typescript ci --ignore-scripts
       - name: Test TypeScript bindings
         run: npm --prefix contracts/v1/bindings/typescript test
+      - name: Validate Shared Contracts v1 exact release 1.1.0
+        run: python contracts/releases/v1/1.1.0/validator/validate_contracts.py
+      - name: Test Shared Contracts v1 exact release 1.1.0 schemas and Python bindings
+        run: python -m pytest -p no:cacheprovider contracts/releases/v1/1.1.0/tests contracts/releases/v1/1.1.0/bindings/python/tests -q
+      - name: Check Shared Contracts v1 exact release 1.1.0 binding drift
+        run: python contracts/releases/v1/1.1.0/bindings/tooling/check_drift.py
+      - name: Test Shared Contracts v1 exact release 1.1.0 Java bindings
+        run: mvn -f contracts/releases/v1/1.1.0/bindings/java/pom.xml test
+      - name: Install Shared Contracts v1 exact release 1.1.0 TypeScript dependencies
+        run: npm --prefix contracts/releases/v1/1.1.0/bindings/typescript ci --ignore-scripts
+      - name: Test Shared Contracts v1 exact release 1.1.0 TypeScript bindings
+        run: npm --prefix contracts/releases/v1/1.1.0/bindings/typescript test
 
   java:
     name: java

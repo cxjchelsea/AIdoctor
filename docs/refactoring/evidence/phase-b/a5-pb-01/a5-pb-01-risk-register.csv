@@ -1,0 +1,7 @@
+risk,severity,scope,mitigation,remaining_action
+A5-PB-01-R01,HIGH,Runtime consumers,1.1 bindings are not imported by services,authorize B1 runtime migration separately
+A5-PB-01-R02,HIGH,StatePatch 1.1,target XOR and branch validator tests,implement adapter before B1
+A5-PB-01-R03,HIGH,Clinical content,fixtures use neutral synthetic values only,clinical policy/validation later
+A5-PB-01-R04,MEDIUM,Version domain,schemas use JS safe integer range,align PBNC Java int before production B2
+A5-PB-01-R05,MEDIUM,Observation values,closed tagged union excludes null/list/range,product semantics later
+A5-PB-01-R06,MEDIUM,Exact versions,raw 1.0 wire payloads are not 1.1 valid,consumer opt-in/adapters later

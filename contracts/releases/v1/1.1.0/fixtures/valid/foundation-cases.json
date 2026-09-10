@@ -1,0 +1,420 @@
+{
+  "ContractEnvelope": {
+    "contract_name": "ContractEnvelope",
+    "contract_version": "1.1.0",
+    "message_id": "msg.001",
+    "correlation_id": "corr.001",
+    "trace_id": "trace.001",
+    "created_at": "2026-09-09T05:00:00Z",
+    "producer": "contract-service",
+    "capability_id": "capability.001",
+    "capability_version": "1.1.0"
+  },
+  "IdentifierSet": {
+    "contract_version": "1.1.0",
+    "cdp_id": "test.cdp.001",
+    "patient_id": "test.subject.001",
+    "encounter_id": "test.encounter.001",
+    "session_id": "test.session.001",
+    "tenant_id": "test.tenant.001",
+    "review_id": "test.review.001",
+    "delivery_id": "test.delivery.001"
+  },
+  "StatePatch": {
+    "contract_version": "1.1.0",
+    "envelope": {
+      "contract_name": "StatePatch",
+      "contract_version": "1.1.0",
+      "message_id": "msg.patch.001",
+      "correlation_id": "corr.001",
+      "trace_id": "trace.001",
+      "created_at": "2026-09-09T05:00:00Z",
+      "producer": "contract-service",
+      "capability_id": "capability.001",
+      "capability_version": "1.1.0"
+    },
+    "cdp_id": "test.cdp.001",
+    "base_version": 1,
+    "patch_id": "patch.001",
+    "idempotency_key": "idem.001",
+    "operations": [
+      {
+        "op": "REPLACE",
+        "path": "/patient_state/alpha",
+        "value": "alpha",
+        "expected_current_value": null,
+        "source": "PATIENT_FACT",
+        "sensitivity": "INTERNAL"
+      }
+    ],
+    "reason_code": "TEST_REASON",
+    "evidence_refs": [],
+    "producer": "contract-service",
+    "created_at": "2026-09-09T05:00:00Z"
+  },
+  "CommitResult": {
+    "contract_version": "1.1.0",
+    "envelope": {
+      "contract_name": "CommitResult",
+      "contract_version": "1.1.0",
+      "message_id": "msg.commit.001",
+      "correlation_id": "corr.001",
+      "trace_id": "trace.001",
+      "created_at": "2026-09-09T05:00:00Z",
+      "producer": "contract-service",
+      "capability_id": "capability.001",
+      "capability_version": "1.1.0"
+    },
+    "patch_id": "patch.001",
+    "cdp_id": "test.cdp.001",
+    "status": "COMMITTED",
+    "previous_version": 1,
+    "committed_version": 2,
+    "committed_at": "2026-09-09T05:01:00Z",
+    "reason_code": "PATCH_COMMITTED",
+    "conflicts": [],
+    "rejected_operations": [],
+    "errors": [],
+    "audit_ref": {
+      "contract_version": "1.1.0",
+      "audit_id": "audit.001",
+      "audit_type": "STATE_COMMITTED",
+      "audit_version": 1,
+      "created_at": "2026-09-09T05:00:00Z",
+      "access_level": "INTERNAL",
+      "phi_capable": false
+    },
+    "retryable": false
+  },
+  "ContractConflict": {
+    "contract_version": "1.1.0",
+    "conflict_id": "conflict.001",
+    "type": "VERSION_MISMATCH",
+    "path": "/patient_state/alpha",
+    "expected_version": 1,
+    "actual_version": 2,
+    "expected_value": null,
+    "actual_value": null,
+    "resolution": "REFRESH_AND_REVIEW",
+    "retryable": true,
+    "details": "alpha"
+  },
+  "AuditRef": {
+    "contract_version": "1.1.0",
+    "audit_id": "audit.001",
+    "audit_type": "STATE_COMMITTED",
+    "audit_version": 1,
+    "created_at": "2026-09-09T05:00:00Z",
+    "access_level": "INTERNAL",
+    "phi_capable": false
+  },
+  "TraceRef": {
+    "contract_version": "1.1.0",
+    "trace_id": "trace.001",
+    "trace_type": "REQUEST_TRACE",
+    "trace_version": 1,
+    "created_at": "2026-09-09T05:00:00Z",
+    "access_level": "INTERNAL",
+    "phi_capable": false
+  },
+  "KnowledgeReleaseRef": {
+    "contract_version": "1.1.0",
+    "knowledge_release_id": "knowledge.001",
+    "source_registry_version": "1.1.0",
+    "released_at": "2026-09-09T05:00:00Z",
+    "status": "ACTIVE",
+    "source_refs": [
+      "source.001"
+    ],
+    "checksum_manifest_ref": "urn:aidoctor:manifest:alpha"
+  },
+  "SourceArtifact": {
+    "contract_version": "1.1.0",
+    "artifact_id": "artifact.001",
+    "artifact_type": "UPLOAD",
+    "owner_ref": "test.subject.001",
+    "content_type": "text/plain",
+    "original_filename": "alpha.txt",
+    "size_bytes": 5,
+    "checksum": {
+      "algorithm": "SHA-256",
+      "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "storage_ref": "urn:aidoctor:artifact:alpha",
+    "created_at": "2026-09-09T05:00:00Z",
+    "processing_status": "RECEIVED",
+    "derived_artifacts": [],
+    "sensitivity": "INTERNAL",
+    "retention_class": "TEST"
+  },
+  "EvidencePack": {
+    "contract_version": "1.1.0",
+    "evidence_pack_id": "evidence.001",
+    "knowledge_release_id": "knowledge.001",
+    "created_at": "2026-09-09T05:00:00Z",
+    "claims": [
+      {
+        "claim_id": "claim.001",
+        "text": "alpha",
+        "claim_type": "PATIENT_FACT",
+        "support_status": "SUPPORTED",
+        "citation_refs": [
+          "source.001"
+        ],
+        "applicability": "UNKNOWN",
+        "limitations": []
+      }
+    ],
+    "sources": [
+      {
+        "source_id": "source.001",
+        "source_type": "PATIENT_RECORD",
+        "title": "alpha",
+        "publisher": null,
+        "release_or_version": null,
+        "jurisdiction": null,
+        "valid_from": null,
+        "valid_to": null,
+        "locator": "urn:aidoctor:source:alpha",
+        "span": "alpha",
+        "license": null,
+        "retrieved_at": "2026-09-09T05:00:00Z"
+      }
+    ],
+    "conflicts": [],
+    "limitations": []
+  },
+  "ToolContext": {
+    "contract_version": "1.1.0",
+    "envelope": {
+      "contract_name": "ToolContext",
+      "contract_version": "1.1.0",
+      "message_id": "msg.toolctx.001",
+      "correlation_id": "corr.001",
+      "trace_id": "trace.001",
+      "created_at": "2026-09-09T05:00:00Z",
+      "producer": "contract-service",
+      "capability_id": "capability.001",
+      "capability_version": "1.1.0"
+    },
+    "actor": {
+      "actor_id": "actor.001",
+      "actor_type": "SERVICE"
+    },
+    "identifiers": {
+      "contract_version": "1.1.0",
+      "cdp_id": "test.cdp.001"
+    },
+    "capability": {
+      "capability_id": "capability.001",
+      "capability_version": "1.1.0"
+    },
+    "current_state_ref": {
+      "cdp_id": "test.cdp.001",
+      "version": 1,
+      "read_fields": [
+        "/patient_state/alpha"
+      ]
+    },
+    "authorization_scope": {
+      "granted": [
+        "STATE_PATCH_PROPOSE"
+      ],
+      "requested": [
+        "STATE_PATCH_PROPOSE"
+      ]
+    },
+    "deadline": "2026-09-09T05:10:00Z",
+    "locale": "en-US",
+    "requested_operation": "ALPHA",
+    "input_refs": [
+      {
+        "ref_type": "ARTIFACT",
+        "ref_id": "artifact.001",
+        "ref_version": 1
+      }
+    ]
+  },
+  "ToolResult": {
+    "contract_version": "1.1.0",
+    "envelope": {
+      "contract_name": "ToolResult",
+      "contract_version": "1.1.0",
+      "message_id": "msg.toolres.001",
+      "correlation_id": "corr.001",
+      "trace_id": "trace.001",
+      "created_at": "2026-09-09T05:00:00Z",
+      "producer": "contract-service",
+      "capability_id": "capability.001",
+      "capability_version": "1.1.0"
+    },
+    "tool_name": "tool-alpha",
+    "tool_version": "1.1.0",
+    "invocation_id": "invoke.001",
+    "status": "SUCCEEDED",
+    "reason_code": "TOOL_SUCCEEDED",
+    "retryable": false,
+    "output": [
+      {
+        "name": "alpha",
+        "value": "beta"
+      }
+    ],
+    "suggested_patches": [],
+    "evidence_refs": [
+      "evidence.001"
+    ],
+    "errors": [],
+    "started_at": "2026-09-09T05:00:00Z",
+    "completed_at": "2026-09-09T05:01:00Z"
+  },
+  "PatientDeliveryView": {
+    "contract_version": "1.1.0",
+    "delivery_id": "delivery.001",
+    "delivery_version": 1,
+    "delivery_status": "PREPARING",
+    "cdp_id": "test.cdp.001",
+    "review_status": "NOT_REVIEWED",
+    "generated_at": "2026-09-09T05:00:00Z",
+    "title": "alpha",
+    "summary": "beta",
+    "safety_notice": [
+      {
+        "notice_id": "notice.001",
+        "level_ref": "POLICY_ALPHA",
+        "message": "alpha"
+      }
+    ],
+    "recommended_actions": [
+      "alpha"
+    ],
+    "evidence_sections": [
+      {
+        "section_id": "section.001",
+        "title": "alpha",
+        "display_order": 1,
+        "cards": [
+          {
+            "card_id": "card.001",
+            "claim_id": "claim.001",
+            "basis_type": "PATIENT_FACT",
+            "patient_friendly_claim": "alpha",
+            "evidence_status": "SUPPORTED",
+            "related_patient_fact_ids": [
+              "fact.001"
+            ],
+            "sources": [
+              {
+                "citation_id": "citation.001",
+                "source_id": "source.001",
+                "title": "alpha",
+                "organization": "org-alpha",
+                "source_type": "OTHER_APPROVED_SOURCE",
+                "link_policy": "NO_EXTERNAL_LINK",
+                "freshness_status": "UNKNOWN"
+              }
+            ],
+            "limitations": [],
+            "clinician_reviewed": false,
+            "display_priority": "NORMAL",
+            "expandable": false
+          }
+        ]
+      }
+    ],
+    "limitations": [],
+    "version_bindings": {
+      "delivery_version": 1,
+      "contract_version": "1.1.0",
+      "cdp_version": 1,
+      "review_decision_version": null,
+      "knowledge_release_id": "knowledge.001",
+      "knowledge_release_version": "1.1.0"
+    }
+  },
+  "Encounter": {
+    "contract_version": "1.1.0",
+    "envelope": {
+      "contract_name": "Encounter",
+      "contract_version": "1.1.0",
+      "message_id": "msg.encounter.001",
+      "correlation_id": "corr.001",
+      "trace_id": "trace.001",
+      "created_at": "2026-09-09T05:00:00Z",
+      "producer": "contract-service",
+      "capability_id": "capability.001",
+      "capability_version": "1.1.0"
+    },
+    "encounter_id": "test.encounter.001",
+    "subject_ref": "test.subject.001",
+    "session_ref": "test.session.001",
+    "lifecycle_status": "OPEN",
+    "started_at": "2026-09-09T05:00:00Z",
+    "updated_at": "2026-09-09T05:01:00Z",
+    "current_state_version": 1
+  },
+  "ClinicalObservation": {
+    "contract_version": "1.1.0",
+    "observation_id": "test.observation.001",
+    "encounter_id": "test.encounter.001",
+    "subject_ref": "test.subject.001",
+    "value": {
+      "kind": "TEXT",
+      "value": "alpha"
+    },
+    "recorded_time": "2026-09-09T05:00:00Z",
+    "status": "COMMITTED",
+    "sensitivity": "INTERNAL",
+    "provenance_refs": [
+      "test.provenance.001"
+    ],
+    "evidence_refs": [
+      "evidence.001"
+    ]
+  },
+  "ClinicalStateSnapshot": {
+    "contract_version": "1.1.0",
+    "envelope": {
+      "contract_name": "ClinicalStateSnapshot",
+      "contract_version": "1.1.0",
+      "message_id": "msg.snapshot.001",
+      "correlation_id": "corr.001",
+      "trace_id": "trace.001",
+      "created_at": "2026-09-09T05:00:00Z",
+      "producer": "contract-service",
+      "capability_id": "capability.001",
+      "capability_version": "1.1.0"
+    },
+    "encounter_id": "test.encounter.001",
+    "state_version": 1,
+    "committed_at": "2026-09-09T05:01:00Z",
+    "observations": {
+      "test.observation.001": {
+        "contract_version": "1.1.0",
+        "observation_id": "test.observation.001",
+        "encounter_id": "test.encounter.001",
+        "subject_ref": "test.subject.001",
+        "value": {
+          "kind": "TEXT",
+          "value": "alpha"
+        },
+        "recorded_time": "2026-09-09T05:00:00Z",
+        "status": "COMMITTED",
+        "sensitivity": "INTERNAL",
+        "provenance_refs": [
+          "test.provenance.001"
+        ],
+        "evidence_refs": [
+          "evidence.001"
+        ]
+      }
+    },
+    "evidence_refs": [
+      "evidence.001"
+    ]
+  }
+}
+
+
+
+

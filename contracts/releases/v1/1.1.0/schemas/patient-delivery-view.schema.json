@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.aidoctor.dev/contracts/1.1.0/patient-delivery-view.schema.json",
+  "title": "PatientDeliveryView",
+  "description": "Strict structural whitelist for a patient-facing delivery. Natural-language content still requires a later policy/content-safety delivery gate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version", "delivery_id", "delivery_version", "delivery_status",
+    "cdp_id", "review_status", "generated_at", "title", "summary",
+    "safety_notice", "recommended_actions", "evidence_sections",
+    "limitations", "version_bindings"
+  ],
+  "properties": {
+    "contract_version": {"const": "1.1.0"},
+    "delivery_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "delivery_version": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "delivery_status": {"enum": ["PREPARING", "AWAITING_CLINICIAN", "READY", "READY_WITH_LIMITED_EVIDENCE", "DEGRADED", "SUPERSEDED", "CANCELLED"]},
+    "cdp_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+    "review_status": {"enum": ["NOT_REVIEWED", "PENDING_CLINICIAN", "CLINICIAN_APPROVED", "CLINICIAN_MODIFIED", "CLINICIAN_REJECTED"]},
+    "generated_at": {"$ref": "contract-envelope.schema.json#/$defs/timestamp"},
+    "title": {"type": "string", "minLength": 1, "maxLength": 300},
+    "summary": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "safety_notice": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/safetyNotice"}},
+    "recommended_actions": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 1000}},
+    "evidence_sections": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/evidenceSection"}},
+    "limitations": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/patientLimitation"}},
+    "follow_up": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 1000}},
+    "version_bindings": {"$ref": "#/$defs/versionBindings"}
+  },
+  "$defs": {
+    "safetyNotice": {
+      "type": "object", "additionalProperties": false,
+      "required": ["notice_id", "level_ref", "message"],
+      "properties": {
+        "notice_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+        "level_ref": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^POLICY_[A-Z0-9_]+$", "description": "Policy reference only; A5 does not invent clinical risk levels."},
+        "message": {"type": "string", "minLength": 1, "maxLength": 2000}
+      }
+    },
+    "evidenceSection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["section_id", "title", "display_order", "cards"],
+      "properties": {
+        "section_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 200},
+        "description": {"type": ["string", "null"], "maxLength": 1000},
+        "display_order": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+        "cards": {"type": "array", "maxItems": 64, "items": {"$ref": "#/$defs/evidenceCard"}}
+      }
+    },
+    "evidenceCard": {
+      "type": "object", "additionalProperties": false,
+      "required": ["card_id", "claim_id", "basis_type", "patient_friendly_claim", "evidence_status", "related_patient_fact_ids", "sources", "limitations", "clinician_reviewed", "display_priority", "expandable"],
+      "properties": {
+        "card_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+        "claim_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+        "basis_type": {"enum": ["SAFETY_RULE", "MEDICAL_EVIDENCE", "CLINICIAN_DECISION", "PATIENT_FACT"]},
+        "patient_friendly_claim": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "rationale_summary": {"type": ["string", "null"], "maxLength": 2000},
+        "evidence_status": {"enum": ["SUPPORTED", "PARTIALLY_SUPPORTED", "CONFLICTING", "INSUFFICIENT_EVIDENCE", "POPULATION_MISMATCH", "STALE_SOURCE", "OUT_OF_SCOPE", "NOT_REQUIRED"]},
+        "certainty_label": {"type": ["string", "null"], "enum": ["STRONGER_BASIS", "LIMITED_BASIS", "SOURCES_DIFFER", "MORE_INFORMATION_NEEDED", "MAY_NOT_FULLY_APPLY", "CLINICIAN_REVIEWED", null]},
+        "related_patient_fact_ids": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"}},
+        "sources": {"type": "array", "maxItems": 5, "items": {"$ref": "#/$defs/patientSourceSummary"}},
+        "conflict_summary": {"oneOf": [{"$ref": "#/$defs/patientConflictSummary"}, {"type": "null"}]},
+        "applicability": {"oneOf": [{"$ref": "#/$defs/patientApplicabilitySummary"}, {"type": "null"}]},
+        "limitations": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/patientLimitation"}},
+        "clinician_reviewed": {"type": "boolean"},
+        "reviewed_at": {"oneOf": [{"$ref": "contract-envelope.schema.json#/$defs/timestamp"}, {"type": "null"}]},
+        "display_priority": {"enum": ["CRITICAL", "HIGH", "NORMAL", "LOW"]},
+        "expandable": {"type": "boolean"}
+      },
+      "allOf": [
+        {"if": {"properties": {"basis_type": {"const": "MEDICAL_EVIDENCE"}, "evidence_status": {"not": {"const": "INSUFFICIENT_EVIDENCE"}}}, "required": ["basis_type", "evidence_status"]}, "then": {"properties": {"sources": {"minItems": 1}}}},
+        {"if": {"properties": {"clinician_reviewed": {"const": true}}, "required": ["clinician_reviewed"]}, "then": {"properties": {"reviewed_at": {"$ref": "contract-envelope.schema.json#/$defs/timestamp"}}}},
+        {"if": {"properties": {"clinician_reviewed": {"const": false}}, "required": ["clinician_reviewed"]}, "then": {"properties": {"reviewed_at": {"type": "null"}}}}
+      ]
+    },
+    "patientSourceSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["citation_id", "source_id", "title", "organization", "source_type", "link_policy", "freshness_status"],
+      "properties": {
+        "citation_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+        "source_id": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 300},
+        "organization": {"type": "string", "minLength": 1, "maxLength": 300},
+        "publication_date": {"type": ["string", "null"], "format": "date"},
+        "source_version": {"type": ["string", "null"], "maxLength": 100},
+        "source_type": {"enum": ["GUIDELINE", "SYSTEMATIC_REVIEW", "GOVERNMENT_HEALTH_INFORMATION", "PEER_REVIEWED_STUDY", "OTHER_APPROVED_SOURCE"]},
+        "applicable_population": {"type": ["string", "null"], "maxLength": 500},
+        "region": {"type": ["string", "null"], "maxLength": 100},
+        "patient_friendly_excerpt": {"type": ["string", "null"], "maxLength": 1000},
+        "access_url": {"type": ["string", "null"], "format": "uri", "maxLength": 500},
+        "link_policy": {"enum": ["DIRECT", "LANDING_PAGE", "NO_EXTERNAL_LINK"]},
+        "freshness_status": {"enum": ["CURRENT", "REVIEW_DUE", "STALE", "UNKNOWN"]}
+      }
+    },
+    "patientConflictSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["exists", "patient_friendly_message", "affected_claim_ids", "requires_clinician_review"],
+      "properties": {
+        "exists": {"const": true},
+        "patient_friendly_message": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "affected_claim_ids": {"type": "array", "minItems": 2, "maxItems": 16, "uniqueItems": true, "items": {"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"}},
+        "requires_clinician_review": {"type": "boolean"}
+      }
+    },
+    "patientApplicabilitySummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["population_match", "region_match"],
+      "properties": {
+        "population_match": {"enum": ["MATCH", "PARTIAL", "MISMATCH", "UNKNOWN"]},
+        "region_match": {"enum": ["MATCH", "PARTIAL", "MISMATCH", "UNKNOWN"]},
+        "patient_friendly_message": {"type": ["string", "null"], "maxLength": 1000}
+      }
+    },
+    "patientLimitation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["code", "message", "severity"],
+      "properties": {
+        "code": {"enum": ["MISSING_INFORMATION", "INSUFFICIENT_EVIDENCE", "CONFLICTING_EVIDENCE", "POPULATION_MISMATCH", "REGION_MISMATCH", "STALE_SOURCE", "SOURCE_ACCESS_LIMITED", "CLINICIAN_REVIEW_REQUIRED", "CAPABILITY_SCOPE_LIMIT"]},
+        "message": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "severity": {"enum": ["INFO", "WARNING", "CRITICAL"]},
+        "user_action": {"type": "string", "minLength": 1, "maxLength": 1000}
+      }
+    },
+    "versionBindings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["delivery_version", "contract_version", "cdp_version", "review_decision_version", "knowledge_release_id", "knowledge_release_version"],
+      "properties": {
+        "delivery_version": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+        "contract_version": {"const": "1.1.0"},
+        "cdp_version": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+        "review_decision_version": {"oneOf": [{"type": "integer", "minimum": 1, "maximum": 9007199254740991}, {"type": "null"}]},
+        "knowledge_release_id": {"oneOf": [{"$ref": "contract-envelope.schema.json#/$defs/opaqueIdentifier"}, {"type": "null"}]},
+        "knowledge_release_version": {"oneOf": [{"$ref": "contract-envelope.schema.json#/$defs/semanticVersion"}, {"type": "null"}]}
+      }
+    }
+  }
+}
