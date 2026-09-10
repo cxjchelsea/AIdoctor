@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
-/**
- * 缁戝畾涓撶敤 ObjectMapper锛氳泧褰㈠瓧娈点€佹嫆缁濇湭鐭ュ睘鎬с€佺渷鐣ユ湭鍑虹幇鐨勫彲閫?null銆?
- * 涓嶆敼鍙樼敓浜?diagnosis-service 鐨勫叏灞€ Jackson 閰嶇疆銆?
- */
+/** ObjectMapper for release-local structural bindings. It is not wired into diagnosis-service runtime consumers. */
 public final class SharedContractsMapper {
     private SharedContractsMapper() {
     }

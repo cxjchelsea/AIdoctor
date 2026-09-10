@@ -160,3 +160,31 @@ def test_encounter_lifecycle_time_rules():
     assert errors("Encounter", closed)
     closed["closed_at"] = "2026-09-09T05:02:00Z"
     assert not errors("Encounter", closed)
+
+
+def test_encounter_offset_aware_updated_at_chronology():
+    valid_offset = valid("Encounter")
+    valid_offset["started_at"] = "2026-09-09T10:00:00+02:00"
+    valid_offset["updated_at"] = "2026-09-09T08:30:00Z"
+    assert not errors("Encounter", valid_offset)
+
+    invalid_offset = valid("Encounter")
+    invalid_offset["started_at"] = "2026-09-09T08:00:00Z"
+    invalid_offset["updated_at"] = "2026-09-09T09:00:00+02:00"
+    assert errors("Encounter", invalid_offset)
+
+
+def test_encounter_offset_aware_closed_at_chronology():
+    valid_offset = valid("Encounter")
+    valid_offset["lifecycle_status"] = "CLOSED"
+    valid_offset["started_at"] = "2026-09-09T10:00:00+02:00"
+    valid_offset["updated_at"] = "2026-09-09T10:10:00+02:00"
+    valid_offset["closed_at"] = "2026-09-09T08:30:00Z"
+    assert not errors("Encounter", valid_offset)
+
+    invalid_offset = valid("Encounter")
+    invalid_offset["lifecycle_status"] = "CLOSED"
+    invalid_offset["started_at"] = "2026-09-09T08:00:00Z"
+    invalid_offset["updated_at"] = "2026-09-09T08:10:00Z"
+    invalid_offset["closed_at"] = "2026-09-09T09:00:00+02:00"
+    assert errors("Encounter", invalid_offset)

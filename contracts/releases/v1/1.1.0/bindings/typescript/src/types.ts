@@ -1,5 +1,5 @@
-// REVIEWED_BINDING 鈥?structural TypeScript types for Shared Contracts v1.
-// SCHEMA_SEMANTIC_AUTHORITY remains contracts/v1/manifest.json + schemas.
+// REVIEWED_BINDING structural TypeScript types for Shared Contracts v1.1.0.
+// SCHEMA_SEMANTIC_AUTHORITY is contracts/releases/v1/1.1.0/manifest.json + schemas.
 
 export type ContractVersionLiteral = "1.1.0";
 export type ControlledValue = string | number | boolean | null | Array<string | number | boolean | null>;
@@ -49,9 +49,12 @@ export interface ClinicalObservation {
   evidence_refs?: string[];
 }
 
+export type CanonicalObservationPath = `/observations/${string}`;
+
 export type StatePatchOperation =
   | { op: "ADD" | "REPLACE" | "REMOVE" | "TEST"; path: string; value?: ControlledValue; expected_current_value?: ControlledValue; source: "PATIENT_FACT" | "MEDICAL_EVIDENCE" | "CLINICIAN_DECISION" | "SAFETY_RULE" | "TOOL_OUTPUT"; sensitivity: "PUBLIC" | "INTERNAL" | "INTERNAL_SENSITIVE" | "PHI" }
-  | { op: "ADD" | "REPLACE" | "REMOVE"; path: string; value?: ClinicalObservation; source: "PATIENT_FACT" | "MEDICAL_EVIDENCE" | "CLINICIAN_DECISION" | "SAFETY_RULE" | "TOOL_OUTPUT"; sensitivity: "PUBLIC" | "INTERNAL" | "INTERNAL_SENSITIVE" | "PHI" };
+  | { op: "ADD" | "REPLACE"; path: CanonicalObservationPath; value: ClinicalObservation; expected_current_value?: never; source: "PATIENT_FACT" | "MEDICAL_EVIDENCE" | "CLINICIAN_DECISION" | "SAFETY_RULE" | "TOOL_OUTPUT"; sensitivity: "PUBLIC" | "INTERNAL" | "INTERNAL_SENSITIVE" | "PHI" }
+  | { op: "REMOVE"; path: CanonicalObservationPath; value?: never; expected_current_value?: never; source: "PATIENT_FACT" | "MEDICAL_EVIDENCE" | "CLINICIAN_DECISION" | "SAFETY_RULE" | "TOOL_OUTPUT"; sensitivity: "PUBLIC" | "INTERNAL" | "INTERNAL_SENSITIVE" | "PHI" };
 
 export interface StatePatch {
   contract_version: ContractVersionLiteral;

@@ -1,4 +1,4 @@
-// REVIEWED_BINDING version stamp. Must match contracts/v1/manifest.json.
+// REVIEWED_BINDING version stamp. Must match contracts/releases/v1/1.1.0/manifest.json.
 // Written by tooling/sync_version.py. Do not edit independently.
 
 export const CONTRACT_VERSION = "1.1.0" as const;

@@ -6,6 +6,20 @@ Base: `7e47ee00ecc47f051638552bde44c03aa8b3f72b`
 Tree: `c306ca3ba218f38b5fa62303652320b8cc614770`
 Branch: `agent/a5-pb-01-canonical-state-mutation-contracts-1-1-0`
 
+## Bounded correction pass
+
+Authorization: `A5_PB_01_PR75_BOUNDED_CORRECTION_EXPLICIT_AUTHORIZATION_GRANTED`
+
+The bounded correction pass addresses independent review findings only:
+
+- Java `ClinicalObservation.value` now uses typed ObservationValue variants for TEXT, NUMBER, BOOLEAN, CODED, QUANTITY, and REFERENCE.
+- Java StatePatch operations now deserialize into distinct legacy and canonical observation operation branches.
+- Java safe-integer fields whose schema domain exceeds `Integer` range now use `Long`.
+- Encounter lifecycle chronology now compares offset-aware RFC3339 timestamps rather than raw strings.
+- 1.1 binding documentation/comments now point to the self-contained release-local authority.
+
+This does not mark the release durable, approve PR #75, migrate State Committer, start B1, enable Clinical Runtime, or wire production.
+
 ## Release
 
 Path: `contracts/releases/v1/1.1.0/`

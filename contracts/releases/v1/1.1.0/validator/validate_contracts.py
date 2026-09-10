@@ -76,6 +76,10 @@ def pointer(parts):
     return "/" + "/".join(str(part).replace("~", "~0").replace("/", "~1") for part in parts)
 
 
+def parse_rfc3339_timestamp(value):
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 def canonical_token(token):
     token = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", token)
     return re.sub(r"[-_]+", "_", token).lower()
@@ -244,9 +248,9 @@ def semantic_errors(name, instance):
                 if observation.get("encounter_id") != instance.get("encounter_id"):
                     errors.append("ClinicalObservation.encounter_id must equal ClinicalStateSnapshot.encounter_id")
     if name == "Encounter":
-        if instance.get("closed_at") and instance.get("started_at") and instance.get("closed_at") < instance.get("started_at"):
+        if instance.get("closed_at") and instance.get("started_at") and parse_rfc3339_timestamp(instance.get("closed_at")) < parse_rfc3339_timestamp(instance.get("started_at")):
             errors.append("closed_at must not precede started_at")
-        if instance.get("updated_at") and instance.get("started_at") and instance.get("updated_at") < instance.get("started_at"):
+        if instance.get("updated_at") and instance.get("started_at") and parse_rfc3339_timestamp(instance.get("updated_at")) < parse_rfc3339_timestamp(instance.get("started_at")):
             errors.append("updated_at must not precede started_at")
 
     if name == "ToolContext":

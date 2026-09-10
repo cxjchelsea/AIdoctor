@@ -1,11 +1,66 @@
 package com.aidoctor.contracts.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.util.List;
 import java.util.Map;
 
 public final class ClinicalTypes {
-    private ClinicalTypes() { }
+    private ClinicalTypes() {
+    }
+
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "kind", visible = true)
+    @JsonSubTypes({
+        @JsonSubTypes.Type(value = TextObservationValue.class, name = "TEXT"),
+        @JsonSubTypes.Type(value = NumberObservationValue.class, name = "NUMBER"),
+        @JsonSubTypes.Type(value = BooleanObservationValue.class, name = "BOOLEAN"),
+        @JsonSubTypes.Type(value = CodedObservationValue.class, name = "CODED"),
+        @JsonSubTypes.Type(value = QuantityObservationValue.class, name = "QUANTITY"),
+        @JsonSubTypes.Type(value = ReferenceObservationValue.class, name = "REFERENCE")
+    })
+    public abstract static class ObservationValue {
+        @JsonProperty("kind")
+        public String kind;
+    }
+
+    public static class TextObservationValue extends ObservationValue {
+        @JsonProperty("value")
+        public String value;
+    }
+
+    public static class NumberObservationValue extends ObservationValue {
+        @JsonProperty("value")
+        public Double value;
+    }
+
+    public static class BooleanObservationValue extends ObservationValue {
+        @JsonProperty("value")
+        public Boolean value;
+    }
+
+    public static class CodedObservationValue extends ObservationValue {
+        @JsonProperty("code")
+        public String code;
+        @JsonProperty("system")
+        public String system;
+        @JsonProperty("display")
+        public String display;
+    }
+
+    public static class QuantityObservationValue extends ObservationValue {
+        @JsonProperty("value")
+        public Double value;
+        @JsonProperty("unit")
+        public String unit;
+    }
+
+    public static class ReferenceObservationValue extends ObservationValue {
+        @JsonProperty("reference_type")
+        public String referenceType;
+        @JsonProperty("reference_id")
+        public String referenceId;
+    }
 
     public static class Encounter {
         @JsonProperty("contract_version") public String contractVersion;
@@ -37,7 +92,7 @@ public final class ClinicalTypes {
         @JsonProperty("observation_id") public String observationId;
         @JsonProperty("encounter_id") public String encounterId;
         @JsonProperty("subject_ref") public String subjectRef;
-        @JsonProperty("value") public Object value;
+        @JsonProperty("value") public ObservationValue value;
         @JsonProperty("recorded_time") public String recordedTime;
         @JsonProperty("effective_time") public String effectiveTime;
         @JsonProperty("status") public String status;

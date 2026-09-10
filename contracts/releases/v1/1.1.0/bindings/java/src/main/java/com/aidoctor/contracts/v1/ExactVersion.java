@@ -1,8 +1,6 @@
 package com.aidoctor.contracts.v1;
 
-/**
- * EXACT 鐗堟湰鍗忓晢锛氭湭鐭?contract_version 蹇呴』 fail-closed銆?
- */
+/** Exact-version guard for fail-closed contract_version checks. */
 public final class ExactVersion {
     private ExactVersion() {
     }

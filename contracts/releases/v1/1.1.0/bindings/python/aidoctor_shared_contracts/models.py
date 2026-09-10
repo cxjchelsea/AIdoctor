@@ -1,6 +1,6 @@
-# REVIEWED_BINDING 鈥?缁撴瀯缁戝畾锛屼笉鏄?schema 璇箟鏉冨▉銆?
-# extra=forbid 瀵瑰簲 additionalProperties:false銆?
-# 鏉′欢瀛楁 / 浜ゅ弶寮曠敤浠嶇敱 contracts/v1/validator/validate_contracts.py 瑁佸喅銆?
+# REVIEWED_BINDING structural Python models for Shared Contracts v1.1.0.
+# extra=forbid mirrors additionalProperties:false where modeled.
+# Cross-field and path semantics remain owned by contracts/releases/v1/1.1.0/validator/validate_contracts.py.
 
 from __future__ import annotations
 
@@ -589,10 +589,9 @@ def model_for(schema_name: str) -> Type[_StrictModel]:
 
 
 def dump_binding(instance: _StrictModel) -> Dict[str, Any]:
-    """搴忓垪鍖栦负鍙啀浜ょ粰 schema validator 鐨?JSON 瀵硅薄銆?
+    """Dump a structural binding instance to JSON-compatible data for validator handoff.
 
-    浣跨敤 exclude_unset锛氫繚鐣?fixture 涓樉寮忓嚭鐜扮殑 required-null锛?
-    涓嶆妸鏈嚭鐜扮殑鍙€夊瓧娈佃ˉ鎴?null锛堥偅浜涘瓧娈电殑 schema 寰€寰€涓嶅厑璁?null锛夈€?
+    exclude_unset preserves fixture-style required-null behavior without inventing absent optional fields.
     """
     return instance.model_dump(mode="json", exclude_unset=True)
 

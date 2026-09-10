@@ -3,9 +3,7 @@ package com.aidoctor.contracts.v1;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
- * REVIEWED_BINDING锛氫俊灏併€佹爣璇嗐€佸啿绐併€佽拷韪笌瀹¤寮曠敤銆?
- */
+/** Structural Java bindings for shared foundation contracts. */
 public final class FoundationTypes {
     private FoundationTypes() {
     }
@@ -61,10 +59,10 @@ public final class FoundationTypes {
         public String path;
         @JsonInclude(JsonInclude.Include.ALWAYS)
         @JsonProperty("expected_version")
-        public Integer expectedVersion;
+        public Long expectedVersion;
         @JsonInclude(JsonInclude.Include.ALWAYS)
         @JsonProperty("actual_version")
-        public Integer actualVersion;
+        public Long actualVersion;
         @JsonInclude(JsonInclude.Include.ALWAYS)
         @JsonProperty("expected_value")
         public Object expectedValue;
@@ -87,7 +85,7 @@ public final class FoundationTypes {
         @JsonProperty("trace_type")
         public String traceType;
         @JsonProperty("trace_version")
-        public Integer traceVersion;
+        public Long traceVersion;
         @JsonProperty("created_at")
         public String createdAt;
         @JsonProperty("access_level")
@@ -104,7 +102,7 @@ public final class FoundationTypes {
         @JsonProperty("audit_type")
         public String auditType;
         @JsonProperty("audit_version")
-        public Integer auditVersion;
+        public Long auditVersion;
         @JsonProperty("created_at")
         public String createdAt;
         @JsonProperty("access_level")

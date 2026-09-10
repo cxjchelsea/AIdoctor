@@ -1,28 +1,78 @@
 package com.aidoctor.contracts.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.io.IOException;
 import java.util.List;
 
 /**
- * REVIEWED_BINDING锛歋tatePatch 涓烘彁妗堬紝CommitResult 涓烘彁浜ょ粨鏋滐紝浜岃€呬笉鍙簰鎹€?
+ * Structural Java binding for StatePatch and CommitResult. Cross-field semantics remain owned by the release validator.
  */
 public final class StateTypes {
     private StateTypes() {
     }
 
-    public static class StatePatchOperation {
+    public abstract static class StatePatchOperation {
         @JsonProperty("op")
         public String op;
         @JsonProperty("path")
         public String path;
-        @JsonProperty("value")
-        public Object value;
-        @JsonProperty("expected_current_value")
-        public Object expectedCurrentValue;
         @JsonProperty("source")
         public String source;
         @JsonProperty("sensitivity")
         public String sensitivity;
+    }
+
+    public static class LegacyStatePatchOperation extends StatePatchOperation {
+        @JsonProperty("value")
+        public JsonNode value;
+        @JsonProperty("expected_current_value")
+        public JsonNode expectedCurrentValue;
+    }
+
+    public abstract static class CanonicalObservationOperation extends StatePatchOperation {
+    }
+
+    public static class CanonicalObservationAddOperation extends CanonicalObservationOperation {
+        @JsonProperty("value")
+        public ClinicalTypes.ClinicalObservation value;
+    }
+
+    public static class CanonicalObservationReplaceOperation extends CanonicalObservationOperation {
+        @JsonProperty("value")
+        public ClinicalTypes.ClinicalObservation value;
+    }
+
+    public static class CanonicalObservationRemoveOperation extends CanonicalObservationOperation {
+    }
+
+    public static class StatePatchOperationDeserializer extends JsonDeserializer<StatePatchOperation> {
+        @Override
+        public StatePatchOperation deserialize(JsonParser parser, DeserializationContext context) throws IOException {
+            JsonNode node = parser.getCodec().readTree(parser);
+            String path = node.has("path") && node.get("path").isTextual() ? node.get("path").asText() : "";
+            String op = node.has("op") && node.get("op").isTextual() ? node.get("op").asText() : "";
+            Class<? extends StatePatchOperation> target;
+            if (path.startsWith("/observations/")) {
+                if ("ADD".equals(op)) {
+                    target = CanonicalObservationAddOperation.class;
+                } else if ("REPLACE".equals(op)) {
+                    target = CanonicalObservationReplaceOperation.class;
+                } else if ("REMOVE".equals(op)) {
+                    target = CanonicalObservationRemoveOperation.class;
+                } else {
+                    throw JsonMappingException.from(parser, "unsupported canonical observation operation: " + op);
+                }
+            } else {
+                target = LegacyStatePatchOperation.class;
+            }
+            return parser.getCodec().treeToValue(node, target);
+        }
     }
 
     public static class StatePatch {
@@ -35,12 +85,13 @@ public final class StateTypes {
         @JsonProperty("encounter_id")
         public String encounterId;
         @JsonProperty("base_version")
-        public Integer baseVersion;
+        public Long baseVersion;
         @JsonProperty("patch_id")
         public String patchId;
         @JsonProperty("idempotency_key")
         public String idempotencyKey;
         @JsonProperty("operations")
+        @JsonDeserialize(contentUsing = StatePatchOperationDeserializer.class)
         public List<StatePatchOperation> operations;
         @JsonProperty("reason_code")
         public String reasonCode;
@@ -54,7 +105,7 @@ public final class StateTypes {
 
     public static class RejectedOperation {
         @JsonProperty("operation_index")
-        public Integer operationIndex;
+        public Long operationIndex;
         @JsonProperty("reason_code")
         public String reasonCode;
     }
@@ -80,9 +131,9 @@ public final class StateTypes {
         @JsonProperty("status")
         public String status;
         @JsonProperty("previous_version")
-        public Integer previousVersion;
+        public Long previousVersion;
         @JsonProperty("committed_version")
-        public Integer committedVersion;
+        public Long committedVersion;
         @JsonProperty("committed_at")
         public String committedAt;
         @JsonProperty("reason_code")

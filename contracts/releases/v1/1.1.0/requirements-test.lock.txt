@@ -1,5 +1,5 @@
 # Generated for Python 3.13 on Windows with:
-#   python -m pip install -r contracts/v1/requirements-test.txt
+#   python -m pip install -r contracts/releases/v1/1.1.0/requirements-test.txt
 #   python -m pip freeze
 # All direct and transitive contract-test dependencies are pinned. This is not a service runtime dependency file.
 arrow==1.4.0
