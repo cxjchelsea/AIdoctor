@@ -4,6 +4,8 @@ pydantic==2.5.0
 pytesseract==0.3.10
 Pillow==10.1.0
 opencv-python==4.8.1.78
+# 钉住仓库既有兼容的 NumPy 1.x，避免解析到 NumPy 2.x 导致 OpenCV ABI 失败
+numpy==1.24.3
 python-multipart==0.0.6
 python-dotenv==1.0.0
 prometheus-client==0.19.0

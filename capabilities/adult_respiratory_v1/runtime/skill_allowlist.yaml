@@ -1,0 +1,21 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: runtime-skill-allowlist-v1
+schema_version: 1.0.0
+allowlist_type: SKILL
+review_status: REQUIRES_CLINICAL_REVIEW
+runtime_eligibility: NOT_IMPLEMENTED
+production_eligibility: BLOCKED
+references: []
+human_review_conditions:
+  - Any future clinical skill requires explicit clinical and technical review.
+governance:
+  record_id: gap-runtime-skill-001
+  owner_role: skill-governance-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: No skill release is registered and approved for A6.
+  required_evidence:
+    - Registered skill contract, release, permission, and evaluation evidence
+  intended_validation_suite: capability-skill-allowlist-review
+  source_requirement: Existing registered implementation and approved release
+  prohibited_runtime_use: true

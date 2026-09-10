@@ -1,0 +1,21 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: safety-red-flags-v1
+schema_version: 1.0.0
+pack_type: RED_FLAGS
+review_status: REQUIRES_CLINICAL_REVIEW
+production_eligibility: BLOCKED
+rules: []
+fail_closed:
+  insufficient_input_action: HUMAN_REVIEW_OR_FIXED_SAFETY_PATH
+  model_single_point_decision_allowed: false
+governance:
+  record_id: gap-safety-red-flags-001
+  owner_role: clinical-safety-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: No approved red-flag rule set or threshold is available in A6.
+  required_evidence:
+    - Approved red-flag rules and safety evaluation suite
+  intended_validation_suite: capability-safety-red-flag-eval
+  source_requirement: Licensed and clinically reviewed safety sources
+  prohibited_runtime_use: true

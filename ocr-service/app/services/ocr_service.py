@@ -6,9 +6,12 @@ import logging
 import io
 import re
 from PIL import Image
-import pytesseract
-import cv2
-import numpy as np
+
+from app.services.raw_ocr import (
+    RawOcrEngine,
+    RawOcrEngineUnavailableError,
+    RawOcrExecutionFailedError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +26,9 @@ class OcrService:
         
         # 指标名称映射（用于结构化提取）
         self.indicator_mapping = self._load_indicator_mapping()
+
+        # 非临床 RAW OCR 引擎；临床提取仍由本类历史方法负责。
+        self._raw_ocr_engine = RawOcrEngine()
     
     def _load_report_templates(self) -> Dict[str, Dict[str, Any]]:
         """
@@ -80,28 +86,7 @@ class OcrService:
             预处理后的图片
         """
         logger.info("开始图片预处理")
-        
-        # 转换为numpy数组
-        img_array = np.array(image)
-        
-        # 如果是彩色图片，转换为灰度图
-        if len(img_array.shape) == 3:
-            img_gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-        else:
-            img_gray = img_array
-        
-        # 二值化
-        _, img_binary = cv2.threshold(img_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        # 去噪
-        img_denoised = cv2.fastNlMeansDenoising(img_binary, None, 10, 7, 21)
-        
-        # 对比度增强
-        img_enhanced = cv2.convertScaleAbs(img_denoised, alpha=1.5, beta=0)
-        
-        # 转换回PIL Image
-        processed_image = Image.fromarray(img_enhanced)
-        
+        processed_image = self._raw_ocr_engine.preprocess_image(image)
         logger.info("图片预处理完成")
         return processed_image
     
@@ -118,13 +103,16 @@ class OcrService:
         logger.info("开始OCR识别")
         
         try:
-            # 使用Tesseract OCR识别
-            # 注意：需要系统安装Tesseract OCR
-            text = pytesseract.image_to_string(image, lang='chi_sim+eng')
+            # 委托非临床 RAW 边界；默认语言仍为历史 chi_sim+eng。
+            text = self._raw_ocr_engine.recognize_raw_text(image)
             
             logger.info(f"OCR识别完成，识别文字长度: {len(text)}")
             return text
             
+        except (RawOcrEngineUnavailableError, RawOcrExecutionFailedError) as raw_ocr_error:
+            logger.error(f"OCR识别失败: {str(raw_ocr_error)}")
+            # 历史行为：技术失败对外折叠为空串，供遗留调用方兼容。
+            return ""
         except Exception as e:
             logger.error(f"OCR识别失败: {str(e)}")
             # 如果Tesseract不可用，返回空字符串

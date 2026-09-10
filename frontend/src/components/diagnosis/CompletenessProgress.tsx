@@ -7,7 +7,7 @@ interface CompletenessProgressProps {
 
 const CompletenessProgress: React.FC<CompletenessProgressProps> = ({
   completeness,
-  status,
+  status: _status,
 }) => {
   const getStatus = (): 'exception' | 'active' | 'success' => {
     if (completeness < 0.6) return 'exception'

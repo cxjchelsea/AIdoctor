@@ -1,0 +1,39 @@
+{
+  "fixture_id": "classify-color-invalid-output",
+  "provider_id": "synthetic-provider",
+  "scenario": "INVALID_OUTPUT",
+  "output_contract_id": "tool-result",
+  "output_contract_version": "1.0.0",
+  "candidate_payload": {
+    "contract_version": "1.0.0",
+    "envelope": {
+      "contract_name": "ToolResult",
+      "contract_version": "1.0.0",
+      "message_id": "msg-synthetic-color-invalid-1",
+      "correlation_id": "corr-synthetic-invalid-1",
+      "trace_id": "trace-synthetic-invalid-1",
+      "created_at": "2026-08-13T00:00:02Z",
+      "producer": "synthetic-color-service",
+      "capability_id": "synthetic-color-classify",
+      "capability_version": "1.0.0"
+    },
+    "tool_version": "1.0.0",
+    "invocation_id": "invocation-synthetic-invalid-1",
+    "status": "SUCCEEDED",
+    "reason_code": "COMPLETED",
+    "retryable": false,
+    "output": [
+      {
+        "name": "color_label",
+        "value": "blue"
+      }
+    ],
+    "suggested_patches": [],
+    "evidence_refs": [
+      "evidence-synthetic-invalid-1"
+    ],
+    "errors": [],
+    "started_at": "2026-08-13T00:00:00Z",
+    "completed_at": "2026-08-13T00:00:02Z"
+  }
+}

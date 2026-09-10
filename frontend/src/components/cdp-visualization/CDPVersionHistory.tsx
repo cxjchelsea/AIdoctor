@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, List, Tag, Typography } from 'antd'
+import { Card, List, Tag, Typography, Space } from 'antd'
 
 const { Title, Text } = Typography
 
@@ -13,7 +13,7 @@ interface CDPVersionHistoryProps {
   cdpId: string
 }
 
-const CDPVersionHistory: React.FC<CDPVersionHistoryProps> = ({ cdpId }) => {
+const CDPVersionHistory: React.FC<CDPVersionHistoryProps> = ({ cdpId: _cdpId }) => {
   // TODO: 从API获取CDP版本历史数据
   const versions: CDPVersion[] = []
 

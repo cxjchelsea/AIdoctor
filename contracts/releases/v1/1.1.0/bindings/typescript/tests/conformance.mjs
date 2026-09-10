@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const here = path.dirname(fileURLToPath(import.meta.url));
+const release = path.resolve(here, "../../..");
+const manifest = JSON.parse(fs.readFileSync(path.join(release, "manifest.json"), "utf8"));
+assert.equal(manifest.contract_version, "1.1.0");
+assert.equal(manifest.version_negotiation, "EXACT");
+assert.equal(manifest.contracts.length, 16);
+const fixtures = {};
+for (const fileName of fs.readdirSync(path.join(release, "fixtures/valid"))) if (fileName.endsWith(".json")) Object.assign(fixtures, JSON.parse(fs.readFileSync(path.join(release, "fixtures/valid", fileName), "utf8")));
+for (const item of manifest.contracts) assert.ok(fixtures[item.name], "missing fixture " + item.name);
+assert.equal(fixtures.ClinicalObservation.value.kind, "TEXT");
+assert.ok(fixtures.ClinicalStateSnapshot.observations["test.observation.001"]);
+assert.throws(() => { if ("9.9.9" !== "1.1.0") throw new Error("unknown contract_version rejected: 9.9.9"); }, /unknown contract_version/);
+console.log("typescript binding structural checks passed");

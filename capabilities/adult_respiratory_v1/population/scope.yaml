@@ -1,0 +1,44 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: population-scope-v1
+schema_version: 1.0.0
+review_status: REQUIRES_CLINICAL_REVIEW
+adult_age_boundary:
+  status: REQUIRES_CLINICAL_REVIEW
+  minimum_age: null
+  maximum_age: null
+supported_chief_complaint_categories:
+  - RESPIRATORY_SYMPTOM_REPORT
+  - RESPIRATORY_DOCUMENT_DISCUSSION
+supported_encounter_types:
+  - ASYNCHRONOUS_INFORMATION_COLLECTION
+  - CLINICIAN_ASSISTED_REVIEW
+explicit_exclusions:
+  - AUTOMATIC_DIAGNOSIS
+  - AUTOMATIC_TREATMENT
+  - PRESCRIPTION_OR_DOSAGE_CHANGE
+  - OPEN_ENDED_RESPIRATORY_DIAGNOSIS
+  - HIGH_RISK_DECISION_WITHOUT_CLINICIAN_REVIEW
+  - PEDIATRIC_COMPLETE_PATHWAY
+  - PREGNANCY_COMPLETE_PATHWAY
+unsupported_requests:
+  - TREATMENT_RECOMMENDATION
+  - PRESCRIPTION_REQUEST
+  - DOSAGE_CHANGE_REQUEST
+escalation_required_categories:
+  - POSSIBLE_HIGH_RISK_PRESENTATION
+  - INSUFFICIENT_INPUT_FOR_SAFETY
+  - OUT_OF_SCOPE_POPULATION
+non_goals:
+  - Clinical diagnosis or treatment
+  - Production patient workflow
+governance:
+  record_id: gap-population-001
+  owner_role: clinical-policy-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: No approved numeric adult boundary or clinical population policy is available in A6.
+  required_evidence:
+    - Approved population and exclusion policy
+  intended_validation_suite: capability-population-clinical-review
+  source_requirement: Approved clinical and organizational policy sources
+  prohibited_runtime_use: true

@@ -9,7 +9,6 @@ from app.models.request import WorkupPlanRequest
 from app.models.response import WorkupPlanResponse, VerificationPlan
 from app.models.tool_context import ToolContext
 from app.models.tool_result import ToolResult, Evidence, Quality, SuggestedWrite, ErrorInfo
-from app.utils.exceptions import ServiceException
 from app.utils.cdp_reader import read_cdp_fields
 import logging
 

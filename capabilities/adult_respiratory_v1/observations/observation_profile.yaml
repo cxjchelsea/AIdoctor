@@ -1,0 +1,18 @@
+capability_id: adult_respiratory_v1
+package_version: 1.0.0
+asset_id: observation-profile-v1
+schema_version: 1.0.0
+review_status: REQUIRES_CLINICAL_REVIEW
+fields: []
+conflict_policy: HUMAN_REVIEW_REQUIRED
+provenance_required: true
+governance:
+  record_id: gap-observation-001
+  owner_role: clinical-data-owner
+  review_status: REQUIRES_CLINICAL_REVIEW
+  blocking_reason: The observation field set and validation rules are not clinically approved.
+  required_evidence:
+    - Reviewed observation inventory and source rules
+  intended_validation_suite: capability-observation-profile-review
+  source_requirement: Approved clinical data specification
+  prohibited_runtime_use: true

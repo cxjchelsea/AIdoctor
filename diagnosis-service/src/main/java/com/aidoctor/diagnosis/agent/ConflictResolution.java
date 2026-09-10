@@ -116,17 +116,14 @@ public class ConflictResolution {
         // 如果冲突涉及高危诊断，使用风险优先策略
         List<String> affectedDirections = (List<String>) conflict.get("affected_directions");
         if (affectedDirections != null) {
-            Map<String, Object> ddxMap = cdp.getDdxMap();
-            if (ddxMap != null) {
-                List<Map<String, Object>> rankList = (List<Map<String, Object>>) ddxMap.get("rank_list");
-                if (rankList != null) {
-                    for (String direction : affectedDirections) {
-                        for (Map<String, Object> ddx : rankList) {
-                            if (direction.equals(ddx.get("disease_name"))) {
-                                String riskLevel = (String) ddx.get("risk_level");
-                                if ("L1".equals(riskLevel) || "L2".equals(riskLevel)) {
-                                    return "risk_priority";
-                                }
+            List<Map<String, Object>> rankList = cdp.getDdx();
+            if (rankList != null) {
+                for (String direction : affectedDirections) {
+                    for (Map<String, Object> ddx : rankList) {
+                        if (direction.equals(ddx.get("disease_name"))) {
+                            String riskLevel = (String) ddx.get("risk_level");
+                            if ("L1".equals(riskLevel) || "L2".equals(riskLevel)) {
+                                return "risk_priority";
                             }
                         }
                     }
@@ -256,23 +253,20 @@ public class ConflictResolution {
                                                        CDP cdp, 
                                                        AgentState agentState) {
         List<String> affectedDirections = (List<String>) conflict.get("affected_directions");
-        Map<String, Object> ddxMap = cdp.getDdxMap();
+        List<Map<String, Object>> rankList = cdp.getDdx();
         
         String highestRiskDirection = null;
         int highestRisk = 0;
         
-        if (ddxMap != null && affectedDirections != null) {
-            List<Map<String, Object>> rankList = (List<Map<String, Object>>) ddxMap.get("rank_list");
-            if (rankList != null) {
-                for (String direction : affectedDirections) {
-                    for (Map<String, Object> ddx : rankList) {
-                        if (direction.equals(ddx.get("disease_name"))) {
-                            String riskLevel = (String) ddx.get("risk_level");
-                            int risk = RISK_PRIORITY.getOrDefault(riskLevel, 0);
-                            if (risk > highestRisk) {
-                                highestRisk = risk;
-                                highestRiskDirection = direction;
-                            }
+        if (rankList != null && affectedDirections != null) {
+            for (String direction : affectedDirections) {
+                for (Map<String, Object> ddx : rankList) {
+                    if (direction.equals(ddx.get("disease_name"))) {
+                        String riskLevel = (String) ddx.get("risk_level");
+                        int risk = RISK_PRIORITY.getOrDefault(riskLevel, 0);
+                        if (risk > highestRisk) {
+                            highestRisk = risk;
+                            highestRiskDirection = direction;
                         }
                     }
                 }

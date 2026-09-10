@@ -1,0 +1,5 @@
+# CI-only overlay for Model Runtime tests (NC-CLOSE-03).
+# 不改变 A7-NC 生产依赖语义。生产文件仍是 requirements.txt（仅 PyYAML==6.0.2）。
+# 本文件不得被任何 *-service runtime 安装。
+pydantic==2.10.3
+pytest==8.4.1

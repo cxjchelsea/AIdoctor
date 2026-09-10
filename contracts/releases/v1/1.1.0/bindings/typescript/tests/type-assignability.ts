@@ -1,0 +1,10 @@
+import { SCHEMA_NAMES, type ClinicalObservation, type ClinicalStateSnapshot, type Encounter, type StatePatch, type ObservationValue } from "../src/index";
+import { CONTRACT_VERSION } from "../src/version";
+const _version: "1.1.0" = CONTRACT_VERSION;
+const _count: number = SCHEMA_NAMES.length;
+const value: ObservationValue = { kind: "TEXT", value: "alpha" };
+const observation: ClinicalObservation = { contract_version: "1.1.0", observation_id: "test.observation.001", encounter_id: "test.encounter.001", subject_ref: "test.subject.001", value, recorded_time: "2026-09-09T05:00:00Z", status: "COMMITTED", sensitivity: "INTERNAL", provenance_refs: ["test.provenance.001"] };
+const encounter: Encounter = { contract_version: "1.1.0", envelope: { contract_name: "Encounter", contract_version: "1.1.0", message_id: "msg.001", correlation_id: "corr.001", trace_id: "trace.001", created_at: "2026-09-09T05:00:00Z", producer: "contract-service", capability_id: "capability.001", capability_version: "1.1.0" }, encounter_id: "test.encounter.001", subject_ref: "test.subject.001", lifecycle_status: "OPEN", started_at: "2026-09-09T05:00:00Z", updated_at: "2026-09-09T05:01:00Z", current_state_version: 1 };
+const snapshot: ClinicalStateSnapshot = { contract_version: "1.1.0", envelope: { ...encounter.envelope, contract_name: "ClinicalStateSnapshot" }, encounter_id: encounter.encounter_id, state_version: 1, committed_at: "2026-09-09T05:01:00Z", observations: { [observation.observation_id]: observation } };
+const patch: StatePatch = { contract_version: "1.1.0", envelope: { ...encounter.envelope, contract_name: "StatePatch" }, encounter_id: encounter.encounter_id, base_version: 1, patch_id: "patch.001", idempotency_key: "idem.001", operations: [{ op: "ADD", path: "/observations/test.observation.001", value: observation, source: "PATIENT_FACT", sensitivity: "INTERNAL" }], reason_code: "TEST_REASON", evidence_refs: [], producer: "contract-service", created_at: "2026-09-09T05:00:00Z" };
+export function assertBindingUnion(): number { return _count + Object.keys(snapshot.observations).length + patch.operations.length; }

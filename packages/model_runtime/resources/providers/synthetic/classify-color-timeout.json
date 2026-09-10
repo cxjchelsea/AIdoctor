@@ -1,0 +1,9 @@
+{
+  "fixture_id": "classify-color-timeout",
+  "provider_id": "synthetic-provider",
+  "scenario": "TIMEOUT",
+  "output_contract_id": "tool-result",
+  "output_contract_version": "1.0.0",
+  "error_code": "SIMULATED_TIMEOUT",
+  "error_detail": "simulated provider timeout"
+}

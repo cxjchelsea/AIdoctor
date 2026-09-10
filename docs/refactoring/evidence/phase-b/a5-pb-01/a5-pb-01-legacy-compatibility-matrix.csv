@@ -1,0 +1,6 @@
+legacy_surface,1_1_handling,evidence,not_claimed
+StatePatch 1.0 legacy roots,reissued as legacy branch with 1.1 identity,legacy fixture validates under 1.1,raw 1.0 wire compatibility
+StatePatch controlledValue,preserved for legacy branch,legacy object-value remains invalid,global object expansion
+CommitResult cdp_id,reissued as legacy target,cdp_id/encounter_id XOR tests,runtime patch/result pairing
+ClinicalStateSnapshot,canonical observations only,key and encounter validator rules,legacy CDP as canonical body
+PBNC State Committer,remains 1.0 engineering evidence,no diagnosis-service edits,1.1 runtime verification

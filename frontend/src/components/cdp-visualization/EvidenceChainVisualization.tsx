@@ -15,7 +15,7 @@ interface EvidenceChainVisualizationProps {
 }
 
 const EvidenceChainVisualization: React.FC<EvidenceChainVisualizationProps> = ({
-  cdpId,
+  cdpId: _cdpId,
 }) => {
   // TODO: 从API获取证据链数据
   const evidenceChain: Evidence[] = []

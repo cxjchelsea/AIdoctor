@@ -1,0 +1,894 @@
+# Phase A CI MVP (NC-CLOSE-03)
+# 本工作流只回答：当前变更是否保住非临床 Freeze Candidate 工程基线。
+# 不回答：临床安全、Clinical Runtime 批准、Phase A Frozen、生产授权。
+# CI 成功不得被解释为上述任一结论。
+name: Phase A CI MVP
+
+on:
+  pull_request:
+    branches:
+      - agent/enterprise-agent-refactoring-plan
+  push:
+    branches:
+      - agent/enterprise-agent-refactoring-plan
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: contracts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            contracts/v1/requirements-test.lock.txt
+            contracts/v1/bindings/python/requirements-dev.txt
+            contracts/releases/v1/1.1.0/requirements-test.lock.txt
+            contracts/releases/v1/1.1.0/bindings/python/requirements-dev.txt
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5.7.0
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+      - name: Set up Node 20
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # actions/setup-node v7.0.0
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            contracts/v1/bindings/typescript/package-lock.json
+            contracts/releases/v1/1.1.0/bindings/typescript/package-lock.json
+      - name: Install contract Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r contracts/v1/requirements-test.lock.txt
+          python -m pip install -r contracts/v1/bindings/python/requirements-dev.txt
+          python -m pip install -r contracts/releases/v1/1.1.0/requirements-test.lock.txt
+          python -m pip install -r contracts/releases/v1/1.1.0/bindings/python/requirements-dev.txt
+      - name: Validate Shared Contracts v1
+        run: python contracts/v1/validator/validate_contracts.py
+      - name: Test contract schemas and Python bindings
+        run: python -m pytest -p no:cacheprovider contracts/v1/tests contracts/v1/bindings/python/tests -q
+      - name: Check binding version drift
+        run: python contracts/v1/bindings/tooling/check_drift.py
+      - name: Test Java bindings
+        run: mvn -f contracts/v1/bindings/java/pom.xml test
+      - name: Install TypeScript binding dependencies
+        run: npm --prefix contracts/v1/bindings/typescript ci --ignore-scripts
+      - name: Test TypeScript bindings
+        run: npm --prefix contracts/v1/bindings/typescript test
+      - name: Validate Shared Contracts v1 exact release 1.1.0
+        run: python contracts/releases/v1/1.1.0/validator/validate_contracts.py
+      - name: Test Shared Contracts v1 exact release 1.1.0 schemas and Python bindings
+        run: python -m pytest -p no:cacheprovider contracts/releases/v1/1.1.0/tests contracts/releases/v1/1.1.0/bindings/python/tests -q
+      - name: Check Shared Contracts v1 exact release 1.1.0 binding drift
+        run: python contracts/releases/v1/1.1.0/bindings/tooling/check_drift.py
+      - name: Test Shared Contracts v1 exact release 1.1.0 Java bindings
+        run: mvn -f contracts/releases/v1/1.1.0/bindings/java/pom.xml test
+      - name: Install Shared Contracts v1 exact release 1.1.0 TypeScript dependencies
+        run: npm --prefix contracts/releases/v1/1.1.0/bindings/typescript ci --ignore-scripts
+      - name: Test Shared Contracts v1 exact release 1.1.0 TypeScript bindings
+        run: npm --prefix contracts/releases/v1/1.1.0/bindings/typescript test
+
+  java:
+    name: java
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5.7.0
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+      - name: Install local Shared Contracts Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Test diagnosis-service
+        run: mvn -f diagnosis-service/pom.xml test
+
+  python-safety:
+    name: python-safety
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            capabilities/requirements-test.lock.txt
+            packages/model_runtime/requirements.txt
+            packages/model_runtime/requirements-ci.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Install bounded Python safety dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r capabilities/requirements-test.lock.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements-ci.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+      - name: Validate capability structural package
+        run: python capabilities/validator/validate_capability.py
+      - name: Test capability structural and clinical-block invariants
+        run: python -m pytest capabilities/tests -q
+      - name: Test Model Runtime non-clinical suite
+        run: python -m pytest packages/model_runtime/tests -q
+      - name: Test Python Runtime foundation
+        env:
+          PYTHONPATH: contracts/v1/bindings/python
+        run: python -m pytest packages/python_runtime/tests -q
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Node 20
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # actions/setup-node v7.0.0
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            frontend-admin/package-lock.json
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+      - name: Build frontend
+        run: npm --prefix frontend run build
+      - name: Install frontend-admin dependencies
+        run: npm --prefix frontend-admin ci
+      - name: Build frontend-admin
+        run: npm --prefix frontend-admin run build
+
+  java-python-protocol:
+    name: java-python-protocol
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/python_runtime/requirements-http.txt
+            packages/model_runtime/requirements.txt
+            contracts/v1/bindings/python/requirements-dev.txt
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5.7.0
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+      - name: Install required Python protocol dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r contracts/v1/bindings/python/requirements-dev.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+      - name: Install local Shared Contracts Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Start Python Runtime HTTP façade
+        env:
+          PYTHONPATH: contracts/v1/bindings/python
+        run: |
+          mkdir -p logs
+          nohup python -m uvicorn packages.python_runtime.http.app:app --host 127.0.0.1 --port 8099 > logs/python-runtime-http.log 2>&1 &
+          echo $! > logs/python-runtime-http.pid
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8099/api/v1/runtime/health; then
+              echo
+              echo "HEALTH_PASS"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "HEALTH_TIMEOUT"
+          cat logs/python-runtime-http.log
+          exit 1
+      - name: Run PythonRuntimeProtocolIT
+        run: mvn -f diagnosis-service/pom.xml -Dtest=PythonRuntimeProtocolIT test
+      - name: Capture Python Runtime HTTP façade logs
+        if: always()
+        run: |
+          if [ -f logs/python-runtime-http.log ]; then
+            echo "===== python-runtime-http.log ====="
+            cat logs/python-runtime-http.log
+          fi
+      - name: Stop Python Runtime HTTP façade
+        if: always()
+        run: |
+          if [ -f logs/python-runtime-http.pid ]; then
+            kill "$(cat logs/python-runtime-http.pid)" || true
+          fi
+
+  ocr-separation:
+    name: ocr-separation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.10
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            ocr-service/requirements.txt
+            packages/model_runtime/requirements.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Install OCR service dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ocr-service/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+          python -m pip install pytest
+      - name: Verify OCR Python imports
+        run: |
+          python -c "import cv2, numpy, PIL, pytesseract; print('python', __import__('sys').version); print('cv2', cv2.__version__); print('numpy', numpy.__version__); print('PIL', PIL.__version__); print('pytesseract', getattr(pytesseract, '__version__', 'unknown'))"
+      - name: Test OCR raw-engine separation
+        working-directory: ocr-service
+        run: python -m pytest tests --ignore=tests/test_raw_ocr_runtime_composition.py --ignore=tests/test_raw_ocr_real_engine.py --ignore=tests/test_raw_ocr_runtime_real_engine.py --ignore=tests/test_engineering_opt_in_raw_ocr_runtime.py --ignore=tests/test_engineering_raw_ocr_runtime_process.py -q
+      - name: Test injected Runtime raw OCR composition
+        working-directory: ocr-service
+        env:
+          PYTHONPATH: ../contracts/v1/bindings/python:..
+        run: python -m pytest tests/test_raw_ocr_runtime_composition.py -q
+
+  ocr-real-engine:
+    name: ocr-real-engine
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.10
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: ocr-service/requirements.txt
+      - name: Install system Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-chi-sim
+      - name: Record Tesseract engine identity
+        run: |
+          python --version
+          which tesseract
+          tesseract --version
+          tesseract --list-langs
+      - name: Install OCR engine Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ocr-service/requirements.txt
+          python -m pip install pytest
+      - name: Test real Tesseract engine
+        working-directory: ocr-service
+        env:
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+        run: python -m pytest tests/test_raw_ocr_real_engine.py -q
+
+  ocr-runtime-real-engine:
+    name: ocr-runtime-real-engine
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.10
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            ocr-service/requirements.txt
+            packages/model_runtime/requirements.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Install system Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-chi-sim
+      - name: Record Tesseract engine identity
+        run: |
+          python --version
+          which tesseract
+          tesseract --version
+          tesseract --list-langs
+      - name: Install OCR Runtime composition dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ocr-service/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+          python -m pip install pytest
+      - name: Test injected Runtime raw OCR with real Tesseract
+        working-directory: ocr-service
+        env:
+          PYTHONPATH: ../contracts/v1/bindings/python:..
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+        run: python -m pytest tests/test_raw_ocr_runtime_real_engine.py -q
+
+  ocr-docker-raw-engine:
+    name: ocr-docker-raw-engine
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Record Docker identity
+        run: |
+          docker --version
+          docker info --format '{{.ServerVersion}}'
+      - name: Build current OCR image from repository Dockerfile
+        run: |
+          docker build \
+            -t aidoctor-ocr:postfreeze-03b-e \
+            ./ocr-service
+      - name: Record built image identity
+        run: |
+          docker image inspect aidoctor-ocr:postfreeze-03b-e \
+            --format 'Id={{.Id}} RepoTags={{json .RepoTags}} RepoDigests={{json .RepoDigests}} Size={{.Size}}'
+      - name: Verify container Python and Tesseract identity
+        run: |
+          docker run --rm aidoctor-ocr:postfreeze-03b-e python --version
+          docker run --rm aidoctor-ocr:postfreeze-03b-e which tesseract
+          docker run --rm aidoctor-ocr:postfreeze-03b-e tesseract --version
+          docker run --rm aidoctor-ocr:postfreeze-03b-e tesseract --list-langs
+      - name: Run stage-closing Docker RawOcrEngine probe
+        run: |
+          docker run --rm \
+            aidoctor-ocr:postfreeze-03b-e \
+            python tests/docker_raw_engine_probe.py
+
+  ocr-runtime-engineering-opt-in-real-engine:
+    name: ocr-runtime-engineering-opt-in-real-engine
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.10
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            ocr-service/requirements.txt
+            packages/model_runtime/requirements.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Install system Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-chi-sim
+      - name: Record Tesseract engine identity
+        run: |
+          python --version
+          which tesseract
+          tesseract --version
+          tesseract --list-langs
+      - name: Install OCR Runtime engineering opt-in dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ocr-service/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+          python -m pip install pytest
+      - name: Test engineering opt-in Raw OCR Runtime with real Tesseract
+        working-directory: ocr-service
+        env:
+          PYTHONPATH: ../contracts/v1/bindings/python:..
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+        run: python -m pytest tests/test_engineering_opt_in_raw_ocr_runtime.py -q -s
+
+  ocr-runtime-engineering-process-real-engine:
+    name: ocr-runtime-engineering-process-real-engine
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            ocr-service/requirements.txt
+            packages/model_runtime/requirements.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Install system Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-chi-sim
+      - name: Record Tesseract engine identity
+        run: |
+          python --version
+          which tesseract
+          tesseract --version
+          tesseract --list-langs
+      - name: Install OCR Runtime engineering process dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ocr-service/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+          python -m pip install pytest
+      - name: Test default Runtime surface regression
+        working-directory: ocr-service
+        env:
+          PYTHONPATH: ../contracts/v1/bindings/python:..
+        run: python -m pytest tests/test_engineering_opt_in_raw_ocr_runtime.py::test_default_create_app_rejects_engineering_raw_ocr_tool_context -q -s
+      - name: Test engineering Raw OCR Runtime process with real Tesseract
+        working-directory: ocr-service
+        env:
+          PYTHONPATH: .:../contracts/v1/bindings/python:..
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+          TMPDIR: ${{ runner.temp }}
+        run: python -m pytest tests/test_engineering_raw_ocr_runtime_process.py -q -s
+
+  java-python-raw-ocr-real-tool:
+    name: java-python-raw-ocr-real-tool
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            ocr-service/requirements.txt
+            packages/model_runtime/requirements.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5.7.0
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+      - name: Install system Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-chi-sim
+      - name: Record Tesseract engine identity
+        run: |
+          python --version
+          which tesseract
+          tesseract --version
+          tesseract --list-langs
+          test "$(which tesseract)" = "/usr/bin/tesseract"
+          tesseract --list-langs 2>&1 | grep -qx eng
+          tesseract --list-langs 2>&1 | grep -qx chi_sim
+          echo "JAVA_RAW_OCR_REAL_TOOL_TESSERACT_BINARY=/usr/bin/tesseract"
+          echo "JAVA_RAW_OCR_REAL_TOOL_LANG_ENG=YES"
+          echo "JAVA_RAW_OCR_REAL_TOOL_LANG_CHI_SIM=YES"
+      - name: Assert default Runtime surface and cutover remain unchanged
+        run: |
+          grep -q "engineering.synthetic.runtime_smoke" packages/python_runtime/http/transport.py
+          grep -q "AUTHORIZED_SYNTHETIC_CAPABILITY_ID" packages/python_runtime/http/app.py
+          if grep -q "engineering.ocr.raw" packages/python_runtime/http/app.py; then
+            echo "default create_app leaked engineering.ocr.raw"
+            exit 1
+          fi
+          if grep -q "PythonRuntimeClient" \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/agent/ToolCaller.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/agent/AgentLoop.java; then
+            echo "PythonRuntimeClient production wiring detected"
+            exit 1
+          fi
+          echo "DEFAULT_RUNTIME_CAPABILITY_SURFACE_UNCHANGED=YES"
+          echo "JAVA_PYTHON_CUTOVER_VERIFIED=NO"
+      - name: Install OCR Runtime engineering process dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ocr-service/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+      - name: Install local Shared Contracts Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Start engineering Raw OCR Runtime process
+        env:
+          PYTHONPATH: ocr-service:contracts/v1/bindings/python:.
+          AIDOCTOR_ENGINEERING_RAW_OCR_PORT: "8099"
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+          SANDBOX_ROOT: ${{ runner.temp }}/aidoctor-03b-i-artifact-sandbox
+        run: |
+          mkdir -p logs "${SANDBOX_ROOT}/raw-ocr/input"
+          python - <<'PY'
+          import hashlib
+          import io
+          import os
+          from pathlib import Path
+          from PIL import Image, ImageDraw, ImageFont
+
+          sandbox = Path(os.environ["SANDBOX_ROOT"])
+          payload = sandbox / "raw-ocr" / "input" / "artifact.png"
+          canvas = Image.new("RGB", (1600, 400), color=(255, 255, 255))
+          drawer = ImageDraw.Draw(canvas)
+          font = ImageFont.load_default(size=96)
+          text = "HELLO OCR 123"
+          bbox = drawer.textbbox((0, 0), text, font=font)
+          width = bbox[2] - bbox[0]
+          height = bbox[3] - bbox[1]
+          left = max((1600 - width) // 2, 40)
+          top = max((400 - height) // 2, 40)
+          drawer.text((left, top), text, fill=(0, 0, 0), font=font)
+          buffer = io.BytesIO()
+          canvas.save(buffer, format="PNG")
+          content = buffer.getvalue()
+          payload.write_bytes(content)
+          digest = hashlib.sha256(content).hexdigest()
+          Path("logs/artifact.env").write_text(
+              "export AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_SANDBOX_ROOT="
+              + str(sandbox.resolve())
+              + "\nexport AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SIZE_BYTES="
+              + str(len(content))
+              + "\nexport AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SHA256="
+              + digest
+              + "\n",
+              encoding="ascii",
+          )
+          PY
+          set -a
+          # shellcheck disable=SC1091
+          . logs/artifact.env
+          set +a
+          rm -f logs/artifact.env
+          unset AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_BASE64
+          echo "JAVA_RAW_OCR_REAL_TOOL_ARTIFACT_BACKEND=SANDBOXED_FILESYSTEM"
+          echo "JAVA_RAW_OCR_REAL_TOOL_ENV_BASE64_BOOTSTRAP_USED=NO"
+          nohup python engineering/raw_ocr_runtime_process.py \
+            > logs/engineering-raw-ocr-runtime-process.log 2>&1 &
+          echo $! > logs/engineering-raw-ocr-runtime-process.pid
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8099/api/v1/runtime/health; then
+              echo
+              echo "JAVA_RAW_OCR_REAL_TOOL_ENGINEERING_PROCESS=YES"
+              echo "HEALTH_PASS"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "HEALTH_TIMEOUT"
+          cat logs/engineering-raw-ocr-runtime-process.log
+          exit 1
+      - name: Run PythonRuntimeRawOcrRealToolIT
+        env:
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+        run: mvn -f diagnosis-service/pom.xml -Dtest=PythonRuntimeRawOcrRealToolIT test
+      - name: Capture engineering Raw OCR Runtime process logs
+        if: always()
+        run: |
+          if [ -f logs/engineering-raw-ocr-runtime-process.log ]; then
+            echo "===== engineering-raw-ocr-runtime-process.log ====="
+            cat logs/engineering-raw-ocr-runtime-process.log
+          fi
+      - name: Stop engineering Raw OCR Runtime process
+        if: always()
+        run: |
+          if [ -f logs/engineering-raw-ocr-runtime-process.pid ]; then
+            kill "$(cat logs/engineering-raw-ocr-runtime-process.pid)" || true
+          fi
+
+  artifact-storage-sandboxed:
+    name: artifact-storage-sandboxed
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.11"
+      - name: Install focused sandbox test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements-ci.txt
+      - name: Test sandboxed ArtifactPort backend and architecture guards
+        env:
+          PYTHONPATH: contracts/v1/bindings/python
+          AIDOCTOR_REQUIRE_SANDBOX_SYMLINK_TEST: "1"
+        run: |
+          python -m pytest \
+            packages/python_runtime/tests/test_sandboxed_artifact_backend.py \
+            packages/python_runtime/tests/test_architecture_guards.py \
+            -q -s
+
+  runtime-full-semantic-validator:
+    name: runtime-full-semantic-validator
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/model_runtime/requirements.txt
+            packages/model_runtime/requirements-ci.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Install Runtime semantic validator test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements-ci.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+      - name: Test Runtime full semantic validator over HTTP
+        env:
+          PYTHONPATH: contracts/v1/bindings/python
+        run: |
+          python -m pytest \
+            packages/python_runtime/tests/test_runtime_full_semantic_validator.py \
+            -q -s
+
+  runtime-canonical-raw-ocr-controlled-opt-in:
+    name: runtime-canonical-raw-ocr-controlled-opt-in
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            ocr-service/requirements.txt
+            packages/model_runtime/requirements.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Install system Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-chi-sim
+      - name: Record Tesseract engine identity
+        run: |
+          python --version
+          which tesseract
+          tesseract --version
+          tesseract --list-langs
+      - name: Install canonical controlled opt-in test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ocr-service/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+          python -m pip install pytest
+      - name: Test canonical Runtime controlled Raw OCR opt-in
+        env:
+          PYTHONPATH: ocr-service:contracts/v1/bindings/python:.
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+        run: |
+          python -m pytest \
+            packages/python_runtime/tests/test_canonical_raw_ocr_controlled_opt_in.py \
+            packages/python_runtime/tests/test_architecture_guards.py \
+            -q -s
+
+  ocr-runtime-engineering-docker-real-tool:
+    name: ocr-runtime-engineering-docker-real-tool
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Record Docker identity
+        run: |
+          docker --version
+          docker info --format '{{.ServerVersion}}'
+      - name: Build dedicated engineering Runtime image
+        run: |
+          docker build \
+            -f engineering/Dockerfile \
+            -t aidoctor-engineering-runtime:postfreeze-03c \
+            .
+          echo "ENGINEERING_DOCKER_RUNTIME_IMAGE_BUILD=PASS"
+      - name: Record engineering image identity
+        run: |
+          docker image inspect aidoctor-engineering-runtime:postfreeze-03c \
+            --format 'Id={{.Id}} RepoTags={{json .RepoTags}} RepoDigests={{json .RepoDigests}} Size={{.Size}}'
+      - name: Run container-internal localhost Runtime real-tool probe
+        run: |
+          docker run --rm \
+            -e AIDOCTOR_ENGINEERING_RAW_OCR_PORT=8099 \
+            aidoctor-engineering-runtime:postfreeze-03c \
+            python engineering/docker_runtime_probe.py
+
+  java-raw-ocr-controlled-runtime-route:
+    name: java-raw-ocr-controlled-runtime-route
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # actions/setup-python v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            ocr-service/requirements.txt
+            packages/model_runtime/requirements.txt
+            packages/python_runtime/requirements-http.txt
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5.7.0
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+      - name: Install system Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            tesseract-ocr-chi-sim
+      - name: Record engine identity
+        run: |
+          java -version
+          python --version
+          which tesseract
+          tesseract --version
+          tesseract --list-langs
+          test "$(which tesseract)" = "/usr/bin/tesseract"
+          tesseract --list-langs 2>&1 | grep -qx eng
+          tesseract --list-langs 2>&1 | grep -qx chi_sim
+      - name: Assert default Java and Python surfaces remain unchanged
+        run: |
+          grep -q "engineering.synthetic.runtime_smoke" packages/python_runtime/http/transport.py
+          grep -q "AUTHORIZED_SYNTHETIC_CAPABILITY_ID" packages/python_runtime/http/app.py
+          if grep -q "engineering.ocr.raw" packages/python_runtime/http/app.py; then
+            echo "default create_app leaked engineering.ocr.raw"
+            exit 1
+          fi
+          if grep -qE "PythonRuntimeClient|ControlledRawOcr" \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/agent/ToolCaller.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/agent/AgentLoop.java; then
+            echo "controlled Raw OCR production wiring detected"
+            exit 1
+          fi
+          if grep -Rql "ControlledRawOcr" examination-service; then
+            echo "examination-service imported controlled Raw OCR gateway"
+            exit 1
+          fi
+          if grep -qE "@Component|@Service|@Configuration|@RestController|@Controller|@Bean|@ConditionalOnProperty|@Profile" \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/ControlledRawOcrGateway.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/ControlledRawOcrRoutePolicy.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/ControlledRawOcrRoute.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/ControlledRawOcrGatewayException.java; then
+            echo "controlled gateway Spring wiring detected"
+            exit 1
+          fi
+          echo "DEFAULT_RUNTIME_CAPABILITY_SURFACE_UNCHANGED=YES"
+          echo "JAVA_DEFAULT_ROUTE_PRESERVED=YES"
+          echo "JAVA_CONTROLLED_GATEWAY_COMPONENT_SCANNED=NO"
+          echo "JAVA_PYTHON_CUTOVER_VERIFIED=NO"
+          echo "CANONICAL_RUNTIME_RAW_OCR_ENABLED=NO"
+          echo "JAVA_PYTHON_RAW_OCR_CONTROLLED_CUTOVER_VERIFIED=NO"
+      - name: Install OCR Runtime engineering process dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ocr-service/requirements.txt
+          python -m pip install -r packages/model_runtime/requirements.txt
+          python -m pip install -r packages/python_runtime/requirements-http.txt
+      - name: Install local Shared Contracts Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Start engineering Raw OCR Runtime process
+        env:
+          PYTHONPATH: ocr-service:contracts/v1/bindings/python:.
+          AIDOCTOR_ENGINEERING_RAW_OCR_PORT: "8099"
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+          SANDBOX_ROOT: ${{ runner.temp }}/aidoctor-04-raw-ocr-artifact-sandbox
+        run: |
+          mkdir -p logs "${SANDBOX_ROOT}/raw-ocr/input"
+          python - <<'PY'
+          import hashlib
+          import io
+          import os
+          from pathlib import Path
+          from PIL import Image, ImageDraw, ImageFont
+
+          sandbox = Path(os.environ["SANDBOX_ROOT"])
+          payload = sandbox / "raw-ocr" / "input" / "artifact.png"
+          canvas = Image.new("RGB", (1600, 400), color=(255, 255, 255))
+          drawer = ImageDraw.Draw(canvas)
+          font = ImageFont.load_default(size=96)
+          text = "HELLO OCR 123"
+          bbox = drawer.textbbox((0, 0), text, font=font)
+          width = bbox[2] - bbox[0]
+          height = bbox[3] - bbox[1]
+          left = max((1600 - width) // 2, 40)
+          top = max((400 - height) // 2, 40)
+          drawer.text((left, top), text, fill=(0, 0, 0), font=font)
+          buffer = io.BytesIO()
+          canvas.save(buffer, format="PNG")
+          content = buffer.getvalue()
+          payload.write_bytes(content)
+          digest = hashlib.sha256(content).hexdigest()
+          Path("logs/artifact.env").write_text(
+              "export AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_SANDBOX_ROOT="
+              + str(sandbox.resolve())
+              + "\nexport AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SIZE_BYTES="
+              + str(len(content))
+              + "\nexport AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_EXPECTED_SHA256="
+              + digest
+              + "\n",
+              encoding="ascii",
+          )
+          PY
+          set -a
+          # shellcheck disable=SC1091
+          . logs/artifact.env
+          set +a
+          rm -f logs/artifact.env
+          unset AIDOCTOR_ENGINEERING_RAW_OCR_ARTIFACT_BASE64
+          echo "JAVA_RAW_OCR_REAL_TOOL_ARTIFACT_BACKEND=SANDBOXED_FILESYSTEM"
+          echo "JAVA_RAW_OCR_REAL_TOOL_ENV_BASE64_BOOTSTRAP_USED=NO"
+          nohup python engineering/raw_ocr_runtime_process.py \
+            > logs/engineering-raw-ocr-runtime-process.log 2>&1 &
+          echo $! > logs/engineering-raw-ocr-runtime-process.pid
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8099/api/v1/runtime/health; then
+              echo
+              echo "JAVA_PYTHON_RUNTIME_REAL_HTTP=YES"
+              echo "HEALTH_PASS"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "HEALTH_TIMEOUT"
+          cat logs/engineering-raw-ocr-runtime-process.log
+          exit 1
+      - name: Run controlled Raw OCR gateway unit and real-tool tests
+        env:
+          AIDOCTOR_REQUIRE_REAL_TESSERACT: "1"
+        run: |
+          mvn -f diagnosis-service/pom.xml \
+            -Dtest=ControlledRawOcrGatewayTest,ControlledRawOcrGatewayRealToolIT \
+            test
+      - name: Capture engineering Raw OCR Runtime process logs
+        if: always()
+        run: |
+          if [ -f logs/engineering-raw-ocr-runtime-process.log ]; then
+            echo "===== engineering-raw-ocr-runtime-process.log ====="
+            cat logs/engineering-raw-ocr-runtime-process.log
+          fi
+      - name: Stop engineering Raw OCR Runtime process
+        if: always()
+        run: |
+          if [ -f logs/engineering-raw-ocr-runtime-process.pid ]; then
+            kill "$(cat logs/engineering-raw-ocr-runtime-process.pid)" || true
+          fi
+

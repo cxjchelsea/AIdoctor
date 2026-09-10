@@ -148,12 +148,11 @@ public class StopConditionEvaluator {
      */
     @SuppressWarnings("unchecked")
     private boolean checkEvidenceReferencesComplete(CDP cdp) {
-        Map<String, Object> ddxMap = cdp.getDdxMap();
-        if (ddxMap == null) {
+        List<Map<String, Object>> rankList = cdp.getDdx();
+        if (rankList == null) {
             return false;
         }
-        
-        List<Map<String, Object>> rankList = (List<Map<String, Object>>) ddxMap.get("rank_list");
+
         if (rankList == null || rankList.isEmpty()) {
             return false;
         }
@@ -178,7 +177,7 @@ public class StopConditionEvaluator {
      * 检查风险评估完成
      */
     private boolean checkRiskAssessmentComplete(CDP cdp) {
-        Map<String, Object> triageMap = cdp.getTriageMap();
+        Map<String, Object> triageMap = cdp.getTriage();
         return triageMap != null && triageMap.containsKey("risk_level");
     }
     
@@ -187,26 +186,21 @@ public class StopConditionEvaluator {
      */
     @SuppressWarnings("unchecked")
     private boolean checkDiagnosisConclusionClear(CDP cdp) {
-        Map<String, Object> ddxMap = cdp.getDdxMap();
-        if (ddxMap == null) {
-            return false;
-        }
-        
-        List<Map<String, Object>> tier1List = (List<Map<String, Object>>) ddxMap.get("tier1_most_likely");
-        return tier1List != null && !tier1List.isEmpty();
+        List<Map<String, Object>> ddx = cdp.getDdx();
+        return ddx != null && !ddx.isEmpty();
     }
     
     /**
      * 检查检查建议完成
      */
     private boolean checkWorkupPlanComplete(CDP cdp) {
-        Map<String, Object> workupPlanMap = cdp.getWorkupPlanMap();
-        if (workupPlanMap != null && !workupPlanMap.isEmpty()) {
+        List<Map<String, Object>> workupPlan = cdp.getWorkupPlan();
+        if (workupPlan != null && !workupPlan.isEmpty()) {
             return true;
         }
         
         // 或者明确不需要检查
-        Map<String, Object> uncertaintyMap = cdp.getUncertaintyMap();
+        Map<String, Object> uncertaintyMap = cdp.getUncertainty();
         if (uncertaintyMap != null && Boolean.TRUE.equals(uncertaintyMap.get("no_workup_needed"))) {
             return true;
         }
@@ -218,8 +212,8 @@ public class StopConditionEvaluator {
      * 检查治疗建议完成
      */
     private boolean checkManagementPlanComplete(CDP cdp) {
-        Map<String, Object> managementPlanMap = cdp.getManagementPlanMap();
-        return managementPlanMap != null && !managementPlanMap.isEmpty();
+        List<Map<String, Object>> managementPlan = cdp.getManagementPlan();
+        return managementPlan != null && !managementPlan.isEmpty();
     }
     
     /**
@@ -227,21 +221,17 @@ public class StopConditionEvaluator {
      */
     @SuppressWarnings("unchecked")
     private boolean checkEvidenceChainComplete(CDP cdp) {
-        Map<String, Object> evidenceGraphMap = cdp.getEvidenceGraphMap();
-        if (evidenceGraphMap == null) {
-            return false;
-        }
-        
-        List<Map<String, Object>> evidenceNodes = (List<Map<String, Object>>) evidenceGraphMap.get("evidence_nodes");
-        return evidenceNodes != null && !evidenceNodes.isEmpty();
+        List<Map<String, Object>> evidenceGraph = cdp.getEvidenceGraph();
+        return evidenceGraph != null && !evidenceGraph.isEmpty();
     }
     
     /**
      * 检查终点结论包生成
      */
     private boolean checkFinalConclusionGenerated(CDP cdp) {
-        Map<String, Object> finalConclusionMap = cdp.getFinalConclusionMap();
-        return finalConclusionMap != null && !finalConclusionMap.isEmpty();
+        Map<String, Object> patientState = cdp.getPatientState();
+        Object conclusionPackage = patientState == null ? null : patientState.get("conclusion_package");
+        return conclusionPackage instanceof Map && !((Map<?, ?>) conclusionPackage).isEmpty();
     }
     
     /**

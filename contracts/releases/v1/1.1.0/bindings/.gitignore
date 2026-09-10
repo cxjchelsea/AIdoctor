@@ -1,0 +1,6 @@
+﻿# 缁戝畾鏋勫缓浜х墿锛涗笉杩涘叆璇箟鏉冨▉鏍戙€?
+java/target/
+typescript/node_modules/
+**/__pycache__/
+*.pyc
+.pytest_cache/
