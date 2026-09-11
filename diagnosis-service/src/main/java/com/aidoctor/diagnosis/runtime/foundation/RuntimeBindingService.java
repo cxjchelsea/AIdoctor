@@ -1,5 +1,6 @@
 package com.aidoctor.diagnosis.runtime.foundation;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,11 +36,7 @@ public class RuntimeBindingService {
     ) {
         Optional<RuntimeBindingRecord> existing = repository.findById(consultationId);
         if (existing.isPresent()) {
-            RuntimeBindingRecord binding = existing.get();
-            if (!binding.sameBinding(cdpId, runtimeAuthority, scopeVersion, capabilitySetVersion, contractVersion)) {
-                throw new IllegalStateException("Consultation runtime/version binding is immutable once established.");
-            }
-            return binding;
+            return requireSame(existing.get(), cdpId, runtimeAuthority, scopeVersion, capabilitySetVersion, contractVersion);
         }
 
         RuntimeBindingRecord created = new RuntimeBindingRecord(
@@ -51,11 +48,30 @@ public class RuntimeBindingService {
                 capabilitySetVersion,
                 contractVersion,
                 LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
-        return repository.save(created);
+        try {
+            return repository.save(created);
+        } catch (DataIntegrityViolationException race) {
+            RuntimeBindingRecord winner = repository.findById(consultationId).orElseThrow(() -> race);
+            return requireSame(winner, cdpId, runtimeAuthority, scopeVersion, capabilitySetVersion, contractVersion);
+        }
     }
 
     public RuntimeBindingRecord requireBinding(String consultationId) {
         return repository.findById(consultationId)
                 .orElseThrow(() -> new IllegalStateException("Runtime binding not found: " + consultationId));
+    }
+
+    private RuntimeBindingRecord requireSame(
+            RuntimeBindingRecord binding,
+            String cdpId,
+            String runtimeAuthority,
+            String scopeVersion,
+            String capabilitySetVersion,
+            String contractVersion
+    ) {
+        if (!binding.sameBinding(cdpId, runtimeAuthority, scopeVersion, capabilitySetVersion, contractVersion)) {
+            throw new IllegalStateException("Consultation runtime/version binding is immutable once established.");
+        }
+        return binding;
     }
 }
