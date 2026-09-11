@@ -1,5 +1,10 @@
 import asyncio
+import inspect
 
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from app.api.c01_routes import router as c01_router
 from app.models.c01_u01 import C01U01Request
 from app.services.c01_u01_service import C01U01ClinicalUnderstandingService
 
@@ -43,7 +48,6 @@ def test_other_relation_is_candidate_and_does_not_forge_subject_reference_id():
     result = interpret("我妈这两天头晕")
     assert result.subjectCandidate.subjectType == "OTHER"
     assert result.subjectCandidate.relationText in ("我妈", "妈妈", "母亲")
-    # Formal subjectReferenceId belongs to U01 identity/business context, not C01 inference.
     assert not hasattr(result.subjectCandidate, "subjectReferenceId")
     assert result.scopeCandidate.scope == "SYMPTOM"
 
@@ -87,3 +91,28 @@ def test_empty_input_is_insufficient_information_not_negative_clinical_result():
     assert result.reasonCode == "EMPTY_USER_INPUT"
     assert result.scopeCandidate.scope == "UNKNOWN"
     assert result.earlySafetySignalCandidate.detected is False
+
+
+def test_typed_http_contract_exposes_candidates_without_state_write_fields():
+    app = FastAPI()
+    app.include_router(c01_router, prefix="/api/v1")
+    client = TestClient(app)
+    payload = request("我头晕").model_dump()
+
+    response = client.post("/api/v1/capabilities/c01/u01/interpret", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["bindingRef"]["capabilityId"] == "C01"
+    assert body["subjectCandidate"]["subjectType"] == "SELF"
+    assert body["scopeCandidate"]["scope"] == "SYMPTOM"
+    assert "suggested_writes" not in body
+    assert "stateChangeProposal" not in body
+
+
+def test_c01_service_does_not_reenter_legacy_orchestration_or_direct_write_semantics():
+    source = inspect.getsource(C01U01ClinicalUnderstandingService)
+    assert "ClinicalParsingService" not in source
+    assert "suggested_writes" not in source
+    assert "patient_state" not in source
+    assert "CDP" not in source
