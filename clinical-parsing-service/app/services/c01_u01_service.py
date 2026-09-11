@@ -3,7 +3,7 @@
 The service produces candidates only. Final Subject/Problem/Scope decisions remain
 owned by U01/D10. This adapter deliberately does not produce CDP writes.
 """
-from typing import List, Tuple
+from typing import Iterable, Optional, Tuple
 
 from app.models.c01_u01 import (
     C01BindingRef,
@@ -29,7 +29,7 @@ class C01U01ClinicalUnderstandingService:
     CONTRACT_VERSION = "contracts-v1"
 
     OTHER_RELATIONS = (
-        "妈妈", "母亲", "我妈", "爸爸", "父亲", "我爸",
+        "我妈妈", "妈妈", "母亲", "我妈", "我爸爸", "爸爸", "父亲", "我爸",
         "孩子", "儿子", "女儿", "老公", "丈夫", "老婆", "妻子",
         "朋友", "家人", "奶奶", "爷爷", "外婆", "外公",
     )
@@ -49,6 +49,8 @@ class C01U01ClinicalUnderstandingService:
     )
 
     def __init__(self):
+        # Reuse existing concept recognition and ambiguity assets; do not reuse legacy
+        # tool_1 write suggestions or CDP mutation semantics.
         self._legacy_parsing = ClinicalParsingService()
 
     async def interpret(self, request: C01U01Request) -> C01U01Result:
@@ -58,6 +60,7 @@ class C01U01ClinicalUnderstandingService:
                 binding=binding,
                 reason="CAPABILITY_BINDING_MISMATCH",
                 retryable=False,
+                status="UNSUPPORTED",
             )
 
         text = (request.text or "").strip()
@@ -66,6 +69,7 @@ class C01U01ClinicalUnderstandingService:
                 binding=binding,
                 reason="EMPTY_USER_INPUT",
                 retryable=False,
+                status="INSUFFICIENT_INFORMATION",
             )
 
         parsing = await self._legacy_parsing.parse(ClinicalParsingRequest(
@@ -83,7 +87,6 @@ class C01U01ClinicalUnderstandingService:
 
         ambiguous = bool(parsing.ambiguousExpressions)
         if ambiguous:
-            subject.uncertain = subject.uncertain or subject.subjectType == "UNKNOWN"
             scope.uncertain = True
             problem.uncertain = True
 
@@ -133,7 +136,7 @@ class C01U01ClinicalUnderstandingService:
 
     def _subject_candidate(self, text: str) -> SubjectCandidate:
         relation, span = self._first_match(text, self.OTHER_RELATIONS)
-        if relation:
+        if relation and span:
             return SubjectCandidate(
                 subjectType="OTHER",
                 relationText=relation,
@@ -143,7 +146,7 @@ class C01U01ClinicalUnderstandingService:
             )
 
         marker, span = self._first_match(text, self.SELF_MARKERS)
-        if marker:
+        if marker and span:
             return SubjectCandidate(
                 subjectType="SELF",
                 relationText=None,
@@ -160,5 +163,173 @@ class C01U01ClinicalUnderstandingService:
             evidenceSpans=[],
         )
 
-    def _problem_candidate(self(self, text, parsing, scope):
-        pass
+    def _problem_candidate(self, text, parsing, scope: ScopeCandidate) -> ProblemCandidate:
+        semantic_spans = []
+        seen = set()
+        for concept in parsing.concepts:
+            original = (concept.originalText or "").strip()
+            if original and original not in seen:
+                span = self._span(text, original)
+                if span:
+                    semantic_spans.append(span)
+                    seen.add(original)
+
+        if not semantic_spans:
+            for marker in self.CLINICAL_CUES + self.EXAM_MARKERS + self.OUTSIDE_MARKERS:
+                span = self._span(text, marker)
+                if span and marker not in seen:
+                    semantic_spans.append(span)
+                    seen.add(marker)
+
+        if scope.scope == "UNKNOWN" and not semantic_spans:
+            return ProblemCandidate(
+                text=None,
+                confidence=0.0,
+                uncertain=True,
+                evidenceSpans=[],
+            )
+
+        return ProblemCandidate(
+            text=text,
+            confidence=0.85 if semantic_spans else 0.60,
+            uncertain=scope.uncertain,
+            evidenceSpans=semantic_spans,
+        )
+
+    def _scope_candidate(self, text, parsing) -> ScopeCandidate:
+        outside_spans = self._all_matches(text, self.OUTSIDE_MARKERS)
+        exam_spans = self._all_matches(text, self.EXAM_MARKERS)
+        clinical_spans = self._all_matches(text, self.CLINICAL_CUES)
+
+        for concept in parsing.concepts:
+            original = (concept.originalText or "").strip()
+            span = self._span(text, original) if original else None
+            if span:
+                clinical_spans.append(span)
+
+        if parsing.structuredData.examinations:
+            for exam in parsing.structuredData.examinations:
+                span = self._span(text, exam.name)
+                if span:
+                    exam_spans.append(span)
+
+        outside = bool(outside_spans)
+        exam = bool(exam_spans)
+        clinical = bool(clinical_spans) or bool(parsing.structuredData.symptoms)
+
+        if outside and (clinical or exam):
+            return ScopeCandidate(
+                scope="MIXED",
+                confidence=0.90,
+                uncertain=True,
+                evidenceSpans=self._dedupe_spans(outside_spans + exam_spans + clinical_spans),
+            )
+        if exam:
+            return ScopeCandidate(
+                scope="EXAMINATION",
+                confidence=0.90,
+                uncertain=False,
+                evidenceSpans=self._dedupe_spans(exam_spans + clinical_spans),
+            )
+        if clinical:
+            return ScopeCandidate(
+                scope="SYMPTOM",
+                confidence=0.88,
+                uncertain=False,
+                evidenceSpans=self._dedupe_spans(clinical_spans),
+            )
+        if outside:
+            return ScopeCandidate(
+                scope="OUTSIDE_V1_INTENT",
+                confidence=0.92,
+                uncertain=False,
+                evidenceSpans=self._dedupe_spans(outside_spans),
+            )
+        return ScopeCandidate(
+            scope="UNKNOWN",
+            confidence=0.0,
+            uncertain=True,
+            evidenceSpans=[],
+        )
+
+    def _early_safety_candidate(self, text: str) -> EarlySafetySignalCandidate:
+        spans = self._all_matches(text, self.EARLY_SAFETY_CLUES)
+        clues = [span.text for span in spans]
+        return EarlySafetySignalCandidate(
+            detected=bool(spans),
+            clues=clues,
+            evidenceSpans=self._dedupe_spans(spans),
+        )
+
+    def _insufficient_result(
+        self,
+        binding: C01BindingRef,
+        reason: str,
+        retryable: bool,
+        status: str,
+    ) -> C01U01Result:
+        return C01U01Result(
+            businessStatus=status,
+            reasonCode=reason,
+            retryable=retryable,
+            bindingRef=binding,
+            subjectCandidate=SubjectCandidate(
+                subjectType="UNKNOWN", confidence=0.0, uncertain=True, evidenceSpans=[]
+            ),
+            problemCandidate=ProblemCandidate(
+                text=None, confidence=0.0, uncertain=True, evidenceSpans=[]
+            ),
+            scopeCandidate=ScopeCandidate(
+                scope="UNKNOWN", confidence=0.0, uncertain=True, evidenceSpans=[]
+            ),
+            earlySafetySignalCandidate=EarlySafetySignalCandidate(
+                detected=False, clues=[], evidenceSpans=[]
+            ),
+            sourceAttribution="USER_TEXT",
+            provenance=["c01-u01:binding-validation"],
+        )
+
+    def _first_match(
+        self, text: str, markers: Iterable[str]
+    ) -> Tuple[Optional[str], Optional[EvidenceSpan]]:
+        for marker in markers:
+            span = self._span(text, marker)
+            if span:
+                return marker, span
+        return None, None
+
+    def _all_matches(self, text: str, markers: Iterable[str]):
+        spans = []
+        for marker in markers:
+            start = text.find(marker)
+            while start >= 0:
+                spans.append(EvidenceSpan(
+                    text=marker,
+                    start=start,
+                    end=start + len(marker),
+                    source="USER_TEXT",
+                ))
+                start = text.find(marker, start + len(marker))
+        return self._dedupe_spans(spans)
+
+    def _span(self, text: str, marker: str) -> Optional[EvidenceSpan]:
+        start = text.find(marker)
+        if start < 0:
+            return None
+        return EvidenceSpan(
+            text=marker,
+            start=start,
+            end=start + len(marker),
+            source="USER_TEXT",
+        )
+
+    @staticmethod
+    def _dedupe_spans(spans):
+        seen = set()
+        result = []
+        for span in spans:
+            key = (span.start, span.end, span.text)
+            if key not in seen:
+                seen.add(key)
+                result.append(span)
+        return result
