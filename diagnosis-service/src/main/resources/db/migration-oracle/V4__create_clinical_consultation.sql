@@ -1,5 +1,6 @@
 CREATE TABLE clinical_consultation (
     consultation_id VARCHAR2(128 CHAR) NOT NULL,
+    row_version NUMBER(19) DEFAULT 0 NOT NULL,
     cdp_id VARCHAR2(128 CHAR) NOT NULL,
     user_id VARCHAR2(128 CHAR) NOT NULL,
     lifecycle_status VARCHAR2(32 CHAR) NOT NULL,
@@ -11,7 +12,6 @@ CREATE TABLE clinical_consultation (
     scope_decision VARCHAR2(32 CHAR) NOT NULL,
     clarification_reason VARCHAR2(128 CHAR),
     early_safety_signal NUMBER(1) DEFAULT 0 NOT NULL,
-    next_unit VARCHAR2(16 CHAR) NOT NULL,
     start_event_id VARCHAR2(128 CHAR) NOT NULL,
     created_at TIMESTAMP NOT NULL,
     CONSTRAINT pk_clinical_consultation PRIMARY KEY (consultation_id),
