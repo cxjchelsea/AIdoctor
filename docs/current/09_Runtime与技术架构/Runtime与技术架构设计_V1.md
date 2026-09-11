@@ -1,53 +1,44 @@
 # AIdoctor Phase 9 — Runtime 与技术架构设计 V1
 
-> 状态：DRAFT COMPLETE / NOT FROZEN
+> 状态：DRAFT COMPLETE / REVIEW REMEDIATED / NOT FROZEN
 > 适用基线：`main` 当前真实代码 + Phase 1～8 已冻结权威设计
-> 目标：在不改变既有业务语义、状态 Owner、Unit、Capability 与 Contract 边界的前提下，定义 V1 临床 Runtime 的执行、等待、恢复、提交、失败、并发、版本绑定与 Brownfield 迁移架构。
-> 非目标：本文件不构成 Implementation Authorization；不冻结具体框架、消息队列、数据库、微服务拆分或部署厂商选型；不进入 Phase 10 前端设计。
+> 目标：在不改变既有业务语义、状态 Owner、Unit、Capability 与 Contract 边界的前提下，定义 V1 临床 Runtime 的执行、等待、恢复、提交、失败、并发、版本绑定、外部副作用一致性与 Brownfield 迁移架构。
+> 非目标：本文件不构成 Implementation Authorization；不冻结具体 Runtime 框架、消息队列、数据库、微服务拆分或部署厂商；不进入 Phase 10。
 
 ---
 
-# 1. Phase 9 的问题边界
+# 1. Phase 9 的边界
 
-Phase 9 回答的是：
+Phase 1～8 已冻结：
 
 ```text
-已经有了：
 业务语义
-→ 系统状态
+→ 状态与 Owner
 → 业务闭环
 → Unit
 → Capability / deterministic policy
-→ Contract
-
-接下来：
-谁驱动一次执行？
-如何从已提交 Clinical State 决定下一 Unit？
-何时等待？
-如何恢复？
-如何处理 duplicate / conflict / crash / timeout？
-如何保证同一事件最多产生一次临床效果？
-如何把现有 Java fixed workflow 迁入新 Runtime？
+→ Contract / Data semantics
 ```
 
-Phase 9 不重新回答：
+Phase 9 只回答：
 
 ```text
-什么是 Clinical Risk
-谁拥有 Safety Gate
-什么时候应该问问题
-什么 DDx 是医学上正确的
-Capability 应该返回什么业务语义
-Clinical State 应有哪些业务域
+谁驱动一次执行？
+如何从 committed Clinical State 选择下一 Unit？
+何时 WAIT？如何 Resume？
+如何处理 duplicate / conflict / crash / timeout？
+如何保证 replay 不重复同一业务 effect？
+如何管理外部发送与 Clinical State 的一致性？
+如何把当前 fixed workflow 增量迁移进新 Runtime？
 ```
 
-这些已经由 Phase 1～8 冻结。
+Phase 9 不重新定义：Clinical Risk、Safety Gate、Clinical Readiness、Delivery Readiness、Unit、Capability、Deterministic Policy 或 Contract 语义。
 
 ---
 
 # 2. 当前真实技术基线
 
-根据 Current State Baseline 与当前 `main`：
+当前 `main` 真实主链仍是：
 
 ```text
 Frontend
@@ -58,289 +49,216 @@ Frontend
 → legacy Python / Java clinical services
 ```
 
-当前真实主链仍是：
+即：
 
 ```text
-Java fixed workflow
-+
-legacy clinical services
-+
-CDP
+Java fixed workflow + legacy clinical services + CDP
 ```
 
-而不是 Enterprise Runtime 主控。
+不是 Enterprise Runtime 主控。
 
-现有可复用基础：
+当前资产处置：
 
 ```text
-CDP aggregate / versioning / locking       KEEP + REFACTOR
-StateCommitter                            REUSE_FOUNDATION + ADAPT
-Python Runtime                            REUSE_FOUNDATION + ADAPT
-Model Runtime                             REUSE_FOUNDATION + ADAPT
-Execution Trace                           REUSE_FOUNDATION + ADAPT
-Clinical Parsing / Dialog / Risk / DDx    REFACTOR / ADAPT
+CDP aggregate/versioning/locking       KEEP + REFACTOR
+StateCommitter                        REUSE_FOUNDATION + ADAPT
+Python Runtime                        REUSE_FOUNDATION + ADAPT
+Model Runtime                         REUSE_FOUNDATION + ADAPT
+Execution Trace                       REUSE_FOUNDATION + ADAPT
+Clinical Parsing/Dialog/Risk/DDx      REFACTOR / ADAPT
+Legacy LLM                            REPLACE / REMOVE
 ```
 
 当前明确缺失：
 
 ```text
 Clinical Runtime 主控
-Durable Clinical Resume
-Business Event Inbox / durable dedupe boundary
 Unit-level deterministic scheduler
-正式 Clinical State 与 StateCommitter 的主链接管
-旧固定 5-step workflow 的增量迁移机制
+Durable Clinical Resume
+Business Event durable intake/dedupe ledger
+StateCommitter → authoritative Clinical CDP adapter
+外部副作用的 crash-safe delivery boundary
+fixed 5-step → state-driven Unit routing 的迁移层
 ```
 
-重要事实：当前 Python Runtime 是 deterministic、engine-neutral、single Tool invocation runtime；它不是 Clinical Workflow Runtime，也没有完整业务 Resume 闭环。
+现有 Python Runtime 是 deterministic、engine-neutral、single Tool invocation foundation；它不是 Clinical Workflow Runtime。
 
 ---
 
-# 3. Phase 9 架构总原则
+# 3. Phase 9 核心不变量
 
-## 3.1 Runtime 不拥有 Clinical Truth
+```text
+RUNTIME-INV-01 Runtime != Clinical Truth Owner
+RUNTIME-INV-02 Clinical State/CDP != Runtime Checkpoint
+RUNTIME-INV-03 Trace != Clinical Truth
+RUNTIME-INV-04 Capability Result cannot bypass Business Owner/Policy/G2
+RUNTIME-INV-05 Scheduler routes from committed state, not uncommitted candidate
+RUNTIME-INV-06 Business Resume validity != Runtime Resume compatibility
+RUNTIME-INV-07 stale/missing checkpoint alone cannot invalidate a valid business event
+RUNTIME-INV-08 replay cannot apply the same intended business effect twice
+RUNTIME-INV-09 one event may legitimately cause multiple distinct governed effects
+RUNTIME-INV-10 commit conflict cannot be solved by blind stale replay
+RUNTIME-INV-11 safety-sensitive failure cannot become ordinary clinical continuation
+RUNTIME-INV-12 Runtime retry cannot bypass idempotency/version/safety policy
+RUNTIME-INV-13 one Consultation cannot have two authoritative clinical writers
+RUNTIME-INV-14 fixed 5-step workflow is migration source, not target truth
+RUNTIME-INV-15 framework choice cannot redefine frozen Unit/Capability/Contract semantics
+RUNTIME-INV-16 same Consultation cannot silently switch bound clinical semantics mid-flight
+RUNTIME-INV-17 checkpoint loss after clinical commit must be recoverable from authoritative state
+RUNTIME-INV-18 Runtime failure != business negative result
+RUNTIME-INV-19 Thread/Run completion != Consultation completion
+RUNTIME-INV-20 external send success != Clinical State commit; both require durable correlation/reconciliation
+```
 
-正式链路保持：
+其中 RUNTIME-INV-08 与 RUNTIME-INV-09 必须同时成立。例如一个 `USER_ANSWER` 可以合法导致：
+
+```text
+patient fact commit
+→ risk recomputation commit
+→ safety gate commit
+→ readiness commit
+```
+
+这些是不同 effect。禁止的是 replay 再次重复其中同一个 effect，而不是强迫整个 event 只能产生一次 commit。
+
+---
+
+# 4. Runtime 总体逻辑架构
+
+以下是逻辑职责，不等于微服务边界：
+
+```text
+API / Application Ingress
+        ↓
+Business Event Intake / Ledger
+        ↓
+Clinical Run Coordinator
+        ↓
+Unit Scheduler / Transition Engine
+        ├────────→ Business Owner / D01-D10 Policy Host
+        ├────────→ Capability Invocation Gateway → C01-C06 / P03 / P04
+        └────────→ Delivery Side-effect Coordinator
+                              ↓
+                Decision / accepted business effect
+                              ↓
+                    K09 State Change Proposal
+                              ↓
+          P01 State Governance / Clinical CDP Adapter
+                              ↓
+                   Clinical State Version n+1
+
+Cross-cutting:
+P02 Durable Clinical Resume
+P05 Trace / Audit
+P06 Scope / Capability / Version Binding
+Runtime persistence / Outbox / delivery receipt
+```
+
+正式业务链保持：
 
 ```text
 Capability Result
 → Business Owner / Deterministic Policy interprets
 → Deterministic Decision / accepted business effect
 → State Change Proposal
-→ G2 State Governance
+→ G2/P01
 → Commit Result
 → New Clinical State Version
 ```
 
-Runtime 只负责：
-
-```text
-执行
-调度
-挂起
-恢复
-超时
-重试控制
-checkpoint
-并发协调
-版本绑定
-trace 关联
-```
-
-禁止：
-
-```text
-Runtime 根据模型结果直接改 Clinical State
-Runtime 根据 checkpoint 恢复一份独立 Clinical Truth
-Runtime 根据 null / [] / error 猜业务语义
-Runtime 自己决定 Clinical Risk / Safety Gate / Readiness / Delivery Readiness
-```
-
-## 3.2 Clinical State 是业务真源
-
-```text
-Clinical Business Truth = governed Clinical State / CDP
-Execution Truth         = Runtime Thread / Run / Checkpoint
-Observation Truth       = Trace / Audit
-UI Local State          = Frontend local state
-```
-
-必须保持：
-
-```text
-Clinical State != Runtime Checkpoint
-Consultation ACTIVE != Thread RUNNING
-Thread COMPLETED != Consultation COMPLETED
-Trace != Clinical Truth
-```
-
-## 3.3 Runtime 只能从已提交状态继续推进
-
-一个 Unit 即使完成 Capability 调用，如果正式业务效果尚未经 G2 commit，则 Runtime 不得把“候选结果”当成下一 Unit 的正式输入。
-
-标准推进点：
-
-```text
-Decision / accepted effect
-→ Proposal
-→ Commit Result = COMMITTED / governed NO_EFFECT
-→ reload / resolve authoritative Clinical State
-→ choose next Unit
-```
-
-若：
-
-```text
-Commit Result = REJECTED / CONFLICT / FAILED
-```
-
-则不能按“已完成状态变化”继续执行。
-
-## 3.4 Safety 可抢占普通执行路径
-
-任何普通执行计划都不得绕过：
-
-```text
-U03 Risk
-→ U04 Safety Gate
-```
-
-当安全敏感能力不可用、Safety Gate 为 BLOCKED / UNAVAILABLE，或 D07 判定普通临床路径不得继续时，Runtime 必须停止普通路径并进入受控的 U14 / Safe Exit / terminal 路由。
-
-## 3.5 Runtime 不采用无界自主 Agent Loop
-
-V1 不设计：
-
-```text
-Observe → Think → Tool → Think → Tool → ...
-```
-
-的开放式自主循环作为临床主控。
-
-V1 使用：
-
-```text
-accepted business event
-→ bounded Run
-→ deterministic Unit routing
-→ approved Capability invocation
-→ governed commit
-→ next deterministic route / WAIT / terminal
-```
-
-BL-04 ↔ BL-05 可以循环，但只有 D03/D04/U09 判定仍存在真实决策价值时才允许继续。
+Runtime 只负责执行、调度、挂起、恢复、超时、重试控制、checkpoint、并发协调、版本绑定和 trace 关联。
 
 ---
 
-# 4. V1 Runtime 逻辑架构
-
-V1 定义以下逻辑组件。它们是职责边界，不等价于必须拆成独立微服务。
-
-```text
-┌─────────────────────────────────────────────┐
-│ API / Application Ingress                  │
-│ 当前可由既有 Java Controller/Service 承接  │
-└──────────────────┬──────────────────────────┘
-                   ↓
-┌─────────────────────────────────────────────┐
-│ Business Event Intake / Inbox              │
-│ event identity / dedupe / ordering context │
-└──────────────────┬──────────────────────────┘
-                   ↓
-┌─────────────────────────────────────────────┐
-│ Clinical Run Coordinator                   │
-│ Thread / Run / lifecycle coordination      │
-└──────────────────┬──────────────────────────┘
-                   ↓
-┌─────────────────────────────────────────────┐
-│ Unit Scheduler / Transition Engine         │
-│ 根据 committed state + policies 选择 Unit │
-└───────┬─────────────┬─────────────┬─────────┘
-        │             │             │
-        ↓             ↓             ↓
- Business Owner   D01-D10 Policy   Capability Gateway
- / Interpreter       Host          C01-C06 / P03/P04
-        │             │             │
-        └─────────────┴──────┬──────┘
-                             ↓
-                 K09 State Change Proposal
-                             ↓
-┌─────────────────────────────────────────────┐
-│ P01 State Governance / Clinical CDP Adapter│
-│ StateCommitter + authoritative CDP write   │
-└──────────────────┬──────────────────────────┘
-                   ↓
-             Clinical State V(n+1)
-                   ↓
-┌─────────────────────────────────────────────┐
-│ P02 Durable Clinical Resume                │
-│ Thread / Run / Checkpoint / Pending refs   │
-└─────────────────────────────────────────────┘
-
-Cross-cutting:
-P05 Trace / Audit
-P06 Scope / Capability / Version Binding
-Delivery / Outbox boundary
-```
-
----
-
-# 5. 组件职责与禁止权限
+# 5. 逻辑组件职责
 
 ## 5.1 API / Application Ingress
 
+当前可继续由既有 Java Controller/Application Service 承接。
+
 职责：
 
-- 接收 Start / Answer / Correction / Cancel 等外部事件；
-- 建立身份、consultation、request/correlation context；
-- 将输入转换为 K02 Business Event；
-- 不直接写 Clinical Truth。
+- 接收 Start / Answer / Correction / Cancel 等输入；
+- 建立 identity / consultation / correlation context；
+- 转成 K02 Business Event；
+- 查询业务结果。
 
-Brownfield 初期可继续由既有 Java Controller / application service 承接。
-
-禁止：
+禁止 Controller/Frontend：
 
 ```text
-前端或 Controller 根据异常生成“正常/低风险”默认值
-Controller 自行推进 fixed step
-Controller 绕过 Event/State Governance 直接改正式 Clinical State
+异常时生成“正常/低风险”临床默认值
+直接推进 fixed step
+绕过 K09/G2 写 Clinical Truth
 ```
 
-## 5.2 Business Event Intake / Inbox
+## 5.2 Business Event Intake / Ledger
 
 职责：
 
-- 记录可识别的 business event；
-- 按 `event_id / idempotency_key` 做 durable dedupe；
-- 保存 event received / accepted / applied/no-effect 的可追溯关系；
-- 为 replay/crash recovery 提供事件入口事实。
+- durable 记录 `event_id / idempotency_key`；
+- 识别 transport/request replay；
+- 记录 event 与后续 business decision、effect、proposal、commit 的引用关系；
+- 支持 crash/replay reconciliation。
 
-它不决定临床语义。
+它只保存：
+
+```text
+RECEIVED identity
+processing correlation
+business decision refs
+applied effect refs
+```
+
+它不能自行宣布业务 `ACCEPTED / DUPLICATE / EXPIRED / REJECTED / APPLIED`。这些状态来自 Phase 8 的 Business Resume/Event Decision 与正式 commit 结果；Ledger 只能引用/记录。
 
 ## 5.3 Clinical Run Coordinator
 
 职责：
 
-- 为一次被接受的事件建立或恢复 Run；
-- 关联 consultation / thread / run / clinical_state_version；
-- 控制一次 bounded execution；
-- 协调 Unit Scheduler、Capability、Policy、State Governance；
-- 在 WAIT、terminal 或当前 Run 无可执行 Unit 时结束本次 Run。
+- 为一个可处理 event 建立/恢复 Run；
+- 关联 consultation/thread/run/clinical-state-version；
+- 驱动 bounded execution；
+- 协调 Scheduler、Policy、Capability、State Governance、Delivery Coordinator；
+- 在 WAIT、terminal、controlled failure 或当前已无 eligible Unit 时结束 Run。
 
-它不拥有 Consultation Lifecycle 的业务值；D01 / 对应业务 Owner 决定业务迁移，Runtime 执行。
+它不拥有 Consultation Lifecycle 的业务值。
 
 ## 5.4 Unit Scheduler / Transition Engine
 
-输入必须以当前 committed Clinical State 为核心：
+输入：
 
 ```text
-current Clinical State Version
+committed Clinical State
 + Consultation Lifecycle
-+ Risk / Safety / Readiness / Delivery states
++ Clinical Risk / Safety Gate / Clinical Readiness / Delivery Readiness
 + accepted event context
 + pending interaction refs
-+ deterministic policy results
-+ bound version context
++ deterministic decision refs
++ version binding
 ```
 
-输出是：
+输出：
 
 ```text
-next eligible Unit / WAIT / no-op / terminal execution intent
+next eligible Unit
+WAIT execution intent
+no-progress/terminal execution intent
 ```
 
-Scheduler 不重新发明业务流程规则，规则来自 Phase 3～7 冻结的状态和 D01-D10。
+Scheduler 不重写业务规则；规则来自 Phase 3～7 冻结状态与 D01-D10。
 
-## 5.5 Business Owner / Deterministic Policy Host
+## 5.5 Business Owner / Policy Host
 
-职责：
+承载：
 
-- 承载 D01-D10；
-- 执行业务 Owner 对 Capability Result 的解释；
-- 生成 Deterministic Decision；
-- 在需要正式状态变化时形成 K09 State Change Proposal。
+```text
+D01-D10
+Business Owner interpretation
+Deterministic Decision
+K09 Proposal production after interpretation
+```
 
-必须保持 Phase 4 Owner：
+Owner 保持：
 
 ```text
 F4 → Clinical Risk
@@ -354,60 +272,65 @@ Runtime → Thread / Run / Checkpoint
 
 职责：
 
-- 根据 P06 已批准 binding 调用 C01-C06；
-- 适配现有 Python/Java clinical service、Model Runtime、KG/RAG；
-- 统一执行级 timeout/cancellation/correlation；
-- 将旧 ToolResult 与新的 business capability semantics 分离；
-- 返回结构化 Capability Result。
+- 根据 P06 binding 调用批准的 C01-C06；
+- 适配当前 Python/Java clinical services、Model Runtime、KG/RAG；
+- 管理执行级 timeout/cancellation/correlation；
+- 分离旧 ToolResult execution status 与业务 Capability Result；
+- 返回结构化 result。
 
-禁止 Capability 自行 commit Clinical State。
+Capability 不得直接 commit Clinical State。
 
 ## 5.7 P01 State Governance / Clinical CDP Adapter
 
-目标是把现有：
+目标：
 
 ```text
 StateCommitter foundation
 +
-CDP aggregate / versioning / locking
+CDP aggregate/version/locking
+→ 唯一正式 Clinical State 写入边界
 ```
 
-收敛为唯一正式临床写入边界。
+职责：authorization、source/field/consent validation、base version validation、typed proposal validation、atomic commit、audit/evidence refs、Clinical State Version advance。
 
-职责：
-
-- 校验 authorization / source / field permission / consent；
-- 校验 `base_clinical_state_version`；
-- 校验 proposal schema / precondition；
-- 原子提交 typed governed changes；
-- 返回 Commit Result；
-- 推进正式 Clinical State Version；
-- 写 audit/evidence refs。
-
-关键迁移目标：
+迁移目标：
 
 ```text
 CDP aggregate = KEEP
-uncontrolled direct CDP writes = REMOVE incrementally
-StateCommitter mechanical repository commit = ADAPT to authoritative Clinical CDP commit
+uncontrolled direct CDP write = REMOVE incrementally
+StateCommitter repository commit = ADAPT to authoritative Clinical CDP commit
 ```
 
 ## 5.8 P02 Durable Clinical Resume
 
-P02 是 Phase 9 的核心新增层，负责：
+负责：
 
 ```text
 Thread
 Run
 Checkpoint
-Pending interaction refs
-interrupt / waiting context
+interrupt/wait execution context
+pending refs
 runtime expiry
-retry / repair execution metadata
+retry/repair execution metadata
 resume compatibility
 ```
 
-它不拥有 Business Resume validity。
+不拥有 Business Resume validity。
+
+## 5.9 Delivery Side-effect Coordinator
+
+负责 Question/Result 等外部发送的：
+
+```text
+durable delivery intent
+idempotency key
+transport attempt
+transport receipt
+reconciliation
+```
+
+它不拥有 Question lifecycle、Consultation lifecycle 或 Delivery Readiness，只把可靠 transport outcome 提供给相应 Business Owner/Policy 形成正式业务状态变化。
 
 ---
 
@@ -415,26 +338,23 @@ resume compatibility
 
 ## 6.1 Consultation
 
-业务对象，由 Phase 3 生命周期管理。不是 Runtime object。
+Phase 3 业务对象，不属于 Runtime ownership。
 
 ## 6.2 Thread
 
-Thread 表示一个 Consultation 的 durable execution lineage。
-
-它用于把多次 Run 串起来，但：
+Thread 表示 Consultation 的 durable Clinical execution lineage。
 
 ```text
-Thread running/completed
-!= Consultation ACTIVE/COMPLETED
+Thread state != Consultation state
 ```
 
-一个 Consultation V1 原则上拥有一个权威 Clinical Thread lineage；不得同时存在两个都能向同一 Clinical State 写正式效果的主控 Thread。
+V1 同一 Consultation 只能有一个能够驱动正式 Clinical State 写入的权威 orchestration lineage。技术上可以存在 child/background execution，但它们不能成为第二个 Clinical Truth writer。
 
 ## 6.3 Run
 
-Run 是对一个已接受事件进行的一次有限执行尝试。
+Run 是对一个 event 或一次合法 continuation 的有限执行区间。
 
-典型来源：
+来源可包括：
 
 ```text
 START_CONSULTATION
@@ -442,25 +362,29 @@ USER_ANSWER
 CORRECTION
 CANCEL
 expiry/system event
+delivery confirmation
 approved internal continuation
 ```
 
-一个 Run 必须是 bounded 的；它结束于：
+一个 event 可在同一 Run 中触发多个不同 Unit/effect。
+
+Run 结束于：
 
 ```text
-WAITING boundary
+WAIT boundary
 terminal business state
-safe stop
-current event effect applied/no-effect
-runtime/capability failure routed
+controlled failure/safe stop
+该 event 当前所有可执行 consequences 已收敛
 no further eligible Unit
 ```
+
+不能用“一个 event 已产生一个 effect”作为 Run 结束条件。
 
 ## 6.4 Checkpoint
 
 Checkpoint 是执行恢复快照，不是临床事实快照。
 
-至少应表达/引用：
+至少表达/引用：
 
 ```text
 checkpoint_id
@@ -480,246 +404,262 @@ created_at
 integrity metadata
 ```
 
-可以缓存执行所需的最小派生数据，但不得形成与 Clinical State 长期漂移的第二份临床真值。
-
 ## 6.5 Pending Interaction
 
-V1 至少需要正式引用：
+业务 Question 状态来自 governed Clinical State/K06。Runtime 只引用：
 
 ```text
 pending_question_id
-question state
 expected consultation/state context
 expiry
-business correlation refs
+correlation refs
 ```
-
-它用于 U06 → WAITING_USER → U07 Resume。
-
-Pending Interaction 的业务状态来自 governed Clinical State / K06；Runtime 仅保存恢复引用和执行上下文。
 
 ---
 
-# 7. 一次标准 Run 的执行协议
+# 7. Event 与 Effect 幂等模型
 
-标准协议：
+## 7.1 Event identity != Effect identity
+
+必须显式区分：
+
+```text
+Event ID
+= 外部/业务事件身份
+
+Effect ID / effect idempotency key
+= 某 event 在某 Unit/Owner/Decision 下的一个预期正式效果身份
+```
+
+推荐 effect idempotency 语义至少绑定：
+
+```text
+event_id
++ effect_type / unit_id / owner context
++ stable business target
++ version/binding context when required
+```
+
+具体编码格式留给 Contract Spec/实现，不在此冻结。
+
+## 7.2 正确的 exactly-once 目标
+
+Runtime 内部允许：
+
+```text
+at-least-once processing / replay
+```
+
+临床侧要求：
+
+```text
+same intended effect
+→ at most once formal application
+```
+
+而不是：
+
+```text
+same event
+→ only one Clinical State commit
+```
+
+## 7.3 Event replay ledger
+
+Ledger 必须能回答：
+
+```text
+这个 event 是否见过？
+它已形成哪些 business decisions？
+哪些 intended effects 已经 COMMITTED / NO_EFFECT？
+哪些 effect 尚未完成或处于 conflict/failure？
+```
+
+这样 crash 后才能继续未完成 consequences，而不是因为“event seen”就错误地停止，也不是从头重复所有 effect。
+
+---
+
+# 8. 标准 Run 执行协议
 
 ```text
 1. Receive K02 Business Event
-2. Durable event identity / dedupe check
+2. Persist/lookup Event identity
 3. Load authoritative Clinical State
-4. Validate event business applicability when required
-5. Bind runtime/scope/capability/policy versions
-6. Open or resume Thread, create Run
-7. Resolve next eligible Unit from committed state
-8. Execute deterministic logic and/or approved Capability
-9. Business Owner / Resolver interprets result
-10. Produce Decision / accepted business effect
-11. If state change required → create K09 Proposal
-12. G2/P01 commit
-13. Handle Commit Result
-14. Reload/advance from committed Clinical State
-15. Continue bounded routing, WAIT, safe exit or terminate Run
-16. Persist checkpoint at durable execution boundary
-17. Trace references are linked throughout
+4. 执行业务 applicability/resume validation（若该 event 需要）
+5. 记录 business decision ref，不由 Ledger 自行裁决
+6. Bind scope/capability/policy/runtime compatibility context
+7. Open/resume Thread and create Run
+8. Reconcile already-applied effects for this event
+9. Scheduler 从 committed state 选择 next eligible Unit
+10. 执行 deterministic logic / approved Capability
+11. Business Owner/Resolver interprets
+12. 形成 Decision / accepted business effect
+13. 为该 intended effect 形成独立 idempotency identity
+14. 如需 state change → K09 Proposal → G2/P01 commit
+15. 处理 Commit Result
+16. reload authoritative Clinical State
+17. 继续下一 eligible consequence，直到 WAIT/terminal/failure/no-progress
+18. 在 durable boundary 写 Checkpoint
+19. 全程关联 Trace/Audit refs
 ```
 
-禁止：
+只有：
 
 ```text
-Capability success
-→ scheduler 假定 state 已改变
-→ 直接进入下一 Unit
+COMMITTED
+或语义明确的 governed NO_EFFECT
 ```
 
-必须以 Commit Result 和正式 Clinical State 为准。
+才能认为该 intended effect 已收敛。
+
+`REJECTED / CONFLICT / FAILED` 不能按“effect 已完成”继续。
 
 ---
 
-# 8. Unit 路由模型
+# 9. Unit 路由模型
 
-V1 Runtime 不使用固定 `current_step = 1..5` 作为系统真源。
+V1 不使用 `current_step = 1..5` 或固定 completeness threshold 作为系统真源。
 
-路由由正式状态驱动。
-
-基础优先级：
+主要路由由 committed state 驱动：
 
 ```text
-A. terminal / cancel / expire handling
-B. accepted correction / invalidation consequences
-C. risk & safety preemption
-D. required clarification / question wait
-E. clinical analysis / DDx
-F. post-DDx gap re-evaluation
-G. offline evidence route
-H. safe exit
-I. normal delivery
+terminal/cancel/expire
+→ correction/invalidation consequences
+→ risk/safety preemption
+→ readiness
+   ├─ NEEDS_CLARIFICATION / CAN_ASK_MORE → U06
+   ├─ READY_FOR_CLINICAL_ANALYSIS → U08 → U09 → U05
+   ├─ NEEDS_OFFLINE_EVIDENCE → U10
+   ├─ OUT_OF_SCOPE → U11
+   └─ NO_RELIABLE_DIRECTION → U11
+→ normal delivery → U12
 ```
 
-这只是 Runtime 的路由优先级，不改变 U01-U15 的业务语义。
-
-核心主循环：
+普通事实主干：
 
 ```text
-Clinical Facts committed
+committed Facts
 → U03 Risk
 → U04 Safety
 → U05 Readiness
-
-Readiness:
-├─ NEEDS_CLARIFICATION / CAN_ASK_MORE → U06 → WAITING_USER
-├─ READY_FOR_CLINICAL_ANALYSIS        → U08 → U09 → U05
-├─ NEEDS_OFFLINE_EVIDENCE             → U10
-├─ OUT_OF_SCOPE                       → U11
-└─ NO_RELIABLE_DIRECTION              → U11
 ```
 
-正常满足交付条件时进入 U12。
+U14 failure routing 可抢占普通路径。
 
-任何 U14 failure routing 可抢占当前普通路径。
+BL-04 ↔ BL-05 只有存在真实 decision value 且 D03/D04 允许时才循环。
 
 ---
 
-# 9. WAIT / Resume 协议
+# 10. WAIT / Resume 协议
 
-## 9.1 WAITING_USER 建立
-
-U06 只有在：
+## 10.1 Business Resume 必须先于 Runtime Resume
 
 ```text
-Question = DELIVERED_TO_USER
-+
-对应 lifecycle transition 已经正式 commit
-```
-
-后，Consultation 才能进入 `WAITING_USER`。
-
-仅生成 Question Candidate 或渲染文本不等于已经等待用户。
-
-## 9.2 Resume 必须先做 Business validation
-
-严格顺序：
-
-```text
-USER_ANSWER event
+USER_ANSWER
 → Business Resume Event Decision
 → ACCEPTED / DUPLICATE / EXPIRED / REJECTED
-→ 只有 ACCEPTED 才能进入后续业务 effect
-→ Runtime Execution Resume
+→ 只有业务 ACCEPTED 才允许产生新的业务 effects
+→ Runtime resume / rehydrate
 ```
 
-Runtime 不得使用：
+Runtime 不能用 checkpoint existence 判断用户回答是否合法。
 
-```text
-checkpoint exists
-```
+## 10.2 stale/missing checkpoint
 
-来证明用户回答业务上有效。
-
-## 9.3 checkpoint 不兼容不自动否定合法业务事件
-
-当：
+若：
 
 ```text
 Business Resume = ACCEPTED
-但 checkpoint = MISSING / INCOMPATIBLE
+checkpoint = MISSING / INCOMPATIBLE
 ```
 
-Runtime 应优先：
+则优先从：
 
 ```text
 authoritative Clinical State
 + accepted event
 + pending interaction refs
 + bound version context
++ event/effect ledger
 ```
 
-重新水合执行上下文。
+重建执行上下文。
 
-因此：
+无法安全重建时进入 U14/D07；不能把 Runtime failure 改写成用户回答非法。
+
+## 10.3 Duplicate Resume
+
+重复 answer 不得重复产生已应用 effects。
+
+如果第一次 Run 只完成了部分 distinct effects 后 crash，replay 必须：
 
 ```text
-stale checkpoint
-!= stale Clinical Truth
-!= user answer automatically rejected
+跳过已经完成的 effect
+继续仍合法且未完成的 consequences
 ```
 
-若无法安全重建，则进入 U14 / D07；不得把 Runtime 恢复失败改写成“用户回答非法”。
+而不是简单地“看到 event 已存在 → 全部返回 DUPLICATE”。
 
-## 9.4 Resume 后事件只允许一次临床效果
-
-合法 answer 的 effect 必须与：
-
-```text
-event_id
-accepted_event_ref
-proposal idempotency_key
-commit result
-```
-
-建立可追溯链。
-
-重复请求必须收敛到：
-
-```text
-DUPLICATE
-或 governed NO_EFFECT
-```
-
-而不是产生第二个 Clinical State 变化。
+Business Resume 的 DUPLICATE 语义与 runtime effect reconciliation 必须可追溯地对齐。
 
 ---
 
-# 10. 幂等、并发与一致性
+# 11. Question/Delivery 外部副作用一致性
 
-## 10.1 语义目标
+Phase 8 已冻结：只有 Question 真正 `DELIVERED_TO_USER` 后，Consultation 才能进入 `WAITING_USER`。
 
-不要求 Runtime 的每一个内部执行动作“物理 exactly once”。
-
-允许：
+因此不能简单写成：
 
 ```text
-at-least-once processing / replay
+send question
+→ assume WAITING_USER
 ```
 
-但必须实现：
+也不能：
 
 ```text
-same business event
-→ at most one formal clinical effect
+commit WAITING_USER
+→ 尚未真正发送问题
 ```
 
-通过：
+V1 采用 durable side-effect protocol：
 
 ```text
-Event identity
-+ Business Resume / event applicability
-+ Proposal idempotency key
-+ StateCommitter idempotency
-+ expected/base Clinical State Version
-+ atomic commit
+A. U06 选择 Question
+B. commit Question=SELECTED / pending delivery intent（不得提前 WAITING_USER）
+C. durable outbox/delivery intent 获得稳定 delivery_id + idempotency key
+D. transport 执行发送
+E. durable transport receipt / confirmed outcome
+F. delivery-confirmation event/run
+G. Business Owner 根据 confirmed outcome 形成正式状态效果
+H. G2 原子提交：Question=DELIVERED_TO_USER + Consultation=WAITING_USER
+I. checkpoint at WAIT boundary
 ```
 
-共同保证。
+如果 D/E 后 crash，恢复必须通过相同 `delivery_id/idempotency key` 查 transport outcome 或安全重试，不能重复发送。
 
-## 10.2 单 Consultation 逻辑单写者
-
-V1 原则：
+如果外部已成功发送但 G/H 暂时失败：
 
 ```text
-同一 Consultation 的正式 Clinical State
-在任一时刻只有一个逻辑主写执行路径
+用户实际已看到问题
+但 Clinical State 尚未完成 WAITING transition
 ```
 
-实现可以使用：
+此时必须进入 reconciliation/repair，不允许重新生成另一问题或假装未发送。最终无法修复时进入 U14，并保留完整审计。
 
-```text
-lease / mutex / queue partition / serialized command handling
-```
+Normal Delivery / Safe Exit 的外部发送也使用同一类 durable delivery principle，但 F7 的 Delivery Readiness Owner 不因此转移给 Delivery Coordinator。
 
-但这些只是 Runtime 协调手段。
+---
 
-最终临床一致性不能只依赖锁，仍必须由：
+# 12. 并发、Conflict 与单写者
+
+## 12.1 单 Consultation 逻辑单写者
+
+V1 要求同一 Consultation 任一时刻只有一个正式 Clinical State 主写路径。
+
+可用：lease、mutex、queue partition、serialized command handling 等协调，但最终一致性不能只依赖锁。
+
+必须同时由：
 
 ```text
 base_clinical_state_version
@@ -728,138 +668,76 @@ base_clinical_state_version
 
 保护。
 
-## 10.3 Commit Conflict
+## 12.2 Commit Conflict
 
-遇到：
-
-```text
-Commit Result = CONFLICT
-```
-
-禁止：
+遇到 `CONFLICT`：
 
 ```text
-对旧 proposal 盲目重试直到成功
-```
-
-正确路径：
-
-```text
-reload current Clinical State
-→ 判断原 event 是否已产生 effect
-→ 如未产生，重新执行必要的 Owner/Policy interpretation
-→ 生成基于新版本的新 Proposal
+reload authoritative Clinical State
+→ reconcile 原 intended effect 是否已经存在
+→ 判断当前 event/effect 是否仍适用
+→ 必要时重新运行 Owner/Policy interpretation
+→ 形成基于新版本的新 Proposal
 → 再 commit
 ```
 
-如果 conflict 改变了安全/业务前提，必须重新经过相应安全和 readiness 路由。
+禁止把旧 Proposal 盲目重试到成功。
+
+若新版本改变安全/readiness 前提，必须重新经过对应路由。
 
 ---
 
-# 11. Checkpoint 与 crash recovery
+# 13. Checkpoint 与 Crash Recovery
 
-## 11.1 checkpoint 的 durable boundary
-
-Checkpoint 应保存于明确的 durable execution boundary，例如：
+Checkpoint 写在明确 durable boundary：
 
 ```text
-accepted event durable
-state commit completed
+event identity durable
+formal state commit completed
 entered WAIT
-approved external side-effect durable
-run terminal
+external side-effect outcome durable
+run terminal/no-progress
 ```
 
-不得依靠每个内存步骤都写 checkpoint 来替代正式状态治理。
-
-## 11.2 crash after commit / before checkpoint
-
-场景：
+## 13.1 crash after commit / before checkpoint
 
 ```text
-Clinical State Vn → commit → Vn+1
-进程 crash
-checkpoint 仍指向 Vn
+Clinical State Vn → commit Vn+1 → crash → checkpoint still Vn
 ```
 
-恢复时必须：
+恢复：
 
 ```text
-load authoritative Vn+1
-→ 识别 event/proposal effect 已存在
-→ checkpoint incompatible/stale
-→ rebuild runtime cursor
-→ 不再次提交同一 clinical effect
+load Vn+1
+→ use event/effect ledger + commit refs
+→ recognize effect already applied
+→ rebuild cursor
+→ continue remaining consequences
 ```
 
-## 11.3 crash after capability / before proposal
+不得重复同一 effect。
 
-Capability Result 未形成正式 Proposal/Commit 时，不存在正式 Clinical State effect。
+## 13.2 crash after Capability / before Proposal
 
-恢复后可以按当前版本重新调用或经 D07 决定 repair/retry，但不能把此前非 durable 的模型输出视为 Clinical Truth。
+Capability output 不是 Clinical Truth。恢复后可以按 policy 重新调用/repair/retry，或进入 U14。
 
-## 11.4 crash after external delivery side effect
+## 13.3 crash during delivery
 
-对非幂等外部副作用，需要 durable outbox / delivery idempotency boundary。
-
-必须避免：
-
-```text
-内容已发送给用户
-→ crash
-→ replay
-→ 再次发送
-```
-
-具体消息基础设施选型不在 Phase 9 冻结。
+依赖 stable `delivery_id/idempotency key` + durable intent/receipt 做 transport reconciliation，禁止无条件重新发送。
 
 ---
 
-# 12. Failure 与 retry 架构
+# 14. Failure 与 Retry
 
-## 12.1 三层 failure 必须分开
+必须分开：
 
 ```text
 A. execution/tool failure
-B. capability business_status / reason_code / retryable
-C. business failure routing decision
+B. capability business_status + reason_code + retryable
+C. D07 business failure routing decision
 ```
 
-旧 ToolResult：
-
-```text
-SUCCEEDED
-NO_RESULT
-RETRYABLE_FAILURE
-NON_RETRYABLE_FAILURE
-TIMED_OUT
-POLICY_BLOCKED
-```
-
-只能作为工程执行基础。
-
-业务 Capability Result 仍按 Phase 7/8 表达：
-
-```text
-SUCCESS
-NO_RESULT
-INSUFFICIENT_INFORMATION
-NOT_APPLICABLE
-UNSUPPORTED
-DEPENDENCY_FAILURE
-TIMEOUT
-INVALID_OUTPUT
-SAFETY_BLOCKED
-```
-
-## 12.2 retry 不由 Capability 自治
-
-V1 禁止：
-
-```text
-Capability 自己无限重试
-Runtime 因“可能成功”无限重试
-```
+旧 ToolResult 只作为工程基础，不能成为新的业务状态真源。
 
 Retry 必须受：
 
@@ -868,58 +746,30 @@ retryable
 attempt budget
 time budget
 idempotency
+clinical-state version
 safety impact
 fallback policy
-D07 routing
+D07
 ```
 
-约束。
-
-## 12.3 高风险依赖失败
+约束，Capability/Runtime 均不得无限自主重试。
 
 必须保持：
 
 ```text
-high-risk capability unavailable
-→ ordinary clinical continuation prohibited
+risk service timeout != NO_HIGH_RISK_SIGNAL
+DDx failure != empty normal DDx
+Safety failure != SAFE
+Capability SUCCESS + Commit FAILED != Unit success
 ```
 
-不能把：
-
-```text
-risk service timeout
-→ no risk
-```
-
-或：
-
-```text
-DDx failure
-→ empty DDx
-→ low risk
-```
-
-作为 fallback。
-
-## 12.4 Commit failure
-
-```text
-Capability SUCCESS
-+
-Commit FAILED / REJECTED / unresolved CONFLICT
-```
-
-表示 Unit 预期的正式状态效果没有完成。
-
-Runtime 不得继续假设 state 已更新。
+高风险依赖不可用时，普通临床 continuation 禁止。
 
 ---
 
-# 13. Version Binding
+# 15. Version Binding
 
-## 13.1 Consultation-level binding
-
-一个 Consultation 至少绑定：
+Consultation 至少绑定：
 
 ```text
 scope_version
@@ -927,11 +777,7 @@ capability_set_version
 contract compatibility context
 ```
 
-禁止在进行中的 Consultation 中静默切换临床语义集合。
-
-## 13.2 Run-level binding
-
-每个 Run 至少可追溯：
+Run 至少可追溯：
 
 ```text
 runtime_version
@@ -942,96 +788,58 @@ knowledge/evidence version when relevant
 contract/schema version
 ```
 
-## 13.3 checkpoint compatibility
-
-Resume 时校验：
+Resume 校验：
 
 ```text
-checkpoint clinical state reference
+checkpoint referenced Clinical State Version
 runtime schema compatibility
 bound scope/capability/policy compatibility
 pending interaction validity
 ```
 
-兼容：可以直接恢复执行 cursor。
+checkpoint 不兼容时优先从 authoritative state 重建。
 
-不兼容：优先从 canonical Clinical State 重建；不能静默沿用旧 cached clinical semantics。
-
-## 13.4 版本升级原则
-
-进行中的 Consultation 默认保持其绑定版本，除非存在显式、可审计的 migration policy。
-
-新版本优先作用于新 Consultation。
+进行中的 Consultation 默认保持已绑定临床语义版本；除非存在显式、可审计 migration policy，否则不得静默升级。
 
 ---
 
-# 14. 数据存储职责
+# 16. 逻辑持久化职责
 
-Phase 9 冻结逻辑存储职责，不冻结具体数据库产品。
-
-## 14.1 Clinical State Store
-
-保存/承载 governed Clinical State / CDP 与版本历史。
-
-## 14.2 Business Event / Idempotency Store
-
-保存：
+Phase 9 冻结职责，不冻结数据库产品。
 
 ```text
-event identity
-received/accepted/applied/no-effect relations
-idempotency metadata
+Clinical State Store
+  governed CDP + version history
+
+Business Event / Effect Ledger
+  event identity + decision refs + effect identities + commit/no-effect refs
+
+Runtime Store
+  Thread + Run + Checkpoint + retry/expiry/execution cursor
+
+Delivery/Outbox Store
+  delivery intent + idempotency + transport receipt/reconciliation
+
+Trace/Audit Store
+  execution/audit refs
+
+Version/Registry Store
+  scope/capability/policy/model/prompt/knowledge/contract metadata
 ```
 
-## 14.3 Runtime Store
-
-保存：
-
-```text
-Thread
-Run
-Checkpoint
-runtime expiry/retry metadata
-execution cursor
-pending refs
-```
-
-不得成为 Clinical Truth store。
-
-## 14.4 Trace / Audit Store
-
-保存引用化的执行与审计链。
-
-## 14.5 Version / Registry Store
-
-保存：
-
-```text
-scope
-capability set
-policy/rule
-model route
-prompt
-knowledge/evidence
-contract/schema
-```
-
-版本元数据。
-
-## 14.6 Delivery / Outbox Store
-
-在存在非幂等外部发送时保存 durable delivery intent / outcome，以支持 crash-safe replay。
+Runtime Store 不得成为第二份 Clinical Truth store。
 
 ---
 
-# 15. Trace / Observability 关联模型
+# 17. Trace / Observability 关联
 
-至少贯穿以下 correlation identity：
+至少贯穿：
 
 ```text
 consultation_id
 clinical_state_version
 event_id
+effect_id
 thread_id
 run_id
 unit_id
@@ -1044,67 +852,51 @@ delivery_id
 trace_id
 ```
 
-原则：
-
 ```text
-Trace records what happened
-Audit records governed actions
-Clinical State records business truth
+Trace = what happened
+Audit = governed action evidence
+Clinical State = business truth
 ```
 
-Trace 默认不复制完整 PHI payload；优先记录类型、版本、状态、引用、摘要和必要 reason code。
-
-现有 Execution Trace implementation 可保留并接入这些 identity，但 Trace 开启状态、采样、持久化和敏感字段策略需要在 Phase 11/12 继续工程化。
+默认不复制完整 PHI；优先记录版本、状态、引用、reason code 与必要摘要。
 
 ---
 
-# 16. 安全与权限 Runtime 边界
-
-Phase 9 不重新定义 G4，但 Runtime 必须提供执行支撑：
-
-- 每次 Capability invocation 携带最小授权 Context；
-- P06 确保只调用当前 Scope / Capability Set 允许的能力；
-- StateCommitter/P01 再次验证正式写权限；
-- Runtime cancellation/timeout 不能跳过安全后果；
-- safety-sensitive failure 必须进入 D07/D02 语义链；
-- checkpoint / trace / error 默认最小化 PHI；
-- resume token/ref 不得等价为 Clinical authorization。
-
----
-
-# 17. Brownfield 资产映射
+# 18. Brownfield 资产映射
 
 | 当前资产 | Phase 9 定位 | 处置 | 关键变化 |
 |---|---|---|---|
-| DiagnosisController | Ingress | KEEP + ADAPT | 从直接驱动旧流程转为提交 Business Event / 查询结果 |
-| DiagnosisOrchestrationService | Application/legacy orchestration seam | REFACTOR | 逐步让出 fixed workflow 主控，成为 Runtime façade/adapter |
-| CDPManager | Clinical State aggregate adapter | KEEP + REFACTOR | 保留版本/锁/快照资产，移除无治理直接写路径 |
-| DiagnosisWorkflowOrchestrator | legacy fixed scheduler | REPLACE incrementally | 5-step 不再是系统真源；由 Unit Scheduler 按状态路由 |
-| AgentLoop | historical asset | DO NOT PROMOTE | 可吸收局部能力，不恢复为开放式临床主控 |
-| StateCommitter | P01 foundation | REUSE_FOUNDATION + ADAPT | 接管真实 Clinical CDP authoritative write |
-| Python Runtime | capability execution foundation | REUSE_FOUNDATION + ADAPT | 保留 deterministic single-invocation；上层新增 Clinical Runtime/P02 |
+| DiagnosisController | Ingress | KEEP + ADAPT | 从驱动旧流程转为 Business Event/Query façade |
+| DiagnosisOrchestrationService | legacy orchestration seam | REFACTOR | 逐步让出 fixed workflow 主控 |
+| CDPManager | Clinical State aggregate adapter | KEEP + REFACTOR | 保留版本/锁/快照，移除无治理直接写 |
+| DiagnosisWorkflowOrchestrator | legacy fixed scheduler | REPLACE incrementally | 5-step 不再是系统真源 |
+| AgentLoop | historical asset | DO NOT PROMOTE | 只吸收局部资产，不恢复开放式临床主控 |
+| StateCommitter | P01 foundation | REUSE_FOUNDATION + ADAPT | 接管 authoritative Clinical CDP write |
+| Python Runtime | execution foundation | REUSE_FOUNDATION + ADAPT | 保留 deterministic invocation；上层新增 Clinical Runtime/P02 |
 | Model Runtime | P03 foundation | REUSE_FOUNDATION + ADAPT | 受 Capability/Prompt/Version binding 管理 |
-| Execution Trace | P05 | REUSE_FOUNDATION + ADAPT | 接入 event/unit/decision/proposal/commit/runtime refs |
-| Dialog private Redis/memory truth | temporary execution/cache only | REMOVE AS TRUTH | 不再作为正式问诊状态源 |
+| Execution Trace | P05 | REUSE_FOUNDATION + ADAPT | 增加 event/effect/unit/decision/proposal/commit/runtime refs |
+| Dialog Redis/memory | cache/execution aid | REMOVE AS TRUTH | 不再作为正式状态源 |
 | Frontend Zustand | UI local state | KEEP AS UI LOCAL | 不生成 Clinical Truth |
-| Legacy LLM | legacy dependency | REPLACE / REMOVE | 不重新启用作为临床正式路径 |
+| Legacy LLM | legacy dependency | REPLACE / REMOVE | 不重新启用为正式临床路径 |
 
 ---
 
-# 18. 部署与进程拓扑原则
+# 19. 部署与技术选型原则
 
-Phase 9 不以“先进”为理由拆微服务。
+Phase 9 不因“先进”自动拆微服务。
 
-V1 优先形成：
+V1 首先保证：
 
 ```text
-一个权威 Clinical Orchestration control path
+one authoritative Clinical Orchestration control path
 +
-一个权威 State Governance write path
+one authoritative State Governance write path
 +
-若干可独立部署/现有的 Capability runtime
+approved Capability runtimes
 +
-独立 Runtime persistence / Trace / Registry logical stores
+durable Runtime/Event/Delivery persistence
++
+Trace/Registry
 ```
 
 Brownfield 初期允许：
@@ -1118,318 +910,239 @@ Java Ingress/Application
 
 语言边界不等于业务 Owner 边界。
 
-明确暂不冻结：
+本阶段明确不冻结：
 
 ```text
 LangGraph / Temporal / Cadence / 自研 scheduler
 Kafka / RabbitMQ / DB queue
-Redis / PostgreSQL / Mongo 等 Runtime store 产品
+Redis / PostgreSQL / Mongo 等 store 产品
 Kubernetes 服务拆分粒度
-sync RPC vs async message 的最终组合
+sync RPC / async message 最终组合
 ```
 
-选择这些技术必须以后续的可靠性、恢复语义、吞吐、运维成本和当前团队能力为依据，而不是先选框架再倒推架构。
+技术选型必须服务于上述执行语义，而不是反过来重定义业务架构。
 
 ---
 
-# 19. Brownfield 迁移策略
+# 20. Brownfield 迁移策略
 
-## 19.1 Strangler，而不是双主控
+## 20.1 Strangler，不双主控
 
-迁移原则：
-
-```text
-legacy fixed workflow
-与
-new Clinical Runtime
-```
-
-可以阶段性共存，但同一个 Consultation 不能同时由两套主控产生正式 Clinical State 写入。
-
-禁止：
+legacy fixed workflow 与 new Clinical Runtime 可阶段共存，但同一 Consultation 不允许两套主控都产生正式 Clinical State 写入。
 
 ```text
-Dual Orchestration + Dual Clinical Write
-```
-
-## 19.2 Consultation-level routing
-
-推荐通过显式 runtime/orchestration binding 或 feature gate，使：
-
-```text
-旧 Consultation → 继续 legacy binding
+旧 Consultation → legacy binding
 新 eligible Consultation → new runtime binding
 ```
 
-不得在进行中的 Consultation 中静默从旧 fixed workflow 切到新语义。
+不得进行中的 Consultation 静默换主控。
 
-## 19.3 Shadow 的允许边界
+## 20.2 Shadow 边界
 
-可以：
+允许：shadow calculation / route comparison / capability output / trace。
 
-```text
-shadow calculation
-shadow route comparison
-shadow capability output
-shadow trace
-```
-
-但 shadow 结果：
+Shadow：
 
 ```text
 不得 commit Clinical State
 不得发送给用户
-不得形成第二个正式业务 effect
+不得形成第二套 business effect
 ```
 
-## 19.4 推荐迁移顺序
-
-Runtime 迁移必须与 Phase 6 推荐 Slice A 对齐：
+## 20.3 推荐迁移顺序
 
 ```text
 Foundation:
-P01 State Governance / Clinical CDP Adapter
+P01 State Governance/CDP Adapter
 P02 Durable Clinical Resume
 P05 Trace correlation
 P06 Version Binding
+Event/Effect Ledger
+Delivery side-effect boundary
 
-Slice A core:
-U01
-U02
-U03
-U04
-U05
-U06
-U07
+Slice A:
+U01 U02 U03 U04 U05 U06 U07
++ U11 U14 U15 closure
 
-Horizontal closure:
-U11
-U14
-U15
+Then:
+U08/U09
+U10
+U12
+U13 full correction/invalidation
 ```
 
-然后再进入：
-
-```text
-U08/U09 DDx loop
-U10 offline evidence
-U12 normal completion
-U13 correction/invalidation full path
-```
-
-这只是迁移设计顺序，不构成 Implementation Authorization。
+只是迁移设计顺序，不构成 Implementation Authorization。
 
 ---
 
-# 20. Slice A Runtime 映射
-
-## U01
+# 21. Slice A Runtime 映射
 
 ```text
-START event
-→ Run open
+U01 START
 → subject/problem extraction
-→ D10 scope adjudication
-→ D01 lifecycle decision
+→ D10 scope
+→ D01 lifecycle
 → governed commit
-```
 
-## U02
-
-```text
-new clinical input
+U02 input
 → C01 parse/normalize
 → Owner interpretation
-→ typed K09 proposal
-→ P01 commit Clinical State version
-```
+→ typed Proposal
+→ P01 commit
 
-## U03/U04
-
-```text
-committed facts
+U03/U04
 → C02 risk evidence
-→ D09 / F4 Clinical Risk
+→ D09/F4 Clinical Risk commit
+→ D02/G4 Safety Gate commit
+
+U05
+→ D03 Clinical Readiness
 → commit
-→ D02 / G4 Safety Gate
-→ commit
-```
 
-普通路由只允许从已提交 Safety 状态继续。
-
-## U05
-
-```text
-current committed readiness inputs
-→ D03 Clinical Readiness decision
-→ proposal
-→ commit
-```
-
-## U06
-
-```text
-readiness requires question
-→ C03 gap/question
+U06
+→ C03 question/gap
 → D04 stopping
-→ selected question
-→ delivery success
-→ lifecycle WAITING_USER commit
-→ checkpoint
-→ Run ends
-```
+→ Question SELECTED commit
+→ durable delivery intent/send/receipt
+→ delivery-confirmation effect
+→ atomically commit Question DELIVERED_TO_USER + Consultation WAITING_USER
+→ checkpoint / Run end
 
-## U07
-
-```text
-answer event
-→ business resume validation
-→ dedupe/expiry/applicability
+U07
+→ Business Resume validation
 → runtime resume/rehydrate
-→ event effect once
-→ U02 / subsequent state route
-```
+→ reconcile prior effects
+→ apply new answer consequences idempotently
+→ continue U02/U03/U04/U05...
 
-## U11/U14/U15
-
-分别保证：
-
-```text
-safe exit closure
-failure closure
-cancel/expire closure
-```
-
-使 Slice A 不是只有 happy path 的半条链。
-
----
-
-# 21. Runtime correctness 场景
-
-Phase 9 后续实现至少必须能证明以下场景：
-
-```text
-RTE-01 duplicate USER_ANSWER → one clinical effect
-RTE-02 process crash after commit before checkpoint → no duplicate effect
-RTE-03 process crash after capability before proposal → no phantom Clinical Truth
-RTE-04 stale checkpoint + valid business answer → rehydrate or controlled U14, not false rejection
-RTE-05 checkpoint points to stale Clinical State → cannot overwrite newer state
-RTE-06 concurrent events → conflict detected, no blind stale replay
-RTE-07 risk capability unavailable → ordinary clinical continuation blocked
-RTE-08 Safety Gate BLOCKED/UNAVAILABLE → no DDx/delivery ordinary route
-RTE-09 capability SUCCESS + commit FAILED → Unit not treated as completed
-RTE-10 duplicate delivery replay → no duplicate external side effect
-RTE-11 CANCELLED/EXPIRED consultation + late answer → zero new clinical effect
-RTE-12 correction invalidates upstream fact → affected downstream results cannot remain silently current
-RTE-13 Runtime restart while WAITING_USER → pending question remains resumable
-RTE-14 unsupported/failure result → not coerced to empty/normal/negative business value
-RTE-15 old fixed workflow and new runtime coexist → same Consultation has only one authoritative writer
+U11/U14/U15
+→ Safe Exit / Failure / Cancel-Expire closure
 ```
 
 ---
 
-# 22. Phase 9 与后续阶段边界
+# 22. Runtime correctness 必测场景
 
-## Phase 9 冻结
+```text
+RTE-01 duplicate USER_ANSWER → no repeated intended effect
+RTE-02 one USER_ANSWER legitimately causes multiple distinct governed effects
+RTE-03 crash after one of several effects → replay skips completed effect and continues remaining legal consequences
+RTE-04 crash after commit before checkpoint → no repeated commit effect
+RTE-05 crash after capability before proposal → no phantom Clinical Truth
+RTE-06 stale checkpoint + valid answer → rehydrate or controlled U14, not false rejection
+RTE-07 stale checkpoint cannot overwrite newer Clinical State
+RTE-08 concurrent events → conflict detected, no blind stale replay
+RTE-09 risk capability unavailable → ordinary continuation blocked
+RTE-10 Safety Gate BLOCKED/UNAVAILABLE → no ordinary DDx/delivery route
+RTE-11 capability SUCCESS + commit FAILED → Unit not treated as completed
+RTE-12 question send success + crash before WAITING commit → reconcile by delivery_id without duplicate question
+RTE-13 delivery retry → no duplicate external side effect
+RTE-14 CANCELLED/EXPIRED + late answer → zero new clinical effects
+RTE-15 correction invalidation → affected downstream result cannot remain silently current
+RTE-16 restart while WAITING_USER → pending question resumable
+RTE-17 unsupported/failure → not coerced to empty/normal/negative
+RTE-18 legacy/new runtime coexist → same Consultation has one authoritative writer
+RTE-19 event ledger cannot declare clinical ACCEPTED/DUPLICATE by itself
+RTE-20 new bound version applies to new Consultation without silent mid-flight semantic switch
+```
+
+---
+
+# 23. 与后续阶段边界
+
+Phase 9 冻结：
 
 ```text
 Runtime ownership
 logical component boundaries
-Thread / Run / Checkpoint semantics
+Thread/Run/Checkpoint semantics
+Event/Effect idempotency model
 Unit scheduling model
-WAIT / Resume protocol
-State commit integration protocol
-idempotency/concurrency/conflict model
-failure/retry control model
+WAIT/Resume protocol
+external side-effect consistency protocol
+State commit/conflict integration
+failure/retry control
 version binding
 logical persistence responsibilities
 Brownfield runtime migration strategy
 ```
 
-## 留给 Phase 10
+留给 Phase 10：Frontend presentation、UI recovery UX、client-side waiting/error/delivery presentation。
 
-```text
-Frontend presentation
-UI recovery UX
-loading/waiting/error presentation
-client-side delivery behavior
-```
+留给 Phase 11：完整异常矩阵、安全验证矩阵、Eval/E2E/chaos/resilience acceptance、observability acceptance。
 
-## 留给 Phase 11
-
-```text
-完整异常矩阵
-安全验证矩阵
-Eval / E2E / chaos / resilience acceptance
-clinical evaluation gates
-observability acceptance
-```
-
-## 留给 Phase 12
-
-```text
-具体 deployment topology
-CI/CD
-release gate
-SLO / capacity / autoscaling
-migration execution plan
-rollback/runbook
-legacy retirement
-production authorization
-```
-
-具体框架/数据库/消息系统可以在实施设计中选定，但不得改变本 Phase 9 冻结的业务执行语义。
+留给 Phase 12：具体 deployment topology、CI/CD、SLO/capacity/autoscaling、migration execution plan、rollback/runbook、legacy retirement、production authorization。
 
 ---
 
-# 23. Phase 9 全局不变量
+# 24. Phase 9 独立审查与修复记录
+
+第一次独立审查发现：
 
 ```text
-RUNTIME-INV-01 Runtime != Clinical Truth Owner
-RUNTIME-INV-02 Checkpoint != Clinical State
-RUNTIME-INV-03 Trace != Clinical State
-RUNTIME-INV-04 Capability Result cannot bypass Owner/Policy/G2
-RUNTIME-INV-05 Scheduler routes from committed state, not uncommitted candidate
-RUNTIME-INV-06 Business Resume validity != Runtime Resume compatibility
-RUNTIME-INV-07 valid business event cannot be invalidated only because checkpoint is stale/missing
-RUNTIME-INV-08 duplicate event cannot produce duplicate clinical effect
-RUNTIME-INV-09 commit conflict cannot be solved by blind stale replay
-RUNTIME-INV-10 safety-sensitive failure cannot become ordinary clinical continuation
-RUNTIME-INV-11 Runtime retry cannot bypass idempotency/version/safety policy
-RUNTIME-INV-12 one Consultation cannot have two authoritative clinical writers
-RUNTIME-INV-13 fixed 5-step workflow is migration source, not target system truth
-RUNTIME-INV-14 runtime/framework choice cannot redefine frozen Unit/Capability/Contract semantics
-RUNTIME-INV-15 same Consultation cannot silently switch bound clinical semantics mid-flight
-RUNTIME-INV-16 checkpoint loss after clinical commit must be recoverable from authoritative state
-RUNTIME-INV-17 Runtime failure != business negative result
-RUNTIME-INV-18 Thread/Run completion != Consultation completion
+P9-R01 BLOCKING
+初稿把“duplicate event 不得产生重复临床效果”错误收窄为
+“same event → at most one formal clinical effect”。
+修复：拆分 Event identity 与 Effect identity；允许一个 event 产生多个不同 governed effects，
+但每个 intended effect 最多正式应用一次；增加 partial-replay reconciliation。
+
+P9-R02 BLOCKING
+初稿对 question transport success → WAITING_USER 的 crash window 描述不足。
+修复：增加 durable delivery intent / idempotent transport / receipt / confirmation event /
+Question DELIVERED_TO_USER + Consultation WAITING_USER 原子业务 commit 的协议。
+
+P9-R03 REQUIRED
+Business Event Inbox 的 accepted/applied 描述可能被误读为 Inbox 拥有业务裁决。
+修复：改为 Event/Effect Ledger，只记录 Business Decision / Commit refs，不拥有 ACCEPTED/DUPLICATE 等业务语义。
+
+P9-R04 REQUIRED
+Run 结束条件使用“current event effect applied/no-effect”可能错误暗示 event 只有一个 effect。
+修复：改为 event 当前可执行 consequences 收敛；支持已完成 effect 跳过、未完成 consequences 继续。
+
+P9-R05 REQUIRED
+U06 中“delivery success”容易与 F7 Delivery Readiness 混淆。
+修复：单独定义 Delivery Side-effect Coordinator 与 question transport receipt，明确其不拥有 Delivery Readiness。
+```
+
+修复后状态：
+
+```text
+P9-R01 CLOSED
+P9-R02 CLOSED
+P9-R03 CLOSED
+P9-R04 CLOSED
+P9-R05 CLOSED
+Independent re-review = PENDING
+Phase 9 = NOT FROZEN
 ```
 
 ---
 
-# 24. Phase 9 冻结前检查清单
+# 25. 冻结前检查清单
 
-Phase 9 只有同时满足以下条件才能冻结：
-
-- [ ] Runtime 与 Clinical State Owner 边界无歧义；
-- [ ] Thread / Run / Checkpoint / Consultation 语义完全分离；
-- [ ] Unit 调度不重新引入 fixed completeness / 5-step truth；
-- [ ] Capability → Decision → Proposal → Commit 链没有被 Runtime 绕过；
-- [ ] Business Resume 与 Runtime Resume 完整拆分；
-- [ ] duplicate / crash / checkpoint stale / commit conflict 均有明确恢复语义；
-- [ ] safety failure 不存在 fail-open；
-- [ ] one-consultation-one-authoritative-writer 原则明确；
-- [ ] P01/P02/P05/P06 与现有资产处置清楚；
-- [ ] Brownfield 迁移不存在 dual-write Clinical Truth；
-- [ ] Slice A 能形成 Start → Facts → Risk → Safety → Readiness → Ask → Wait → Resume 以及 Safe Exit / Failure / Cancel 闭环；
-- [ ] 未提前冻结 Phase 10～12 的具体实现/交付事项；
-- [ ] 未把框架选型当成架构本身。
+- [x] Runtime 与 Clinical State Owner 边界无歧义；
+- [x] Thread / Run / Checkpoint / Consultation 语义分离；
+- [x] Unit 调度未重新引入 fixed completeness / 5-step truth；
+- [x] Capability → Decision → Proposal → Commit 没有被 Runtime 绕过；
+- [x] Business Resume 与 Runtime Resume 拆分；
+- [x] Event identity 与 Effect idempotency 正确拆分；
+- [x] partial replay / duplicate / crash / stale checkpoint / conflict 有明确语义；
+- [x] Question/Delivery 外部副作用具有 durable reconciliation 边界；
+- [x] safety failure 不存在 fail-open；
+- [x] one-consultation-one-authoritative-writer 原则明确；
+- [x] P01/P02/P05/P06 与现有资产处置明确；
+- [x] Brownfield 迁移不存在 dual-write Clinical Truth；
+- [x] Slice A 形成 Start → Facts → Risk → Safety → Readiness → Ask → Wait → Resume，并含 Safe Exit/Failure/Cancel closure；
+- [x] 未提前冻结 Phase 10～12；
+- [x] 未把框架选型当成架构本身；
+- [ ] 独立复核确认上述修复未引入新的 BLOCKING/REQUIRED 问题。
 
 当前状态：
 
 ```text
-Phase 9 design draft = COMPLETE
-Independent review = PENDING
+Phase 9 design = DRAFT COMPLETE
+Independent review findings = REMEDIATED
+Independent re-review = PENDING
 Phase 9 = NOT FROZEN
 Implementation Authorization = NOT IMPLIED
 ```
