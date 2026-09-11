@@ -1,0 +1,20 @@
+CREATE TABLE clinical_consultation (
+    consultation_id VARCHAR(128) NOT NULL,
+    cdp_id VARCHAR(128) NOT NULL,
+    user_id VARCHAR(128) NOT NULL,
+    lifecycle_status VARCHAR(32) NOT NULL,
+    subject_status VARCHAR(32) NOT NULL,
+    subject_type VARCHAR(32) NULL,
+    subject_reference_id VARCHAR(128) NULL,
+    problem_status VARCHAR(32) NOT NULL,
+    problem_text VARCHAR(2000) NULL,
+    scope_decision VARCHAR(32) NOT NULL,
+    clarification_reason VARCHAR(128) NULL,
+    early_safety_signal BOOLEAN NOT NULL DEFAULT FALSE,
+    next_unit VARCHAR(16) NOT NULL,
+    start_event_id VARCHAR(128) NOT NULL,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (consultation_id),
+    UNIQUE KEY uk_clinical_consultation_cdp (cdp_id),
+    UNIQUE KEY uk_clinical_consultation_start_event (start_event_id)
+);
