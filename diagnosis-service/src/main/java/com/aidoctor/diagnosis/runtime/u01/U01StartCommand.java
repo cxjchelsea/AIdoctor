@@ -13,11 +13,26 @@ public class U01StartCommand {
     private final String problemText;
     private final String scopeIntentCandidate;
     private final boolean earlySafetySignalPresent;
+    /**
+     * Optional fingerprint of the original source payload. When present, canonical
+     * event identity is based on this source fingerprint instead of derived C01
+     * candidates so a replay stays stable across capability implementation changes.
+     */
+    private final String sourceInputFingerprint;
 
     public U01StartCommand(String eventId, String idempotencyKey, String userId,
                            String subjectType, String subjectReferenceId,
                            String problemText, String scopeIntentCandidate,
                            boolean earlySafetySignalPresent) {
+        this(eventId, idempotencyKey, userId, subjectType, subjectReferenceId,
+                problemText, scopeIntentCandidate, earlySafetySignalPresent, null);
+    }
+
+    public U01StartCommand(String eventId, String idempotencyKey, String userId,
+                           String subjectType, String subjectReferenceId,
+                           String problemText, String scopeIntentCandidate,
+                           boolean earlySafetySignalPresent,
+                           String sourceInputFingerprint) {
         this.eventId = required(eventId, "eventId");
         this.idempotencyKey = required(idempotencyKey, "idempotencyKey");
         this.userId = required(userId, "userId");
@@ -26,6 +41,7 @@ public class U01StartCommand {
         this.problemText = problemText;
         this.scopeIntentCandidate = scopeIntentCandidate;
         this.earlySafetySignalPresent = earlySafetySignalPresent;
+        this.sourceInputFingerprint = trimToNull(sourceInputFingerprint);
     }
 
     public String getEventId() { return eventId; }
@@ -36,11 +52,18 @@ public class U01StartCommand {
     public String getProblemText() { return problemText; }
     public String getScopeIntentCandidate() { return scopeIntentCandidate; }
     public boolean isEarlySafetySignalPresent() { return earlySafetySignalPresent; }
+    public String getSourceInputFingerprint() { return sourceInputFingerprint; }
 
     private static String required(String value, String name) {
-        if (value == null || value.trim().isEmpty()) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
             throw new IllegalArgumentException(name + " is required");
         }
+        return normalized;
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null || value.trim().isEmpty()) return null;
         return value.trim();
     }
 }

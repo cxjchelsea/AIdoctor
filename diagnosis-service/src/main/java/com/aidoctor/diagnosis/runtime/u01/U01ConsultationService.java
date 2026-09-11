@@ -118,12 +118,21 @@ public class U01ConsultationService {
     }
 
     private String digest(U01StartCommand command) {
-        String canonical = safe(command.getUserId()) + "|"
-                + safe(command.getSubjectType()) + "|"
-                + safe(command.getSubjectReferenceId()) + "|"
-                + safe(command.getProblemText()) + "|"
-                + safe(command.getScopeIntentCandidate()) + "|"
-                + command.isEarlySafetySignalPresent();
+        String sourceFingerprint = command.getSourceInputFingerprint();
+        String canonical;
+        if (sourceFingerprint != null) {
+            // Raw-input path: transport identity must remain stable even if C01 candidate
+            // extraction changes in a later capability implementation.
+            canonical = safe(command.getUserId()) + "|raw:" + sourceFingerprint;
+        } else {
+            // Existing structured internal path keeps its original semantics.
+            canonical = safe(command.getUserId()) + "|"
+                    + safe(command.getSubjectType()) + "|"
+                    + safe(command.getSubjectReferenceId()) + "|"
+                    + safe(command.getProblemText()) + "|"
+                    + safe(command.getScopeIntentCandidate()) + "|"
+                    + command.isEarlySafetySignalPresent();
+        }
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] bytes = md.digest(canonical.getBytes(StandardCharsets.UTF_8));
