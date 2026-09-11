@@ -12,16 +12,16 @@ public class U01SemanticPolicy {
                 || ("OTHER".equals(subjectType) && hasText(command.getSubjectReferenceId()));
 
         if (!subjectResolved) {
-            return clarification(subjectType, "SUBJECT_NOT_RESOLVED", command.isEarlySafetySignalPresent());
+            return clarification(subjectType, false, "SUBJECT_NOT_RESOLVED", command.isEarlySafetySignalPresent());
         }
 
         if (!hasText(command.getProblemText())) {
-            return clarification(subjectType, "PROBLEM_NOT_FRAMED", command.isEarlySafetySignalPresent());
+            return clarification(subjectType, true, "PROBLEM_NOT_FRAMED", command.isEarlySafetySignalPresent());
         }
 
         String scope = normalize(command.getScopeIntentCandidate());
         if (!hasText(scope) || "UNKNOWN".equals(scope) || "MIXED".equals(scope)) {
-            return clarification(subjectType, "SCOPE_AMBIGUOUS", command.isEarlySafetySignalPresent());
+            return clarification(subjectType, true, "SCOPE_AMBIGUOUS", command.isEarlySafetySignalPresent());
         }
 
         if (isInScope(scope)) {
@@ -46,12 +46,13 @@ public class U01SemanticPolicy {
                     command.isEarlySafetySignalPresent());
         }
 
-        return clarification(subjectType, "SCOPE_UNRECOGNIZED", command.isEarlySafetySignalPresent());
+        return clarification(subjectType, true, "SCOPE_UNRECOGNIZED", command.isEarlySafetySignalPresent());
     }
 
-    private U01SemanticDecision clarification(String subjectType, String reason, boolean earlySafetySignal) {
+    private U01SemanticDecision clarification(String subjectType, boolean subjectResolved,
+                                               String reason, boolean earlySafetySignal) {
         return new U01SemanticDecision(
-                "SELF".equals(subjectType) || "OTHER".equals(subjectType)
+                subjectResolved
                         ? U01SemanticDecision.SUBJECT_RESOLVED
                         : U01SemanticDecision.SUBJECT_CLARIFICATION_REQUIRED,
                 subjectType,
