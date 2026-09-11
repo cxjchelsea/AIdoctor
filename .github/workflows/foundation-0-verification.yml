@@ -41,7 +41,7 @@ jobs:
       - name: Run Foundation-0 and StateCommitter tests
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Dtest='com.aidoctor.diagnosis.runtime.foundation.*Test,com.aidoctor.diagnosis.state.committer.*Test,com.aidoctor.diagnosis.state.committer.adapters.*Test'
+          -Dtest='FoundationRuntimeBaseTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
           test
       - name: Run diagnosis-service regression suite
         run: mvn -f diagnosis-service/pom.xml test
