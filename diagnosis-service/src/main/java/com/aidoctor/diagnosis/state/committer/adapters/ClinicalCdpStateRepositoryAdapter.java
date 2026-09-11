@@ -5,13 +5,11 @@ import com.aidoctor.diagnosis.entity.CDP;
 import com.aidoctor.diagnosis.repository.CDPRepository;
 import com.aidoctor.diagnosis.service.cdp.CDPVersionService;
 import com.aidoctor.diagnosis.state.committer.ports.StateRepositoryPort;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -20,9 +18,10 @@ import java.util.Optional;
  *
  * <p>This adapter is intentionally narrow. It connects the already existing
  * StateCommitter admission/idempotency/version machinery to the real CDP row
- * and its version history. It does not expand the v1 contract boundary and it
- * does not stringify structured clinical objects to bypass that boundary.
- * Unsupported paths fail closed before the CDP is mutated.</p>
+ * and its version history. It does not expand the diagnosis-service shared
+ * contract boundary and it never stringifies structured clinical objects to
+ * bypass that boundary. Unsupported paths fail closed before the CDP is
+ * mutated.</p>
  */
 @Component
 public class ClinicalCdpStateRepositoryAdapter implements StateRepositoryPort {
@@ -85,7 +84,6 @@ public class ClinicalCdpStateRepositoryAdapter implements StateRepositoryPort {
                     "Clinical CDP mutation could not be pre-validated.");
         }
 
-        // Preserve the pre-commit clinical version before mutating the entity.
         cdpVersionService.createVersion(cdp);
         working.writeTo(cdp);
         cdp.setVersion(Math.addExact(currentVersion, 1));
@@ -94,10 +92,9 @@ public class ClinicalCdpStateRepositoryAdapter implements StateRepositoryPort {
     }
 
     private void apply(StateTypes.StatePatchOperation operation, WorkingState working) {
-        if (!(operation instanceof StateTypes.LegacyStatePatchOperation)) {
-            throw unsupported("Typed clinical operation is not yet representable by the current CDP adapter.");
+        if (operation == null) {
+            throw invalid("Clinical operation is required.");
         }
-        StateTypes.LegacyStatePatchOperation legacy = (StateTypes.LegacyStatePatchOperation) operation;
         String[] tokens = decode(operation.path);
         if (tokens.length < 2) {
             throw unsupported("Clinical path must include a root and a leaf.");
@@ -109,17 +106,17 @@ public class ClinicalCdpStateRepositoryAdapter implements StateRepositoryPort {
         boolean exists = parent.containsKey(leaf);
 
         if ("ADD".equals(operation.op)) {
-            if (exists || legacy.value == null) {
+            if (exists || operation.value == null) {
                 throw invalid("ADD requires a missing target and a non-null value.");
             }
-            parent.put(leaf, toJavaValue(legacy.value));
+            parent.put(leaf, copyValue(operation.value));
             return;
         }
         if ("REPLACE".equals(operation.op)) {
-            if (!exists || legacy.value == null) {
+            if (!exists || operation.value == null) {
                 throw invalid("REPLACE requires an existing target and a non-null value.");
             }
-            parent.put(leaf, toJavaValue(legacy.value));
+            parent.put(leaf, copyValue(operation.value));
             return;
         }
         if ("REMOVE".equals(operation.op)) {
@@ -145,10 +142,7 @@ public class ClinicalCdpStateRepositoryAdapter implements StateRepositoryPort {
         return current;
     }
 
-    private Object toJavaValue(JsonNode value) {
-        if (value == null || value.isNull()) {
-            return null;
-        }
+    private Object copyValue(Object value) {
         return objectMapper.convertValue(value, Object.class);
     }
 
@@ -223,8 +217,6 @@ public class ClinicalCdpStateRepositoryAdapter implements StateRepositoryPort {
             if ("uncertainty".equals(root)) return uncertainty;
             if ("health_state_assessment".equals(root)) return healthStateAssessment;
             if ("wellness_plan".equals(root)) return wellnessPlan;
-            // List-based legacy roots are intentionally not mutated by this first
-            // authoritative adapter because array-index semantics are not frozen.
             throw unsupported("CDP root is not safely writable by Foundation-0: " + root);
         }
 
