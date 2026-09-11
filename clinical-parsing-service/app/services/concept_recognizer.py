@@ -35,23 +35,25 @@ class ConceptRecognizer:
         if not text:
             return []
         
-        logger.debug(f"开始识别医学概念: text={text}")
+        # Do not log raw clinical text. Even DEBUG logs may be enabled in a
+        # non-production environment and must not become an accidental PHI sink.
+        logger.debug("开始识别医学概念: text_length=%s", len(text))
         concepts = []
         
         # 文本预处理
         cleaned_text = self.text_processor.clean_text(text)
         sentences = self.text_processor.split_sentences(cleaned_text)
-        logger.debug(f"分句结果: {sentences}")
+        logger.debug("分句完成: sentence_count=%s", len(sentences))
         
         # 对每个句子进行概念识别
         for sentence in sentences:
             sentence_concepts = self._recognize_in_sentence(sentence)
-            logger.debug(f"句子 '{sentence}' 识别到 {len(sentence_concepts)} 个概念")
+            logger.debug("单句概念识别完成: concept_count=%s", len(sentence_concepts))
             concepts.extend(sentence_concepts)
         
         # 去重
         concepts = self._deduplicate_concepts(concepts)
-        logger.debug(f"去重后共识别到 {len(concepts)} 个概念")
+        logger.debug("去重后概念数: concept_count=%s", len(concepts))
         
         return concepts
     
