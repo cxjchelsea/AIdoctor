@@ -40,12 +40,12 @@ jobs:
       - name: Compile clinical parsing service
         working-directory: clinical-parsing-service
         run: python -m compileall app
-      - name: Run C01 U01 eval slice
+      - name: Run C01 U01 eval and contract slice
         working-directory: clinical-parsing-service
         run: python -m pytest test_c01_u01.py -q
       - name: Run existing clinical parsing regression
         working-directory: clinical-parsing-service
-        run: python -m pytest test_service.py -q
+        run: python -m pytest --asyncio-mode=auto test_service.py -q
 
   c01-java:
     name: c01-java
