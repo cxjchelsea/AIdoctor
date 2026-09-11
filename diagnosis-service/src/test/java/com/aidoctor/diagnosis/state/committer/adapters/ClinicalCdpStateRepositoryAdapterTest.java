@@ -26,14 +26,12 @@ class ClinicalCdpStateRepositoryAdapterTest {
     private CDPRepository repository;
     private CDPVersionService versionService;
     private ClinicalCdpStateRepositoryAdapter adapter;
-    private ObjectMapper mapper;
 
     @BeforeEach
     void setUp() {
         repository = mock(CDPRepository.class);
         versionService = mock(CDPVersionService.class);
-        mapper = new ObjectMapper();
-        adapter = new ClinicalCdpStateRepositoryAdapter(repository, versionService, mapper);
+        adapter = new ClinicalCdpStateRepositoryAdapter(repository, versionService, new ObjectMapper());
     }
 
     @Test
@@ -103,13 +101,13 @@ class ClinicalCdpStateRepositoryAdapterTest {
         return patch;
     }
 
-    private StateTypes.LegacyStatePatchOperation add(String path, Object value) {
-        StateTypes.LegacyStatePatchOperation operation = new StateTypes.LegacyStatePatchOperation();
+    private StateTypes.StatePatchOperation add(String path, Object value) {
+        StateTypes.StatePatchOperation operation = new StateTypes.StatePatchOperation();
         operation.op = "ADD";
         operation.path = path;
         operation.source = "PATIENT_FACT";
         operation.sensitivity = "PHI";
-        operation.value = mapper.valueToTree(value);
+        operation.value = value;
         return operation;
     }
 }
