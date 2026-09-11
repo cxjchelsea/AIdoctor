@@ -53,9 +53,9 @@ class C01U01ClinicalUnderstandingService:
     CLINICAL_CONCEPT_TYPES = {"symptom", "disease", "medication", "allergy", "indicator"}
 
     def __init__(self):
-        # Reuse the lowest-level parsing assets only. Do not call the legacy
-        # ClinicalParsingService orchestration because it logs raw clinical text at
-        # INFO and also carries legacy response semantics not owned by C01/U01.
+        # Reuse only the lowest-level parsing assets. Do not call the legacy
+        # parsing orchestration: it carries logging and response semantics that are
+        # outside the governed C01/U01 candidate boundary.
         vocabulary_loader = VocabularyLoader(settings.vocabulary_base_path)
         vocabulary_loader.load_all_vocabularies()
         self._concept_recognizer = ConceptRecognizer(vocabulary_loader)
@@ -170,8 +170,8 @@ class C01U01ClinicalUnderstandingService:
             + self._all_matches(text, self.OUTSIDE_MARKERS)
         )
 
-        # ConceptRecognizer currently reports sentence-level original_text. Keep the
-        # candidate provenance without pretending that it has token-level offsets.
+        # The reused recognizer currently reports sentence-level original_text. Keep
+        # candidate provenance without pretending that token-level offsets exist.
         has_supported_concept = any(concept.get("concept_type") for concept in concepts)
         if scope.scope == "UNKNOWN" and not evidence and not has_supported_concept:
             return ProblemCandidate(
