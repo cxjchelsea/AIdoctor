@@ -12,7 +12,7 @@ public class U01Result {
     private final String nextUnit;
     private final String runId;
 
-    public U01Result(ConsultationRecord record, String runId) {
+    public U01Result(ConsultationRecord record, String nextUnit, String runId) {
         this.consultationId = record.getConsultationId();
         this.cdpId = record.getCdpId();
         this.lifecycleStatus = record.getLifecycleStatus();
@@ -21,7 +21,7 @@ public class U01Result {
         this.scopeDecision = record.getScopeDecision();
         this.clarificationReason = record.getClarificationReason();
         this.earlySafetySignalPresent = record.isEarlySafetySignal();
-        this.nextUnit = record.getNextUnit();
+        this.nextUnit = nextUnit;
         this.runId = runId;
     }
 
