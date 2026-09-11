@@ -56,7 +56,8 @@ public class U01ConsultationService {
         Optional<ConsultationRecord> existing = consultationRepository.findById(consultationId);
         if (existing.isPresent()) {
             requireSameStart(existing.get(), command);
-            return new U01Result(existing.get(), null);
+            ClinicalRunRecord originalRun = runCoordinator.requireOriginalRun(consultationId, command.getEventId());
+            return new U01Result(existing.get(), routeFromCommittedState(existing.get()), originalRun.getRunId());
         }
 
         U01SemanticDecision decision = semanticPolicy.decide(command);
@@ -82,7 +83,22 @@ public class U01ConsultationService {
         record = consultationRepository.save(record);
 
         ClinicalRunRecord run = runCoordinator.openRun(consultationId, command.getEventId(), cdp.getVersion());
-        return new U01Result(record, run.getRunId());
+        return new U01Result(record, decision.getNextUnit(), run.getRunId());
+    }
+
+    private String routeFromCommittedState(ConsultationRecord record) {
+        if (!U01SemanticDecision.SUBJECT_RESOLVED.equals(record.getSubjectStatus())
+                || !U01SemanticDecision.PROBLEM_FRAMED.equals(record.getProblemStatus())
+                || U01SemanticDecision.NEEDS_CLARIFICATION.equals(record.getScopeDecision())) {
+            return "U06";
+        }
+        if (U01SemanticDecision.OUT_OF_SCOPE.equals(record.getScopeDecision())) {
+            return "U11";
+        }
+        if (U01SemanticDecision.IN_SCOPE.equals(record.getScopeDecision())) {
+            return "U02";
+        }
+        throw new IllegalStateException("Committed U01 state cannot be routed deterministically.");
     }
 
     private void requireSameStart(ConsultationRecord record, U01StartCommand command) {
