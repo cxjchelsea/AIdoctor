@@ -1,5 +1,6 @@
 CREATE TABLE clinical_consultation (
     consultation_id VARCHAR(128) NOT NULL,
+    row_version BIGINT NOT NULL DEFAULT 0,
     cdp_id VARCHAR(128) NOT NULL,
     user_id VARCHAR(128) NOT NULL,
     lifecycle_status VARCHAR(32) NOT NULL,
@@ -11,7 +12,6 @@ CREATE TABLE clinical_consultation (
     scope_decision VARCHAR(32) NOT NULL,
     clarification_reason VARCHAR(128) NULL,
     early_safety_signal BOOLEAN NOT NULL DEFAULT FALSE,
-    next_unit VARCHAR(16) NOT NULL,
     start_event_id VARCHAR(128) NOT NULL,
     created_at DATETIME NOT NULL,
     PRIMARY KEY (consultation_id),
