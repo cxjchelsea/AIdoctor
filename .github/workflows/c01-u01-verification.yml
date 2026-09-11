@@ -36,7 +36,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r clinical-parsing-service/requirements.txt
-          python -m pip install pytest
+          python -m pip install pytest pytest-asyncio
       - name: Compile clinical parsing service
         working-directory: clinical-parsing-service
         run: python -m compileall app
