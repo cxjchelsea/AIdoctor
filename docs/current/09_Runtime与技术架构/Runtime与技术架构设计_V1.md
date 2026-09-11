@@ -1,6 +1,6 @@
 # AIdoctor Phase 9 — Runtime 与技术架构设计 V1
 
-> 状态：DRAFT COMPLETE / REVIEW REMEDIATED / NOT FROZEN
+> 状态：FROZEN / V1
 > 适用基线：`main` 当前真实代码 + Phase 1～8 已冻结权威设计
 > 目标：在不改变既有业务语义、状态 Owner、Unit、Capability 与 Contract 边界的前提下，定义 V1 临床 Runtime 的执行、等待、恢复、提交、失败、并发、版本绑定、外部副作用一致性与 Brownfield 迁移架构。
 > 非目标：本文件不构成 Implementation Authorization；不冻结具体 Runtime 框架、消息队列、数据库、微服务拆分或部署厂商；不进入 Phase 10。
@@ -1086,7 +1086,7 @@ P9-R07 REQUIRED
 即使两者之间 crash，也不得重新选择另一 Question。
 ```
 
-当前：
+最终独立复核：
 
 ```text
 P9-R01 CLOSED
@@ -1096,13 +1096,16 @@ P9-R04 CLOSED
 P9-R05 CLOSED
 P9-R06 CLOSED
 P9-R07 CLOSED
-Independent final re-review = PENDING
-Phase 9 = NOT FROZEN
+
+Independent final re-review = PASS
+New BLOCKING findings = NONE
+New REQUIRED findings = NONE
+Phase 9 = FROZEN / V1
 ```
 
 ---
 
-# 25. 冻结前检查清单
+# 25. 冻结检查清单
 
 - [x] Runtime 与 Clinical State Owner 边界无歧义；
 - [x] Thread / Run / Checkpoint / Consultation 语义分离；
@@ -1120,14 +1123,12 @@ Phase 9 = NOT FROZEN
 - [x] Slice A 形成 Start → Facts → Risk → Safety → Readiness → Ask → Wait → Resume，并含 Safe Exit/Failure/Cancel closure；
 - [x] 未提前冻结 Phase 10～12；
 - [x] 未把框架选型当成架构本身；
-- [ ] final independent re-review 无新的 BLOCKING/REQUIRED 问题。
+- [x] final independent re-review 无新的 BLOCKING/REQUIRED 问题。
 
-当前状态：
+最终状态：
 
 ```text
-Phase 9 design = DRAFT COMPLETE
-Independent review findings = REMEDIATED
-Final independent re-review = PENDING
-Phase 9 = NOT FROZEN
+Phase 9 = FROZEN / V1
 Implementation Authorization = NOT IMPLIED
+Phase 10 = NOT STARTED
 ```
