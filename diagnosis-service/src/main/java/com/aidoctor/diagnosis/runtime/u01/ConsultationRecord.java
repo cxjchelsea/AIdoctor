@@ -7,6 +7,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.Version;
 import java.time.LocalDateTime;
 
 /** Authoritative U01 consultation lifecycle/framing state. This is not Runtime state. */
@@ -20,6 +21,10 @@ public class ConsultationRecord {
     @Id
     @Column(name = "consultation_id", length = 128, nullable = false)
     private String consultationId;
+
+    @Version
+    @Column(name = "row_version", nullable = false)
+    private Long rowVersion;
 
     @Column(name = "cdp_id", length = 128, nullable = false, unique = true)
     private String cdpId;
@@ -54,9 +59,6 @@ public class ConsultationRecord {
     @Column(name = "early_safety_signal", nullable = false)
     private boolean earlySafetySignal;
 
-    @Column(name = "next_unit", length = 16, nullable = false)
-    private String nextUnit;
-
     @Column(name = "start_event_id", length = 128, nullable = false, unique = true)
     private String startEventId;
 
@@ -67,6 +69,7 @@ public class ConsultationRecord {
                               U01StartCommand command, U01SemanticDecision decision,
                               LocalDateTime createdAt) {
         this.consultationId = required(consultationId, "consultationId");
+        this.rowVersion = 0L;
         this.cdpId = required(cdpId, "cdpId");
         this.userId = required(userId, "userId");
         this.lifecycleStatus = ACTIVE;
@@ -78,7 +81,6 @@ public class ConsultationRecord {
         this.scopeDecision = required(decision.getScopeDecision(), "scopeDecision");
         this.clarificationReason = decision.getClarificationReason();
         this.earlySafetySignal = decision.isEarlySafetySignalPresent();
-        this.nextUnit = required(decision.getNextUnit(), "nextUnit");
         this.startEventId = required(command.getEventId(), "startEventId");
         this.createdAt = createdAt == null ? LocalDateTime.now() : createdAt;
     }
