@@ -67,21 +67,25 @@ class U01ConsultationServiceTest {
     }
 
     @Test
-    void canonicalReplayReturnsExistingConsultationWithoutSecondCdpOrRun() {
+    void canonicalReplayReturnsExistingOutcomeWithoutSecondCdpOrRun() {
         U01StartCommand command = command("evt-replay", "idem-replay");
         String consultationId = U01ConsultationService.consultationIdFor(command.getEventId());
         U01SemanticDecision decision = new U01SemanticPolicy().decide(command);
         ConsultationRecord existing = new ConsultationRecord(
                 consultationId, "cdp-existing", "user-1", command, decision, LocalDateTime.now());
+        ClinicalRunRecord originalRun = new ClinicalRunRecord(
+                "run-original", "thread-original", consultationId, "evt-replay", 1, LocalDateTime.now());
         when(consultationRepository.findById(consultationId)).thenReturn(Optional.of(existing));
+        when(runCoordinator.requireOriginalRun(consultationId, "evt-replay")).thenReturn(originalRun);
 
         U01Result result = service.start(command);
 
         assertEquals("cdp-existing", result.getCdpId());
-        assertNull(result.getRunId());
+        assertEquals("run-original", result.getRunId());
+        assertEquals("U02", result.getNextUnit());
         verifyNoInteractions(cdpManager);
         verifyNoInteractions(bindingService);
-        verifyNoInteractions(runCoordinator);
+        verify(runCoordinator, never()).openRun(anyString(), anyString(), anyInt());
         verify(consultationRepository, never()).save(any());
     }
 
