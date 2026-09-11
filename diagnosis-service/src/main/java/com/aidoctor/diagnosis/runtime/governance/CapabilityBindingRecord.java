@@ -96,9 +96,9 @@ public class CapabilityBindingRecord {
         this.languageScope = defaultAny(languageScope);
         this.channelScope = defaultAny(channelScope);
         this.bindingStatus = status(bindingStatus);
-        this.effectiveFrom = effectiveFrom == null ? LocalDateTime.now() : effectiveFrom;
+        this.effectiveFrom = requiredTime(effectiveFrom, "effectiveFrom");
         this.effectiveUntil = effectiveUntil;
-        this.createdAt = createdAt == null ? LocalDateTime.now() : createdAt;
+        this.createdAt = requiredTime(createdAt, "createdAt");
         if (this.effectiveUntil != null && this.effectiveUntil.isBefore(this.effectiveFrom)) {
             throw new IllegalArgumentException("effectiveUntil cannot be before effectiveFrom");
         }
@@ -118,8 +118,45 @@ public class CapabilityBindingRecord {
                 && matchesScope(channelScope, context.getChannel());
     }
 
+    public boolean sameDefinition(CapabilityBindingRecord other) {
+        return other != null
+                && bindingId.equals(other.bindingId)
+                && capabilityId.equals(other.capabilityId)
+                && capabilityVersion.equals(other.capabilityVersion)
+                && capabilitySetVersion.equals(other.capabilitySetVersion)
+                && scopeVersion.equals(other.scopeVersion)
+                && contractVersion.equals(other.contractVersion)
+                && populationScope.equals(other.populationScope)
+                && regionScope.equals(other.regionScope)
+                && languageScope.equals(other.languageScope)
+                && channelScope.equals(other.channelScope)
+                && bindingStatus.equals(other.bindingStatus)
+                && effectiveFrom.equals(other.effectiveFrom)
+                && equalNullable(effectiveUntil, other.effectiveUntil);
+    }
+
+    public void disable() {
+        requireActive();
+        this.bindingStatus = DISABLED;
+    }
+
+    public void expire() {
+        requireActive();
+        this.bindingStatus = EXPIRED;
+    }
+
+    private void requireActive() {
+        if (!ACTIVE.equals(bindingStatus)) {
+            throw new IllegalStateException("Only ACTIVE binding may transition: " + bindingId);
+        }
+    }
+
     private static boolean matchesScope(String configured, String actual) {
         return ANY.equals(configured) || configured.equals(actual);
+    }
+
+    private static boolean equalNullable(Object left, Object right) {
+        return left == null ? right == null : left.equals(right);
     }
 
     private static String defaultAny(String value) {
@@ -132,6 +169,13 @@ public class CapabilityBindingRecord {
             throw new IllegalArgumentException("Unsupported binding status: " + normalized);
         }
         return normalized;
+    }
+
+    private static LocalDateTime requiredTime(LocalDateTime value, String name) {
+        if (value == null) {
+            throw new IllegalArgumentException(name + " is required");
+        }
+        return value;
     }
 
     private static String required(String value, String name) {
