@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - impl/foundation-0-runtime-base
+      - impl/u01-legacy-impact
   pull_request:
     branches:
       - main
@@ -38,10 +39,10 @@ jobs:
         run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
       - name: Compile diagnosis-service
         run: mvn -f diagnosis-service/pom.xml -DskipTests compile
-      - name: Run Foundation-0 and StateCommitter tests
+      - name: Run Foundation-0, U01 legacy guard and StateCommitter tests
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Dtest='FoundationRuntimeBaseTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
+          -Dtest='FoundationRuntimeBaseTest,U01LegacyBoundaryGuardTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
           test
       - name: Run diagnosis-service regression suite
         run: mvn -f diagnosis-service/pom.xml test
