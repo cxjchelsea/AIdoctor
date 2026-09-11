@@ -13,10 +13,47 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class Foundation1GovernanceTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-11T06:00:00Z"), ZoneOffset.UTC);
+
+    @Test
+    void registryIsIdempotentButCannotSilentlyRepointBindingIdentity() {
+        CapabilityBindingRepository repository = mock(CapabilityBindingRepository.class);
+        CapabilityBindingRegistry registry = new CapabilityBindingRegistry(repository);
+        CapabilityBindingRecord existing = binding(CapabilityBindingRecord.ACTIVE,
+                LocalDateTime.parse("2026-09-11T00:00:00"), null);
+        when(repository.findById("binding-1")).thenReturn(Optional.of(existing));
+
+        CapabilityBindingRecord same = binding(CapabilityBindingRecord.ACTIVE,
+                LocalDateTime.parse("2026-09-11T00:00:00"), null);
+        assertSame(existing, registry.register(same));
+        verify(repository, never()).save(same);
+
+        CapabilityBindingRecord repointed = new CapabilityBindingRecord(
+                "binding-1", "C01", "c01-2.0.0", "caps-v2", "scope-v1", "contracts-v1",
+                CapabilityBindingRecord.ANY, CapabilityBindingRecord.ANY, CapabilityBindingRecord.ANY,
+                CapabilityBindingRecord.ANY, CapabilityBindingRecord.ACTIVE,
+                LocalDateTime.parse("2026-09-11T00:00:00"), null, LocalDateTime.parse("2026-09-11T00:00:00"));
+        assertThrows(IllegalStateException.class, () -> registry.register(repointed));
+    }
+
+    @Test
+    void disabledBindingCannotBeSilentlyReactivated() {
+        CapabilityBindingRepository repository = mock(CapabilityBindingRepository.class);
+        CapabilityBindingRegistry registry = new CapabilityBindingRegistry(repository);
+        CapabilityBindingRecord active = binding(CapabilityBindingRecord.ACTIVE,
+                LocalDateTime.parse("2026-09-11T00:00:00"), null);
+        when(repository.findById("binding-1")).thenReturn(Optional.of(active));
+        when(repository.save(any(CapabilityBindingRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CapabilityBindingRecord disabled = registry.disable("binding-1");
+        assertEquals(CapabilityBindingRecord.DISABLED, disabled.getBindingStatus());
+        assertThrows(IllegalStateException.class, disabled::disable);
+    }
 
     @Test
     void activeCompatibleBindingResolves() {
