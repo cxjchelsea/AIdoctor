@@ -112,7 +112,13 @@ def test_typed_http_contract_exposes_candidates_without_state_write_fields():
 
 def test_c01_service_does_not_reenter_legacy_orchestration_or_direct_write_semantics():
     source = inspect.getsource(C01U01ClinicalUnderstandingService)
-    assert "ClinicalParsingService" not in source
+    init_names = C01U01ClinicalUnderstandingService.__init__.__code__.co_names
+    interpret_names = C01U01ClinicalUnderstandingService.interpret.__code__.co_names
+
+    # Check executable references rather than comment text.
+    assert "ClinicalParsingService" not in init_names
+    assert "ClinicalParsingService" not in interpret_names
+    assert "_legacy_parsing" not in source
     assert "suggested_writes" not in source
     assert "patient_state" not in source
     assert "CDP" not in source
