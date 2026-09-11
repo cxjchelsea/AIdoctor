@@ -1,0 +1,47 @@
+name: Foundation-0 Verification
+
+on:
+  push:
+    branches:
+      - impl/foundation-0-runtime-base
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/**'
+      - 'diagnosis-service/src/main/resources/db/migration/**'
+      - 'diagnosis-service/src/main/resources/db/migration-oracle/**'
+      - 'diagnosis-service/pom.xml'
+      - 'contracts/v1/bindings/java/**'
+      - '.github/workflows/foundation-0-verification.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  java-foundation:
+    name: java-foundation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Install Shared Contracts v1 Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Compile diagnosis-service
+        run: mvn -f diagnosis-service/pom.xml -DskipTests compile
+      - name: Run Foundation-0 and StateCommitter tests
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest='com.aidoctor.diagnosis.runtime.foundation.*Test,com.aidoctor.diagnosis.state.committer.*Test,com.aidoctor.diagnosis.state.committer.adapters.*Test'
+          test
+      - name: Run diagnosis-service regression suite
+        run: mvn -f diagnosis-service/pom.xml test
