@@ -1,10 +1,12 @@
 """C01 minimal clinical-understanding slice for U01.
 
 The service produces candidates only. Final Subject/Problem/Scope decisions remain
-owned by U01/D10. This adapter deliberately does not produce CDP writes.
+owned by U01/D10. This adapter deliberately does not produce CDP writes and does
+not pass raw clinical text through the legacy service orchestration/logging path.
 """
 from typing import Iterable, Optional, Tuple
 
+from app.config.settings import settings
 from app.models.c01_u01 import (
     C01BindingRef,
     C01U01Request,
@@ -15,8 +17,9 @@ from app.models.c01_u01 import (
     ScopeCandidate,
     SubjectCandidate,
 )
-from app.models.request import ClinicalParsingRequest
-from app.services.parsing_service import ClinicalParsingService
+from app.services.ambiguity_detector import AmbiguityDetector
+from app.services.concept_recognizer import ConceptRecognizer
+from app.utils.vocabulary_loader import VocabularyLoader
 
 
 class C01U01ClinicalUnderstandingService:
@@ -47,11 +50,16 @@ class C01U01ClinicalUnderstandingService:
         "胸痛", "呼吸困难", "喘不上气", "意识不清", "昏迷", "大出血",
         "抽搐", "紫绀", "突发偏瘫", "言语不清", "剧烈头痛", "自杀", "轻生",
     )
+    CLINICAL_CONCEPT_TYPES = {"symptom", "disease", "medication", "allergy", "indicator"}
 
     def __init__(self):
-        # Reuse existing concept recognition and ambiguity assets; do not reuse legacy
-        # tool_1 write suggestions or CDP mutation semantics.
-        self._legacy_parsing = ClinicalParsingService()
+        # Reuse the lowest-level parsing assets only. Do not call the legacy
+        # ClinicalParsingService orchestration because it logs raw clinical text at
+        # INFO and also carries legacy response semantics not owned by C01/U01.
+        vocabulary_loader = VocabularyLoader(settings.vocabulary_base_path)
+        vocabulary_loader.load_all_vocabularies()
+        self._concept_recognizer = ConceptRecognizer(vocabulary_loader)
+        self._ambiguity_detector = AmbiguityDetector()
 
     async def interpret(self, request: C01U01Request) -> C01U01Result:
         binding = self._binding_ref()
@@ -72,21 +80,15 @@ class C01U01ClinicalUnderstandingService:
                 status="INSUFFICIENT_INFORMATION",
             )
 
-        parsing = await self._legacy_parsing.parse(ClinicalParsingRequest(
-            userId=request.userId,
-            sessionId=request.consultationId or "u01-c01-pre-consultation",
-            text=text,
-            cdpId=None,
-            input=None,
-        ))
+        concepts = self._concept_recognizer.recognize(text)
+        ambiguities = self._ambiguity_detector.detect(text, concepts)
 
         subject = self._subject_candidate(text)
-        scope = self._scope_candidate(text, parsing)
-        problem = self._problem_candidate(text, parsing, scope)
+        scope = self._scope_candidate(text, concepts)
+        problem = self._problem_candidate(text, concepts, scope)
         safety = self._early_safety_candidate(text)
 
-        ambiguous = bool(parsing.ambiguousExpressions)
-        if ambiguous:
+        if ambiguities:
             scope.uncertain = True
             problem.uncertain = True
 
@@ -95,12 +97,6 @@ class C01U01ClinicalUnderstandingService:
         if subject.subjectType == "UNKNOWN" or scope.scope in ("UNKNOWN", "MIXED") or not problem.text:
             business_status = "INSUFFICIENT_INFORMATION"
             reason_code = "CANDIDATES_REQUIRE_BUSINESS_CLARIFICATION"
-
-        provenance = [
-            "clinical-parsing-service:concept_recognizer",
-            "clinical-parsing-service:ambiguity_detector",
-            "c01-u01:subject-scope-safety-adapter",
-        ]
 
         return C01U01Result(
             businessStatus=business_status,
@@ -112,7 +108,11 @@ class C01U01ClinicalUnderstandingService:
             scopeCandidate=scope,
             earlySafetySignalCandidate=safety,
             sourceAttribution="USER_TEXT",
-            provenance=provenance,
+            provenance=[
+                "clinical-parsing-service:concept_recognizer",
+                "clinical-parsing-service:ambiguity_detector",
+                "c01-u01:subject-scope-safety-adapter",
+            ],
         )
 
     def _binding_matches(self, request: C01U01Request) -> bool:
@@ -163,25 +163,17 @@ class C01U01ClinicalUnderstandingService:
             evidenceSpans=[],
         )
 
-    def _problem_candidate(self, text, parsing, scope: ScopeCandidate) -> ProblemCandidate:
-        semantic_spans = []
-        seen = set()
-        for concept in parsing.concepts:
-            original = (concept.originalText or "").strip()
-            if original and original not in seen:
-                span = self._span(text, original)
-                if span:
-                    semantic_spans.append(span)
-                    seen.add(original)
+    def _problem_candidate(self, text, concepts, scope: ScopeCandidate) -> ProblemCandidate:
+        evidence = self._dedupe_spans(
+            self._all_matches(text, self.CLINICAL_CUES)
+            + self._all_matches(text, self.EXAM_MARKERS)
+            + self._all_matches(text, self.OUTSIDE_MARKERS)
+        )
 
-        if not semantic_spans:
-            for marker in self.CLINICAL_CUES + self.EXAM_MARKERS + self.OUTSIDE_MARKERS:
-                span = self._span(text, marker)
-                if span and marker not in seen:
-                    semantic_spans.append(span)
-                    seen.add(marker)
-
-        if scope.scope == "UNKNOWN" and not semantic_spans:
+        # ConceptRecognizer currently reports sentence-level original_text. Keep the
+        # candidate provenance without pretending that it has token-level offsets.
+        has_supported_concept = any(concept.get("concept_type") for concept in concepts)
+        if scope.scope == "UNKNOWN" and not evidence and not has_supported_concept:
             return ProblemCandidate(
                 text=None,
                 confidence=0.0,
@@ -191,38 +183,43 @@ class C01U01ClinicalUnderstandingService:
 
         return ProblemCandidate(
             text=text,
-            confidence=0.85 if semantic_spans else 0.60,
+            confidence=0.85 if evidence or has_supported_concept else 0.60,
             uncertain=scope.uncertain,
-            evidenceSpans=semantic_spans,
+            evidenceSpans=evidence,
         )
 
-    def _scope_candidate(self, text, parsing) -> ScopeCandidate:
+    def _scope_candidate(self, text, concepts) -> ScopeCandidate:
         outside_spans = self._all_matches(text, self.OUTSIDE_MARKERS)
         exam_spans = self._all_matches(text, self.EXAM_MARKERS)
         clinical_spans = self._all_matches(text, self.CLINICAL_CUES)
 
-        for concept in parsing.concepts:
-            original = (concept.originalText or "").strip()
-            span = self._span(text, original) if original else None
-            if span:
-                clinical_spans.append(span)
-
-        if parsing.structuredData.examinations:
-            for exam in parsing.structuredData.examinations:
-                span = self._span(text, exam.name)
-                if span:
-                    exam_spans.append(span)
+        has_exam_concept = any(
+            concept.get("concept_type") == "examination" for concept in concepts
+        )
+        has_clinical_concept = any(
+            concept.get("concept_type") in self.CLINICAL_CONCEPT_TYPES for concept in concepts
+        )
 
         outside = bool(outside_spans)
-        exam = bool(exam_spans)
-        clinical = bool(clinical_spans) or bool(parsing.structuredData.symptoms)
+        exam = bool(exam_spans) or has_exam_concept
+        explicit_clinical = bool(clinical_spans)
 
-        if outside and (clinical or exam):
+        # Outside intent wins unless the same utterance also carries explicit clinical
+        # discomfort/examination evidence. A broad concept match alone must not turn an
+        # outside-only request into MIXED.
+        if outside and (explicit_clinical or exam):
             return ScopeCandidate(
                 scope="MIXED",
                 confidence=0.90,
                 uncertain=True,
                 evidenceSpans=self._dedupe_spans(outside_spans + exam_spans + clinical_spans),
+            )
+        if outside:
+            return ScopeCandidate(
+                scope="OUTSIDE_V1_INTENT",
+                confidence=0.92,
+                uncertain=False,
+                evidenceSpans=self._dedupe_spans(outside_spans),
             )
         if exam:
             return ScopeCandidate(
@@ -231,19 +228,19 @@ class C01U01ClinicalUnderstandingService:
                 uncertain=False,
                 evidenceSpans=self._dedupe_spans(exam_spans + clinical_spans),
             )
-        if clinical:
+        if explicit_clinical:
             return ScopeCandidate(
                 scope="SYMPTOM",
                 confidence=0.88,
                 uncertain=False,
                 evidenceSpans=self._dedupe_spans(clinical_spans),
             )
-        if outside:
+        if has_clinical_concept:
             return ScopeCandidate(
-                scope="OUTSIDE_V1_INTENT",
-                confidence=0.92,
+                scope="CLINICAL_CONSULTATION",
+                confidence=0.75,
                 uncertain=False,
-                evidenceSpans=self._dedupe_spans(outside_spans),
+                evidenceSpans=[],
             )
         return ScopeCandidate(
             scope="UNKNOWN",
