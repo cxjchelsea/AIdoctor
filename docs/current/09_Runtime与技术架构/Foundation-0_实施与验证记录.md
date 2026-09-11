@@ -63,7 +63,7 @@
 
 验证 Run：`34556206803`
 
-验证 HEAD：`62ad38165abef6784eab5d9ed23e936b4561c011`
+验证代码 HEAD：`62ad38165abef6784eab5d9ed23e936b4561c011`
 
 结果：
 
@@ -73,7 +73,7 @@
 - diagnosis-service regression suite：PASS
 - workflow job `java-foundation`：SUCCESS
 
-因此可以确认本次 Foundation-0 代码达到 **COMPONENT_VERIFIED**。
+因此可以确认本次 Foundation-0 代码达到 **COMPONENT_VERIFIED**。后续仅文档状态记录的提交不改变上述已验证代码树。
 
 ## 5. 尚未完成的接线
 
