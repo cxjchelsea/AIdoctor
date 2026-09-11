@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from app.api.routes import router
+from app.api.c01_routes import router as c01_router
 from app.utils.exceptions import setup_exception_handlers
 from app.config.settings import settings
 from app.utils.metrics import (
@@ -132,8 +133,9 @@ async def metrics_middleware(request: Request, call_next):
         
         raise
 
-# 注册路由
+# 注册 legacy 路由和新 C01 typed capability 路由。
 app.include_router(router, prefix="/api/v1")
+app.include_router(c01_router, prefix="/api/v1")
 
 # 设置异常处理
 setup_exception_handlers(app)
@@ -158,5 +160,4 @@ async def metrics():
         generate_latest(),
         media_type=CONTENT_TYPE_LATEST
     )
-
 
