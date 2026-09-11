@@ -1,0 +1,21 @@
+CREATE TABLE clinical_consultation (
+    consultation_id VARCHAR2(128 CHAR) NOT NULL,
+    row_version NUMBER(19) DEFAULT 0 NOT NULL,
+    cdp_id VARCHAR2(128 CHAR) NOT NULL,
+    user_id VARCHAR2(128 CHAR) NOT NULL,
+    lifecycle_status VARCHAR2(32 CHAR) NOT NULL,
+    subject_status VARCHAR2(32 CHAR) NOT NULL,
+    subject_type VARCHAR2(32 CHAR),
+    subject_reference_id VARCHAR2(128 CHAR),
+    problem_status VARCHAR2(32 CHAR) NOT NULL,
+    problem_text VARCHAR2(2000 CHAR),
+    scope_decision VARCHAR2(32 CHAR) NOT NULL,
+    clarification_reason VARCHAR2(128 CHAR),
+    early_safety_signal NUMBER(1) DEFAULT 0 NOT NULL,
+    start_event_id VARCHAR2(128 CHAR) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    CONSTRAINT pk_clinical_consultation PRIMARY KEY (consultation_id),
+    CONSTRAINT uk_clinical_consultation_cdp UNIQUE (cdp_id),
+    CONSTRAINT uk_clinical_consultation_start_event UNIQUE (start_event_id),
+    CONSTRAINT ck_clinical_consultation_safety CHECK (early_safety_signal IN (0, 1))
+);

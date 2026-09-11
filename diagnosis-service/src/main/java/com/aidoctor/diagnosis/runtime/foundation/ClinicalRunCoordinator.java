@@ -64,4 +64,10 @@ public class ClinicalRunCoordinator {
                 LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
         return runRepository.save(run);
     }
+
+    public ClinicalRunRecord requireOriginalRun(String consultationId, String eventId) {
+        return runRepository.findFirstByConsultationIdAndEventIdOrderByCreatedAtAsc(consultationId, eventId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Original run not found for canonical event: consultationId=" + consultationId + ", eventId=" + eventId));
+    }
 }

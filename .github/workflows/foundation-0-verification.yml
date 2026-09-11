@@ -5,13 +5,16 @@ on:
     branches:
       - impl/foundation-0-runtime-base
       - impl/u01-legacy-impact
+      - impl/u01-consultation-establishment
   pull_request:
     branches:
       - main
     paths:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/**'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/**'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u01/**'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/**'
       - 'diagnosis-service/src/main/resources/db/migration/**'
       - 'diagnosis-service/src/main/resources/db/migration-oracle/**'
@@ -39,10 +42,10 @@ jobs:
         run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
       - name: Compile diagnosis-service
         run: mvn -f diagnosis-service/pom.xml -DskipTests compile
-      - name: Run Foundation-0, U01 legacy guard and StateCommitter tests
+      - name: Run Foundation-0, U01 and StateCommitter focused tests
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Dtest='FoundationRuntimeBaseTest,U01LegacyBoundaryGuardTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
+          -Dtest='FoundationRuntimeBaseTest,U01LegacyBoundaryGuardTest,U01SemanticPolicyTest,U01ConsultationServiceTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
           test
       - name: Run diagnosis-service regression suite
         run: mvn -f diagnosis-service/pom.xml test
