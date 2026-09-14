@@ -71,7 +71,7 @@ jobs:
       - name: Run U02 and governance focused tests
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Dtest='C01U02CapabilityGatewayTest,U02ClinicalFactFormationTest,U02ClinicalFactCommitServiceTest,C01U01CapabilityGatewayTest,U01NaturalLanguageStartServiceTest,FoundationRuntimeBaseTest,Foundation1GovernanceTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
+          -Dtest='C01U02CapabilityGatewayTest,U02ClinicalFactFormationTest,U02ClinicalFactCommitServiceTest,U02ClinicalFactApplicationServiceTest,C01U01CapabilityGatewayTest,U01NaturalLanguageStartServiceTest,FoundationRuntimeBaseTest,Foundation1GovernanceTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
           test
       - name: Run diagnosis-service regression suite
         run: mvn -f diagnosis-service/pom.xml test
