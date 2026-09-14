@@ -43,6 +43,9 @@ public final class U03GovernedCandidateGateway {
                         CapabilityBindingRecord.ANY,
                         CapabilityBindingRecord.ANY));
         U03ReleaseBinding releaseBinding = releaseRegistry.requireActive(capabilityBinding.getBindingId());
+        if (!releaseBinding.isCompatibleWith(capabilityBinding)) {
+            throw new IllegalStateException("U03 release scope is not compatible with authorized capability binding");
+        }
         U03RiskAssessmentCandidate candidate = provider.assess(command, capabilityBinding, releaseBinding);
         if (candidate == null) throw new IllegalStateException("U03 candidate provider returned null");
         return new GovernedResult(candidate, capabilityBinding, releaseBinding);
