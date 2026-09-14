@@ -10,6 +10,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -25,39 +26,29 @@ public final class StatePatchBoundaryValidator {
     private static final Pattern SERVICE_NAME = Pattern.compile("^[a-z][a-z0-9-]*$");
     private static final Pattern SEMVER = Pattern.compile("^[0-9]+\\.[0-9]+\\.[0-9]+$");
     private static final Pattern REASON = Pattern.compile("^[A-Z][A-Z0-9_]*$");
-    private static final Pattern JSON_POINTER =
-            Pattern.compile("^/(?:[^~/]|~0|~1)+(?:/(?:[^~/]|~0|~1)+)*$");
+    private static final Pattern JSON_POINTER = Pattern.compile("^/(?:[^~/]|~0|~1)+(?:/(?:[^~/]|~0|~1)+)*$");
     private static final Pattern TIMESTAMP_OFFSET = Pattern.compile(".*(?:Z|[+-][0-9]{2}:[0-9]{2})$");
     private static final BigDecimal MAX_SAFE_INTEGER = new BigDecimal("9007199254740991");
     private static final Set<String> ROOTS = setOf(
             "patient_state", "ddx", "evidence_graph", "workup_plan", "management_plan",
-            "triage", "uncertainty", "health_state_assessment", "wellness_plan"
-    );
+            "triage", "uncertainty", "health_state_assessment", "wellness_plan");
     private static final Set<String> SOURCES = setOf(
-            "PATIENT_FACT", "MEDICAL_EVIDENCE", "CLINICIAN_DECISION", "SAFETY_RULE", "TOOL_OUTPUT"
-    );
+            "PATIENT_FACT", "MEDICAL_EVIDENCE", "CLINICIAN_DECISION", "SAFETY_RULE", "TOOL_OUTPUT");
     private static final Set<String> SENSITIVITIES = setOf(
-            "PUBLIC", "INTERNAL", "INTERNAL_SENSITIVE", "PHI"
-    );
+            "PUBLIC", "INTERNAL", "INTERNAL_SENSITIVE", "PHI");
     private static final Set<String> AUDIT_TYPES = setOf(
             "CONTRACT_RECEIVED", "TOOL_INVOKED", "STATE_PATCH_REQUESTED", "STATE_COMMITTED",
-            "PATIENT_DELIVERY_CREATED", "REVIEW_DECISION_RECORDED"
-    );
+            "PATIENT_DELIVERY_CREATED", "REVIEW_DECISION_RECORDED");
     private static final Set<String> ACCESS_LEVELS = setOf(
-            "INTERNAL", "RESTRICTED", "SECURITY_REVIEW_REQUIRED"
-    );
+            "INTERNAL", "RESTRICTED", "SECURITY_REVIEW_REQUIRED");
 
     public Validation validate(StateTypes.StatePatch patch) {
-        if (patch == null) {
-            return invalid("StatePatch is required.");
-        }
+        if (patch == null) return invalid("StatePatch is required.");
         if (!ContractVersion.CONTRACT_VERSION.equals(patch.contractVersion)) {
             return invalid("StatePatch contract_version must be exactly 1.0.0.");
         }
         Validation envelope = validateEnvelope(patch.envelope);
-        if (!envelope.valid) {
-            return envelope;
-        }
+        if (!envelope.valid) return envelope;
         if (!opaque(patch.cdpId) || !opaque(patch.patchId) || !opaque(patch.idempotencyKey)) {
             return invalid("StatePatch identifiers are malformed.");
         }
@@ -69,13 +60,9 @@ public final class StatePatchBoundaryValidator {
         }
         for (StateTypes.StatePatchOperation operation : patch.operations) {
             Validation operationValidation = validateOperation(operation);
-            if (!operationValidation.valid) {
-                return operationValidation;
-            }
+            if (!operationValidation.valid) return operationValidation;
         }
-        if (!matches(patch.reasonCode, REASON, 1, 64)) {
-            return invalid("reason_code is malformed.");
-        }
+        if (!matches(patch.reasonCode, REASON, 1, 64)) return invalid("reason_code is malformed.");
         if (patch.evidenceRefs == null || patch.evidenceRefs.size() > 64) {
             return invalid("evidence_refs is required and limited to 64 items.");
         }
@@ -121,8 +108,7 @@ public final class StatePatchBoundaryValidator {
     }
 
     private Validation validateOperation(StateTypes.StatePatchOperation operation) {
-        if (operation == null || operation.op == null || operation.op.length() == 0
-                || operation.op.length() > 16) {
+        if (operation == null || operation.op == null || operation.op.length() == 0 || operation.op.length() > 16) {
             return invalid("StatePatch operation is malformed.");
         }
         if (!jsonPointer(operation.path) || !authorizedRoot(operation.path)) {
@@ -134,20 +120,20 @@ public final class StatePatchBoundaryValidator {
         if ("REMOVE".equals(operation.op) && operation.value != null) {
             return invalid("REMOVE cannot carry a non-null value.");
         }
-        if (!controlledValue(operation.value, 4000)
-                || !controlledValue(operation.expectedCurrentValue, 4000)) {
+        if (!controlledValue(operation.value, 4000, 0) || !controlledValue(operation.expectedCurrentValue, 4000, 0)) {
             return invalid("StatePatch operation value is outside the v1 controlled-value boundary.");
         }
         return Validation.valid();
     }
 
-    private static boolean controlledValue(Object value, int stringLimit) {
-        if (value == null || value instanceof Boolean) {
-            return true;
-        }
-        if (value instanceof String) {
-            return ((String) value).length() <= stringLimit;
-        }
+    /**
+     * Controlled-value boundary. U02 adds exactly one level of structured object
+     * so a typed Clinical Fact can remain structured instead of being hidden in a JSON string.
+     * Nested maps and list-of-map values remain rejected.
+     */
+    private static boolean controlledValue(Object value, int stringLimit, int depth) {
+        if (value == null || value instanceof Boolean) return true;
+        if (value instanceof String) return ((String) value).length() <= stringLimit;
         if (value instanceof Number) {
             try {
                 BigDecimal number = new BigDecimal(value.toString());
@@ -158,11 +144,21 @@ public final class StatePatchBoundaryValidator {
         }
         if (value instanceof List<?>) {
             List<?> values = (List<?>) value;
-            if (values.size() > 64) {
-                return false;
-            }
+            if (values.size() > 64) return false;
             for (Object item : values) {
-                if (item instanceof List<?> || !controlledValue(item, 1000)) {
+                if (item instanceof List<?> || item instanceof Map<?, ?> || !controlledValue(item, 1000, depth + 1)) return false;
+            }
+            return true;
+        }
+        if (value instanceof Map<?, ?>) {
+            if (depth > 0) return false;
+            Map<?, ?> values = (Map<?, ?>) value;
+            if (values.isEmpty() || values.size() > 32) return false;
+            for (Map.Entry<?, ?> entry : values.entrySet()) {
+                if (!(entry.getKey() instanceof String)
+                        || !matches((String) entry.getKey(), OPAQUE_ID, 1, 64)
+                        || entry.getValue() instanceof Map<?, ?>
+                        || !controlledValue(entry.getValue(), 1000, depth + 1)) {
                     return false;
                 }
             }
@@ -177,22 +173,12 @@ public final class StatePatchBoundaryValidator {
         return slash > 1 && ROOTS.contains(root);
     }
 
-    private static boolean jsonPointer(String value) {
-        return matches(value, JSON_POINTER, 1, 256);
-    }
-
-    private static boolean opaque(String value) {
-        return matches(value, OPAQUE_ID, 1, 128);
-    }
-
-    private static boolean serviceName(String value) {
-        return matches(value, SERVICE_NAME, 1, 80);
-    }
+    private static boolean jsonPointer(String value) { return matches(value, JSON_POINTER, 1, 256); }
+    private static boolean opaque(String value) { return matches(value, OPAQUE_ID, 1, 128); }
+    private static boolean serviceName(String value) { return matches(value, SERVICE_NAME, 1, 80); }
 
     private static boolean timestamp(String value) {
-        if (value == null || value.length() < 1 || value.length() > 64 || !TIMESTAMP_OFFSET.matcher(value).matches()) {
-            return false;
-        }
+        if (value == null || value.length() < 1 || value.length() > 64 || !TIMESTAMP_OFFSET.matcher(value).matches()) return false;
         try {
             OffsetDateTime.parse(value);
             return true;
@@ -202,19 +188,11 @@ public final class StatePatchBoundaryValidator {
     }
 
     private static boolean matches(String value, Pattern pattern, int minimum, int maximum) {
-        return value != null
-                && value.length() >= minimum
-                && value.length() <= maximum
-                && pattern.matcher(value).matches();
+        return value != null && value.length() >= minimum && value.length() <= maximum && pattern.matcher(value).matches();
     }
 
-    private static Set<String> setOf(String... values) {
-        return new HashSet<String>(Arrays.asList(values));
-    }
-
-    private static Validation invalid(String message) {
-        return Validation.invalid(message);
-    }
+    private static Set<String> setOf(String... values) { return new HashSet<String>(Arrays.asList(values)); }
+    private static Validation invalid(String message) { return Validation.invalid(message); }
 
     public static final class Validation {
         public final boolean valid;
@@ -225,12 +203,7 @@ public final class StatePatchBoundaryValidator {
             this.message = message;
         }
 
-        static Validation valid() {
-            return new Validation(true, null);
-        }
-
-        static Validation invalid(String message) {
-            return new Validation(false, message);
-        }
+        static Validation valid() { return new Validation(true, null); }
+        static Validation invalid(String message) { return new Validation(false, message); }
     }
 }
