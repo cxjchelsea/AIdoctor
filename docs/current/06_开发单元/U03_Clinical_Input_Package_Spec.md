@@ -5,223 +5,156 @@
 
 ---
 
-## 1. Clinical Input Package 总体组成
+## 1. 为什么需要独立 Clinical Input Package
+
+U03 当前工程链已经可以安全承载临床能力，但工程侧不能从代码结构反推出医学规则。若缺少正式输入包，最容易出现：
 
 ```text
-A Clinical Risk Semantics
-B Evidence Catalog
-C Safety-critical Risk Rule Pack
-D D09 Clinical Policy Table
-E Knowledge Release Manifest
-F Risk EvalSet / Safety Suite
+开发者自行补医学常识
+→ 规则散落在代码 / Prompt
+→ 无法追溯来源
+→ 无法审核版本
+→ 无法证明 Eval 覆盖
+→ 生产变更无法治理
 ```
 
-当前 A/B/C 已完成结构层准备，但均未获得医学 Owner 批准，也没有形成 production clinical content。
+因此真实 C02 / D09 实现前，必须先有一个医学 Owner 可签字确认的输入包。
 
 ---
 
-## 2. A — Clinical Risk Semantics
+## 2. 必交文件 A：Clinical Risk Semantics
 
-状态：
+至少定义 Risk Evidence / Red Flag / Must-not-miss / Vital-sign Safety Signal / Risk Factor 以及 UNKNOWN / UNMEASURED / AMBIGUOUS / CONFLICTING / FAILED 的正式语义。
+
+当前结构文件：
 
 ```text
-STRUCTURAL_SEMANTICS_FROZEN
-MEDICAL_OWNER_REVIEW_REQUIRED
-NOT_APPROVED
+U03_Clinical_Risk_Semantics.md
 ```
 
-文件：`U03_Clinical_Risk_Semantics.md`
+当前状态：
 
-负责冻结风险证据、状态语义、owner/currentness/failure 等基础语义；具体医学内容仍需审核。
+```text
+STRUCTURAL_SEMANTICS_FROZEN / MEDICAL_OWNER_REVIEW_REQUIRED / NOT_APPROVED
+```
 
 ---
 
-## 3. B — Evidence Catalog
+## 3. 必交文件 B：Evidence Catalog
 
-状态：
+Evidence Catalog 必须是受治理、可版本化目录，不直接拥有 Risk Disposition。
 
-```text
-STRUCTURAL_SCHEMA_FROZEN
-CLINICAL_CONTENT_PENDING
-MEDICAL_OWNER_REVIEW_REQUIRED
-NOT_APPROVED
-```
-
-文件：`U03_Evidence_Catalog_Schema.md`
-
-每个正式 evidence definition 至少需要：
+当前结构文件：
 
 ```text
-evidence_id
-evidence_version
-canonical_name
-category
-clinical_definition
-required_input_fields
-accepted_source_types
-minimum_evidence_requirement
-uncertainty/ambiguity/conflict/missingness policy refs
-population/region/language/channel scope
-source_reference_ids
-provenance_refs
-knowledge_release_refs
-owner
-review_status
-effective_from/effective_until
+U03_Evidence_Catalog_Schema.md
 ```
 
-具体 evidence entries 必须后续由可追溯医学来源和 Medical Owner 提供/审核。
+当前状态：
+
+```text
+STRUCTURAL_SCHEMA_FROZEN / CLINICAL_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / NOT_APPROVED
+```
 
 ---
 
-## 4. C — Safety-critical Risk Rule Pack
+## 4. 必交文件 C：Safety-critical Risk Rule Pack
 
-状态：
+每条 rule 必须是结构化、可测试、可版本化对象，而不是自由文本提示词。Rule Pack 必须显式携带 release/version/scope/review/effective time/source/provenance/supersede/rollback 等治理信息。
 
-```text
-STRUCTURAL_SCHEMA_FROZEN
-CLINICAL_RULE_CONTENT_PENDING
-MEDICAL_OWNER_REVIEW_REQUIRED
-NOT_APPROVED
-```
-
-文件：`U03_Safety_Critical_Risk_Rule_Pack_Schema.md`
-
-每条正式 rule 至少需要：
+当前结构文件：
 
 ```text
-rule_id
-rule_version
-rule_set_id
-canonical_name
-description
-status
-input_schema_ref
-predicate_schema_ref
-required_evidence_refs[]
-optional_evidence_refs[]
-priority
-conflict_group
-precedence_refs[]
-mutual_exclusion_refs[]
-scope fields
-source_reference_ids[]
-knowledge_release_refs[]
-provenance_refs[]
-review_owner
-review_status
-effective_from/effective_until
-supersedes_refs[]
-rollback_target_ref
+U03_Safety_Critical_Risk_Rule_Pack_Schema.md
 ```
 
-Rule Pack release 至少需要：
+当前状态：
 
 ```text
-rule_release_id
-rule_set_id
-release_version
-status
-contract_version
-scope_version
-rule_refs[]
-knowledge_release_refs[]
-evaluation_refs[]
-source/provenance refs
-scope
-effective window
-supersedes/rollback refs
-clinical_review_owner
-technical_review_owner
-release_approval_status
+STRUCTURAL_SCHEMA_FROZEN / CLINICAL_RULE_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / NOT_APPROVED
 ```
-
-具体医学 rule entries、thresholds、precedence 与冲突裁决内容不得由开发侧自行补齐。
 
 ---
 
-## 5. D — D09 Clinical Policy Table
+## 5. 必交文件 D：D09 Clinical Policy Table
 
-待建设。
+D09 是正式 Clinical Risk Disposition Owner。Policy Table 必须显式定义 branch、preconditions、required evidence/rule refs、priority、precedence、result status、disposition、reason code、failure behavior、release refs、source/provenance 与 review 状态。
 
-目标：定义 accepted evidence / governed rule results 到正式 Clinical Risk Disposition 的确定性 policy 结构。
-
-允许 outcome vocabulary 保持：
+当前结构文件：
 
 ```text
-VALID + NO_HIGH_RISK_SIGNAL
-VALID + CAUTION
-VALID + HIGH_RISK
-FAILED
+U03_D09_Clinical_Policy_Table_Schema.md
 ```
 
-具体 policy branch / priority / precedence / failure handling 需要受审内容。
+当前状态：
+
+```text
+STRUCTURAL_SCHEMA_FROZEN / CLINICAL_POLICY_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / NOT_APPROVED
+```
 
 ---
 
-## 6. E — Knowledge Release Manifest
+## 6. 必交文件 E：Knowledge Release Manifest
 
-待建设/裁定是否需要具体独立 release。
-
-至少应支持：
+若 Risk Engine / Rule Pack / D09 需要医学知识内容，每个 Knowledge Release 至少应提供：
 
 ```text
 knowledge_release_id
 version
-status
 content_scope
 source_reference_ids
-provenance_refs
+source_versions / publication dates where applicable
+curation_method
 review_owner
 review_status
-scope
-effective_from/effective_until
+applicable scope
+effective_from / effective_to
 supersedes
 rollback_ref
 ```
 
----
+系统只绑定正式 release ref；不得把“最新知识”作为未版本化隐式依赖。
 
-## 7. F — Risk EvalSet / Safety Suite
-
-待建设。
-
-至少需要独立于实现代码的 fixtures/cases，并绑定：
+当前状态：
 
 ```text
-case_id
-clinical_state_version fixture
-input facts/assertions
-expected evidence/rule/policy outcomes
-must_not_output assertions
-rule release
-knowledge release
-source/rationale refs
-review_owner
+NOT_STARTED / NOT_ADJUDICATED
+```
+
+---
+
+## 7. 必交文件 F：Risk EvalSet / Safety Suite
+
+每个 golden case 至少应绑定 case id、Clinical State fixture、输入事实、expected evidence/rule/policy outcome、negative assertions、release refs、rationale/source refs 与 review owner。
+
+当前状态：
+
+```text
+NOT_STARTED
 ```
 
 ---
 
 ## 8. 完整输入包验收条件
 
-进入 CD-07 Implementation 之前至少满足：
+Clinical Input Package 只有同时满足以下条件才可进入 CD-07 Implementation：
 
 ```text
-A = APPROVED
-B = APPROVED
-C = APPROVED + initial release READY
-D = APPROVED
-E = APPROVED or explicitly NOT_REQUIRED
-F = REVIEW_READY
+A Clinical Risk Semantics = APPROVED
+B Evidence Catalog = APPROVED
+C Rule Pack Specification / initial release = APPROVED
+D D09 Policy Table = APPROVED
+E Knowledge Release Manifest = APPROVED or explicitly NOT_REQUIRED
+F EvalSet / Safety Suite = REVIEW_READY
 ```
 
 并且：
 
 - 每个医学判断有 owner；
-- 每个安全关键内容有可追溯来源；
-- release 有 version/scope/effective time；
+- 每个关键规则可追溯 source；
+- 每个 release 有 version/scope/effective time；
 - EvalSet 与实现代码独立；
-- 不存在开发自行补齐的未审医学规则。
+- 不存在“开发自行补齐”的未审医学规则。
 
 ---
 
@@ -231,7 +164,7 @@ F = REVIEW_READY
 A = STRUCTURAL_SEMANTICS_FROZEN / NOT_APPROVED
 B = STRUCTURAL_SCHEMA_FROZEN / CONTENT_PENDING / NOT_APPROVED
 C = STRUCTURAL_SCHEMA_FROZEN / CONTENT_PENDING / NOT_APPROVED
-D = NOT_STARTED
+D = STRUCTURAL_SCHEMA_FROZEN / CONTENT_PENDING / NOT_APPROVED
 E = NOT_STARTED / NOT_ADJUDICATED
 F = NOT_STARTED
 
@@ -239,3 +172,5 @@ Clinical Input Package = NOT_COMPLETE
 Medical Owner Approval = NOT_COMPLETE
 CD-07 Implementation Readiness = BLOCKED
 ```
+
+下一步应进入 E / Knowledge Release Manifest 的结构与适用性判定。
