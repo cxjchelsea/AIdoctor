@@ -23,12 +23,12 @@ class U02ClinicalFactCommitServiceTest {
                 SyntheticStatePatchFactory.CDP_ID, 0, "trace-u02", "corr-u02", decision, binding());
 
         // The shared harness intentionally authorizes only synthetic defaults.
-        // This test adds the exact U02 field and source permissions needed to
-        // verify StateCommitter mechanics without weakening production policy.
+        // This test adds the exact U02 field and frozen K03 source permission
+        // needed to verify StateCommitter mechanics without weakening production policy.
         proposal.getStatePatch().envelope.capabilityId = SyntheticCapabilityPolicyFake.AUTHORIZED_ID;
         proposal.getStatePatch().envelope.capabilityVersion = SyntheticCapabilityPolicyFake.AUTHORIZED_VERSION;
         harness.fieldPermission.authorize(proposal.getStatePatch().operations.get(0).path);
-        harness.sourceValidation.authorize("PATIENT_FACT");
+        harness.sourceValidation.authorize("PATIENT_REPORTED");
 
         U02ClinicalFactCommitService service = new U02ClinicalFactCommitService(harness.committer);
         StateTypes.CommitResult first = service.commit(proposal);
