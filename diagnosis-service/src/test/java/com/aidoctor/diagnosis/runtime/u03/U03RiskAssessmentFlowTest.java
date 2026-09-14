@@ -38,17 +38,40 @@ class U03RiskAssessmentFlowTest {
                 new U03DecisionOutcome("decision-1", "VALID", "UNSUPPORTED", "TEST", candidate.getEvidenceRefs()));
 
         assertThrows(IllegalStateException.class, () -> service.decide(
-                command("event-invalid-outcome"),
-                U03RiskAssessmentCandidate.valid(Arrays.asList("evidence-1")),
-                release()));
+                command("event-invalid-outcome"), validCandidate(7, "evidence-1"), release()));
+    }
+
+    @Test
+    void evidenceAcceptanceRequiresExactClinicalStateVersion() {
+        U03RiskAssessmentCandidate accepted = new U03EvidenceAcceptanceService().accept(
+                command("event-accept"), validCandidate(7, "evidence-1"), capabilityBinding(), release());
+        assertFalse(accepted.isFailed());
+
+        U03RiskAssessmentCandidate rejected = new U03EvidenceAcceptanceService().accept(
+                command("event-stale"), validCandidate(6, "evidence-old"), capabilityBinding(), release());
+        assertTrue(rejected.isFailed());
+        assertEquals("U03_CLINICAL_STATE_VERSION_MISMATCH", rejected.getFailureReasonCode());
+    }
+
+    @Test
+    void evidenceAcceptanceRejectsReleaseMismatchBeforeDecision() {
+        U03RiskAssessmentCandidate candidate = U03RiskAssessmentCandidate.valid(
+                7, Arrays.asList("evidence-1"), 0.8d, "SYNTHETIC_UNCERTAINTY",
+                Collections.<String>emptyList(), Arrays.asList("source-1"), Arrays.asList("synthetic-eval"),
+                "c02-u03-v1-active", "1.0.0", "wrong-rules", "knowledge-v1");
+
+        U03RiskAssessmentCandidate rejected = new U03EvidenceAcceptanceService().accept(
+                command("event-release-mismatch"), candidate, capabilityBinding(), release());
+        assertTrue(rejected.isFailed());
+        assertEquals("U03_RELEASE_BINDING_MISMATCH", rejected.getFailureReasonCode());
     }
 
     @Test
     void validProposalBindsInputVersionAndAllGovernedReleases() {
         U03ExecutionCommand command = command("event-valid");
-        U03RiskAssessmentCandidate candidate = U03RiskAssessmentCandidate.valid(Arrays.asList("evidence-1"));
+        U03RiskAssessmentCandidate candidate = validCandidate(7, "evidence-1");
         U03DecisionOutcome decision = new U03DecisionOutcome(
-                "decision-valid", "VALID", "CAUTION", "RULE_PACK_DECISION", candidate.getEvidenceRefs());
+                "decision-valid", "VALID", "CAUTION", "SYNTHETIC_RULE_DECISION", candidate.getEvidenceRefs());
         U03GovernedCandidateGateway.GovernedResult governed = new U03GovernedCandidateGateway.GovernedResult(
                 candidate, capabilityBinding(), release());
 
@@ -86,6 +109,21 @@ class U03RiskAssessmentFlowTest {
         assertNull(value.get("knowledge_release_ref"));
         assertNull(value.get("outcome_code"));
         assertEquals("FAILED", value.get("assessment_status"));
+    }
+
+    private static U03RiskAssessmentCandidate validCandidate(int version, String evidenceRef) {
+        return U03RiskAssessmentCandidate.valid(
+                version,
+                Arrays.asList(evidenceRef),
+                0.8d,
+                "SYNTHETIC_UNCERTAINTY",
+                Collections.<String>emptyList(),
+                Arrays.asList("source-1"),
+                Arrays.asList("synthetic-eval"),
+                "c02-u03-v1-active",
+                "1.0.0",
+                "rules-v1",
+                "knowledge-v1");
     }
 
     private static U03ExecutionCommand command(String eventId) {
