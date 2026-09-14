@@ -17,8 +17,11 @@ public final class U03CommitService {
         if (proposal.getSourceDecisionRef() == null || proposal.getSourceDecisionRef().trim().isEmpty()) {
             throw new IllegalArgumentException("U03 proposal must reference its source decision");
         }
-        if (proposal.getReleaseRefs().size() < 3) {
-            throw new IllegalArgumentException("U03 proposal must bind capability, rule and knowledge releases");
+        if (proposal.getReleaseRefs().isEmpty()) {
+            throw new IllegalArgumentException("U03 proposal must retain at least the attempted capability binding ref");
+        }
+        if (proposal.isFullReleaseEvidenceRequired() && proposal.getReleaseRefs().size() < 3) {
+            throw new IllegalArgumentException("VALID U03 proposal must bind capability, rule and knowledge releases");
         }
         return stateCommitter.commit(proposal.getStatePatch());
     }
