@@ -140,12 +140,6 @@ public class C01U02CapabilityGateway {
                 || observation.getConfidenceOrUncertainty() > 1.0d) {
             throw invalid("C01/U02 returned malformed Observation Candidate.");
         }
-        if ("UNKNOWN".equals(observation.getValueSemantics()) && "NO".equals(observation.getValueSemantics())) {
-            throw invalid("UNKNOWN cannot be collapsed into NO.");
-        }
-        if ("UNMEASURED".equals(observation.getValueSemantics()) && "NORMAL".equals(observation.getValueSemantics())) {
-            throw invalid("UNMEASURED cannot be collapsed into NORMAL.");
-        }
     }
 
     private void validateBinding(
