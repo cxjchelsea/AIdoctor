@@ -3,7 +3,7 @@
 > Unit：U02 临床事实形成与版本提交  
 > 阶段：Unit 前置 Legacy Impact Assessment  
 > 分支：`prep/u02-clinical-fact-formation`  
-> 基线：`main@8257b399bd4547d56c5613366feafb7b72318b15`（Foundation-1 已合并）  
+> 基线：`main@e0b9d776fec9b9510b4d6b68425f87f8f5fbc87c`（Foundation-1 + C01-U01 已合并）  
 > 本文件只识别 U02 会触碰的旧资产、允许复用边界和退役条件；不构成 U02 Implementation Authorization、Clinical Runtime Enablement、Merge Authorization 或物理删除授权。
 
 ---
@@ -89,7 +89,7 @@ DiagnosisController.continueDiagnosis
 | Foundation-1 P06 binding governance | Capability 可用性治理 | **KEEP / REUSE** | **YES** | C01-U02 invocation 绑定合法 CapabilityBindingRef | 当前无删除计划 |
 | Foundation-1 Resolver / Invocation Guard | 调用前 fail-closed 校验 | **KEEP / REUSE** | **YES** | C01-U02 必经 | 当前无删除计划 |
 | Foundation-1 P05 capability-call trace | 调用关联基础 | **KEEP / REUSE + U02 INCREMENT** | **YES** | 绑定 result→decision→proposal→commit→state version | 当前无删除计划 |
-| PR #80 C01-U01 slice | 当前 U01 所需 C01 typed candidate/Java gateway/internal wiring | **DEPENDENCY / MUST REBASE-OR-MERGE BEFORE U02 IMPLEMENTATION** | U02 应在其上增量扩展 | U02 不能重新平行实现另一套 C01 foundation | N/A |
+| C01-U01 slice（PR #80） | U01 所需 C01 typed candidate/Java gateway/internal wiring | **MERGED PREDECESSOR / INCREMENTAL BASELINE** | **YES** | U02 必须在该基础上增量扩展，不得平行重建 C01 foundation | N/A |
 
 ---
 
@@ -182,9 +182,8 @@ StateCommitter / Clinical CDP Adapter
 Foundation-1 governance/trace
 = REUSE
 
-PR #80 C01-U01
-= REQUIRED PREDECESSOR FOR INCREMENTAL C01-U02 IMPLEMENTATION
-= CURRENTLY NOT MERGED
+C01-U01 Mainline Predecessor
+= SATISFIED / MERGED AS PR #80
 
 Physical Legacy Removal
 = NOT AUTHORIZED
