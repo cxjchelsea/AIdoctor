@@ -37,7 +37,7 @@ public final class U02DependencyInvalidationHook {
         if ("RISK".equals(artifactType)) return "STALE";
         if ("DDX".equals(artifactType)) return "INVALIDATED";
         if ("WORKUP".equals(artifactType) || "DELIVERY".equals(artifactType)) return "SUPERSEDED";
-        return "INVALIDATED";
+        throw new IllegalArgumentException("Unsupported U02/D05 dependent artifact type: " + artifactType);
     }
 
     public static final class DependentArtifact {
