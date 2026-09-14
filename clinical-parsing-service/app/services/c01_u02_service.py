@@ -25,6 +25,7 @@ class C01U02ClinicalUnderstandingService:
     UNMEASURED_MARKERS = ("没测", "未测", "没有测", "没量", "未量")
     SEVERITY = (("轻微", "MILD"), ("轻度", "MILD"), ("中度", "MODERATE"), ("严重", "SEVERE"), ("剧烈", "SEVERE"))
     VALUE_UNIT = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>℃|°C|mmHg|bpm|次/分|mg|g|ml|mL|mmol/L|%)")
+    CLAUSE_SEPARATORS = ",，。;；!?！？\n"
 
     def __init__(self):
         vocabulary_loader = VocabularyLoader(settings.vocabulary_base_path)
@@ -87,10 +88,22 @@ class C01U02ClinicalUnderstandingService:
             if key in seen:
                 continue
             seen.add(key)
-            result.append(self._candidate(index, text, raw_ref, concept_id, display, source_type, float(concept.get("confidence") or 0.5), ambiguous))
+            local_text = self._clause_for_concept(text, concept, display)
+            result.append(self._candidate(
+                index,
+                local_text,
+                raw_ref,
+                concept_id,
+                display,
+                source_type,
+                float(concept.get("confidence") or 0.5),
+                ambiguous,
+            ))
         return result
 
     def _candidate(self, index, text, raw_ref, concept_id, display, source_type, confidence, ambiguous):
+        # Negation/value/temporality/severity are scoped to this concept's local
+        # clause, never copied from an unrelated concept elsewhere in the input.
         negated = any(marker in text for marker in self.NEGATION_MARKERS)
         unknown = any(marker in text for marker in self.UNKNOWN_MARKERS)
         unmeasured = any(marker in text for marker in self.UNMEASURED_MARKERS)
@@ -128,6 +141,28 @@ class C01U02ClinicalUnderstandingService:
             ambiguityFlags=flags,
             contradictionRefs=[],
         )
+
+    @classmethod
+    def _clause_for_concept(cls, text: str, concept: Dict, display: str) -> str:
+        needle = str(concept.get("original_text") or display or "").strip()
+        if not needle:
+            return text
+        position = text.find(needle)
+        if position < 0 and display:
+            position = text.find(display)
+        if position < 0:
+            return text
+
+        left = 0
+        right = len(text)
+        for separator in cls.CLAUSE_SEPARATORS:
+            found = text.rfind(separator, 0, position)
+            if found >= left:
+                left = found + 1
+            found = text.find(separator, position + len(needle))
+            if found >= 0:
+                right = min(right, found)
+        return text[left:right].strip()
 
     @staticmethod
     def _concept_id(concept: Dict) -> Optional[str]:
