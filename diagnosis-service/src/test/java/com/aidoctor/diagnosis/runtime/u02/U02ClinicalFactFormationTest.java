@@ -19,7 +19,7 @@ class U02ClinicalFactFormationTest {
     @Test
     void unknownWithResolvedConceptRemainsExplicitFactNotNegative() {
         U02ClinicalFactBusinessOwner owner = new U02ClinicalFactBusinessOwner();
-        C01U02CapabilityResponse response = response(observation("UNKNOWN", "UNCERTAIN"));
+        C01U02CapabilityResponse response = response(observation("UNKNOWN", "UNCERTAIN", "PATIENT_REPORTED"));
 
         U02ClinicalFactDecision decision = owner.decide("consult-1", "event-1", response);
 
@@ -30,7 +30,7 @@ class U02ClinicalFactFormationTest {
 
     @Test
     void unresolvedConceptRequiresClarificationAndCannotBecomeProposal() {
-        C01U02CapabilityResponse.ObservationCandidate unresolved = observation("UNKNOWN", "UNCERTAIN");
+        C01U02CapabilityResponse.ObservationCandidate unresolved = observation("UNKNOWN", "UNCERTAIN", "PATIENT_REPORTED");
         unresolved.setConceptId(null);
         U02ClinicalFactDecision decision = new U02ClinicalFactBusinessOwner()
                 .decide("consult-1", "event-1", response(unresolved));
@@ -40,9 +40,9 @@ class U02ClinicalFactFormationTest {
     }
 
     @Test
-    void typedProposalKeepsFactStructuredAndPassesStatePatchBoundary() {
+    void typedPatientFactKeepsStructureSourceAndPassesStatePatchBoundary() {
         U02ClinicalFactDecision decision = new U02ClinicalFactBusinessOwner()
-                .decide("consult-1", "event-1", response(observation("UNMEASURED", "UNCERTAIN")));
+                .decide("consult-1", "event-1", response(observation("UNMEASURED", "UNCERTAIN", "PATIENT_REPORTED")));
         U02ClinicalFactProposal proposal = new U02ClinicalFactProposalFactory().create(
                 "cdp-1", 3, "trace-1", "corr-1", decision, binding());
 
@@ -50,12 +50,30 @@ class U02ClinicalFactFormationTest {
         assertEquals(Integer.valueOf(3), patch.baseVersion);
         assertEquals("P01", patch.envelope.capabilityId);
         assertEquals(1, patch.operations.size());
+        assertTrue(patch.operations.get(0).path.startsWith("/patient_state/clinical_fact_"));
+        assertEquals("PATIENT_REPORTED", patch.operations.get(0).source);
         assertTrue(patch.operations.get(0).value instanceof Map<?, ?>);
         Map<?, ?> fact = (Map<?, ?>) patch.operations.get(0).value;
         assertEquals("UNMEASURED", fact.get("value_semantics"));
+        assertEquals("PATIENT_REPORTED", fact.get("source_type"));
         assertEquals("U02_CLINICAL_FACT_OWNER", proposal.getBusinessOwner());
         assertEquals(Collections.singletonList("c01-u02-v1-active"), proposal.getCapabilityBindingRefs());
         assertTrue(new StatePatchBoundaryValidator().validate(patch).valid);
+    }
+
+    @Test
+    void modelInferenceBecomesDerivedAssertionNotPatientFact() {
+        U02ClinicalFactDecision decision = new U02ClinicalFactBusinessOwner()
+                .decide("consult-1", "event-model", response(observation("YES", "NORMALIZED", "MODEL_INFERRED")));
+        U02ClinicalFactProposal proposal = new U02ClinicalFactProposalFactory().create(
+                "cdp-1", 3, "trace-model", "corr-model", decision, binding());
+
+        StateTypes.StatePatchOperation operation = proposal.getStatePatch().operations.get(0);
+        assertTrue(operation.path.startsWith("/patient_state/derived_clinical_assertion_"));
+        assertEquals("MODEL_INFERRED", operation.source);
+        Map<?, ?> value = (Map<?, ?>) operation.value;
+        assertEquals("MODEL_INFERRED", value.get("source_type"));
+        assertTrue(new StatePatchBoundaryValidator().validate(proposal.getStatePatch()).valid);
     }
 
     @Test
@@ -87,14 +105,14 @@ class U02ClinicalFactFormationTest {
         return response;
     }
 
-    private C01U02CapabilityResponse.ObservationCandidate observation(String value, String lifecycle) {
+    private C01U02CapabilityResponse.ObservationCandidate observation(String value, String lifecycle, String sourceType) {
         C01U02CapabilityResponse.ObservationCandidate observation = new C01U02CapabilityResponse.ObservationCandidate();
         observation.setObservationId("obs-1");
         observation.setConceptId("CUI:C0012833");
         observation.setConceptDisplay("头晕");
         observation.setRawTextRef("sha256:abc");
         observation.setValueSemantics(value);
-        observation.setSourceType("PATIENT_REPORTED");
+        observation.setSourceType(sourceType);
         observation.setLifecycle(lifecycle);
         observation.setConfidenceOrUncertainty(0.8d);
         observation.setProvenance(Collections.singletonList("candidate"));
