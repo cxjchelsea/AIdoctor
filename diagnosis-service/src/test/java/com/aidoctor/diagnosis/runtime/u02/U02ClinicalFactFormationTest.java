@@ -98,6 +98,17 @@ class U02ClinicalFactFormationTest {
         assertEquals(4, records.get(0).targetClinicalStateVersion);
     }
 
+    @Test
+    void d05RejectsUnsupportedArtifactTypeInsteadOfInventingStateEffect() {
+        U02DependencyInvalidationHook hook = new U02DependencyInvalidationHook();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> hook.invalidate(
+                        "consult-1", "event-1", "obs-1", 4,
+                        Collections.singletonList(
+                                new U02DependencyInvalidationHook.DependentArtifact("UNKNOWN_MODULE", "artifact-1"))));
+    }
+
     private C01U02CapabilityResponse response(C01U02CapabilityResponse.ObservationCandidate observation) {
         C01U02CapabilityResponse response = new C01U02CapabilityResponse();
         response.setBusinessStatus("SUCCESS");
