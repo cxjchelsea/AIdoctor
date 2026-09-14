@@ -35,7 +35,7 @@ class C01U02CapabilityGatewayTest {
     void authorizedBindingReturnsCandidateOnlyResult() {
         C01U02CapabilityClient client = mock(C01U02CapabilityClient.class);
         CapabilityInvocationGuard guard = authorizedGuard();
-        when(client.interpret(any())).thenReturn(validResponse("UNKNOWN", "UNCERTAIN"));
+        when(client.interpret(any())).thenReturn(validResponse("UNKNOWN", "UNCERTAIN", "PATIENT_REPORTED"));
         C01U02CapabilityGateway gateway = new C01U02CapabilityGateway(client, guard, true);
 
         C01U02CapabilityGateway.GovernedResult result = gateway.interpret(
@@ -45,6 +45,46 @@ class C01U02CapabilityGatewayTest {
         assertEquals(C01U02CapabilityGateway.BINDING_ID, result.getAuthorizedBinding().getBindingId());
         verify(guard).authorize(eq(C01U02CapabilityGateway.BINDING_ID),
                 eq(C01U02CapabilityGateway.CAPABILITY_ID), any(CapabilityExecutionContext.class));
+    }
+
+    @Test
+    void modelInferredSourceRemainsModelInferred() {
+        C01U02CapabilityClient client = mock(C01U02CapabilityClient.class);
+        CapabilityInvocationGuard guard = authorizedGuard();
+        when(client.interpret(any())).thenReturn(validResponse("YES", "NORMALIZED", "MODEL_INFERRED"));
+        C01U02CapabilityGateway gateway = new C01U02CapabilityGateway(client, guard, true);
+
+        C01U02CapabilityGateway.GovernedResult result = gateway.interpret(
+                "user-1", "模型推断头晕", "consult-1", "event-model", "MODEL_INFERRED");
+
+        assertEquals("MODEL_INFERRED", result.getResponse().getObservationCandidates().get(0).getSourceType());
+        assertNotEquals("PATIENT_REPORTED", result.getResponse().getObservationCandidates().get(0).getSourceType());
+    }
+
+    @Test
+    void unsupportedSourceFailsBeforeGovernanceOrRemoteCall() {
+        C01U02CapabilityClient client = mock(C01U02CapabilityClient.class);
+        CapabilityInvocationGuard guard = mock(CapabilityInvocationGuard.class);
+        C01U02CapabilityGateway gateway = new C01U02CapabilityGateway(client, guard, true);
+
+        C01U02CapabilityException ex = assertThrows(C01U02CapabilityException.class,
+                () -> gateway.interpret("user-1", "我头晕", "consult-1", "event-source", "UNKNOWN_SOURCE"));
+
+        assertEquals("CLINICAL_SOURCE_TYPE_UNSUPPORTED", ex.getReasonCode());
+        verifyNoInteractions(client, guard);
+    }
+
+    @Test
+    void returnedSourceCannotSilentlyChangeProvenanceClass() {
+        C01U02CapabilityClient client = mock(C01U02CapabilityClient.class);
+        CapabilityInvocationGuard guard = authorizedGuard();
+        when(client.interpret(any())).thenReturn(validResponse("YES", "NORMALIZED", "PATIENT_REPORTED"));
+        C01U02CapabilityGateway gateway = new C01U02CapabilityGateway(client, guard, true);
+
+        C01U02CapabilityException ex = assertThrows(C01U02CapabilityException.class,
+                () -> gateway.interpret("user-1", "模型推断头晕", "consult-1", "event-mismatch", "MODEL_INFERRED"));
+
+        assertEquals("INVALID_OUTPUT", ex.getReasonCode());
     }
 
     @Test
@@ -65,7 +105,7 @@ class C01U02CapabilityGatewayTest {
     void bindingMismatchFailsClosed() {
         C01U02CapabilityClient client = mock(C01U02CapabilityClient.class);
         CapabilityInvocationGuard guard = authorizedGuard();
-        C01U02CapabilityResponse response = validResponse("YES", "NORMALIZED");
+        C01U02CapabilityResponse response = validResponse("YES", "NORMALIZED", "PATIENT_REPORTED");
         response.getBindingRef().setCapabilityVersion("unexpected");
         when(client.interpret(any())).thenReturn(response);
         C01U02CapabilityGateway gateway = new C01U02CapabilityGateway(client, guard, true);
@@ -97,7 +137,7 @@ class C01U02CapabilityGatewayTest {
                 LocalDateTime.parse("2026-09-01T00:00:00"));
     }
 
-    private C01U02CapabilityResponse validResponse(String valueSemantics, String lifecycle) {
+    private C01U02CapabilityResponse validResponse(String valueSemantics, String lifecycle, String sourceType) {
         C01U02CapabilityResponse response = new C01U02CapabilityResponse();
         response.setBusinessStatus("SUCCESS");
         response.setReasonCode("OBSERVATION_CANDIDATES_EXTRACTED");
@@ -121,7 +161,7 @@ class C01U02CapabilityGatewayTest {
         observation.setConceptDisplay("头晕");
         observation.setRawTextRef("sha256:abc");
         observation.setValueSemantics(valueSemantics);
-        observation.setSourceType("PATIENT_REPORTED");
+        observation.setSourceType(sourceType);
         observation.setLifecycle(lifecycle);
         observation.setConfidenceOrUncertainty(0.8d);
         observation.setProvenance(Collections.singletonList("test"));
