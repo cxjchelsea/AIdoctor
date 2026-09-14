@@ -74,6 +74,21 @@ def test_unmeasured_is_not_normal_and_keeps_source_type():
     assert observation.sourceType == "PATIENT_REPORTED"
 
 
+def test_model_inferred_is_not_relabelled_patient_reported():
+    result = interpret("头晕", source_type="MODEL_INFERRED")
+    observation = result.observationCandidates[0]
+    assert result.businessStatus == "SUCCESS"
+    assert observation.sourceType == "MODEL_INFERRED"
+    assert observation.sourceType != "PATIENT_REPORTED"
+
+
+def test_unsupported_source_type_fails_closed_without_candidates():
+    result = interpret("头晕", source_type="UNKNOWN_SOURCE")
+    assert result.businessStatus == "UNSUPPORTED"
+    assert result.reasonCode == "CLINICAL_SOURCE_TYPE_UNSUPPORTED"
+    assert result.observationCandidates == []
+
+
 def test_value_unit_temporality_and_severity_are_candidate_metadata():
     result = interpret("今天体温39.2℃，症状严重")
     observation = result.observationCandidates[0]
