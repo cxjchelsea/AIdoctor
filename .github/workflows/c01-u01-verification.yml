@@ -13,6 +13,8 @@ on:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/dto/capability/c01/**'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/**'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u01/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/governance/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/governance/**'
       - 'docs/current/07_能力设计/**'
       - '.github/workflows/c01-u01-verification.yml'
 
@@ -66,7 +68,7 @@ jobs:
       - name: Run C01, U01, Foundation and StateCommitter focused tests
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Dtest='C01U01CapabilityGatewayTest,U01NaturalLanguageStartServiceTest,U01SemanticPolicyTest,U01ConsultationServiceTest,U01LegacyBoundaryGuardTest,FoundationRuntimeBaseTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
+          -Dtest='C01U01CapabilityGatewayTest,U01NaturalLanguageStartServiceTest,U01SemanticPolicyTest,U01ConsultationServiceTest,U01LegacyBoundaryGuardTest,FoundationRuntimeBaseTest,Foundation1GovernanceTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
           test
       - name: Run diagnosis-service regression suite
         run: mvn -f diagnosis-service/pom.xml test
