@@ -31,6 +31,14 @@ public class C01U02CapabilityGateway {
             new HashSet<String>(Arrays.asList("YES", "NO", "UNKNOWN", "UNMEASURED", "NOT_ASKED", "NOT_APPLICABLE"));
     private static final Set<String> LIFECYCLES =
             new HashSet<String>(Arrays.asList("EXTRACTED", "NORMALIZED", "CONFIRMED", "UNCERTAIN", "CONTRADICTED", "INVALIDATED"));
+    private static final Set<String> SOURCE_TYPES =
+            new HashSet<String>(Arrays.asList(
+                    "PATIENT_REPORTED",
+                    "EXTERNAL_MEASUREMENT",
+                    "OCR_EXTRACTED",
+                    "MODEL_INFERRED",
+                    "RULE_DERIVED",
+                    "CLINICIAN_CONFIRMED"));
 
     private final C01U02CapabilityClient client;
     private final CapabilityInvocationGuard invocationGuard;
@@ -55,6 +63,11 @@ public class C01U02CapabilityGateway {
             throw new C01U02CapabilityException(
                     "CAPABILITY_BINDING_INACTIVE", false,
                     "C01/U02 capability binding is not active for this runtime composition.");
+        }
+        if (!SOURCE_TYPES.contains(sourceType)) {
+            throw new C01U02CapabilityException(
+                    "CLINICAL_SOURCE_TYPE_UNSUPPORTED", false,
+                    "C01/U02 clinical source type is not part of the frozen K03 source semantics.");
         }
 
         final CapabilityBindingRecord authorizedBinding;
@@ -95,13 +108,14 @@ public class C01U02CapabilityGateway {
                     "C01/U02 capability invocation failed.", ex);
         }
 
-        validateResponse(response, authorizedBinding);
+        validateResponse(response, authorizedBinding, sourceType);
         return new GovernedResult(response, authorizedBinding);
     }
 
     private void validateResponse(
             C01U02CapabilityResponse response,
-            CapabilityBindingRecord authorizedBinding) {
+            CapabilityBindingRecord authorizedBinding,
+            String expectedSourceType) {
         if (response == null) {
             throw invalid("C01/U02 returned null response.");
         }
@@ -123,11 +137,13 @@ public class C01U02CapabilityGateway {
             throw invalid("C01/U02 SUCCESS must contain at least one Observation Candidate.");
         }
         for (C01U02CapabilityResponse.ObservationCandidate observation : observations) {
-            validateObservation(observation);
+            validateObservation(observation, expectedSourceType);
         }
     }
 
-    private void validateObservation(C01U02CapabilityResponse.ObservationCandidate observation) {
+    private void validateObservation(
+            C01U02CapabilityResponse.ObservationCandidate observation,
+            String expectedSourceType) {
         if (observation == null
                 || blank(observation.getObservationId())
                 || blank(observation.getConceptDisplay())
@@ -135,7 +151,8 @@ public class C01U02CapabilityGateway {
                 || !observation.getRawTextRef().startsWith("sha256:")
                 || !VALUE_SEMANTICS.contains(observation.getValueSemantics())
                 || !LIFECYCLES.contains(observation.getLifecycle())
-                || blank(observation.getSourceType())
+                || !SOURCE_TYPES.contains(observation.getSourceType())
+                || !expectedSourceType.equals(observation.getSourceType())
                 || observation.getConfidenceOrUncertainty() < 0.0d
                 || observation.getConfidenceOrUncertainty() > 1.0d) {
             throw invalid("C01/U02 returned malformed Observation Candidate.");
