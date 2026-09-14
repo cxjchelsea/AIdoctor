@@ -28,10 +28,19 @@ failure semantics = AVAILABLE
 
 ```text
 A Clinical Risk Semantics
-= STRUCTURAL_SEMANTICS_FROZEN / MEDICAL_OWNER_REVIEW_REQUIRED / NOT_APPROVED
+= STRUCTURAL_SEMANTICS_FROZEN
+/ SOURCE_GROUNDED_CONTENT_DRAFT_v0.1_AVAILABLE
+/ SOURCE_REVIEW_PASS_FOR_MEDICAL_OWNER_REVIEW
+/ MEDICAL_OWNER_REVIEW_REQUIRED
+/ NOT_APPROVED
 
 B Evidence Catalog
-= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / NOT_APPROVED
+= STRUCTURAL_SCHEMA_FROZEN
+/ SOURCE_GROUNDED_CONTENT_DRAFT_v0.1_AVAILABLE
+/ 11 CANDIDATE ENTRIES
+/ SOURCE_REVIEW_PASS_FOR_MEDICAL_OWNER_REVIEW
+/ MEDICAL_OWNER_REVIEW_REQUIRED
+/ NOT_APPROVED
 
 C Safety-critical Risk Rule Pack
 = STRUCTURAL_SCHEMA_FROZEN / CLINICAL_RULE_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / NOT_APPROVED
@@ -46,13 +55,38 @@ F Risk EvalSet / Safety Suite
 = STRUCTURAL_SCHEMA_FROZEN / GOLDEN_CASE_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / EVALUATION_OWNER_REVIEW_REQUIRED / NOT_REVIEW_READY
 ```
 
-A/B/C/D/E/F 的结构与治理框架已经齐备，但尚未形成可用于正式临床判断和独立临床验证的受审内容。
+A/B 已进入真实、来源可追溯的医学内容草案阶段；C/D/E/F 仍未完成真实内容。
 
 ---
 
-## 3. Readiness Gate
+## 3. A/B source review 结果
 
-进入 CD-07 `C02 / D09 Clinical Implementation` 之前仍必须满足：
+新增：
+
+```text
+U03_Clinical_Risk_Semantics_Content_Draft_v0.1.md
+U03_Evidence_Catalog_Content_Draft_v0.1.md
+U03_AB_Source_Review_v0.1.md
+```
+
+当前 source review 结论：
+
+```text
+A: 6/6 source-supported for medical review
+B: 11/11 source-supported for medical review
+Medical Owner Approval = 0
+Production Eligibility = NO
+```
+
+主要待决问题：
+- 通用 new altered mental state 若要扩大为跨病种全局 red flag，建议补更直接的通用急性病来源；
+- 成人来源不能扩展到儿科、妊娠/近期妊娠；
+- 生命体征具体阈值留在 C Rule Pack，不由 B Catalog 承担；
+- NICE/NHS 初始来源最终仍需根据目标地区做 localization adjudication。
+
+---
+
+## 4. Readiness Gate
 
 ### Gate A — Clinical Semantics Frozen
 
@@ -61,7 +95,7 @@ CD-01 APPROVED
 CD-02 APPROVED
 ```
 
-当前：`NOT_PASSED`
+当前：`NOT_PASSED`，但 A/B 已达到 `READY_FOR_MEDICAL_OWNER_REVIEW`。
 
 ### Gate B — Governed Content Ready
 
@@ -93,11 +127,12 @@ Implementation Authorization
 
 ---
 
-## 4. 当前 Readiness 判定
+## 5. 当前 Readiness 判定
 
 ```text
 Engineering Prerequisites = PASS
 Clinical Structural Definitions = COMPLETE_FOR_SCHEMA_LAYER
+A/B Source-grounded Content = AVAILABLE / REVIEWED_FOR_SOURCE_CONSISTENCY
 Medical Owner Approval = NOT_COMPLETE
 Governed Clinical Content = NOT_COMPLETE
 Clinical Evaluation Content = NOT_COMPLETE
@@ -116,44 +151,16 @@ U03 Clinical Dependency Readiness
 
 ---
 
-## 5. 结构阶段已经完成
-
-当前不应继续新增新的 schema 层。下一阶段应转为：
-
-```text
-医学内容填充
-↓
-Medical Owner / Policy Owner 审核
-↓
-Knowledge applicability adjudication
-↓
-真实 golden cases / negative assertions
-↓
-EvalSet review
-↓
-重新执行 Clinical Dependency Readiness
-```
-
-当前仍不应：
-
-- 将未审核医学内容写成 production rule；
-- 以代码顺序代替临床优先级；
-- 以 synthetic case 冒充 Clinical Eval；
-- 启动 U04 并假定 U03 已临床可用。
-
----
-
 ## 6. 下一步
 
-下一步不再是结构设计，而是 Clinical Input Package 内容完成：
+当前最合理的下一步是：
 
 ```text
-A 医学语义审核
-B Evidence Catalog 实际条目
-C Rule Pack 实际规则内容
-D D09 Policy 实际 branch / precedence
-E Knowledge applicability + initial release content
-F clinical golden cases + safety negative assertions
+Medical Owner review A/B
+↓
+approve / revise / reject individual entries
+↓
+only approved B entries may enter C Rule Pack content design
 ```
 
-只有这些内容达到既定 review gate 后，才重新评估 CD-07 Implementation Readiness。
+若暂时没有医学 Owner，可继续做来源扩充、地区本地化资料整理和 review package 准备，但不得由工程侧自行把 A/B 标记为 APPROVED。
