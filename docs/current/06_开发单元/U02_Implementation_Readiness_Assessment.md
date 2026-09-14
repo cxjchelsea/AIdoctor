@@ -3,7 +3,7 @@
 > Unit：U02 临床事实形成与版本提交  
 > 阶段：Pre-Implementation Readiness  
 > 分支：`prep/u02-clinical-fact-formation`  
-> 基线：`main@8257b399bd4547d56c5613366feafb7b72318b15`  
+> 基线：`main@e0b9d776fec9b9510b4d6b68425f87f8f5fbc87c`  
 > 本文件用于判断 U02 是否满足 Implementation Authorization 条件；不构成实现授权或 Merge Authorization。
 
 ---
@@ -52,7 +52,7 @@ Phase 8 已冻结 K03 Observation Candidate 与 K09 StateChangeProposal/Commit �
 | Foundation-1 P06 Binding Governance | MERGED / COMPONENT_VERIFIED | REUSE | 否 |
 | Foundation-1 Resolver / Invocation Guard | MERGED / COMPONENT_VERIFIED | REUSE | 否 |
 | Foundation-1 P05 Trace Baseline | MERGED / COMPONENT_VERIFIED | U02 wiring increment | 否 |
-| C01-U01 minimal slice | PR #80 IMPLEMENTED / COMPONENT_VERIFIED / INTERNALLY_WIRED，但 **NOT_MERGED** | 作为 C01-U02 增量扩展基线 | **是** |
+| C01-U01 minimal slice | **MERGED / COMPONENT_VERIFIED / INTERNALLY_WIRED / FOUNDATION-1-BINDING-GOVERNED** | 作为 C01-U02 增量扩展基线 | 否 |
 | C01-U02 Clinical Fact Parsing | NOT_IMPLEMENTED | INCREMENTAL_EXTENSION | 否，属于 U02 实现范围 |
 | P01 typed Clinical Fact Commit | Foundation mechanical core exists，U02 typed path NOT_IMPLEMENTED | INCREMENTAL_EXTENSION | 否，属于 U02 实现范围 |
 | minimum D05 invalidation hook | NOT_IMPLEMENTED | U02 最小版本 | 否，属于 U02 实现范围 |
@@ -65,12 +65,13 @@ Phase 8 已冻结 K03 Observation Candidate 与 K09 StateChangeProposal/Commit �
 
 ### 3.1 当前必须继承的 C01-U01 基础
 
-U02 不应重新实现以下能力基础，而应在 PR #80 的 C01-U01 slice 上增量扩展：
+U02 不应重新实现以下能力基础，而应在已合入主线的 C01-U01 slice 上增量扩展：
 
 ```text
 typed candidate-only capability contract
 Java typed gateway/client
 fail-closed capability invocation
+Foundation-1 authoritative CapabilityInvocationGuard
 CapabilityBinding validation
 provenance / uncertainty pattern
 raw-input fingerprint / replay safety pattern
@@ -265,7 +266,7 @@ full dependency engine = DEFERRED
 
 ## 6. U02 最小施工包
 
-若 Implementation Authorization 后，允许的施工范围固定为：
+若获得明确 Implementation Authorization，允许的施工范围固定为：
 
 ```text
 U02-01 C01-U02 Observation Candidate contract extension
@@ -297,36 +298,30 @@ production activation
 
 ---
 
-## 7. 当前阻塞项
+## 7. Predecessor Closure / Remaining Gate
 
-### BLOCKER-U02-01 — C01-U01 仍未进入 main
-
-当前 PR #80：
+此前唯一硬阻塞 `BLOCKER-U02-01` 已关闭：
 
 ```text
-OPEN
-DRAFT
-MERGEABLE
-NOT_MERGED
+PR #80 C01-U01
+= MERGED
+merge commit = e0b9d776fec9b9510b4d6b68425f87f8f5fbc87c
+C01-U01 Mainline Dependency = SATISFIED
 ```
 
-U02 的 C01 设计是 `INCREMENTAL_EXTENSION`，因此必须以 C01-U01 基础为前置。当前 `main` 没有该基础。
+Foundation-1 与 C01-U01 均已进入主线，因此当前不存在需要额外建设 Foundation-2 的证据。
 
-可接受的解除方式：
+仍然必须保持以下门禁区分：
 
 ```text
-A. PR #80 完成最终 Merge Readiness → Merge Authorization → standard merge → PMV
-
-或
-
-B. 明确重构 PR #80，使其在最新 Foundation-1 main 上更新并重新验证后再合并
+Implementation Readiness PASS
+!= Implementation Authorization
+!= Unit Verified
+!= Merge Authorization
+!= Production Authorization
 ```
 
-不接受：
-
-```text
-U02 在 main 上另造一套平行 C01 implementation
-```
+本文件只给出“可以授权实施”的技术判断，不自动开始编码。
 
 ---
 
@@ -341,10 +336,15 @@ C01-U02 Gap = DEFINED
 P01-U02 Gap = DEFINED
 minimum D05 Scope = DEFINED
 Foundation-1 Dependency = SATISFIED
-C01-U01 Mainline Dependency = NOT_SATISFIED
+C01-U01 Mainline Dependency = SATISFIED
+Foundation-2 = NOT_REQUIRED
 
-U02 Implementation Readiness = BLOCKED_BY_PREDECESSOR
-U02 Implementation Authorization = NOT_YET_RECOMMENDED
+U02 Implementation Readiness = PASS / IMPLEMENTATION_READY
+U02 Implementation Authorization = NOT_GRANTED_BY_THIS_DOCUMENT
 ```
 
-解除唯一当前硬阻塞后，应再次检查 PR #80 与最新 Foundation-1 的兼容性，然后即可进入 U02 Implementation Authorization Gate。
+正式进入 U02 编码前，下一门禁只剩：
+
+```text
+Explicit U02 Implementation Authorization
+```
