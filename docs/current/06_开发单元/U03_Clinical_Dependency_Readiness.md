@@ -43,10 +43,10 @@ E Knowledge Release Manifest
 = STRUCTURAL_SCHEMA_FROZEN / APPLICABILITY_ADJUDICATION_PENDING / CLINICAL_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / NOT_APPROVED
 
 F Risk EvalSet / Safety Suite
-= NOT_STARTED
+= STRUCTURAL_SCHEMA_FROZEN / GOLDEN_CASE_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / EVALUATION_OWNER_REVIEW_REQUIRED / NOT_REVIEW_READY
 ```
 
-A/B/C/D/E 已经完成结构和治理语义冻结，但尚未形成可用于生产临床判断的受审内容。
+A/B/C/D/E/F 的结构与治理框架已经齐备，但尚未形成可用于正式临床判断和独立临床验证的受审内容。
 
 ---
 
@@ -97,10 +97,11 @@ Implementation Authorization
 
 ```text
 Engineering Prerequisites = PASS
-Clinical Structural Definitions = PARTIAL / AVAILABLE
+Clinical Structural Definitions = COMPLETE_FOR_SCHEMA_LAYER
 Medical Owner Approval = NOT_COMPLETE
 Governed Clinical Content = NOT_COMPLETE
-Clinical Evaluation Assets = NOT_COMPLETE
+Clinical Evaluation Content = NOT_COMPLETE
+Independent Evaluation Readiness = NOT_READY
 New Foundation = NOT_REQUIRED
 CD-07 Implementation Readiness = BLOCKED
 U04 Implementation Readiness = BLOCKED_BY_U03_CLINICAL_DEPENDENCY
@@ -115,14 +116,23 @@ U03 Clinical Dependency Readiness
 
 ---
 
-## 5. 现在允许继续的工作
+## 5. 结构阶段已经完成
 
-当前可以继续：
+当前不应继续新增新的 schema 层。下一阶段应转为：
 
-- F / Risk EvalSet / Safety Suite 的数据结构与评估规范；
-- 医学 Owner 对 A/B/C/D/E 的审核；
-- E 层对 REQUIRED / OPTIONAL / NOT_REQUIRED 的适用性裁定；
-- 后续将受审医学内容填充进 B/C/D/E/F。
+```text
+医学内容填充
+↓
+Medical Owner / Policy Owner 审核
+↓
+Knowledge applicability adjudication
+↓
+真实 golden cases / negative assertions
+↓
+EvalSet review
+↓
+重新执行 Clinical Dependency Readiness
+```
 
 当前仍不应：
 
@@ -135,10 +145,15 @@ U03 Clinical Dependency Readiness
 
 ## 6. 下一步
 
-下一步进入：
+下一步不再是结构设计，而是 Clinical Input Package 内容完成：
 
 ```text
-F / Risk EvalSet / Safety Suite structural preparation
+A 医学语义审核
+B Evidence Catalog 实际条目
+C Rule Pack 实际规则内容
+D D09 Policy 实际 branch / precedence
+E Knowledge applicability + initial release content
+F clinical golden cases + safety negative assertions
 ```
 
-F 只冻结评估集 schema、independence、negative assertions、release/version binding、review owner 与 pass/fail gate，不自行生成未审核临床 golden cases。
+只有这些内容达到既定 review gate 后，才重新评估 CD-07 Implementation Readiness。
