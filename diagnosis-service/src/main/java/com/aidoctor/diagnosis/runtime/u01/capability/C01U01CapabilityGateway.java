@@ -3,6 +3,9 @@ package com.aidoctor.diagnosis.runtime.u01.capability;
 import com.aidoctor.diagnosis.client.C01U01CapabilityClient;
 import com.aidoctor.diagnosis.dto.capability.c01.C01U01CapabilityRequest;
 import com.aidoctor.diagnosis.dto.capability.c01.C01U01CapabilityResponse;
+import com.aidoctor.diagnosis.runtime.governance.CapabilityBindingRecord;
+import com.aidoctor.diagnosis.runtime.governance.CapabilityExecutionContext;
+import com.aidoctor.diagnosis.runtime.governance.CapabilityInvocationGuard;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -13,15 +16,16 @@ import java.util.Set;
 /**
  * Minimal governed C01 invocation gateway for U01.
  *
- * Capability existence is not capability authorization. This gateway is default-off,
- * validates the frozen U01 binding, and accepts candidate results only.
+ * <p>Capability existence is not capability authorization. The local feature flag remains
+ * default-off, but an enabled composition still must pass the authoritative Foundation-1
+ * CapabilityInvocationGuard before any clinical capability call is made. Capability output
+ * is candidate-only and its returned binding reference must match the binding that was
+ * actually authorized for this invocation.</p>
  */
 @Component
 public class C01U01CapabilityGateway {
     public static final String BINDING_ID = "c01-u01-v1-active";
     public static final String CAPABILITY_ID = "C01";
-    public static final String CAPABILITY_VERSION = "c01-u01-1.0.0";
-    public static final String CAPABILITY_SET_VERSION = "aidoctor-v1-u01";
     public static final String SCOPE_VERSION = "aidoctor-v1-scope";
     public static final String CONTRACT_VERSION = "contracts-v1";
 
@@ -35,12 +39,15 @@ public class C01U01CapabilityGateway {
                     "OUTSIDE_V1_INTENT", "MIXED", "UNKNOWN"));
 
     private final C01U01CapabilityClient client;
+    private final CapabilityInvocationGuard invocationGuard;
     private final boolean enabled;
 
     public C01U01CapabilityGateway(
             C01U01CapabilityClient client,
+            CapabilityInvocationGuard invocationGuard,
             @Value("${aidoctor.capability.c01-u01.enabled:false}") boolean enabled) {
         this.client = client;
+        this.invocationGuard = invocationGuard;
         this.enabled = enabled;
     }
 
@@ -55,15 +62,33 @@ public class C01U01CapabilityGateway {
                     "C01/U01 capability binding is not active for this runtime composition.");
         }
 
+        final CapabilityBindingRecord authorizedBinding;
+        try {
+            authorizedBinding = invocationGuard.authorize(
+                    BINDING_ID,
+                    CAPABILITY_ID,
+                    new CapabilityExecutionContext(
+                            SCOPE_VERSION,
+                            CONTRACT_VERSION,
+                            CapabilityBindingRecord.ANY,
+                            CapabilityBindingRecord.ANY,
+                            CapabilityBindingRecord.ANY,
+                            CapabilityBindingRecord.ANY));
+        } catch (RuntimeException ex) {
+            throw new C01CapabilityException(
+                    "CAPABILITY_BINDING_NOT_AUTHORIZED", false,
+                    "C01/U01 authoritative capability binding validation failed.", ex);
+        }
+
         C01U01CapabilityRequest request = new C01U01CapabilityRequest(
                 userId,
                 rawText,
                 consultationId,
                 knownSubjectReferenceId,
-                BINDING_ID,
-                CAPABILITY_SET_VERSION,
-                SCOPE_VERSION,
-                CONTRACT_VERSION);
+                authorizedBinding.getBindingId(),
+                authorizedBinding.getCapabilitySetVersion(),
+                authorizedBinding.getScopeVersion(),
+                authorizedBinding.getContractVersion());
 
         final C01U01CapabilityResponse response;
         try {
@@ -74,11 +99,13 @@ public class C01U01CapabilityGateway {
                     "C01/U01 capability invocation failed.", ex);
         }
 
-        validateResponse(response);
+        validateResponse(response, authorizedBinding);
         return response;
     }
 
-    private void validateResponse(C01U01CapabilityResponse response) {
+    private void validateResponse(
+            C01U01CapabilityResponse response,
+            CapabilityBindingRecord authorizedBinding) {
         if (response == null) {
             throw invalid("C01/U01 returned null response.");
         }
@@ -88,7 +115,7 @@ public class C01U01CapabilityGateway {
                     response.isRetryable(),
                     "C01/U01 returned non-usable business status: " + response.getBusinessStatus());
         }
-        validateBinding(response.getBindingRef());
+        validateBinding(response.getBindingRef(), authorizedBinding);
         if (response.getSubjectCandidate() == null
                 || response.getProblemCandidate() == null
                 || response.getScopeCandidate() == null
@@ -108,16 +135,18 @@ public class C01U01CapabilityGateway {
         }
     }
 
-    private void validateBinding(C01U01CapabilityResponse.BindingRef binding) {
+    private void validateBinding(
+            C01U01CapabilityResponse.BindingRef binding,
+            CapabilityBindingRecord authorizedBinding) {
         if (binding == null
-                || !BINDING_ID.equals(binding.getBindingId())
-                || !"ACTIVE".equals(binding.getBindingStatus())
-                || !CAPABILITY_ID.equals(binding.getCapabilityId())
-                || !CAPABILITY_VERSION.equals(binding.getCapabilityVersion())
-                || !CAPABILITY_SET_VERSION.equals(binding.getCapabilitySetVersion())
-                || !SCOPE_VERSION.equals(binding.getScopeVersion())
-                || !CONTRACT_VERSION.equals(binding.getContractVersion())) {
-            throw invalid("C01/U01 CapabilityBindingRef mismatch.");
+                || !authorizedBinding.getBindingId().equals(binding.getBindingId())
+                || !authorizedBinding.getBindingStatus().equals(binding.getBindingStatus())
+                || !authorizedBinding.getCapabilityId().equals(binding.getCapabilityId())
+                || !authorizedBinding.getCapabilityVersion().equals(binding.getCapabilityVersion())
+                || !authorizedBinding.getCapabilitySetVersion().equals(binding.getCapabilitySetVersion())
+                || !authorizedBinding.getScopeVersion().equals(binding.getScopeVersion())
+                || !authorizedBinding.getContractVersion().equals(binding.getContractVersion())) {
+            throw invalid("C01/U01 CapabilityBindingRef does not match the authorized binding.");
         }
     }
 
