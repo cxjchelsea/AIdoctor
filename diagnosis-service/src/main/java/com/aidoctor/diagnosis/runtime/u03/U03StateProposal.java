@@ -10,14 +10,16 @@ public final class U03StateProposal {
     private final String proposalId;
     private final String sourceDecisionRef;
     private final List<String> releaseRefs;
+    private final boolean fullReleaseEvidenceRequired;
     private final StateTypes.StatePatch statePatch;
 
     public U03StateProposal(String proposalId, String sourceDecisionRef, List<String> releaseRefs,
-            StateTypes.StatePatch statePatch) {
+            boolean fullReleaseEvidenceRequired, StateTypes.StatePatch statePatch) {
         this.proposalId = required(proposalId, "proposalId");
         this.sourceDecisionRef = required(sourceDecisionRef, "sourceDecisionRef");
         this.releaseRefs = releaseRefs == null ? Collections.<String>emptyList()
                 : Collections.unmodifiableList(releaseRefs);
+        this.fullReleaseEvidenceRequired = fullReleaseEvidenceRequired;
         if (statePatch == null) throw new IllegalArgumentException("statePatch is required");
         this.statePatch = statePatch;
     }
@@ -25,6 +27,7 @@ public final class U03StateProposal {
     public String getProposalId() { return proposalId; }
     public String getSourceDecisionRef() { return sourceDecisionRef; }
     public List<String> getReleaseRefs() { return releaseRefs; }
+    public boolean isFullReleaseEvidenceRequired() { return fullReleaseEvidenceRequired; }
     public StateTypes.StatePatch getStatePatch() { return statePatch; }
 
     private static String required(String value, String name) {
