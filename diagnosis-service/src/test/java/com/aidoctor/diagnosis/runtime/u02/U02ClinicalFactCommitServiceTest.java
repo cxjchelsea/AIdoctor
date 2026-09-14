@@ -5,6 +5,7 @@ import com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse;
 import com.aidoctor.diagnosis.runtime.governance.CapabilityBindingRecord;
 import com.aidoctor.diagnosis.state.committer.fakes.SyntheticCapabilityPolicyFake;
 import com.aidoctor.diagnosis.state.committer.support.StateCommitterTestHarness;
+import com.aidoctor.diagnosis.state.committer.support.SyntheticStatePatchFactory;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -19,7 +20,7 @@ class U02ClinicalFactCommitServiceTest {
         U02ClinicalFactDecision decision = new U02ClinicalFactBusinessOwner()
                 .decide("consult-1", "event-commit-1", response());
         U02ClinicalFactProposal proposal = new U02ClinicalFactProposalFactory().create(
-                "synthetic-cdp-v1", 0, "trace-u02", "corr-u02", decision, binding());
+                SyntheticStatePatchFactory.CDP_ID, 0, "trace-u02", "corr-u02", decision, binding());
 
         // The shared harness intentionally authorizes only its synthetic capability ID.
         // This substitution tests StateCommitter mechanics, not production P01 policy wiring.
