@@ -11,11 +11,12 @@ from app.services.c01_u02_service import C01U02ClinicalUnderstandingService
 
 class FakeRecognizer:
     def recognize(self, text):
+        concepts = []
         if "头晕" in text:
-            return [{"standard_term": "头晕", "concept_type": "symptom", "cui": "C0012833", "confidence": 0.9}]
+            concepts.append({"standard_term": "头晕", "original_text": "头晕", "concept_type": "symptom", "cui": "C0012833", "confidence": 0.9})
         if "体温" in text:
-            return [{"standard_term": "体温", "concept_type": "indicator", "loinc": "8310-5", "confidence": 0.9}]
-        return []
+            concepts.append({"standard_term": "体温", "original_text": "体温", "concept_type": "indicator", "loinc": "8310-5", "confidence": 0.9})
+        return concepts
 
 
 class FakeAmbiguityDetector:
@@ -79,7 +80,27 @@ def test_value_unit_temporality_and_severity_are_candidate_metadata():
     assert observation.normalizedValue == "39.2"
     assert observation.unit == "℃"
     assert observation.temporality == "CURRENT"
-    assert observation.severityOrDegree == "SEVERE"
+    assert observation.severityOrDegree is None
+
+
+def test_mixed_input_does_not_leak_negation_or_measurement_between_concepts():
+    result = interpret("没有头晕，今天体温38.5℃")
+    observations = {item.conceptDisplay: item for item in result.observationCandidates}
+
+    dizziness = observations["头晕"]
+    temperature = observations["体温"]
+
+    assert dizziness.valueSemantics == "NO"
+    assert dizziness.negation is True
+    assert dizziness.normalizedValue is None
+    assert dizziness.unit is None
+    assert dizziness.temporality is None
+
+    assert temperature.valueSemantics == "YES"
+    assert temperature.negation is False
+    assert temperature.normalizedValue == "38.5"
+    assert temperature.unit == "℃"
+    assert temperature.temporality == "CURRENT"
 
 
 def test_unresolved_expression_fails_soft_without_guessing_concept():
