@@ -37,7 +37,7 @@ C Safety-critical Risk Rule Pack
 = STRUCTURAL_SCHEMA_FROZEN / CLINICAL_RULE_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / NOT_APPROVED
 
 D D09 Clinical Policy Table
-= NOT_STARTED
+= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_POLICY_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / NOT_APPROVED
 
 E Knowledge Release Manifest
 = NOT_STARTED / NOT_ADJUDICATED
@@ -46,7 +46,7 @@ F Risk EvalSet / Safety Suite
 = NOT_STARTED
 ```
 
-A/B/C 已经完成结构和治理语义冻结，但尚未形成可用于生产临床判断的受审内容。
+A/B/C/D 已经完成结构和治理语义冻结，但尚未形成可用于生产临床判断的受审内容。
 
 ---
 
@@ -119,10 +119,9 @@ U03 Clinical Dependency Readiness
 
 当前可以继续：
 
-- D / D09 Clinical Policy Table 的结构定义；
 - E / Knowledge Release Manifest 的结构与适用性判定；
 - F / Risk EvalSet / Safety Suite 的数据结构与评估规范；
-- 医学 Owner 对 A/B/C 的审核；
+- 医学 Owner 对 A/B/C/D 的审核；
 - 后续将受审医学内容填充进 B/C/D/E/F。
 
 当前仍不应：
@@ -139,7 +138,7 @@ U03 Clinical Dependency Readiness
 下一步进入：
 
 ```text
-D / D09 Clinical Policy Table structural preparation
+E / Knowledge Release Manifest structural preparation and applicability adjudication
 ```
 
-D 仍只冻结 Policy 对象、branch、priority、failure/currentness/release refs 等结构，不自行发明具体医学裁决内容。
+E 只冻结 Knowledge Release 的身份、版本、来源、适用范围、review/effective time、supersede/rollback 与 rule/policy binding 结构，不自行创建未审核医学知识内容。
