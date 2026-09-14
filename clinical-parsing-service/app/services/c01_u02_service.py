@@ -20,6 +20,14 @@ class C01U02ClinicalUnderstandingService:
     SCOPE_VERSION = "aidoctor-v1-scope"
     CONTRACT_VERSION = "contracts-v1"
 
+    SOURCE_TYPES = {
+        "PATIENT_REPORTED",
+        "EXTERNAL_MEASUREMENT",
+        "OCR_EXTRACTED",
+        "MODEL_INFERRED",
+        "RULE_DERIVED",
+        "CLINICIAN_CONFIRMED",
+    }
     NEGATION_MARKERS = ("没有", "无", "否认", "未出现", "不伴", "没")
     UNKNOWN_MARKERS = ("不清楚", "不知道", "不确定", "记不清")
     UNMEASURED_MARKERS = ("没测", "未测", "没有测", "没量", "未量")
@@ -37,6 +45,8 @@ class C01U02ClinicalUnderstandingService:
         binding = self._binding_ref()
         if not self._binding_matches(request):
             return self._result(binding, "UNSUPPORTED", "CAPABILITY_BINDING_MISMATCH", False, [])
+        if request.sourceType not in self.SOURCE_TYPES:
+            return self._result(binding, "UNSUPPORTED", "CLINICAL_SOURCE_TYPE_UNSUPPORTED", False, [])
         text = (request.text or "").strip()
         if not text:
             return self._result(binding, "INSUFFICIENT_INFORMATION", "EMPTY_CLINICAL_INPUT", False, [])
@@ -102,8 +112,6 @@ class C01U02ClinicalUnderstandingService:
         return result
 
     def _candidate(self, index, text, raw_ref, concept_id, display, source_type, confidence, ambiguous):
-        # Negation/value/temporality/severity are scoped to this concept's local
-        # clause, never copied from an unrelated concept elsewhere in the input.
         negated = any(marker in text for marker in self.NEGATION_MARKERS)
         unknown = any(marker in text for marker in self.UNKNOWN_MARKERS)
         unmeasured = any(marker in text for marker in self.UNMEASURED_MARKERS)
