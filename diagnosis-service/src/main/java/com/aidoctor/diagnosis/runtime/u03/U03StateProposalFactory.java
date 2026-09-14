@@ -19,11 +19,11 @@ public final class U03StateProposalFactory {
         if (!U03RiskAssessmentCandidate.VALID.equals(decision.getStatus())) {
             throw new IllegalArgumentException("createValid requires VALID decision status");
         }
-        List<String> releaseRefs = Arrays.asList(
-                governed.getCapabilityBinding().getBindingId(),
-                governed.getReleaseBinding().getRuleReleaseId(),
-                governed.getReleaseBinding().getKnowledgeReleaseId());
-        return build(command, decision, releaseRefs, true,
+        return build(command, decision,
+                Arrays.asList(governed.getCapabilityBinding().getBindingId(),
+                        governed.getReleaseBinding().getRuleReleaseId(),
+                        governed.getReleaseBinding().getKnowledgeReleaseId()),
+                true,
                 governed.getCapabilityBinding().getBindingId(),
                 governed.getReleaseBinding().getRuleReleaseId(),
                 governed.getReleaseBinding().getKnowledgeReleaseId());
@@ -37,6 +37,22 @@ public final class U03StateProposalFactory {
         }
         String bindingRef = required(attemptedBindingId, "attemptedBindingId");
         return build(command, decision, Arrays.asList(bindingRef), false, bindingRef, null, null);
+    }
+
+    public U03StateProposal createFailed(U03ExecutionCommand command, U03DecisionOutcome decision,
+            U03GovernedCandidateGateway.GovernedResult governed) {
+        if (command == null || decision == null || governed == null) throw new IllegalArgumentException("U03 inputs are required");
+        if (!U03RiskAssessmentCandidate.FAILED.equals(decision.getStatus())) {
+            throw new IllegalArgumentException("createFailed requires FAILED decision status");
+        }
+        return build(command, decision,
+                Arrays.asList(governed.getCapabilityBinding().getBindingId(),
+                        governed.getReleaseBinding().getRuleReleaseId(),
+                        governed.getReleaseBinding().getKnowledgeReleaseId()),
+                false,
+                governed.getCapabilityBinding().getBindingId(),
+                governed.getReleaseBinding().getRuleReleaseId(),
+                governed.getReleaseBinding().getKnowledgeReleaseId());
     }
 
     private U03StateProposal build(U03ExecutionCommand command, U03DecisionOutcome decision,
