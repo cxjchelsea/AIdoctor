@@ -11,6 +11,7 @@ import java.util.UUID;
  */
 public final class U03RiskAssessmentApplicationService {
     private final U03GovernedCandidateGateway gateway;
+    private final U03EvidenceAcceptanceService evidenceAcceptanceService;
     private final U03DecisionService decisionService;
     private final U03StateProposalFactory proposalFactory;
     private final U03CommitService commitService;
@@ -18,11 +19,13 @@ public final class U03RiskAssessmentApplicationService {
 
     public U03RiskAssessmentApplicationService(
             U03GovernedCandidateGateway gateway,
+            U03EvidenceAcceptanceService evidenceAcceptanceService,
             U03DecisionService decisionService,
             U03StateProposalFactory proposalFactory,
             U03CommitService commitService,
             CapabilityTraceService traceService) {
         this.gateway = required(gateway, "gateway");
+        this.evidenceAcceptanceService = required(evidenceAcceptanceService, "evidenceAcceptanceService");
         this.decisionService = required(decisionService, "decisionService");
         this.proposalFactory = required(proposalFactory, "proposalFactory");
         this.commitService = required(commitService, "commitService");
@@ -55,9 +58,14 @@ public final class U03RiskAssessmentApplicationService {
                 governed.getReleaseBinding().getRuleReleaseId(),
                 governed.getReleaseBinding().getKnowledgeReleaseId());
 
-        U03RiskAssessmentCandidate candidate = governed.getCandidate();
-        U03DecisionOutcome decision = decisionService.decide(command, candidate, governed.getReleaseBinding());
-        U03StateProposal proposal = candidate.isFailed()
+        U03RiskAssessmentCandidate acceptedCandidate = evidenceAcceptanceService.accept(
+                command,
+                governed.getCandidate(),
+                governed.getCapabilityBinding(),
+                governed.getReleaseBinding());
+        U03DecisionOutcome decision = decisionService.decide(
+                command, acceptedCandidate, governed.getReleaseBinding());
+        U03StateProposal proposal = acceptedCandidate.isFailed()
                 ? proposalFactory.createFailed(command, decision, governed)
                 : proposalFactory.createValid(command, decision, governed);
         StateTypes.CommitResult commitResult = commitService.commit(proposal);
