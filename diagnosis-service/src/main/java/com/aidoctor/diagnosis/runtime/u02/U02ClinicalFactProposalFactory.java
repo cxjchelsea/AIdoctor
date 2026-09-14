@@ -48,10 +48,12 @@ public class U02ClinicalFactProposalFactory {
         for (C01U02CapabilityResponse.ObservationCandidate observation : decision.getAcceptedObservations()) {
             StateTypes.StatePatchOperation operation = new StateTypes.StatePatchOperation();
             operation.op = "ADD";
-            operation.path = "/patient_state/clinical_fact_" + safeToken(observation.getObservationId());
+            operation.path = pathFor(observation);
             operation.value = factValue(observation, decision, binding);
             operation.expectedCurrentValue = null;
-            operation.source = "PATIENT_FACT";
+            // Preserve the frozen K03 source class all the way to P01. Do not
+            // collapse MODEL_INFERRED/RULE_DERIVED into patient-reported fact.
+            operation.source = observation.getSourceType();
             operation.sensitivity = "PHI";
             operations.add(operation);
             evidenceRefs.add(safeEvidence(observation.getObservationId()));
@@ -77,6 +79,17 @@ public class U02ClinicalFactProposalFactory {
                 decision.getDecisionId(),
                 Arrays.asList(binding.getBindingId()),
                 patch);
+    }
+
+    private static String pathFor(C01U02CapabilityResponse.ObservationCandidate observation) {
+        String prefix = isDerived(observation.getSourceType())
+                ? "/patient_state/derived_clinical_assertion_"
+                : "/patient_state/clinical_fact_";
+        return prefix + safeToken(observation.getObservationId());
+    }
+
+    private static boolean isDerived(String sourceType) {
+        return "MODEL_INFERRED".equals(sourceType) || "RULE_DERIVED".equals(sourceType);
     }
 
     private static Map<String, Object> factValue(
