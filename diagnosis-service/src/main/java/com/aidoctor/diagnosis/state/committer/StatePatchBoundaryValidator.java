@@ -33,7 +33,11 @@ public final class StatePatchBoundaryValidator {
             "patient_state", "ddx", "evidence_graph", "workup_plan", "management_plan",
             "triage", "uncertainty", "health_state_assessment", "wellness_plan");
     private static final Set<String> SOURCES = setOf(
-            "PATIENT_FACT", "MEDICAL_EVIDENCE", "CLINICIAN_DECISION", "SAFETY_RULE", "TOOL_OUTPUT");
+            // Existing v1 engineering/governance source classes.
+            "PATIENT_FACT", "MEDICAL_EVIDENCE", "CLINICIAN_DECISION", "SAFETY_RULE", "TOOL_OUTPUT",
+            // U02 K03 clinical source semantics frozen by Phase 8.
+            "PATIENT_REPORTED", "EXTERNAL_MEASUREMENT", "OCR_EXTRACTED",
+            "MODEL_INFERRED", "RULE_DERIVED", "CLINICIAN_CONFIRMED");
     private static final Set<String> SENSITIVITIES = setOf(
             "PUBLIC", "INTERNAL", "INTERNAL_SENSITIVE", "PHI");
     private static final Set<String> AUDIT_TYPES = setOf(
