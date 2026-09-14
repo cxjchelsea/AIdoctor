@@ -6,8 +6,12 @@ import com.aidoctor.diagnosis.state.committer.StateCommitter;
 /**
  * Narrow P01/U02 adapter. Only business-owned U02 proposals can reach the
  * mechanical StateCommitter through this boundary.
+ *
+ * <p>This class is intentionally not a Spring production bean: Foundation-0
+ * keeps the StateCommitter core mechanical until real P01 policy ports are
+ * production-wired. U02 verifies the boundary without inventing those ports.</p>
  */
-public final class U02ClinicalFactCommitService {
+public class U02ClinicalFactCommitService {
     private final StateCommitter stateCommitter;
 
     public U02ClinicalFactCommitService(StateCommitter stateCommitter) {
