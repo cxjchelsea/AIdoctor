@@ -1,9 +1,9 @@
 # U03 Clinical Risk Semantics — Content Draft v0.2
 
 > 角色：Clinical Input Package A 的修订医学内容草案。  
-> 权威输入：`U03_AB_Medical_Owner_Review_Record_v0.1.md`、`U03_AB_Revision_Task_v0.2.md`。  
-> 状态：`REVISION_DRAFT / MEDICAL_OWNER_RE_REVIEW_REQUIRED / NOT_APPROVED / NOT_FOR_PRODUCTION`  
-> 说明：本版只落实 Medical Owner 对 v0.1 的修订要求；不构成整包医学批准、Rule Pack 授权或生产发布。
+> 权威输入：`U03_AB_Medical_Owner_Review_Record_v0.1.md`、`U03_AB_Revision_Task_v0.2.md`、第二轮 Medical Owner Review。  
+> 状态：`REVISION_DRAFT / SECOND_REVIEW_CHANGES_APPLIED / MEDICAL_OWNER_CONFIRMATION_REQUIRED / NOT_APPROVED / NOT_FOR_PRODUCTION`  
+> 说明：本版只落实 Medical Owner 对 v0.1 及第二轮 v0.2 review 的修订要求；不构成整包医学批准、Rule Pack 授权或生产发布。
 
 ## 1. v0.2 适用范围
 
@@ -52,14 +52,16 @@ SYMPTOM_RESOLVED != CURRENTLY_SAFE
 
 ### A-RS-02A 新发意识或认知异常
 
-候选定义：新出现的意识、行为或认知异常，可作为高安全影响候选信号，但其适用 scope 必须与具体来源一致，不得仅凭专病来源自动升格为跨病种全局红旗。
+候选定义：新出现的意识、行为或认知异常可作为高安全影响候选信号，但本版默认 scope 仅限于当前来源明确支持的上下文，不得表述为一般急症或跨病种全局红旗。
 
 来源依据：沿用 v0.1 中 NHS Shortness of breath 与 NICE 成人疑似脓毒症来源。
 
 结构建议：
 - category：候选 `RED_FLAG`
-- 若用于全局 RED_FLAG，仍需额外通用急性病来源支持
-- 若未补额外来源，则只能在来源支持的急性/专病上下文中使用
+- NICE NG253 对应使用范围：`age >= 16`、`suspected sepsis`、来源对应 community / custodial 场景
+- NHS Shortness of breath 对应使用范围：该来源所描述的严重呼吸困难急诊警示上下文中的突然意识混乱
+- 上述两个来源上下文不得合并解释为“任何急性疾病的新发意识改变均为全局 RED_FLAG”
+- 若未来申请跨病种全局 RED_FLAG，必须另补通用急性病/急诊权威来源并重新审核
 - UNKNOWN / 未询问不得解释为阴性
 
 ### A-RS-02B 异常皮肤/口唇颜色或灰白外观
@@ -130,6 +132,7 @@ SYMPTOM_RESOLVED != CURRENTLY_SAFE
 ```text
 A-RS-01 = direction retained; missingness/remote-negative semantics hardened
 A-RS-02 = split into A-RS-02A + A-RS-02B; mechanism naming removed
+A-RS-02A = second-review scope tightened to explicit source contexts
 A-RS-03 = sensory abnormality narrowed to sudden focal/unilateral scope
 A-RS-04 = ischemic causal naming removed
 A-RS-05 = direction retained; missingness boundary hardened
@@ -138,22 +141,23 @@ A-RS-06 = suspected-sepsis/source scope locked; COMBINATION_SIGNAL removed from 
 
 ## 5. 再审状态
 
-| Candidate | v0.1 verdict | v0.2 revision | Medical re-review | Production use |
+| Candidate | second-round verdict | current action | Medical confirmation | Production use |
 |---|---|---|---|---|
-| A-RS-01 | APPROVE | COMPLETE | REQUIRED | NO |
-| A-RS-02A | from A-RS-02 REVISE | COMPLETE | REQUIRED | NO |
-| A-RS-02B | from A-RS-02 REVISE | COMPLETE | REQUIRED | NO |
-| A-RS-03 | REVISE | COMPLETE | REQUIRED | NO |
-| A-RS-04 | REVISE | COMPLETE | REQUIRED | NO |
-| A-RS-05 | APPROVE | COMPLETE | REQUIRED | NO |
-| A-RS-06 | REVISE | COMPLETE | REQUIRED | NO |
+| A-RS-01 | APPROVE | retained | COMPLETE_FOR_THIS_ROUND | NO |
+| A-RS-02A | REVISE | source-context scope tightened | REQUIRED | NO |
+| A-RS-02B | APPROVE | retained | COMPLETE_FOR_THIS_ROUND | NO |
+| A-RS-03 | APPROVE | retained | COMPLETE_FOR_THIS_ROUND | NO |
+| A-RS-04 | APPROVE | retained | COMPLETE_FOR_THIS_ROUND | NO |
+| A-RS-05 | APPROVE | retained | COMPLETE_FOR_THIS_ROUND | NO |
+| A-RS-06 | APPROVE | retained | COMPLETE_FOR_THIS_ROUND | NO |
 
 ## 6. 当前结论
 
 ```text
 A Clinical Risk Semantics v0.2
-= REVISION_DRAFT_AVAILABLE
-/ MEDICAL_OWNER_RE_REVIEW_REQUIRED
-/ NOT_APPROVED
+= SECOND_REVIEW_COMPLETE
+/ ONE_TARGETED_SCOPE_REVISION_APPLIED
+/ MEDICAL_OWNER_CONFIRMATION_REQUIRED_FOR_A-RS-02A
+/ PACKAGE_NOT_APPROVED
 / NOT_FOR_PRODUCTION
 ```
