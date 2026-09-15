@@ -2,7 +2,7 @@
 
 > 权威输入：`U03_C_Medical_Owner_Review_Record_v0.1.md`  
 > 目标稿：`U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.2.md`  
-> 状态：`REVISION_REQUIRED / FREEZE_BLOCKED / D_STILL_BLOCKED`
+> 状态：`REVISION_TASK_COMPLETE / SUPERSEDED_FOR_ACTIVE_WORK_BY_v0.2`
 
 本任务单只处理本轮 blocking findings。不授权新来源、不开始 D09、不写入生产阈值发布。
 

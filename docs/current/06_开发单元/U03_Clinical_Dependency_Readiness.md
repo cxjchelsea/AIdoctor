@@ -43,7 +43,9 @@ C Safety-critical Risk Rule Pack
 / CONTENT_DRAFT_v0.2_AVAILABLE
 / ACTIVE_RULE_CANDIDATES_15
 / V0.1_SEPSIS_MENTAL_HIGH_WITHHELD
-/ MEDICAL_TECHNICAL_RE_REVIEW_REQUIRED
+/ MEDICAL_TECHNICAL_RE_REVIEW_COMPLETE
+/ ACTIVE_RULE_APPROVE_15_REVISE_0
+/ PACKAGE_REVISE_BF-C-04
 / INITIAL_RULE_RELEASE_FREEZE_NOT_COMPLETE
 
 D D09 Clinical Policy Table
@@ -98,7 +100,7 @@ C/D/E cross-consistency = PASS
 
 ```text
 KR-U03-SOURCE-001@0.1.0-candidate = CANDIDATE_FROZEN
-C Rule Pack v0.2 = DRAFT_AVAILABLE / RE_REVIEW_REQUIRED / NOT_FROZEN
+C Rule Pack v0.2 = DRAFT_REVIEWED / RULE_LEVEL_APPROVED / PACKAGE_REVISE_BF-C-04 / NOT_FROZEN
 D D09 clinical policy content = NOT_STARTED
 C/D/E cross-consistency = NOT_STARTED
 ```
@@ -124,7 +126,7 @@ suspected_sepsis circular inference = PROHIBITED
 NHS dyspnoea emergency warning context = SOURCE-SPECIFIC / GOVERNED
 ```
 
-D 仍须等待 C v0.2 Medical / Technical re-review 完成且 blocking findings 清零；candidate freeze 之前不得开始真实 D09 branch。
+D 仍须等待 BF-C-04 关闭、package 再批准，以及 candidate freeze 卫生条件满足；在此之前不得开始真实 D09 branch。
 
 ### Gate C — Independent Evaluation Ready
 
@@ -154,8 +156,10 @@ KD-U03-01 Publication = NOT_COMPLETE
 
 C Content Draft v0.1 Review = COMPLETE
 C Content Draft v0.2 = AVAILABLE
-C Medical Re-review = REQUIRED
-C Technical Re-review = REQUIRED
+C Medical Re-review = COMPLETE
+C Technical Re-review = COMPLETE
+C Active-rule APPROVE = 15 / REVISE = 0
+C Package remaining blocker = BF-C-04
 C Initial Rule Release Freeze = NOT_COMPLETE
 CD-03 = NOT_PASSED
 
@@ -182,13 +186,12 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-Medical + Technical re-review
-of
-U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.2.md
+Close BF-C-04
+per U03_C_Revision_Task_v0.2.md
 ↓
-if blocking REVISE = 0
+reconfirm package approval
 ↓
-reassess RR-U03-RISK-001 candidate freeze
+then reassess RR-U03-RISK-001 candidate freeze
 ↓
 then reassess D drafting readiness
 ```

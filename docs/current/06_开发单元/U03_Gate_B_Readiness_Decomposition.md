@@ -238,7 +238,7 @@ C/D/E Cross-Consistency = PASS
 Gate A = PASS
 
 C Structural Schema = PASS
-C Clinical Content = DRAFT_v0.1_REVIEWED / REVISION_REQUIRED
+C Clinical Content = DRAFT_v0.2_REVIEWED / RULE_LEVEL_APPROVED / PACKAGE_REVISE_BF-C-04
 
 D Structural Schema = PASS
 D Clinical Content = NOT_STARTED / BLOCKED_UNTIL_C_VOCABULARY
@@ -248,16 +248,16 @@ E Applicability Adjudication = APPROVED
 E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
 KD-U03-01 Knowledge Release = CANDIDATE_FROZEN / KR-U03-SOURCE-001@0.1.0-candidate
 
-Gate B Readiness = C_DRAFT_REVIEWED_REVISION_REQUIRED
-Primary Blocker = C_INITIAL_RULE_PACK_REVISION_REQUIRED
+Gate B Readiness = C_V0.2_RULE_LEVEL_APPROVED_PACKAGE_REVISE
+Primary Blocker = BF-C-04_SCOPE_CONTEXT_INDEPENDENCE
 Secondary Blockers = D_POLICY_CONTENT_NOT_STARTED
 ```
 
 当前唯一合理的下一步：
 
 ```text
-Revise C to Content Draft v0.2
-per U03_C_Revision_Task_v0.1.md
+Close BF-C-04
+per U03_C_Revision_Task_v0.2.md
 ```
 
 不得开始 D09，不得 freeze `RR-U03-RISK-001` candidate。
