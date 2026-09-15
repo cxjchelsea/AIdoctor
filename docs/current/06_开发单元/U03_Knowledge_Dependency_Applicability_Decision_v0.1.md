@@ -1,8 +1,8 @@
 # U03 Knowledge Dependency Applicability Decision v0.1
 
 > 阶段：U03 Clinical Dependency Completion / E applicability adjudication  
-> 状态：`DRAFT_FOR_GOVERNANCE_MEDICAL_REVIEW / NOT_APPROVED / NOT_FOR_PRODUCTION`  
-> 依据：Gate A 已通过；`U03_Knowledge_Release_Manifest_Schema.md`；`U03_Gate_B_Readiness_Decomposition.md`；当前 `U03ReleaseBinding` 工程合同。  
+> 状态：`APPROVED_FOR_ROLE_APPLICABILITY / NOT_A_KNOWLEDGE_RELEASE / NOT_FOR_PRODUCTION`  
+> 依据：Gate A 已通过；`U03_Knowledge_Release_Manifest_Schema.md`；`U03_Gate_B_Readiness_Decomposition.md`；当前 `U03ReleaseBinding` 工程合同；Medical/Governance review。  
 > 本文件只裁定“知识依赖的角色与是否需要独立 release”，不提供具体医学知识、阈值、规则或 D09 disposition。
 
 ---
@@ -27,7 +27,7 @@ U03 当前 slice
 
 ---
 
-## 2. 当前工程约束
+## 2. 当前工程约束与临床约束
 
 当前 `U03ReleaseBinding` 强制存在：
 
@@ -47,11 +47,18 @@ knowledgeReleaseVersion
 → 必须能够解析一个显式 Knowledge Release ref
 ```
 
-这只是技术兼容性事实，不代表任意医学知识内容已经被批准。
+但 KD-U03-01 的 REQUIRED 不仅来自当前 Java 合同，也来自本 slice 的临床治理要求：正式 U03 结果必须可重放其实际使用的来源 identity/version/scope/provenance。
+
+```text
+即使未来工程合同支持空 knowledge ref
+KD-U03-01 在本 slice 仍为 REQUIRED
+```
+
+工程约束只说明“现在不能留空”；临床治理约束说明“即使技术上能留空，本 slice 也不应留空”。
 
 ---
 
-## 3. Knowledge Dependency 分类原则
+## 3. Knowledge Dependency 分类
 
 本 adjudication 使用：
 
@@ -71,24 +78,25 @@ PROHIBITED_AS_IMPLICIT_DEPENDENCY
 
 ---
 
-## 4. 初始依赖裁定
+## 4. 最终依赖裁定
 
 ### KD-U03-01 — Source-grounded Clinical Knowledge Release
 
 角色：承载当前 U03 A/B/C/D 所引用的受治理医学来源集合与其可重放版本身份，包括来源 identity/version/publication metadata、适用 scope、provenance 和 review status。
 
-初始裁定：
+最终裁定：
 
 ```text
 applicability = REQUIRED
+review = APPROVED
 ```
 
 理由：
 
-1. 当前工程 binding 强制 knowledge release identity/version；
-2. C/D 的正式 release 需要可追溯到其依据的医学知识版本；
-3. 不应把“来源 URL/名称散落在 Rule entries 中”当作完整 Knowledge Release 治理；
-4. 历史结果需要能够重放当时实际绑定的来源集合与 scope。
+1. 本 slice 必须能够重放其使用的医学来源 identity、版本、发表/取用日期、scope 与 provenance；
+2. 当前工程 binding 也强制 knowledge release identity/version；
+3. C/D 的正式 release 需要可追溯到其依据的医学来源版本；
+4. 不应把散落的 URL/来源名称等同于完整 Knowledge Release 治理。
 
 边界：
 
@@ -99,49 +107,46 @@ Knowledge Release
 != D09 Policy
 ```
 
-本项不决定“采用哪个具体指南版本”；具体 source selection / localization 仍需 Medical Owner review。
-
 ### KD-U03-02 — Executable Threshold / Combination Logic
 
 角色：生命体征阈值、布尔组合、precedence、rule predicates 等可执行逻辑。
 
-初始裁定：
+最终裁定：
 
 ```text
 independent_knowledge_release_applicability = NOT_REQUIRED
 owner = C Rule Pack
+review = APPROVED
 ```
 
-理由：这些内容一旦成为正式 executable clinical logic，应进入版本化 Rule Release，而不是同时维护一份可执行 Knowledge Release 副本。
-
-但其 source/provenance 必须引用 KD-U03-01 的 Knowledge Release。
+这些内容只能有一份可执行真值，必须属于版本化 Rule Release。E 不复制阈值或组合逻辑；C 必须引用 KD-U03-01 的来源 release，不得自行发明来源。
 
 ### KD-U03-03 — Final Risk Disposition Mapping
 
 角色：rule/evidence 到 `NO_HIGH_RISK_SIGNAL / CAUTION / HIGH_RISK / FAILED` 的确定性 mapping、priority、precedence 与 conflict behavior。
 
-初始裁定：
+最终裁定：
 
 ```text
 independent_knowledge_release_applicability = NOT_REQUIRED
 owner = D09 Policy Release
+review = APPROVED
 ```
 
-理由：这是 Business/Clinical Policy，不应被隐藏成知识文本。
-
-其医学依据仍可引用 KD-U03-01。
+这是确定性 Clinical/Business Policy，不是供运行时解释的知识文本。D09 可引用 KD-U03-01 作为 provenance，但 disposition truth 只存在于 D09 Policy Release。
 
 ### KD-U03-04 — Runtime Free-form External Retrieval
 
 角色：运行时临时从 Web、RAG、LLM common knowledge、未版本化数据库或最新指南页面获取新的临床知识参与 formal Risk Decision。
 
-初始裁定：
+最终裁定：
 
 ```text
 applicability = PROHIBITED_AS_IMPLICIT_DEPENDENCY
+review = APPROVED
 ```
 
-禁止：
+禁止以下内容直接影响 U03 formal Risk result：
 
 ```text
 model common knowledge
@@ -150,18 +155,17 @@ mutable RAG corpus
 unreviewed source text
 ```
 
-直接影响 U03 formal Risk result。
-
-若未来需要此能力，必须另建明确的 governed Knowledge Release / retrieval contract，不属于当前 slice。
+若未来需要 retrieval，必须另建受治理 Knowledge Release / retrieval contract，并重新进入依赖与审核流程。
 
 ### KD-U03-05 — Explanation-only Knowledge
 
 角色：不改变 formal evidence/rule/policy result，仅用于用户可读解释、来源展示或内部 review 辅助。
 
-初始裁定：
+最终裁定：
 
 ```text
 applicability = OPTIONAL
+review = APPROVED
 ```
 
 硬边界：
@@ -171,13 +175,13 @@ Explanation knowledge
 不得改变 formal Risk Decision
 ```
 
-若 explanation 反向影响 C/D，就不再是 OPTIONAL，而必须重新进入 governed dependency review。
+对外展示的来源应优先引用 KD-U03-01。若 explanation 反向影响 C/D，则不再属于 OPTIONAL，必须重新进入 governed dependency review。
 
 ---
 
-## 5. 当前最小 Knowledge Release 范围建议
+## 5. 当前最小 Knowledge Release 范围
 
-若 KD-U03-01 最终批准为 REQUIRED，当前 U03 最小 Knowledge Release 不应复制所有规则文本，而应最小承载：
+KD-U03-01 已批准为 REQUIRED。当前 U03 最小 Knowledge Release 只承载来源发布信息，不复制规则文本，至少包含：
 
 ```text
 knowledge_release_id
@@ -209,13 +213,11 @@ supersedes_refs[]
 rollback_target_ref
 ```
 
-初始内容来源只能来自已经进入当前 A/B 审核链的受治理 source registry；不得在本步骤增加新的医学结论。
+初始内容只能绑定已经进入当前 A/B 审核链的 source registry；本步骤不得新增指南、来源或新的临床结论。
 
 ---
 
 ## 6. 与 C 的 binding 关系
-
-如果本 adjudication 通过：
 
 ```text
 C Rule Release
@@ -232,8 +234,6 @@ Knowledge Release 存一套阈值
 Rule Pack 再存另一套阈值
 ```
 
-导致双重 truth source。
-
 ---
 
 ## 7. 与 D 的 binding 关系
@@ -249,24 +249,20 @@ D09 不允许从 Knowledge Release 自由解释出新的 branch。
 
 ---
 
-## 8. Medical / Governance Review Questions
-
-本 v0.1 只需要 reviewer 回答：
-
-1. 是否同意 KD-U03-01 在当前 U03 slice 中为 `REQUIRED`？
-2. 是否同意 executable threshold/combination truth 只属于 C，而不复制进 E？
-3. 是否同意 final disposition mapping 只属于 D，而不复制进 E？
-4. 是否同意 runtime free-form external clinical knowledge 对 formal Risk Decision 为 `PROHIBITED_AS_IMPLICIT_DEPENDENCY`？
-5. 是否同意 explanation-only knowledge 可为 `OPTIONAL`，但不得反向影响 formal decision？
-6. 当前最小 Knowledge Release 是否足以支撑 source/version/scope/provenance replay？
-
-允许 verdict：
+## 8. Review 结果
 
 ```text
-APPROVE
-REVISE
-REJECT
+KD-U03-01 = APPROVE / REQUIRED
+KD-U03-02 = APPROVE / NOT_REQUIRED_AS_INDEPENDENT_KR / OWNER_C
+KD-U03-03 = APPROVE / NOT_REQUIRED_AS_INDEPENDENT_KR / OWNER_D09
+KD-U03-04 = APPROVE / PROHIBITED_AS_IMPLICIT_DEPENDENCY
+KD-U03-05 = APPROVE / OPTIONAL
+
+E Applicability Decision v0.1 = APPROVED
+E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
 ```
+
+这里的 COMPLETE 只适用于上述 5 类 dependency role 的适用性裁定，不表示真实 Knowledge Release 已完成或发布。
 
 ---
 
@@ -274,18 +270,15 @@ REJECT
 
 ```text
 E Structural Schema = FROZEN
-E Applicability Decision Draft v0.1 = AVAILABLE
-E Applicability Approval = NOT_COMPLETE
-KD-U03-01 = PROPOSED_REQUIRED
-KD-U03-02 = PROPOSED_NOT_REQUIRED_AS_INDEPENDENT_KNOWLEDGE
-KD-U03-03 = PROPOSED_NOT_REQUIRED_AS_INDEPENDENT_KNOWLEDGE
-KD-U03-04 = PROPOSED_PROHIBITED_AS_IMPLICIT_DEPENDENCY
-KD-U03-05 = PROPOSED_OPTIONAL
+E Applicability Decision v0.1 = APPROVED
+E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
+KD-U03-01 Knowledge Release Content = NOT_STARTED
+Knowledge Release Publication = NOT_COMPLETE
 
 CD-04 = NOT_PASSED
 Gate B = NOT_PASSED
-C real clinical rule content = NOT_STARTED
-D real clinical policy content = NOT_STARTED
+C real clinical rule content = BLOCKED_UNTIL_RESOLVABLE_KR_OBJECT
+D real clinical policy content = BLOCKED
 ```
 
-下一步：对本 applicability decision 做 Medical/Governance review。批准前不得开始 C 的真实医学规则内容。
+下一步：按第 5 节起草最小 KD-U03-01 Knowledge Release 内容对象，只绑定已审核 A/B source registry。不得开始 C 的真实阈值/组合规则或 D09 branch。
