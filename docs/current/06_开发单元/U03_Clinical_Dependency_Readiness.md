@@ -55,7 +55,7 @@ D D09 Clinical Policy Table
 / POLICY_RELEASE = PR-U03-D09-001@0.2.0-draft
 / BF-D-01_CLOSED
 / BF-D-02_CLOSED
-/ COVERAGE_CONTRACT = U03_D09_COVERAGE_V0_2_APPROVED_FOR_CONTENT_NOT_FROZEN
+/ COVERAGE_CONTRACT = U03_D09_COVERAGE_V0_2_CANDIDATE_FROZEN
 / CONTENT_APPROVAL = APPROVED_FOR_CONTENT_AND_COVERAGE
 / FREEZE_READINESS_ASSESSED_NOT_READY
 / PRE_FREEZE_EVAL_MINIMUM_DEFINED_CONTENT_NOT_BUILT
@@ -101,11 +101,25 @@ D v0.2 内容已通过：
 PR-U03-D09-001@0.2.0-draft = REVIEWED
 BF-D-01 = CLOSED
 BF-D-02 = CLOSED
-U03_D09_COVERAGE_V0_2 = APPROVED_FOR_CONTENT / NOT_FROZEN
 D Content Approval = APPROVED_FOR_CONTENT_AND_COVERAGE
 ```
 
-D candidate-freeze readiness 已单独评估：
+Coverage contract 已完成独立冻结：
+
+```text
+U03_D09_COVERAGE_V0_2
+= RESOLVABLE
+/ MEDICAL_APPROVE
+/ TECHNICAL_APPROVE
+/ CANDIDATE_FROZEN
+
+freeze_record_ref
+= U03_D09_Coverage_Contract_Freeze_Record_v0.2.md
+
+BLOCKER-FZ-D-01 = CLOSED
+```
+
+D candidate-freeze readiness 当前：
 
 ```text
 U03_D09_Freeze_Readiness_Assessment_v0.1.md
@@ -116,14 +130,14 @@ D Candidate Freeze Readiness = NOT_PASSED
 
 ```text
 BLOCKER-FZ-D-01
-= coverage contract reviewed/approved but not frozen
+= CLOSED / coverage contract frozen
 
 BLOCKER-FZ-D-02
 = minimum D pre-freeze evaluation content/review not built
 
 BLOCKER-FZ-D-03
 = independent PR-U03-D09-001@0.2.0-candidate not created
-/ MUST_REMAIN_AFTER_D-01_D-02
+/ MUST_REMAIN_AFTER_D-02
 
 BLOCKER-FZ-D-04
 = candidate freeze record / CD-05 decision not complete
@@ -142,7 +156,6 @@ U03_D09_PreFreeze_Evaluation_Minimum_v0.1.md
 Gate B 仍缺：
 
 ```text
-coverage contract freeze
 D pre-freeze evaluation content + review
 D policy candidate identity + freeze
 CD-05 decision
@@ -188,7 +201,8 @@ D09 Coverage Contract
 / RESOLVABLE
 / MEDICAL_APPROVE
 / TECHNICAL_APPROVE
-/ NOT_FROZEN
+/ CANDIDATE_FROZEN
+/ NOT_FOR_PRODUCTION
 ```
 
 ## 5. 当前 Readiness 判定
@@ -202,11 +216,15 @@ CD-04 = CANDIDATE_READY / NOT_PRODUCTION
 
 D Content Approval = APPROVED_FOR_CONTENT_AND_COVERAGE
 D Candidate Freeze Readiness = NOT_PASSED
-D Coverage Contract Freeze = NOT_COMPLETE
+D Coverage Contract Freeze = COMPLETE
+BLOCKER-FZ-D-01 = CLOSED
 D Pre-Freeze Evaluation Minimum = DEFINED
 D Pre-Freeze Evaluation Content = NOT_STARTED
+BLOCKER-FZ-D-02 = OPEN
 D Policy Candidate = NOT_CREATED
+BLOCKER-FZ-D-03 = OPEN
 D Policy Candidate Freeze = NOT_COMPLETE
+BLOCKER-FZ-D-04 = OPEN
 CD-05 = NOT_PASSED
 
 C/D/E Cross-Consistency = NOT_STARTED
@@ -232,9 +250,9 @@ U03 Clinical Dependency Readiness
 ## 6. 当前唯一下一步
 
 ```text
-freeze U03_D09_COVERAGE_V0_2
-↓
 build + review D minimum pre-freeze evaluation fixtures
+↓
+close BLOCKER-FZ-D-02
 ↓
 create independent PR-U03-D09-001@0.2.0-candidate
 ↓
@@ -250,8 +268,8 @@ Gate B decision
 ## 7. 当前禁止事项
 
 - 不把 `PR-U03-D09-001@0.2.0-draft` 的 content approval 当成 frozen/published policy；
-- 不把 `U03_D09_COVERAGE_V0_2` 的 content approval 误当成已冻结；
-- 不创建 D candidate version，直到 D-FZ-01 / D-FZ-02 关闭；
+- 不把 `U03_D09_COVERAGE_V0_2` 的 candidate freeze 当成 D policy freeze；
+- 不创建 D candidate version，直到 D-FZ-02 关闭；
 - 不把 D pre-freeze minimum 定义误当成 eval 已完成；
 - 不把 D pre-freeze eval 误当成 Gate C PASS；
 - 不修改或重命名 `RR-U03-RISK-001@0.2.0-candidate`；
