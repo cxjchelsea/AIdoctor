@@ -37,10 +37,15 @@ B Evidence Catalog
 / SOURCE_LOCKED_SEMANTICS_FROZEN
 
 C Safety-critical Risk Rule Pack
-= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_RULE_CONTENT_NOT_STARTED / UNBLOCKED_FOR_DRAFTING
+= STRUCTURAL_SCHEMA_FROZEN
+/ CLINICAL_RULE_CONTENT_DRAFT_v0.1_AVAILABLE
+/ INITIAL_RULE_RELEASE = RR-U03-RISK-001@0.1.0-draft
+/ MEDICAL_OWNER_REVIEW_REQUIRED
+/ TECHNICAL_REVIEW_REQUIRED
+/ INITIAL_RULE_RELEASE_FREEZE_NOT_COMPLETE
 
 D D09 Clinical Policy Table
-= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_POLICY_CONTENT_NOT_STARTED / BLOCKED_UNTIL_C_VOCABULARY
+= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_POLICY_CONTENT_NOT_STARTED / BLOCKED_UNTIL_C_RULE_RESULT_VOCABULARY_REVIEWED
 
 E Knowledge Release Manifest
 = STRUCTURAL_SCHEMA_FROZEN
@@ -88,34 +93,26 @@ C/D/E cross-consistency = PASS
 
 当前：`NOT_PASSED`
 
-当前 Gate B 主 blocker：
+当前 Gate B blocker：
 
 ```text
 KR-U03-SOURCE-001@0.1.0-candidate = CANDIDATE_FROZEN
-C initial Rule Pack clinical content = NOT_STARTED
+C initial Rule Pack clinical content = DRAFT_AVAILABLE / REVIEW_NOT_COMPLETE
 D D09 clinical policy content = NOT_STARTED
 C/D/E cross-consistency = NOT_STARTED
 ```
 
-治理记录：
+当前 C 草案：
 
 ```text
-U03_KR_Governance_Owner_Assignment_v0.1.md
-U03_KR_Formal_Review_Record_v0.1.md
-U03_KR_Freeze_Readiness_v0.1.md
+U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.1.md
+RR-U03-RISK-001@0.1.0-draft
+knowledge_release_ref = KR-U03-SOURCE-001@0.1.0-candidate
 ```
 
-当前可引用：
+C 草案只允许使用 Gate A 已批准的 B evidence refs；NG253 executable thresholds 仅存在于 C，不复制进 E；rule-level signal 不得直接解释为 D09 disposition。
 
-```text
-KR-U03-SOURCE-001@0.1.0-candidate
-= CANDIDATE_FROZEN
-= RESOLVABLE_FOR_C_DRAFTING
-= NOT_PUBLISHED
-= NOT_VALID_FOR_PRODUCTION_BINDING
-```
-
-因此 C 初始 Rule Pack 可以开始起草。D 仍须等 C 的 rule/result vocabulary。Gate B 详细依赖顺序与完成定义见 `U03_Gate_B_Readiness_Decomposition.md`。
+D 仍须等 C 的 rule/result vocabulary 完成 Medical Owner / Technical review 后才能开始真实 branch。Gate B 详细依赖顺序与完成定义见 `U03_Gate_B_Readiness_Decomposition.md`。
 
 ### Gate C — Independent Evaluation Ready
 
@@ -140,17 +137,17 @@ Gate A = PASS
 
 E Applicability Decision v0.1 = APPROVED
 E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
-KD-U03-01 Knowledge Release Draft = AVAILABLE
-KD-U03-01 Source Metadata Verification = COMPLETE_FOR_CURRENT_6_SOURCES
-KD-U03-01 Locked Clinical Context = APPLIED
-KD-U03-01 Owner Assignment = COMPLETE
-KD-U03-01 Formal Review = COMPLETE / APPROVE
-KD-U03-01 REVIEW_READY = YES
+KD-U03-01 Knowledge Release Candidate = KR-U03-SOURCE-001@0.1.0-candidate
 KD-U03-01 Freeze = COMPLETE_FOR_CANDIDATE
 KD-U03-01 Publication = NOT_COMPLETE
 
-C Clinical Rule Content = NOT_STARTED / UNBLOCKED_FOR_DRAFTING
-D Clinical Policy Content = NOT_STARTED / BLOCKED_UNTIL_C_VOCABULARY
+C Clinical Rule Content Draft v0.1 = AVAILABLE
+C Medical Owner Review = NOT_COMPLETE
+C Technical Review = NOT_COMPLETE
+C Initial Rule Release Freeze = NOT_COMPLETE
+CD-03 = NOT_PASSED
+
+D Clinical Policy Content = NOT_STARTED / BLOCKED_UNTIL_C_RULE_RESULT_VOCABULARY_REVIEWED
 Gate B = NOT_PASSED
 
 Medical Owner Approval for whole Clinical Input Package = NOT_COMPLETE
@@ -173,20 +170,24 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-Draft C initial Rule Pack
-using only Gate A approved B evidence refs
-and KR-U03-SOURCE-001@0.1.0-candidate
+Medical Owner / Technical Review
+of
+U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.1.md
+↓
+if approved
+↓
+freeze RR-U03-RISK-001 candidate rule/result vocabulary
+↓
+then reassess D drafting readiness
 ```
-
-D 不得先于 C 的 rule/result vocabulary 开始。不得把 candidate 当作 production binding。
 
 ## 6. 当前禁止事项
 
 - 不把 `KR-U03-SOURCE-001@0.1.0-candidate` 当作 PUBLISHED 或生产 binding；
-- D 不得先于 C 的稳定 rule/result vocabulary 开始；
-- 不新增未经过 A/B 审核链的医学来源；
+- 不把 `RR-U03-RISK-001@0.1.0-draft` 当作 frozen/runtime rule release；
+- D 不得先于 C 的 rule/result vocabulary review/freeze 开始；
+- 不新增未经过 A/B 审核链的医学来源或 evidence；
 - 不把 NICE/NHS 直接视为中国生产规则；
 - 不打开儿科或孕产 source pack；
-- 不把 Gate A PASS 或 E applicability approval 解释为整包 Medical Owner Approval；
 - 不以模型常识、实时网页、mutable RAG 或未版本化内容绕过 KD-U03-01；
-- 不把 `KR-U03-SOURCE-001@0.1.0-draft` 作为 C 的引用版本。
+- 不把 Rule Signal 直接提升为 `NO_HIGH_RISK_SIGNAL / CAUTION / HIGH_RISK / FAILED`。
