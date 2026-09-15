@@ -74,7 +74,7 @@ B APPROVE = 11 / REVISE = 0
 
 ```text
 Gate B = NOT_PASSED
-reason = BLOCKED_BY_CDE_SCOPE_INCONSISTENCY
+reason = TARGETED_SCOPE_DELTA_NOT_YET_VALIDATED_AND_FROZEN
 ```
 
 历史 0.2.0 集合的 cross-consistency：
@@ -94,10 +94,73 @@ Coverage = U03_D09_COVERAGE_V0_2_1_DRAFT / APPROVED_FOR_CONTENT
 
 pregnancy / puerperium
 = OUTSIDE_CURRENT_U03_WHOLE_POLICY_SLICE
-→ D09-P-001 / OVERALL_POLICY_SCOPE_MISMATCH
+→ D09-P-001 / OVERALL_POLICY_SCOPE_MISMATCH when TRUE
 ```
 
-这不等于新 candidate / freeze / Gate B PASS。
+Evaluation reuse assessment 已完成：
+
+```text
+U03_CDE_v0.2.1_Evaluation_Reuse_Assessment.md
+
+C 57 fixtures
+= REUSABLE_FOR_UNCHANGED_RULE_SEMANTICS
+
+D 48 fixtures
+= REUSABLE_FOR_UNCHANGED_POLICY_SEMANTICS
+
+full C fixture rebuild = NOT_REQUIRED
+full D fixture rebuild = NOT_REQUIRED
+targeted scope delta fixtures = REQUIRED
+```
+
+当前新增 freeze blocker：
+
+```text
+BLOCKER-FZ-CDE-021-01
+= OVERALL_SCOPE_ENTRY_MISSINGNESS_FORMALIZATION_REQUIRED
+```
+
+原因：
+
+```text
+overall_policy_scope_satisfied requires
+pregnancy_or_puerperium = FALSE
+```
+
+已批准：
+
+```text
+TRUE
+→ D09-P-001
+→ FAILED / NONE
+→ OVERALL_POLICY_SCOPE_MISMATCH
+→ denominator NOT_CONSTRUCTED
+```
+
+但以下状态尚未形成唯一 formal D09 handling：
+
+```text
+UNKNOWN
+NOT_ASKED
+NOT_ESTABLISHED
+```
+
+已确定：
+
+```text
+these states != FALSE
+→ must NOT enter denominator
+→ must NOT produce P3/P4
+→ must NOT produce NO_HIGH_RISK_SIGNAL
+```
+
+尚需 Medical + Technical 明确 formal branch/reason-code handling。任务记录：
+
+```text
+U03_CDE_v0.2.1_Scope_Entry_Missingness_Task.md
+```
+
+这不重开 `BF-CDE-01`；它只阻塞 0.2.1 candidate freeze。
 
 旧冻结对象保持 immutable：
 
@@ -118,7 +181,7 @@ CD-06 = NOT_REVIEW_READY
 Clinical Golden Cases = NOT_STARTED
 ```
 
-历史 C 57 / D 48 fixtures 不自动认证 0.2.1。
+历史 C 57 / D 48 fixtures 可按 invariance argument 复用，但不能单独认证 0.2.1；必须加 targeted delta fixtures + targeted review。
 
 ### Gate D — Authorization
 
@@ -166,6 +229,15 @@ CD-05 = PASSED_FOR_INITIAL_CANDIDATE (historical 0.2.0 candidate)
 C/D/E Cross-Consistency = REVISE_REQUIRED / CONTENT_ALIGNMENT_APPROVED
 BF-CDE-01 = CLOSED_FOR_CONTENT
 Targeted Scope Revision Drafts = REVIEWED / APPROVED_FOR_CONTENT
+Evaluation Reuse Assessment = COMPLETE
+C57 Reuse = YES_FOR_UNCHANGED_SEMANTICS
+D48 Reuse = YES_FOR_UNCHANGED_SEMANTICS
+Targeted Scope Delta Fixtures = REQUIRED / NOT_BUILT
+BLOCKER-FZ-CDE-021-01 = OPEN
+
+new 0.2.1 candidate identities = NOT_CREATED
+new freeze = NOT_COMPLETE
+C/D/E cross-consistency re-review = NOT_STARTED
 Gate B = NOT_PASSED
 Gate C = NOT_PASSED
 CD-07 = BLOCKED
@@ -177,8 +249,16 @@ Production Authorization = BLOCKED
 ## 6. 当前唯一下一步
 
 ```text
-assess whether historical C 57 / D 48 fixtures
-can be reused or need targeted scope fixtures
+Medical + Technical decision
+for pregnancy/puerperium scope-entry
+UNKNOWN / NOT_ASKED / NOT_ESTABLISHED
+↓
+close BLOCKER-FZ-CDE-021-01
+↓
+build targeted v0.2.1 scope fixtures
+(TRUE / FALSE / UNKNOWN / NOT_ASKED / NOT_ESTABLISHED minimum)
+↓
+targeted Medical + Technical/Eval review
 ↓
 create independent new candidate identities
 ↓
@@ -194,7 +274,9 @@ only if PASS + blocking finding = 0
 
 - 不原地修改历史 frozen C/D/coverage candidates；
 - 不直接把 0.2.1 revision drafts 标记 candidate/frozen；
-- 不自动继承历史 C 57 / D 48 fixture PASS 到新 scope versions；
+- 不把历史 C57/D48 fixture PASS 自动改写成 0.2.1 已验证；
+- 不让 `UNKNOWN / NOT_ASKED / NOT_ESTABLISHED` 静默折叠为 FALSE；
+- 不让 scope-entry 未确定状态进入 denominator；
 - 不把 content alignment 解释为 Gate B PASS；
 - 不开始 CD-07 / runtime / U04；
 - 不打开儿科或孕产临床规则；当前修订只是在现有 authority 下明确“孕产不属于当前 slice”。
