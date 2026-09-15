@@ -47,6 +47,12 @@ public class CapabilityCallTraceRecord {
     @Column(name = "binding_id", length = 128, nullable = false)
     private String bindingId;
 
+    @Column(name = "rule_release_ref", length = 128)
+    private String ruleReleaseRef;
+
+    @Column(name = "knowledge_release_ref", length = 128)
+    private String knowledgeReleaseRef;
+
     @Column(name = "capability_result_ref", length = 128)
     private String capabilityResultRef;
 
@@ -102,6 +108,12 @@ public class CapabilityCallTraceRecord {
         this.startedAt = startedAt == null ? LocalDateTime.now() : startedAt;
     }
 
+    public void bindReleases(String ruleReleaseRef, String knowledgeReleaseRef) {
+        requireStarted();
+        this.ruleReleaseRef = required(ruleReleaseRef, "ruleReleaseRef");
+        this.knowledgeReleaseRef = required(knowledgeReleaseRef, "knowledgeReleaseRef");
+    }
+
     public void succeed(
             String capabilityResultRef,
             String decisionRef,
@@ -123,6 +135,23 @@ public class CapabilityCallTraceRecord {
     public void fail(String reasonCode, LocalDateTime finishedAt) {
         requireStarted();
         this.reasonCode = required(reasonCode, "reasonCode");
+        this.callStatus = FAILED;
+        this.finishedAt = finishedAt == null ? LocalDateTime.now() : finishedAt;
+    }
+
+    public void failWithOutcome(
+            String reasonCode,
+            String decisionRef,
+            String proposalRef,
+            String commitRef,
+            Integer clinicalStateVersionAfter,
+            LocalDateTime finishedAt) {
+        requireStarted();
+        this.reasonCode = required(reasonCode, "reasonCode");
+        this.decisionRef = decisionRef;
+        this.proposalRef = proposalRef;
+        this.commitRef = commitRef;
+        this.clinicalStateVersionAfter = clinicalStateVersionAfter;
         this.callStatus = FAILED;
         this.finishedAt = finishedAt == null ? LocalDateTime.now() : finishedAt;
     }

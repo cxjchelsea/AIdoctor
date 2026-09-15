@@ -50,6 +50,16 @@ public class CapabilityTraceService {
     }
 
     @Transactional
+    public CapabilityCallTraceRecord bindReleases(
+            String capabilityCallId,
+            String ruleReleaseRef,
+            String knowledgeReleaseRef) {
+        CapabilityCallTraceRecord trace = require(capabilityCallId);
+        trace.bindReleases(ruleReleaseRef, knowledgeReleaseRef);
+        return repository.save(trace);
+    }
+
+    @Transactional
     public CapabilityCallTraceRecord succeed(
             String capabilityCallId,
             String capabilityResultRef,
@@ -73,6 +83,19 @@ public class CapabilityTraceService {
     public CapabilityCallTraceRecord fail(String capabilityCallId, String reasonCode) {
         CapabilityCallTraceRecord trace = require(capabilityCallId);
         trace.fail(reasonCode, now());
+        return repository.save(trace);
+    }
+
+    @Transactional
+    public CapabilityCallTraceRecord failWithOutcome(
+            String capabilityCallId,
+            String reasonCode,
+            String decisionRef,
+            String proposalRef,
+            String commitRef,
+            Integer clinicalStateVersionAfter) {
+        CapabilityCallTraceRecord trace = require(capabilityCallId);
+        trace.failWithOutcome(reasonCode, decisionRef, proposalRef, commitRef, clinicalStateVersionAfter, now());
         return repository.save(trace);
     }
 
