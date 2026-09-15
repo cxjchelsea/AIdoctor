@@ -1,8 +1,8 @@
 # U03 Evidence Catalog — Content Draft v0.2
 
 > 角色：Clinical Input Package B 的修订医学内容草案。  
-> 权威输入：`U03_AB_Medical_Owner_Review_Record_v0.1.md`、`U03_AB_Revision_Task_v0.2.md`。  
-> 状态：`REVISION_DRAFT / MEDICAL_OWNER_RE_REVIEW_REQUIRED / NOT_APPROVED / NOT_FOR_PRODUCTION`  
+> 权威输入：`U03_AB_Medical_Owner_Review_Record_v0.1.md`、`U03_AB_Revision_Task_v0.2.md`、第二轮 Medical Owner Review。  
+> 状态：`REVISION_DRAFT / SECOND_REVIEW_CHANGES_APPLIED / MEDICAL_OWNER_CONFIRMATION_REQUIRED / NOT_APPROVED / NOT_FOR_PRODUCTION`  
 > 范围：成人一般急性症状远程/社区问诊的初始安全证据集；不是完整全病种 Catalog。
 
 ## 1. Source Registry
@@ -44,19 +44,20 @@ missingness_handling:
 - limitation：远程主诉可作为候选；远程未观察到严重表现不得作为充分排除
 - missingness：未询问/无法观察不得解释为阴性
 - source：`SRC-NHS-DYSPNOEA`
-- v0.1 verdict：`APPROVE`
-- v0.2 status：`RE_REVIEW_REQUIRED`
+- second-round verdict：`APPROVE`
 
 ### EV-RF-NEURO-001 — 新发意识或认知改变
 
 - category：`RED_FLAG` candidate
 - definition：新出现的意识、行为或认知异常
-- scope：当前仅保留为来源支持的急性/专病上下文候选；不得自动作为跨病种全局 RED_FLAG
-- global-promotion：`PROHIBITED_PENDING_ADDITIONAL_GENERAL_ACUTE_SOURCE`
+- scope：仅限当前来源明确支持的上下文，不得写成“任何急性/专病上下文”或跨病种全局 RED_FLAG
+- source-context A：NICE NG253 对应 `age >= 16`、`suspected sepsis`、来源对应 community / custodial 场景
+- source-context B：NHS Shortness of breath 所描述的严重呼吸困难急诊警示上下文中的突然意识混乱
+- global-promotion：`PROHIBITED_PENDING_ADDITIONAL_GENERAL_ACUTE_SOURCE_AND_REVIEW`
 - missingness：未询问或信息不足不得解释为阴性
 - source：`SRC-NICE-SEPSIS-NG253`、`SRC-NHS-DYSPNOEA`
-- v0.1 verdict：`NEED_MORE_SOURCE`
-- v0.2 status：`RE_REVIEW_REQUIRED / NEED_MORE_SOURCE_RETAINED`
+- second-round verdict：`REVISE`
+- current action：`SOURCE_CONTEXT_SCOPE_TIGHTENED / MEDICAL_OWNER_CONFIRMATION_REQUIRED`
 
 ### EV-RF-APPEAR-001 — 异常皮肤/口唇颜色或灰白外观
 
@@ -68,8 +69,7 @@ missingness_handling:
 - channel rule：远程阴性观察不得作为充分排除
 - missingness：无法观察/图像质量不足 = `UNKNOWN/UNRELIABLE`，不得转阴性
 - source：`SRC-NICE-SEPSIS-NG253`、`SRC-NHS-DYSPNOEA`
-- v0.1 verdict：`REVISE`
-- v0.2 status：`RE_REVIEW_REQUIRED`
+- second-round verdict：`APPROVE`
 
 ### EV-MNM-NEURO-001 — 突发局灶无力或单侧/局灶感觉异常
 
@@ -79,8 +79,7 @@ missingness_handling:
 - exclusion boundary：慢性、双侧或非局灶感觉异常不得仅因“麻木”字样自动进入本条
 - resolution rule：症状缓解不得自动转为 negative
 - source：`SRC-NICE-NEURO-NG127`、`SRC-NHS-STROKE`
-- v0.1 verdict：`REVISE`
-- v0.2 status：`RE_REVIEW_REQUIRED`
+- second-round verdict：`APPROVE`
 
 ### EV-MNM-NEURO-002 — 突发言语或语言异常
 
@@ -89,8 +88,7 @@ missingness_handling:
 - resolution rule：短暂缓解仍保留历史阳性证据
 - missingness：未询问不得解释为阴性
 - source：`SRC-NICE-NEURO-NG127`、`SRC-NHS-STROKE`
-- v0.1 verdict：`APPROVE`
-- v0.2 status：`RE_REVIEW_REQUIRED`
+- second-round verdict：`APPROVE`
 
 ### EV-MNM-CARD-001 — 急性高危胸痛样表现
 
@@ -100,8 +98,7 @@ missingness_handling:
 - diagnostic boundary：需考虑急性冠脉事件 != 已确诊
 - atypical boundary：非典型或类似消化不良表现不得自动排除
 - source：`SRC-NHS-CHEST`
-- v0.1 verdict：`REVISE`
-- v0.2 status：`RE_REVIEW_REQUIRED`
+- second-round verdict：`APPROVE`
 
 ### EV-RF-ALLERGY-001 — 快速进展的过敏反应伴气道/呼吸/循环受损
 
@@ -110,8 +107,7 @@ missingness_handling:
 - boundary：皮肤/黏膜改变常见但不是绝对必需；非过敏性 ABC 受损不得自动编入本条
 - missingness：未观察到皮肤表现不得自动转阴性
 - source：`SRC-NICE-ANAPHYLAXIS-NG258`
-- v0.1 verdict：`APPROVE`
-- v0.2 status：`RE_REVIEW_REQUIRED`
+- second-round verdict：`APPROVE`
 
 ### EV-VS-SEPSIS-001 — 成人疑似脓毒症上下文中的异常呼吸频率信号
 
@@ -123,8 +119,7 @@ missingness_handling:
 - threshold：`NOT_STORED_IN_CATALOG`
 - prohibition：不得复制为全局生命体征红旗
 - source：`SRC-NICE-SEPSIS-NG253`
-- v0.1 verdict：`REVISE`
-- v0.2 status：`RE_REVIEW_REQUIRED`
+- second-round verdict：`APPROVE`
 
 ### EV-VS-SEPSIS-002 — 成人疑似脓毒症上下文中的异常收缩压信号
 
@@ -136,8 +131,7 @@ missingness_handling:
 - threshold：`NOT_STORED_IN_CATALOG`
 - prohibition：不得复制为全局生命体征红旗
 - source：`SRC-NICE-SEPSIS-NG253`
-- v0.1 verdict：`REVISE`
-- v0.2 status：`RE_REVIEW_REQUIRED`
+- second-round verdict：`APPROVE`
 
 ### EV-VS-SEPSIS-003 — 成人疑似脓毒症上下文中的异常心率信号
 
@@ -149,8 +143,7 @@ missingness_handling:
 - threshold：`NOT_STORED_IN_CATALOG`
 - prohibition：不得复制为全局生命体征红旗
 - source：`SRC-NICE-SEPSIS-NG253`
-- v0.1 verdict：`REVISE`
-- v0.2 status：`RE_REVIEW_REQUIRED`
+- second-round verdict：`APPROVE`
 
 ### EV-RF-SEPSIS-001 — 成人疑似脓毒症上下文中的不褪色瘀点/紫癜样皮疹
 
@@ -161,14 +154,13 @@ missingness_handling:
 - limitation：远程图像/描述质量有限，必须记录来源质量
 - channel rule：远程未观察到不得作为充分排除
 - source：`SRC-NICE-SEPSIS-NG253`
-- v0.1 verdict：`APPROVE`
-- v0.2 status：`RE_REVIEW_REQUIRED`
+- second-round verdict：`APPROVE`
 
 ## 4. v0.1 → v0.2 处置摘要
 
 ```text
 EV-RF-RESP-001 = retained; missingness hardened
-EV-RF-NEURO-001 = scope explicitly narrowed; NEED_MORE_SOURCE retained for global use
+EV-RF-NEURO-001 = source contexts explicitly locked after second review; global promotion still prohibited
 EV-RF-CIRC-001 = replaced by mechanism-neutral EV-RF-APPEAR-001
 EV-MNM-NEURO-001 = sudden focal/unilateral sensory scope hardened
 EV-MNM-NEURO-002 = retained; missingness hardened
@@ -202,8 +194,9 @@ Production Release
 
 ```text
 B Evidence Catalog v0.2
-= REVISION_DRAFT_AVAILABLE
-/ MEDICAL_OWNER_RE_REVIEW_REQUIRED
-/ NOT_APPROVED
+= SECOND_REVIEW_COMPLETE
+/ ONE_TARGETED_SCOPE_REVISION_APPLIED
+/ MEDICAL_OWNER_CONFIRMATION_REQUIRED_FOR_EV-RF-NEURO-001
+/ PACKAGE_NOT_APPROVED
 / NOT_FOR_PRODUCTION
 ```
