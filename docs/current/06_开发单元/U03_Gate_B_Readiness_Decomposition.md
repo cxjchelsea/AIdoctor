@@ -3,7 +3,7 @@
 > 阶段：U03 Clinical Dependency Completion / Gate B readiness decomposition  
 > 前置：Gate A = PASS；A/B v0.2 来源锁定语义已冻结。  
 > 目的：拆解 CD-03～CD-05 在进入真实临床内容前仍缺失的输入、Owner、依赖顺序与通过条件。  
-> 本文件不提供具体医学阈值、规则分支、风险 disposition 或生产知识内容；不构成 Implementation Authorization、Merge Authorization 或 Production Authorization。
+> 本文件不构成 Implementation Authorization、Merge Authorization 或 Production Authorization。
 
 ## 1. 当前 Gate A 后状态
 
@@ -13,18 +13,22 @@ A Clinical Risk Semantics v0.2 = SOURCE-LOCKED / FROZEN_FOR_GATE_A
 B Evidence Catalog v0.2 = SOURCE-LOCKED / FROZEN_FOR_GATE_A
 
 E Applicability Decision v0.1 = APPROVED
-E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
-KD-U03-01 = REQUIRED
-KD-U03-01 Knowledge Release = CANDIDATE_FROZEN / KR-U03-SOURCE-001@0.1.0-candidate
+KD-U03-01 Knowledge Release
+= KR-U03-SOURCE-001@0.1.0-candidate
+/ CANDIDATE_FROZEN
+/ NOT_PUBLISHED
 
-Medical Owner Approval for whole Clinical Input Package = NOT_COMPLETE
+C Rule Release
+= RR-U03-RISK-001@0.2.0-candidate
+/ CANDIDATE_FROZEN
+/ NOT_PUBLISHED
+
+D Clinical Policy Content = NOT_STARTED
 Gate B = NOT_PASSED
 Gate C = NOT_PASSED
 CD-07 = BLOCKED
 U04 = BLOCKED_BY_U03_CLINICAL_DEPENDENCY
 ```
-
-Gate A PASS 与 E applicability approval 均不表示 Rule Pack、D09 Policy、Knowledge Release publication 或整个 Clinical Input Package 已批准。
 
 ## 2. Gate B 的三个受治理对象
 
@@ -47,11 +51,11 @@ CD-05 = D09 deterministic clinical policy
 ```text
 Gate A PASS
 ↓
-E applicability adjudication = COMPLETE
+E applicability adjudication
 ↓
-KD-U03-01 minimum Knowledge Release object
+KD-U03-01 Knowledge Release candidate
 ↓
-C initial Rule Pack clinical content
+C initial Rule Pack candidate
 ↓
 D D09 clinical policy content
 ↓
@@ -81,78 +85,58 @@ KD-U03-04 Runtime Free-form External Retrieval = PROHIBITED_AS_IMPLICIT_DEPENDEN
 KD-U03-05 Explanation-only Knowledge = OPTIONAL
 ```
 
-并且：
+当前：
 
 ```text
-即使未来工程合同支持空 knowledge ref
-KD-U03-01 在本 slice 仍为临床 REQUIRED
+CD-04 knowledge candidate
+= KR-U03-SOURCE-001@0.1.0-candidate
+/ REVIEWED
+/ RESOLVABLE
+/ CANDIDATE_FROZEN
+/ NOT_PRODUCTION
 ```
 
-### E 下一步
+## 4. C / Rule Pack 当前状态
 
-只允许起草最小 KD-U03-01 Knowledge Release 内容对象，且：
-
-- 只能绑定已进入 A/B 审核链的 source registry；
-- 不新增指南或临床结论；
-- 不保存 executable threshold / combination；
-- 不保存 D09 disposition mapping；
-- 必须显式保留 version/scope/provenance/review/effective-time 字段；
-- 未知的 source version/publication/retrieval metadata 不得编造，必须显式标为待核验。
-
-最小 KR candidate 现已可解析：
+C 已完成：
 
 ```text
-CD-04 = CANDIDATE_READY / NOT_PRODUCTION
-C real rule content = UNBLOCKED_FOR_DRAFTING
-D real policy content = BLOCKED_UNTIL_C_VOCABULARY
+15 active rule review = APPROVE_15 / REVISE_0
+BF-C-01..04 = CLOSED
+Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
+PF-U03-C-POLICY-001 = CANDIDATE_FROZEN
+Pre-Freeze Eval PASS = YES
+RR-U03-RISK-001@0.2.0-candidate = CANDIDATE_FROZEN
 ```
 
-## 4. C / Rule Pack 进入真实内容前需要什么
-
-结构 Schema 已冻结，但真实 Rule Pack 仍缺：
+因此：
 
 ```text
-真实 rule entries
-predicate / operator / threshold content
-required / optional evidence refs
-population / region / language / channel scope
-missingness / uncertainty handling
-priority / conflict group
-source refs / provenance
-knowledge release refs
-initial rule release identity/version/effective time
-clinical review
-technical review
-evaluation refs
+CD-03 = PASSED_FOR_INITIAL_CANDIDATE
 ```
 
-C 只能消费 Gate A 已冻结的 B Evidence refs，并必须引用受治理 KD-U03-01 Knowledge Release 作为来源/provenance。
-
-禁止：
-
-```text
-C 自己新增第二套 Evidence taxonomy
-开发者凭常识补阈值
-Knowledge Release 与 Rule Pack 各维护一份阈值
-rule hit 直接等同 HIGH_RISK
-```
-
-### C readiness 必须先满足
-
-```text
-Gate A = PASS
-E applicability = APPROVED
-KD-U03-01 Knowledge Release object = RESOLVABLE
-Rule content owner = ASSIGNED
-Source refs = AVAILABLE
-Rule release scope/version scheme = FROZEN
-```
+这只表示 initial governed candidate 可用于后续 D drafting，不表示 production rule release 已发布。
 
 ## 5. D / D09 Policy 进入真实内容前需要什么
 
 D09 是唯一正式 Risk Disposition Owner，真实 policy 不能先于 C 的 rule/result vocabulary 稳定。
 
-至少缺：
+该前置现在已经满足：
+
+```text
+rule_release_ref = RR-U03-RISK-001@0.2.0-candidate
+knowledge_release_ref = KR-U03-SOURCE-001@0.1.0-candidate
+C rule/result vocabulary = FROZEN_FOR_CANDIDATE
+```
+
+D drafting readiness 已单独判断：
+
+```text
+U03_D_Drafting_Readiness_Assessment_v0.1.md
+D Drafting Readiness = PASS_FOR_DRAFTING
+```
+
+D 初稿至少需要定义：
 
 ```text
 policy branches
@@ -187,7 +171,7 @@ CD-04 负责把 C/D 真正依赖的 release 资产变成可治理、可解析、
 ```text
 Rule Release governance
 Knowledge Release applicability decision
-KD-U03-01 minimum Knowledge Release content
+KD-U03-01 Knowledge Release content
 release identity/version/scope/effective time
 source/provenance
 supersede/rollback
@@ -195,7 +179,13 @@ review/approval status
 P06 binding compatibility
 ```
 
-当前 CD-04 已完成 applicability 角色裁定，但最小 Knowledge Release 内容仍未完成。
+当前：
+
+```text
+Knowledge Release candidate = FROZEN / RESOLVABLE
+Rule Release candidate = FROZEN / RESOLVABLE
+Production release = NOT_AUTHORIZED
+```
 
 ## 7. Gate B Cross-Consistency Check
 
@@ -238,26 +228,29 @@ C/D/E Cross-Consistency = PASS
 Gate A = PASS
 
 C Structural Schema = PASS
-C Clinical Content = PACKAGE_APPROVED_FOR_CONTENT / NOT_FROZEN
+C Clinical Content = APPROVED_FOR_CONTENT_AND_SCOPE
+C Rule Release Candidate = RR-U03-RISK-001@0.2.0-candidate / CANDIDATE_FROZEN
+CD-03 = PASSED_FOR_INITIAL_CANDIDATE
 
 D Structural Schema = PASS
-D Clinical Content = NOT_STARTED / BLOCKED_UNTIL_C_VOCABULARY
+D Drafting Readiness = PASS_FOR_DRAFTING
+D Clinical Content = NOT_STARTED
+CD-05 = NOT_PASSED
 
 E Structural Schema = PASS
-E Applicability Adjudication = APPROVED
-E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
-KD-U03-01 Knowledge Release = CANDIDATE_FROZEN / KR-U03-SOURCE-001@0.1.0-candidate
+E Applicability = APPROVED
+KD-U03-01 Knowledge Release = KR-U03-SOURCE-001@0.1.0-candidate / CANDIDATE_FROZEN
 
-Gate B Readiness = C_PACKAGE_APPROVED_FREEZE_NOT_READY
-Primary Blocker = C_CANDIDATE_FREEZE_HYGIENE
-Secondary Blockers = D_POLICY_CONTENT_NOT_STARTED
+Gate B Readiness = READY_FOR_D_DRAFTING
+Primary Blocker = D_POLICY_CONTENT_NOT_STARTED
+Secondary Blocker = C_D_E_CROSS_CONSISTENCY_NOT_STARTED
 ```
 
 当前唯一合理的下一步：
 
 ```text
-Independent candidate-freeze readiness
-for missingness / shared-scope / evaluation refs
+Draft D / D09 Clinical Policy Table content
+using frozen C + E candidate refs
 ```
 
-不得开始 D09，不得 freeze `RR-U03-RISK-001` candidate。
+只允许形成 review draft；不得把 drafting readiness 解释为 CD-05 approval、Implementation Authorization、runtime activation 或 production authorization。
