@@ -127,7 +127,8 @@ candidate freeze 仍不等于 Gate B PASS。
 ```text
 D Content Approval = APPROVED_FOR_CONTENT_AND_COVERAGE
 coverage contract = REVIEWED + FROZEN
-D pre-freeze evaluation refs = RESOLVABLE\D pre-freeze fixture content = AVAILABLE
+D pre-freeze evaluation refs = RESOLVABLE
+D pre-freeze fixture content = AVAILABLE
 D pre-freeze Medical review = APPROVE
 D pre-freeze Technical/Eval review = APPROVE
 blocking eval finding = 0
