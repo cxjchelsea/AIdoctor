@@ -2,7 +2,8 @@
 
 > Contract ID：`U03_D09_COVERAGE_V0_2`  
 > 对象：`PR-U03-D09-001@0.2.0-draft` 的 deterministic coverage denominator。  
-> 状态：`APPROVED_FOR_CONTENT / RESOLVABLE / NOT_FROZEN / NOT_FOR_PRODUCTION`。  
+> 状态：`APPROVED_FOR_CONTENT / RESOLVABLE / CANDIDATE_FROZEN / NOT_FOR_PRODUCTION`。  
+> 冻结记录：`U03_D09_Coverage_Contract_Freeze_Record_v0.2.md`  
 > 权威输入：`RR-U03-RISK-001@0.2.0-candidate`、`PF-U03-C-POLICY-001`、`U03_D09_Clinical_Policy_Revision_Task_v0.1.md`。  
 > 本文件只定义 D09 如何确定“哪些 C rule 属于本次 disposition completeness 分母”；不新增医学 rule、阈值、evidence 或 disposition。
 
@@ -276,7 +277,7 @@ U03_C_MISSINGNESS_V0_2
 U03_SEPSIS_SHARED_SCOPE_V0_2
 ```
 
-若 coverage contract 后续经审核冻结，任何变更必须新建 contract version，不得原地改变 denominator。
+本 contract 已冻结。任何后续 denominator / applicability 修改必须新建 contract version 并重新审核；不得原地改变 `U03_D09_COVERAGE_V0_2` 的冻结语义。
 
 ---
 
@@ -287,8 +288,9 @@ contract_ref = U03_D09_COVERAGE_V0_2
 Resolvable Object = YES
 Medical Review = COMPLETE / APPROVE
 Technical Review = COMPLETE / APPROVE
-Frozen = NO
+Frozen = YES
+freeze_record_ref = U03_D09_Coverage_Contract_Freeze_Record_v0.2.md
 Production Eligible = NO
 ```
 
-内容再审已通过；这不等于 coverage contract 已冻结，也不等于 D policy candidate freeze / CD-05 / Gate B。
+冻结仅解决 D candidate freeze 的 denominator immutability 前置，不等于 D policy candidate freeze / CD-05 / Gate B。
