@@ -1,8 +1,10 @@
 # U03 D09 Clinical Policy Table — Content Draft v0.1
 
 > 对象：Clinical Input Package D / D09 deterministic Clinical Risk Disposition Policy 初始内容草案。  
-> 状态：`CLINICAL_POLICY_DRAFT / MEDICAL_REVIEW_REQUIRED / TECHNICAL_REVIEW_REQUIRED / NOT_APPROVED / NOT_FROZEN / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
+> 状态：`CLINICAL_POLICY_DRAFT / MEDICAL_REVIEW_COMPLETE / TECHNICAL_REVIEW_COMPLETE / REVISE_REQUIRED / NOT_APPROVED / NOT_FROZEN / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
 > 前置：`RR-U03-RISK-001@0.2.0-candidate = CANDIDATE_FROZEN`；`KR-U03-SOURCE-001@0.1.0-candidate = CANDIDATE_FROZEN / RESOLVABLE`。  
+> 审核记录：`U03_D09_Clinical_Policy_Review_Record_v0.1.md`  
+> 修订任务：`U03_D09_Clinical_Policy_Revision_Task_v0.1.md`  
 > 本文件只定义 D09 的确定性 disposition draft；不修改 C rule、不定义 U04 Safety Gate、不构成 Implementation Authorization。
 
 ---
@@ -460,6 +462,8 @@ REJECT
 NEED_MORE_SOURCE
 ```
 
+正式裁决见 `U03_D09_Clinical_Policy_Review_Record_v0.1.md`。本 v0.1 不得进入 candidate freeze。
+
 ---
 
 ## 12. Current Status
@@ -467,12 +471,14 @@ NEED_MORE_SOURCE
 ```text
 D Structural Schema = FROZEN
 D Drafting Readiness = PASS_FOR_DRAFTING
-D Clinical Policy Content Draft v0.1 = AVAILABLE
+D Clinical Policy Content Draft v0.1 = REVIEWED
 Policy Release = PR-U03-D09-001@0.1.0-draft
 Rule Release Ref = RR-U03-RISK-001@0.2.0-candidate
 Knowledge Release Ref = KR-U03-SOURCE-001@0.1.0-candidate
-Medical Owner Review = NOT_COMPLETE
-Technical Review = NOT_COMPLETE
+Medical Owner Review = COMPLETE
+Technical Review = COMPLETE
+D Content Approval = REVISE_REQUIRED
+blocking findings = BF-D-01, BF-D-02
 D Policy Candidate Freeze = NOT_COMPLETE
 CD-05 = NOT_PASSED
 C/D/E Cross-Consistency = NOT_STARTED

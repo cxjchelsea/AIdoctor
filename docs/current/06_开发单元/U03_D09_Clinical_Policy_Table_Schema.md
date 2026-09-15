@@ -453,10 +453,12 @@ Version = FROZEN
 
 ```text
 D09 Policy Structural Schema = FROZEN
-Concrete Clinical Policy Branches = NOT_AVAILABLE
-Medical Priority / Precedence = NOT_AVAILABLE
-Medical Owner Review = NOT_COMPLETE
-Policy Release = NOT_PUBLISHED
+Concrete Clinical Policy Branches = DRAFT_v0.1_REVIEWED
+Medical Priority / Precedence = REVIEWED_P0_TO_P5
+Medical Owner Review = COMPLETE
+Technical Review = COMPLETE
+Content Approval = REVISE_REQUIRED
+Policy Release = PR-U03-D09-001@0.1.0-draft / NOT_PUBLISHED
 Clinical Evaluation = NOT_COMPLETE
 ```
 
@@ -465,8 +467,8 @@ Clinical Evaluation = NOT_COMPLETE
 ```text
 D / D09 Clinical Policy Table
 = STRUCTURAL_SCHEMA_FROZEN
-/ CLINICAL_POLICY_CONTENT_PENDING
-/ MEDICAL_OWNER_REVIEW_REQUIRED
+/ CLINICAL_POLICY_CONTENT_DRAFT_v0.1_REVIEWED
+/ REVISE_REQUIRED
 / NOT_APPROVED
 ```
 

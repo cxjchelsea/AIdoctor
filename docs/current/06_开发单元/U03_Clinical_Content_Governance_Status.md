@@ -71,6 +71,9 @@ U03_C_Missingness_M2_ReReview_Record_v0.2.md
 U03_C_Policy_Pair_Freeze_Record_v0.2.md
 U03_C_PreFreeze_Evaluation_Fixtures_v0.2.md
 U03_C_PreFreeze_Eval_Review_Record_v0.2.md
+U03_D09_Clinical_Policy_Content_Draft_v0.1.md
+U03_D09_Clinical_Policy_Review_Record_v0.1.md
+U03_D09_Clinical_Policy_Revision_Task_v0.1.md
 ```
 
 ## 4. 当前 Gate
@@ -85,8 +88,9 @@ A/B v0.2 Source-locked Semantics = FROZEN
 
 Medical Owner Approval = NOT_COMPLETE
 Clinical Input Package = NOT_COMPLETE
-C Rule Pack Clinical Content = PACKAGE_APPROVED_FOR_CONTENT / POLICY_PAIR_FROZEN / PRE_FREEZE_EVAL_PASS / RR_NOT_FROZEN
-D D09 Production Clinical Policy = BLOCKED_UNTIL_C_VOCABULARY
+C Rule Pack Clinical Content = PACKAGE_APPROVED_FOR_CONTENT / POLICY_PAIR_FROZEN / PRE_FREEZE_EVAL_PASS / RR-U03-RISK-001@0.2.0-candidate_CANDIDATE_FROZEN
+D D09 Clinical Policy Draft v0.1 = REVIEWED / REVISE_REQUIRED / BF-D-01_OPEN / BF-D-02_OPEN
+D D09 Production Clinical Policy = NOT_APPROVED / NOT_FROZEN
 E Applicability = APPROVED
 E KR REVIEW_READY = YES
 E KR Freeze = CANDIDATE_FROZEN
@@ -115,8 +119,8 @@ Production Authorization = GRANTED
 
 ## 6. 当前禁止事项
 
-- 不把 `KR-U03-SOURCE-001@0.1.0-candidate` 当作 PUBLISHED；D 不得先于 C 开始；F 仍未开始；
+- 不把 `KR-U03-SOURCE-001@0.1.0-candidate` 或 `PR-U03-D09-001@0.1.0-draft` 当作 PUBLISHED；F 仍未开始；
 - 不打开中国生产本地化；
 - 不打开儿科或孕产 source pack；
 - 不把 NICE/NHS 直接视为中国最终生产规则；
-- 不把 Gate A PASS 解释为 Merge Authorization 或 Production Authorization。
+- 不把 Gate A PASS 或 D v0.1 review 解释为 Merge Authorization、D freeze 或 Production Authorization。

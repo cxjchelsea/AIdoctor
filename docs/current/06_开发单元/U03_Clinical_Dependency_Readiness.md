@@ -51,10 +51,13 @@ C Safety-critical Risk Rule Pack
 D D09 Clinical Policy Table
 = STRUCTURAL_SCHEMA_FROZEN
 / DRAFTING_READINESS_PASS
-/ CLINICAL_POLICY_CONTENT_DRAFT_v0.1_AVAILABLE
+/ CLINICAL_POLICY_CONTENT_DRAFT_v0.1_REVIEWED
 / POLICY_RELEASE = PR-U03-D09-001@0.1.0-draft
-/ MEDICAL_OWNER_REVIEW_REQUIRED
-/ TECHNICAL_REVIEW_REQUIRED
+/ MEDICAL_OWNER_REVIEW_COMPLETE
+/ TECHNICAL_REVIEW_COMPLETE
+/ CONTENT_APPROVAL = REVISE_REQUIRED
+/ BF-D-01_OPEN
+/ BF-D-02_OPEN
 / POLICY_CANDIDATE_FREEZE_NOT_COMPLETE
 / CD-05_NOT_PASSED
 
@@ -91,14 +94,16 @@ RR-U03-RISK-001@0.2.0-candidate = CANDIDATE_FROZEN
 CD-03 = PASSED_FOR_INITIAL_CANDIDATE
 ```
 
-D 已进入内容起草并形成 review draft：
+D v0.1 review 已完成，内容未通过：
 
 ```text
-U03_D09_Clinical_Policy_Content_Draft_v0.1.md
 PR-U03-D09-001@0.1.0-draft
+Medical APPROVE = 6 / REVISE = 0
+Technical APPROVE = 4 / REVISE = 2
+D Content Approval = REVISE_REQUIRED
 ```
 
-D v0.1 当前提出的确定性 precedence：
+D v0.1 已接受的确定性 precedence：
 
 ```text
 P0 INTEGRITY_FAILURE
@@ -129,14 +134,24 @@ fully evaluated applicable set with no risk signal
 = VALID + NO_HIGH_RISK_SIGNAL
 ```
 
-以上均为待 Medical / Technical review 的 proposed policy，不是已批准策略。
+以上方向已审过，但不是已批准策略。仍开放：
+
+```text
+BF-D-01
+overall D scope mismatch must be a formal P0 reason
+not section-8 prose only
+
+BF-D-02
+P-040 / P-020 must cite an executable coverage contract
+5 always-on rules + 2 conditional families
+```
 
 Gate B 仍缺：
 
 ```text
-D Medical Owner review
-D Technical review
-D content approval / candidate readiness
+D v0.2 revision
+D content re-review / approval
+D policy candidate freeze
 CD-05 approval
 C/D/E cross-consistency review
 Gate B final decision
@@ -171,7 +186,8 @@ Rule Release
 
 D09 Policy Release
 = PR-U03-D09-001@0.1.0-draft
-/ DRAFT
+/ REVIEWED
+/ REVISE_REQUIRED
 / NOT_APPROVED
 / NOT_FROZEN
 / NOT_PUBLISHED
@@ -187,9 +203,10 @@ CD-03 = PASSED_FOR_INITIAL_CANDIDATE
 CD-04 = CANDIDATE_READY / NOT_PRODUCTION
 
 D Drafting Readiness = PASS_FOR_DRAFTING
-D Clinical Policy Content Draft v0.1 = AVAILABLE
-D Medical Review = NOT_COMPLETE
-D Technical Review = NOT_COMPLETE
+D Clinical Policy Content Draft v0.1 = REVIEWED
+D Medical Review = COMPLETE
+D Technical Review = COMPLETE
+D Content Approval = REVISE_REQUIRED
 D Policy Candidate Freeze = NOT_COMPLETE
 CD-05 = NOT_PASSED
 
@@ -216,14 +233,14 @@ U03 Clinical Dependency Readiness
 ## 6. 当前唯一下一步
 
 ```text
-Review
+Revise
 U03_D09_Clinical_Policy_Content_Draft_v0.1.md
-using
-U03_D09_Clinical_Policy_Review_Record_v0.1.md
+to v0.2 using
+U03_D09_Clinical_Policy_Revision_Task_v0.1.md
 ↓
-Medical + Technical verdicts
+close BF-D-01 and BF-D-02
 ↓
-revise if needed
+Medical + Technical re-review
 ↓
 only after D content approval
 → assess D policy candidate freeze / CD-05 readiness
@@ -236,7 +253,7 @@ Gate B decision
 ## 7. 当前禁止事项
 
 - 不把 `PR-U03-D09-001@0.1.0-draft` 当作 approved/frozen/published policy；
-- 不把 D draft 映射当成 Medical Owner 已批准策略；
+- 不把已接受的 precedence / 边界方向当成已关闭全部 D blocker；
 - 不修改或重命名 `RR-U03-RISK-001@0.2.0-candidate`；后续变更必须新建版本；
 - D 不得重新解释 C 阈值或新增 C evidence taxonomy；
 - `NO_HIGH_RISK_SIGNAL` 不得解释为 SAFE / NORMAL；

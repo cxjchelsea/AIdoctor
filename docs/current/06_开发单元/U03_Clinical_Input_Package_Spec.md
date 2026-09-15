@@ -51,14 +51,16 @@ C package 内容与 scope invariant 已再确认通过。下一动作是独立�
 
 ```text
 STRUCTURAL_SCHEMA_FROZEN
-CLINICAL_POLICY_CONTENT = NOT_STARTED
-MEDICAL_PRIORITY_PRECEDENCE = NOT_AVAILABLE
-MEDICAL_OWNER_REVIEW = NOT_COMPLETE
-POLICY_RELEASE = NOT_AVAILABLE
+CLINICAL_POLICY_CONTENT_DRAFT_v0.1 = REVIEWED
+MEDICAL_PRIORITY_PRECEDENCE = REVIEWED_P0_TO_P5
+MEDICAL_OWNER_REVIEW = COMPLETE
+TECHNICAL_REVIEW = COMPLETE
+CONTENT_APPROVAL = REVISE_REQUIRED
+POLICY_RELEASE = PR-U03-D09-001@0.1.0-draft
 CD-05 = NOT_PASSED
 ```
 
-D 的真实 policy 必须基于稳定的 governed evidence/rule refs，不能先于 C 的实际 rule/result vocabulary 成型。
+D v0.1 的 6 个 branch 与 `P0 > P1 > P2 > P3 > P4 > P5` 方向已审过；BF-D-01 / BF-D-02 关闭前不得进入 content approval 或 candidate freeze。
 
 ## 6. E：Knowledge Release Manifest
 
