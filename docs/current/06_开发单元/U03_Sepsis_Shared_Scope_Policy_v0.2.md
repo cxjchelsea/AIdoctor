@@ -1,7 +1,7 @@
 # U03 Sepsis Shared Scope Policy v0.2
 
 > Policy ID：`U03_SEPSIS_SHARED_SCOPE_V0_2`  
-> 状态：`RESOLVABLE_DRAFT / REVIEW_COMPLETE_APPROVE / FREEZE_HELD_UNTIL_MISSINGNESS_APPROVE / NOT_FOR_PRODUCTION`  
+> 状态：`CANDIDATE_FROZEN / REVIEW_COMPLETE_APPROVE / PAIR_FREEZE = PF-U03-C-POLICY-001 / NOT_FOR_PRODUCTION`  
 > 目的：把 C v0.2 所有 NG253 sepsis rule 共用的 scope precondition 固化为可解析对象。  
 > 本文件不新增阈值，不定义 D09 disposition，也不创建 suspected sepsis。
 
@@ -99,8 +99,9 @@ policy_ref = U03_SEPSIS_SHARED_SCOPE_V0_2
 Resolvable Object = YES
 Medical Review = COMPLETE_APPROVE
 Technical Review = COMPLETE_APPROVE
-Frozen = NO
+Frozen = YES
+policy_pair_freeze_ref = PF-U03-C-POLICY-001
 Production Eligible = NO
 ```
 
-该对象只解决 shared-scope ref 的可解析性，不代表 C package 或 Rule Release candidate 已冻结。
+该对象已与 Missingness 一并冻结，只供后续 pre-freeze Eval 与 RR candidate freeze 引用。这不代表 Rule Release candidate 已冻结。

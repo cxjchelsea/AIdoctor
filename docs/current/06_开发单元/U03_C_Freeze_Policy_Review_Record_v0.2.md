@@ -2,7 +2,7 @@
 
 > 对象：candidate freeze 前的两个可解析 policy 对象。  
 > 审核对象：`U03_C_MISSINGNESS_V0_2` + `U03_SEPSIS_SHARED_SCOPE_V0_2`。  
-> 状态：`REVIEW_COMPLETE / MISSINGNESS_REVISE / SHARED_SCOPE_APPROVE / POLICY_FREEZE_BLOCKED / D_STILL_BLOCKED`。  
+> 状态：`REVIEW_COMPLETE / M2_CLOSED / POLICY_PAIR_FROZEN / D_STILL_BLOCKED`。  
 > 审核角色：`U03_MEDICAL_OWNER_REVIEW` + `U03_TECHNICAL_GOVERNANCE_REVIEW`  
 > 审核日期：`2026-09-15`  
 > 本记录不重新审核 15 条 active rule，也不审核 D09，不开始 pre-freeze Eval 内容。
@@ -35,10 +35,18 @@ U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.2.md
 | M6 | policy 是否未引入 D09 disposition | APPROVE | APPROVE |
 
 ```text
-U03_C_MISSINGNESS_V0_2 Review = COMPLETE
-Medical = APPROVE_WITH_ONE_TECHNICAL_REVISE
-Technical = REVISE
-Policy Freeze = BLOCKED
+U03_C_MISSINGNESS_V0_2 Initial Review = COMPLETE
+Medical = APPROVE
+Technical = REVISE_M2
+```
+
+后续定向再审已关闭 M2：
+
+```text
+U03_C_Missingness_M2_ReReview_Record_v0.2.md
+= COMPLETE_APPROVE
+M2 = CLOSED
+Policy Pair Freeze = PF-U03-C-POLICY-001
 ```
 
 成立：
@@ -101,8 +109,8 @@ Shared Scope Technical = APPROVE
 当前：
 
 ```text
-Missingness Technical = REVISE
-Policy Freeze = BLOCKED
+Missingness Technical = APPROVE
+Policy Freeze = COMPLETE / PF-U03-C-POLICY-001
 RR-U03-RISK-001 Candidate Freeze = BLOCKED
 Pre-Freeze Eval content = NOT_STARTED
 D = BLOCKED
@@ -114,14 +122,14 @@ D = BLOCKED
 
 ```text
 Policy Review = COMPLETE
-Missingness Policy Frozen = NO
-Shared Scope Policy Frozen = NO
-BLOCKER-FZ-C-01 = OPEN
-BLOCKER-FZ-C-02 = REVIEWED_APPROVE_HELD
+Missingness Policy Frozen = YES
+Shared Scope Policy Frozen = YES
+BLOCKER-FZ-C-01 = CLOSED
+BLOCKER-FZ-C-02 = CLOSED
 BLOCKER-FZ-C-03 = OPEN
 BLOCKER-FZ-C-04 = OPEN / MUST_REMAIN_LAST
 C Candidate Freeze Readiness = NOT_PASSED
 D = STILL_BLOCKED
 ```
 
-下一步：按 `U03_C_Missingness_Policy_Revision_Task_v0.2.md` 补齐测量态映射并再审。通过前不冻结任一 policy，不开始写 Eval fixtures，不创建 candidate version，不开始 D09。
+下一步：按 `U03_C_PreFreeze_Evaluation_Minimum_v0.2.md` 构建 minimum pre-freeze fixtures。在此之前不创建 `RR-U03-RISK-001` candidate version，不开始 D09。

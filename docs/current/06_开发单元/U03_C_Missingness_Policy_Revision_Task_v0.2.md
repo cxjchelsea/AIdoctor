@@ -2,7 +2,7 @@
 
 > 权威输入：`U03_C_Freeze_Policy_Review_Record_v0.2.md`  
 > 目标对象：`U03_C_MISSINGNESS_V0_2`  
-> 状态：`REVISION_REQUIRED / POLICY_FREEZE_BLOCKED`
+> 状态：`REVISION_TASK_COMPLETE / M2_CLOSED`
 
 本任务只补齐测量/evidence 不可判定态的显式执行映射。不重写 15 条 rule，不改阈值，不开始 Eval 或 D09。
 

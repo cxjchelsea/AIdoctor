@@ -67,6 +67,8 @@ U03_C_Freeze_Readiness_Assessment_v0.2.md
 U03_C_Freeze_Policy_Review_Record_v0.2.md
 U03_C_PreFreeze_Evaluation_Minimum_v0.2.md
 U03_C_Missingness_Policy_Revision_Task_v0.2.md
+U03_C_Missingness_M2_ReReview_Record_v0.2.md
+U03_C_Policy_Pair_Freeze_Record_v0.2.md
 ```
 
 ## 4. 当前 Gate
@@ -81,7 +83,7 @@ A/B v0.2 Source-locked Semantics = FROZEN
 
 Medical Owner Approval = NOT_COMPLETE
 Clinical Input Package = NOT_COMPLETE
-C Rule Pack Clinical Content = PACKAGE_APPROVED_FOR_CONTENT / BF-C-04_CLOSED / MISSINGNESS_REVISE / NOT_FROZEN
+C Rule Pack Clinical Content = PACKAGE_APPROVED_FOR_CONTENT / POLICY_PAIR_FROZEN / RR_NOT_FROZEN
 D D09 Production Clinical Policy = BLOCKED_UNTIL_C_VOCABULARY
 E Applicability = APPROVED
 E KR REVIEW_READY = YES

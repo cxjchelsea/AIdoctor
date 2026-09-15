@@ -104,10 +104,10 @@ U03_C_Freeze_Readiness_Assessment_v0.2.md
 
 ```text
 BLOCKER-FZ-C-01
-= U03_C_MISSINGNESS_V0_2 M2 revision applied / re-review required / not frozen
+= CLOSED / U03_C_MISSINGNESS_V0_2 candidate-frozen
 
 BLOCKER-FZ-C-02
-= U03_SEPSIS_SHARED_SCOPE_V0_2 reviewed APPROVE / freeze held until missingness M2 approve
+= CLOSED / U03_SEPSIS_SHARED_SCOPE_V0_2 candidate-frozen
 
 BLOCKER-FZ-C-03
 = minimum pre-freeze evaluation content/review not satisfied
@@ -138,10 +138,11 @@ candidate freeze 与 Gate C 分离：candidate freeze 需要最低 pre-freeze ev
 policy_ref = U03_C_MISSINGNESS_V0_2
 Resolvable = YES
 Medical Review = COMPLETE_APPROVE
-Technical Review v0.2 = COMPLETE_REVISE_M2
+Technical Review = COMPLETE_APPROVE
 M2 Revision = APPLIED
-M2 Re-review = REQUIRED
-Frozen = NO
+M2 Re-review = COMPLETE_APPROVE
+Frozen = YES
+policy_pair_freeze_ref = PF-U03-C-POLICY-001
 ```
 
 M2 修订记录：
@@ -151,7 +152,7 @@ U03_C_Missingness_Policy_Revision_Task_v0.2.md
 U03_C_Missingness_M2_ReReview_Record_v0.2.md
 ```
 
-当前仅等待 M2 定向再审，不重审 15 条 active rule。
+M2 定向再审已通过。两个 policy 已作为 `PF-U03-C-POLICY-001` 一并冻结。
 
 ### Sepsis Shared Scope Policy
 
@@ -160,7 +161,8 @@ policy_ref = U03_SEPSIS_SHARED_SCOPE_V0_2
 Resolvable = YES
 Medical Review = COMPLETE_APPROVE
 Technical Review = COMPLETE_APPROVE
-Frozen = NO / FREEZE_HELD_UNTIL_MISSINGNESS_M2_APPROVE
+Frozen = YES
+policy_pair_freeze_ref = PF-U03-C-POLICY-001
 ```
 
 两项初审记录：
@@ -168,8 +170,9 @@ Frozen = NO / FREEZE_HELD_UNTIL_MISSINGNESS_M2_APPROVE
 ```text
 U03_C_Freeze_Policy_Review_Record_v0.2.md
 = REVIEW_COMPLETE
-/ MISSINGNESS_REVISE_M2
-/ SHARED_SCOPE_APPROVE_HELD
+/ MISSINGNESS_APPROVE
+/ SHARED_SCOPE_APPROVE
+/ POLICY_PAIR_FROZEN
 ```
 
 ### Evaluation Refs
@@ -208,9 +211,8 @@ C Active-rule Review = COMPLETE
 C Active-rule APPROVE = 15 / REVISE = 0
 C BF-C-01..04 = CLOSED
 C Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
-C Missingness M2 Revision = APPLIED
-C Missingness M2 Re-review = REQUIRED
-C Shared Scope Policy = APPROVED / FREEZE_HELD
+C Missingness M2 Re-review = COMPLETE_APPROVE
+C Policy Pair Freeze = PF-U03-C-POLICY-001 / CANDIDATE_FROZEN
 C Candidate Freeze Readiness = NOT_PASSED
 C Initial Rule Release Freeze = NOT_COMPLETE
 CD-03 = NOT_PASSED
@@ -239,25 +241,24 @@ U03 Clinical Dependency Readiness
 ## 6. 当前唯一下一步
 
 ```text
-Re-review M2 only
-using U03_C_Missingness_M2_ReReview_Record_v0.2.md
+Build minimum pre-freeze evaluation fixtures
+per U03_C_PreFreeze_Evaluation_Minimum_v0.2.md
 ↓
-if Missingness Medical + Technical = APPROVE
-and Shared Scope existing APPROVE remains valid
+pre-freeze Medical + Technical/Eval review
 ↓
-freeze the two policy objects together
+re-run RR-U03-RISK-001 candidate freeze readiness
 ↓
-then build minimum pre-freeze evaluation assets
+only then create candidate version
 ```
 
 ## 7. 当前禁止事项
 
 - 不把 `KR-U03-SOURCE-001@0.1.0-candidate` 当作 PUBLISHED 或生产 binding；
 - 不把 `RR-U03-RISK-001@0.2.0-draft` 当作 frozen/runtime rule release；
-- 不在 M2 re-review APPROVE 前冻结 Missingness 或 Shared Scope 任一 policy；
+- 不把 `PF-U03-C-POLICY-001` 误当成 Rule Release candidate freeze；
 - 不把 evaluation ref identity 的存在误当成 EvalSet 或 pre-freeze eval 已完成；
-- 不把 C Package Approval 误当成 candidate freeze 或 D09 授权；
-- 不在 policy pair freeze 前开始 pre-freeze Eval fixture 内容；
+- 不把 C Package Approval 或 policy pair freeze 误当成 RR candidate freeze 或 D09 授权；
+- 不先把 `0.2.0-draft` 改名成 candidate；
 - D 不得先于 C candidate freeze 开始；
 - 不新增未经过 A/B 审核链的医学来源或 evidence；
 - 不把 NICE/NHS 直接视为中国生产规则；

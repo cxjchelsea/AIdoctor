@@ -1,7 +1,7 @@
 # U03 C Missingness Policy v0.2
 
 > Policy ID：`U03_C_MISSINGNESS_V0_2`  
-> 状态：`RESOLVABLE_DRAFT / M2_REVISION_APPLIED / RE_REVIEW_REQUIRED / NOT_FROZEN / NOT_FOR_PRODUCTION`  
+> 状态：`CANDIDATE_FROZEN / M2_CLOSED / PAIR_FREEZE = PF-U03-C-POLICY-001 / NOT_FOR_PRODUCTION`  
 > 目的：把 C v0.2 中已经写入各 rule 的 missingness 语义变成可解析对象，供后续 candidate-freeze 审查引用。  
 > 本文件不新增医学阈值、rule 或 D09 disposition。
 
@@ -210,19 +210,18 @@ D09
 policy_ref = U03_C_MISSINGNESS_V0_2
 Resolvable Object = YES
 Medical Review = COMPLETE_APPROVE
-Technical Review v0.2 = REVISE_M2
+Technical Review = COMPLETE_APPROVE
 M2 Revision = APPLIED
-M2 Re-review = REQUIRED
-Frozen = NO
+M2 Re-review = COMPLETE_APPROVE
+Frozen = YES
+policy_pair_freeze_ref = PF-U03-C-POLICY-001
 Production Eligible = NO
 ```
 
-在 M2 Technical re-review = APPROVE 前：
-
 ```text
-U03_C_MISSINGNESS_V0_2 = NOT_FROZEN
-U03_SEPSIS_SHARED_SCOPE_V0_2 = FREEZE_HELD
-Policy Pair Freeze = BLOCKED
+U03_C_MISSINGNESS_V0_2 = CANDIDATE_FROZEN
+U03_SEPSIS_SHARED_SCOPE_V0_2 = CANDIDATE_FROZEN
+Policy Pair Freeze = COMPLETE
 RR-U03-RISK-001 Candidate Freeze = BLOCKED
 Pre-Freeze Eval Content = NOT_STARTED
 D = BLOCKED

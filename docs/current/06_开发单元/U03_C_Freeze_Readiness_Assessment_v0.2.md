@@ -2,7 +2,7 @@
 
 > 对象：`RR-U03-RISK-001@0.2.0-draft` candidate-freeze readiness。  
 > 前置：C Package Approval = `APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT`。  
-> 状态：`ASSESSMENT_COMPLETE / FREEZE_NOT_READY / D_STILL_BLOCKED / NOT_FOR_PRODUCTION`。  
+> 状态：`ASSESSMENT_COMPLETE / POLICY_PAIR_FROZEN / EVAL_MINIMUM_NOT_BUILT / FREEZE_NOT_READY / D_STILL_BLOCKED / NOT_FOR_PRODUCTION`。  
 > 本文件只判断 candidate freeze 条件，不构成 D09 drafting authorization、Gate C PASS、Implementation Authorization 或 Production Authorization。
 
 ---
@@ -32,8 +32,10 @@ No D09 disposition in C = CONFIRMED
 policy_ref = U03_C_MISSINGNESS_V0_2
 object = RESOLVABLE
 medical_review = COMPLETE_APPROVE
-technical_review = COMPLETE_REVISE
-frozen = NO
+technical_review = COMPLETE_APPROVE
+m2_rereview = COMPLETE_APPROVE
+frozen = YES
+policy_pair_freeze_ref = PF-U03-C-POLICY-001
 ```
 
 需要确认：
@@ -42,7 +44,7 @@ frozen = NO
 - SBP optional baseline branch 与 MODHIGH rule 可并存；
 - policy 不引入 D09 disposition。
 
-当前：`BLOCKING_FREEZE / M2_MEASUREMENT_STATE_MAPPING_INCOMPLETE`。
+当前：`CLOSED`。
 
 ### FZ-C-02 — Sepsis Shared Scope Policy
 
@@ -51,7 +53,8 @@ policy_ref = U03_SEPSIS_SHARED_SCOPE_V0_2
 object = RESOLVABLE
 medical_review = COMPLETE_APPROVE
 technical_review = COMPLETE_APPROVE
-frozen = NO
+frozen = YES
+policy_pair_freeze_ref = PF-U03-C-POLICY-001
 ```
 
 需要确认：
@@ -62,7 +65,7 @@ frozen = NO
 - current pack measurement/evidence/result 单独或组合不得建立/升级 suspected_sepsis；
 - scope unknown 与 scope mismatch 的执行语义明确。
 
-当前：`REVIEWED_APPROVE / FREEZE_HELD_UNTIL_MISSINGNESS_APPROVE`。
+当前：`CLOSED`。
 
 ### FZ-C-03 — Evaluation Refs
 
@@ -128,10 +131,10 @@ candidate freeze
 
 ```text
 BLOCKER-FZ-C-01
-= U03_C_MISSINGNESS_V0_2 review/freeze incomplete
+= CLOSED / U03_C_MISSINGNESS_V0_2 candidate-frozen
 
 BLOCKER-FZ-C-02
-= U03_SEPSIS_SHARED_SCOPE_V0_2 review/freeze incomplete
+= CLOSED / U03_SEPSIS_SHARED_SCOPE_V0_2 candidate-frozen
 
 BLOCKER-FZ-C-03
 = minimum pre-freeze evaluation content/review level not yet satisfied
@@ -159,13 +162,12 @@ Gate C = NOT_PASSED
 下一步：
 
 ```text
-revise U03_C_MISSINGNESS_V0_2
-per U03_C_Missingness_Policy_Revision_Task_v0.2.md
+build minimum pre-freeze evaluation fixtures
+per U03_C_PreFreeze_Evaluation_Minimum_v0.2.md
 ↓
-re-review M2 only
+pre-freeze Medical + Technical/Eval review
 ↓
-if both policies APPROVE
-→ freeze the two policy objects together
+re-run candidate freeze readiness
 ↓
-then build minimum pre-freeze evaluation fixtures
+only then create RR-U03-RISK-001 candidate version
 ```
