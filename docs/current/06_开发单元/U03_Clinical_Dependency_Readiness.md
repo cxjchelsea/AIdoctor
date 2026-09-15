@@ -38,23 +38,22 @@ B Evidence Catalog
 
 C Safety-critical Risk Rule Pack
 = STRUCTURAL_SCHEMA_FROZEN
-/ CLINICAL_RULE_CONTENT_DRAFT_v0.1_AVAILABLE
-/ INITIAL_RULE_RELEASE = RR-U03-RISK-001@0.1.0-draft
-/ MEDICAL_OWNER_REVIEW_COMPLETE
-/ TECHNICAL_REVIEW_COMPLETE
+/ CONTENT_DRAFT_v0.1_REVIEW_COMPLETE
 / MEDICAL_APPROVE_13_REVISE_3
-/ REVISION_REQUIRED
+/ CONTENT_DRAFT_v0.2_AVAILABLE
+/ ACTIVE_RULE_CANDIDATES_15
+/ V0.1_SEPSIS_MENTAL_HIGH_WITHHELD
+/ MEDICAL_TECHNICAL_RE_REVIEW_REQUIRED
 / INITIAL_RULE_RELEASE_FREEZE_NOT_COMPLETE
 
 D D09 Clinical Policy Table
-= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_POLICY_CONTENT_NOT_STARTED / BLOCKED_UNTIL_C_RULE_RESULT_VOCABULARY_REVIEWED
+= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_POLICY_CONTENT_NOT_STARTED / BLOCKED_UNTIL_C_RE_REVIEW_AND_FREEZE
 
 E Knowledge Release Manifest
 = STRUCTURAL_SCHEMA_FROZEN
 / APPLICABILITY_DECISION_v0.1_APPROVED
 / APPLICABILITY_APPROVAL_COMPLETE_FOR_ROLE_APPLICABILITY
 / KD-U03-01_REQUIRED
-/ KD-U03-01_CONTENT_DRAFT_v0.1_AVAILABLE
 / SOURCE_METADATA_VERIFICATION_COMPLETE_FOR_CURRENT_6_SOURCES
 / LOCKED_CLINICAL_CONTEXT_APPLIED
 / OWNER_ASSIGNMENT_COMPLETE
@@ -99,7 +98,7 @@ C/D/E cross-consistency = PASS
 
 ```text
 KR-U03-SOURCE-001@0.1.0-candidate = CANDIDATE_FROZEN
-C initial Rule Pack clinical content = DRAFT_AVAILABLE / REVIEW_COMPLETE / REVISION_REQUIRED
+C Rule Pack v0.2 = DRAFT_AVAILABLE / RE_REVIEW_REQUIRED / NOT_FROZEN
 D D09 clinical policy content = NOT_STARTED
 C/D/E cross-consistency = NOT_STARTED
 ```
@@ -107,14 +106,25 @@ C/D/E cross-consistency = NOT_STARTED
 当前 C 草案：
 
 ```text
-U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.1.md
-RR-U03-RISK-001@0.1.0-draft
+U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.2.md
+RR-U03-RISK-001@0.2.0-draft
 knowledge_release_ref = KR-U03-SOURCE-001@0.1.0-candidate
+active executable rule candidates = 15
 ```
 
-C 草案只允许使用 Gate A 已批准的 B evidence refs；NG253 executable thresholds 仅存在于 C，不复制进 E；rule-level signal 不得直接解释为 D09 disposition。
+v0.2 已按 v0.1 review task 修订：
 
-D 仍须等 C 的 rule/result vocabulary 完成 Medical Owner / Technical review 后才能开始真实 branch。Gate B 详细依赖顺序与完成定义见 `U03_Gate_B_Readiness_Decomposition.md`。
+```text
+SBP HIGH absolute/drop branch execution semantics = ADDED
+sepsis mental HIGH = WITHHELD_FROM_ACTIVE_SET
+sepsis appearance HIGH = B evidence only
+all active rules = matched / insufficient / scope-mismatch semantics
+all sepsis numeric rules = per-rule shared scope precondition
+suspected_sepsis circular inference = PROHIBITED
+NHS dyspnoea emergency warning context = SOURCE-SPECIFIC / GOVERNED
+```
+
+D 仍须等待 C v0.2 Medical / Technical re-review 完成且 blocking findings 清零；candidate freeze 之前不得开始真实 D09 branch。
 
 ### Gate C — Independent Evaluation Ready
 
@@ -138,19 +148,18 @@ A/B Medical Owner Review = COMPLETE
 Gate A = PASS
 
 E Applicability Decision v0.1 = APPROVED
-E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
 KD-U03-01 Knowledge Release Candidate = KR-U03-SOURCE-001@0.1.0-candidate
 KD-U03-01 Freeze = COMPLETE_FOR_CANDIDATE
 KD-U03-01 Publication = NOT_COMPLETE
 
-C Clinical Rule Content Draft v0.1 = AVAILABLE
-C Medical Owner Review = COMPLETE
-C Technical Review = COMPLETE
-C Medical APPROVE = 13 / REVISE = 3
+C Content Draft v0.1 Review = COMPLETE
+C Content Draft v0.2 = AVAILABLE
+C Medical Re-review = REQUIRED
+C Technical Re-review = REQUIRED
 C Initial Rule Release Freeze = NOT_COMPLETE
 CD-03 = NOT_PASSED
 
-D Clinical Policy Content = NOT_STARTED / BLOCKED_UNTIL_C_RULE_RESULT_VOCABULARY_REVIEWED
+D Clinical Policy Content = NOT_STARTED / BLOCKED_UNTIL_C_RE_REVIEW_AND_FREEZE
 Gate B = NOT_PASSED
 
 Medical Owner Approval for whole Clinical Input Package = NOT_COMPLETE
@@ -173,14 +182,13 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-Revise C to Content Draft v0.2
-per U03_C_Revision_Task_v0.1.md
+Medical + Technical re-review
+of
+U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.2.md
 ↓
-re-review Medical Owner + Technical
+if blocking REVISE = 0
 ↓
-only if no remaining blocking REVISE
-↓
-freeze RR-U03-RISK-001 candidate rule/result vocabulary
+reassess RR-U03-RISK-001 candidate freeze
 ↓
 then reassess D drafting readiness
 ```
@@ -188,8 +196,8 @@ then reassess D drafting readiness
 ## 6. 当前禁止事项
 
 - 不把 `KR-U03-SOURCE-001@0.1.0-candidate` 当作 PUBLISHED 或生产 binding；
-- 不把 `RR-U03-RISK-001@0.1.0-draft` 当作 frozen/runtime rule release；
-- D 不得先于 C 的 rule/result vocabulary review/freeze 开始；
+- 不把 `RR-U03-RISK-001@0.2.0-draft` 当作 frozen/runtime rule release；
+- D 不得先于 C v0.2 re-review / freeze 开始；
 - 不新增未经过 A/B 审核链的医学来源或 evidence；
 - 不把 NICE/NHS 直接视为中国生产规则；
 - 不打开儿科或孕产 source pack；
