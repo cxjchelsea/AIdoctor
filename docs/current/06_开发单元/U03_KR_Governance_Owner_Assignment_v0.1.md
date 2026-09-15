@@ -1,16 +1,36 @@
 # U03 KR Governance Owner Assignment v0.1
 
 > 对象：`KR-U03-SOURCE-001` 的治理角色分配。  
-> 状态：`ASSIGNMENT_REQUIRED / NOT_COMPLETE / BLOCKS_REVIEW_READY`  
-> 本文件不指定虚构个人，仅定义角色、责任与完成条件。
+> 状态：`ASSIGNMENT_COMPLETE / REVIEW_CHANNEL_BOUND / CANDIDATE_FROZEN`  
+> 本文件指定本 slice 可追责的职能角色，不虚构自然人，也不构成 production approval。
 
 ## 1. Required Owners
 
 ```text
-curation_owner = PENDING_ASSIGNMENT
-clinical_review_owner = PENDING_ASSIGNMENT
-technical_review_owner = PENDING_ASSIGNMENT
+curation_owner = U03_CLINICAL_INPUT_PACKAGE_MAINTAINER
+clinical_review_owner = U03_MEDICAL_OWNER_REVIEW
+technical_review_owner = U03_TECHNICAL_GOVERNANCE_REVIEW
+assigned_at = 2026-09-15
+assignment_ref = KR_OWNER_ASSIGNMENT_2026-09-15
 ```
+
+绑定说明：
+
+```text
+curation_owner
+= PR #88 / U03 Clinical Input Package 文档维护职责
+= 负责维护已审 6-source registry 与 KR draft 文本
+
+clinical_review_owner
+= U03 Clinical Dependency Completion 的 Medical Owner Review 通道
+= 对本 KR 出具临床审查结论
+
+technical_review_owner
+= U03 KR binding / replay / resolver 兼容性审查通道
+= 对本 KR 出具技术治理审查结论
+```
+
+同一审查通道可分别履行临床与技术职责，但结论必须分栏记录，不得互相替代。组织后续若指定不同自然人，可覆盖本分配而不自动改写已记录的审查问题清单。
 
 ## 2. Role Boundaries
 
@@ -37,11 +57,9 @@ technical_review_owner = PENDING_ASSIGNMENT
 
 ## 3. Independence / Conflict Rule
 
-至少要求 clinical review 与 technical review 的职责可区分；同一人是否可兼任由组织治理决定，但任何 reviewer 都不能把自己未获授权的医学或工程判断扩展到另一职责域。
+clinical review 与 technical review 的职责必须可区分。本轮由同一审查通道分栏签署，不合并成一个“综合通过”。任一方未 APPROVE，不得进入 freeze。
 
 ## 4. Completion Gate
-
-只有以下条件全部满足：
 
 ```text
 curation_owner != PENDING_ASSIGNMENT
@@ -49,24 +67,20 @@ clinical_review_owner != PENDING_ASSIGNMENT
 technical_review_owner != PENDING_ASSIGNMENT
 ```
 
-才允许：
+当前：
 
 ```text
 KR Owner Assignment = COMPLETE
 ```
 
-在此之前：
-
-```text
-KR REVIEW_READY = NO
-KR Freeze = BLOCKED
-C real clinical content = BLOCKED
-D real clinical content = BLOCKED
-```
+本分配只解除“无人签字”的 blocker，不自动使 KR 成为 FROZEN 或允许开始 C。
 
 ## 5. Current Status
 
 ```text
-Owner Assignment = NOT_COMPLETE
-Blocking Reason = REQUIRED_OWNERS_NOT_ASSIGNED
+Owner Assignment = COMPLETE
+Formal Review = COMPLETE / APPROVE
+KR Freeze = COMPLETE_FOR_CANDIDATE
+C drafting = UNBLOCKED
+D drafting = BLOCKED_UNTIL_C_VOCABULARY
 ```

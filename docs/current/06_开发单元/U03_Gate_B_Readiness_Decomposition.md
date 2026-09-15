@@ -15,7 +15,7 @@ B Evidence Catalog v0.2 = SOURCE-LOCKED / FROZEN_FOR_GATE_A
 E Applicability Decision v0.1 = APPROVED
 E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
 KD-U03-01 = REQUIRED
-KD-U03-01 Knowledge Release Content = NOT_STARTED
+KD-U03-01 Knowledge Release = CANDIDATE_FROZEN / KR-U03-SOURCE-001@0.1.0-candidate
 
 Medical Owner Approval for whole Clinical Input Package = NOT_COMPLETE
 Gate B = NOT_PASSED
@@ -99,12 +99,12 @@ KD-U03-01 在本 slice 仍为临床 REQUIRED
 - 必须显式保留 version/scope/provenance/review/effective-time 字段；
 - 未知的 source version/publication/retrieval metadata 不得编造，必须显式标为待核验。
 
-在最小 KR 对象尚不可解析前：
+最小 KR candidate 现已可解析：
 
 ```text
-CD-04 = NOT_PASSED
-C real rule content = BLOCKED
-D real policy content = BLOCKED
+CD-04 = CANDIDATE_READY / NOT_PRODUCTION
+C real rule content = UNBLOCKED_FOR_DRAFTING
+D real policy content = BLOCKED_UNTIL_C_VOCABULARY
 ```
 
 ## 4. C / Rule Pack 进入真实内容前需要什么
@@ -238,26 +238,26 @@ C/D/E Cross-Consistency = PASS
 Gate A = PASS
 
 C Structural Schema = PASS
-C Clinical Content = NOT_STARTED
+C Clinical Content = NOT_STARTED / UNBLOCKED_FOR_DRAFTING
 
 D Structural Schema = PASS
-D Clinical Content = NOT_STARTED
+D Clinical Content = NOT_STARTED / BLOCKED_UNTIL_C_VOCABULARY
 
 E Structural Schema = PASS
 E Applicability Adjudication = APPROVED
 E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
-KD-U03-01 Knowledge Release Content = NOT_STARTED
+KD-U03-01 Knowledge Release = CANDIDATE_FROZEN / KR-U03-SOURCE-001@0.1.0-candidate
 
-Gate B Readiness = NOT_READY_FOR_C_OR_D_CONTENT
-Primary Blocker = KD-U03-01_MINIMUM_KNOWLEDGE_RELEASE_NOT_AVAILABLE
-Secondary Blockers = C/D_REAL_CONTENT_NOT_AVAILABLE
+Gate B Readiness = READY_FOR_C_DRAFTING
+Primary Blocker = C_INITIAL_RULE_PACK_CONTENT_NOT_STARTED
+Secondary Blockers = D_POLICY_CONTENT_NOT_STARTED
 ```
 
 当前唯一合理的下一步：
 
 ```text
-Draft minimum KD-U03-01 Knowledge Release object
-using only already-reviewed A/B source registry
+Draft C initial Rule Pack
+using KR-U03-SOURCE-001@0.1.0-candidate
 ```
 
 不得直接进入 C Rule Pack 真实医学规则内容。

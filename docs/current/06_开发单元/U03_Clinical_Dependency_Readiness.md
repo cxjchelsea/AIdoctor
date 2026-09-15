@@ -37,10 +37,10 @@ B Evidence Catalog
 / SOURCE_LOCKED_SEMANTICS_FROZEN
 
 C Safety-critical Risk Rule Pack
-= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_RULE_CONTENT_NOT_STARTED / BLOCKED
+= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_RULE_CONTENT_NOT_STARTED / UNBLOCKED_FOR_DRAFTING
 
 D D09 Clinical Policy Table
-= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_POLICY_CONTENT_NOT_STARTED / BLOCKED
+= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_POLICY_CONTENT_NOT_STARTED / BLOCKED_UNTIL_C_VOCABULARY
 
 E Knowledge Release Manifest
 = STRUCTURAL_SCHEMA_FROZEN
@@ -50,12 +50,11 @@ E Knowledge Release Manifest
 / KD-U03-01_CONTENT_DRAFT_v0.1_AVAILABLE
 / SOURCE_METADATA_VERIFICATION_COMPLETE_FOR_CURRENT_6_SOURCES
 / LOCKED_CLINICAL_CONTEXT_APPLIED
-/ OWNER_ASSIGNMENT_GATE_DEFINED
-/ OWNER_ASSIGNMENT_NOT_COMPLETE
-/ FORMAL_REVIEW_RECORD_DEFINED
-/ KNOWLEDGE_RELEASE_REVIEW_NOT_STARTED
-/ FREEZE_READINESS_GATE_DEFINED
-/ KNOWLEDGE_RELEASE_FREEZE_NOT_PASSED
+/ OWNER_ASSIGNMENT_COMPLETE
+/ FORMAL_REVIEW_COMPLETE_APPROVE
+/ REVIEW_READY
+/ CANDIDATE_FROZEN
+/ KNOWLEDGE_RELEASE_REF = KR-U03-SOURCE-001@0.1.0-candidate
 / NOT_PUBLISHED
 
 F Risk EvalSet / Safety Suite
@@ -92,12 +91,10 @@ C/D/E cross-consistency = PASS
 当前 Gate B 主 blocker：
 
 ```text
-KR curation owner = PENDING_ASSIGNMENT
-KR clinical review owner = PENDING_ASSIGNMENT
-KR technical review owner = PENDING_ASSIGNMENT
-KR formal content/governance review = NOT_STARTED
-KR freeze readiness = NOT_PASSED
-KR frozen candidate = NOT_AVAILABLE
+KR-U03-SOURCE-001@0.1.0-candidate = CANDIDATE_FROZEN
+C initial Rule Pack clinical content = NOT_STARTED
+D D09 clinical policy content = NOT_STARTED
+C/D/E cross-consistency = NOT_STARTED
 ```
 
 治理记录：
@@ -108,16 +105,17 @@ U03_KR_Formal_Review_Record_v0.1.md
 U03_KR_Freeze_Readiness_v0.1.md
 ```
 
-当前 `KR-U03-SOURCE-001@0.1.0-draft` 仍然：
+当前可引用：
 
 ```text
-NOT_REVIEW_READY
-NOT_FROZEN
-NOT_VALID_FOR_C_FROZEN_REF
-NOT_VALID_FOR_PRODUCTION_BINDING
+KR-U03-SOURCE-001@0.1.0-candidate
+= CANDIDATE_FROZEN
+= RESOLVABLE_FOR_C_DRAFTING
+= NOT_PUBLISHED
+= NOT_VALID_FOR_PRODUCTION_BINDING
 ```
 
-因此 C/D 真实内容仍不得开始。Gate B 详细依赖顺序与完成定义见 `U03_Gate_B_Readiness_Decomposition.md`。
+因此 C 初始 Rule Pack 可以开始起草。D 仍须等 C 的 rule/result vocabulary。Gate B 详细依赖顺序与完成定义见 `U03_Gate_B_Readiness_Decomposition.md`。
 
 ### Gate C — Independent Evaluation Ready
 
@@ -145,16 +143,14 @@ E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
 KD-U03-01 Knowledge Release Draft = AVAILABLE
 KD-U03-01 Source Metadata Verification = COMPLETE_FOR_CURRENT_6_SOURCES
 KD-U03-01 Locked Clinical Context = APPLIED
-KD-U03-01 Governance Owner Gate = DEFINED
-KD-U03-01 Owner Assignment = NOT_COMPLETE
-KD-U03-01 Formal Review Record = DEFINED
-KD-U03-01 Review = NOT_STARTED / BLOCKED_BY_OWNER_ASSIGNMENT
-KD-U03-01 Freeze Readiness Gate = DEFINED
-KD-U03-01 Freeze Readiness = NOT_PASSED
+KD-U03-01 Owner Assignment = COMPLETE
+KD-U03-01 Formal Review = COMPLETE / APPROVE
+KD-U03-01 REVIEW_READY = YES
+KD-U03-01 Freeze = COMPLETE_FOR_CANDIDATE
 KD-U03-01 Publication = NOT_COMPLETE
 
-C Clinical Rule Content = NOT_STARTED / BLOCKED
-D Clinical Policy Content = NOT_STARTED / BLOCKED
+C Clinical Rule Content = NOT_STARTED / UNBLOCKED_FOR_DRAFTING
+D Clinical Policy Content = NOT_STARTED / BLOCKED_UNTIL_C_VOCABULARY
 Gate B = NOT_PASSED
 
 Medical Owner Approval for whole Clinical Input Package = NOT_COMPLETE
@@ -177,25 +173,20 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-Assign KR curation / clinical / technical review owners
-↓
-formal review of U03_Knowledge_Release_Content_Draft_v0.1.md
-↓
-if all reviews approve, evaluate U03_KR_Freeze_Readiness_v0.1.md
-↓
-only then freeze a resolvable KR-U03-SOURCE-001 candidate
+Draft C initial Rule Pack
+using only Gate A approved B evidence refs
+and KR-U03-SOURCE-001@0.1.0-candidate
 ```
 
-不得在此之前进入 C Rule Pack 的真实医学阈值、组合规则或 D09 branch。
+D 不得先于 C 的 rule/result vocabulary 开始。不得把 candidate 当作 production binding。
 
 ## 6. 当前禁止事项
 
-- 不开始 C Rule Pack 真实规则或阈值；
-- 不开始 D09 生产 policy；
+- 不把 `KR-U03-SOURCE-001@0.1.0-candidate` 当作 PUBLISHED 或生产 binding；
+- D 不得先于 C 的稳定 rule/result vocabulary 开始；
 - 不新增未经过 A/B 审核链的医学来源；
 - 不把 NICE/NHS 直接视为中国生产规则；
 - 不打开儿科或孕产 source pack；
 - 不把 Gate A PASS 或 E applicability approval 解释为整包 Medical Owner Approval；
 - 不以模型常识、实时网页、mutable RAG 或未版本化内容绕过 KD-U03-01；
-- 不把 `KR-U03-SOURCE-001@0.1.0-draft` 作为 C 的 frozen knowledge ref；
-- 不在 owner assignment / formal review 完成前把 KR 标记为 REVIEW_READY 或 FROZEN。
+- 不把 `KR-U03-SOURCE-001@0.1.0-draft` 作为 C 的引用版本。

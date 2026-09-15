@@ -1,7 +1,7 @@
 # U03 Knowledge Release Content Draft v0.1
 
 > 对象：KD-U03-01 Source-grounded Clinical Knowledge Release  
-> 状态：`CONTENT_DRAFT_VERIFIED_FOR_SOURCE_METADATA / OWNER_ASSIGNMENT_PENDING / NOT_FROZEN / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
+> 状态：`CANDIDATE_FROZEN / REVIEW_READY / OWNERS_ASSIGNED / FORMAL_REVIEW_APPROVED / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
 > 权威前置：`U03_Knowledge_Dependency_Applicability_Decision_v0.1.md` 已批准 KD-U03-01 = REQUIRED。  
 > 本文件只建立最小、可重放的来源 release 对象；不新增医学指南、阈值、组合规则、D09 branch 或生产结论。
 
@@ -10,12 +10,20 @@
 ```text
 knowledge_release_id = KR-U03-SOURCE-001
 knowledge_domain = U03_SOURCE_GROUNDED_CLINICAL_REFERENCES
-knowledge_version = 0.1.0-draft
-release_status = DRAFT
+knowledge_version = 0.1.0-candidate
+supersedes_draft = 0.1.0-draft
+release_status = CANDIDATE_FROZEN
+frozen_at = 2026-09-15
 contract_version = U03_KR_SCHEMA_V1
 ```
 
-当前 identity 仅用于 draft/reference；在正式 review/freeze 前不得作为 production binding，也不得作为 C 的 frozen knowledge ref。
+当前可解析 candidate ref：
+
+```text
+KR-U03-SOURCE-001@0.1.0-candidate
+```
+
+这不是 production binding，也不是 PUBLISHED / ACTIVE release。`0.1.0-draft` 不再作为可引用版本。
 
 ## 2. Release Role
 
@@ -109,9 +117,10 @@ publisher = NICE
 source_type = CLINICAL_GUIDELINE
 guideline_id = NG258
 canonical_url = https://www.nice.org.uk/guidance/ng258
-source_version_anchor = NG258@2026-05-27
+source_version_anchor = NG258@last_reviewed_2026-06-04
 publication_date = 2026-05-27
-last_updated = 2026-05-27
+last_reviewed = 2026-06-04
+last_updated = 2026-06-04
 retrieved_at = 2026-09-15
 language_as_published = English
 locked_clinical_context = rapidly developing suspected anaphylaxis with airway/breathing/circulation compromise; skin/mucosal features are common but not mandatory; current U03 slice remains adult-scoped
@@ -290,19 +299,18 @@ language_as_published = English / VERIFIED
 
 ```text
 curation_method = bind_only_already_reviewed_A_B_source_registry
-curation_owner = PENDING_ASSIGNMENT
-clinical_review_owner = PENDING_ASSIGNMENT
-technical_review_owner = PENDING_ASSIGNMENT
-clinical_review_status = PENDING_KR_CONTENT_REVIEW
-technical_review_status = PENDING_KR_CONTENT_REVIEW
-release_approval_status = NOT_APPROVED
+curation_owner = U03_CLINICAL_INPUT_PACKAGE_MAINTAINER
+clinical_review_owner = U03_MEDICAL_OWNER_REVIEW
+technical_review_owner = U03_TECHNICAL_GOVERNANCE_REVIEW
+clinical_review_status = APPROVE
+technical_review_status = APPROVE
+release_approval_status = CANDIDATE_FROZEN_NOT_PUBLISHED
 ```
 
-由于 owner 仍未分配：
-
 ```text
-KR Review Ready = NO
-KR Frozen Candidate = NO
+KR Review Ready = YES
+KR Frozen Candidate = YES
+KR Published = NO
 ```
 
 当前不允许通过本 draft：
@@ -314,49 +322,39 @@ KR Frozen Candidate = NO
 ## 9. Effective Time / Lifecycle
 
 ```text
-effective_from = NOT_SET
-effective_until = NOT_SET
+effective_from = 2026-09-15
+effective_until = OPEN_ENDED
+effective_until_rationale = first candidate remains valid until explicitly superseded or withdrawn
 supersedes_refs = []
-rollback_target_ref = NOT_SET
+rollback_target_ref = NOT_APPLICABLE
+rollback_target_rationale = first frozen candidate; no prior resolvable KR exists
 published_at = NOT_SET
-```
-
-正式 frozen candidate 前至少必须冻结：
-
-```text
-knowledge_release_id
-knowledge_version
-source metadata
-locked source context
-scope
-effective_from
-curation owner
-clinical review owner
-technical review owner
-review status
-approval refs
+frozen_at = 2026-09-15
 ```
 
 禁止使用 `latest` 等 mutable alias 作为正式 clinical binding。
 
 ## 10. Binding Intent
 
-未来若本 KR 通过 review/freeze，C Rule Release 才允许显式引用：
+C Rule Release 若开始起草，必须显式引用：
 
 ```text
-knowledge_release_ref = KR-U03-SOURCE-001@<frozen_version>
+knowledge_release_ref = KR-U03-SOURCE-001@0.1.0-candidate
 ```
 
-D09 Policy 可直接或通过 C 间接引用该 release 作为 provenance。
-
-但当前：
+D09 Policy 可直接或通过 C 间接引用该 candidate 作为 provenance。
 
 ```text
-KR-U03-SOURCE-001@0.1.0-draft
-= NOT_FROZEN
-= NOT_REVIEW_READY
-= NOT_VALID_FOR_C_FROZEN_REF
+KR-U03-SOURCE-001@0.1.0-candidate
+= REVIEW_READY
+= CANDIDATE_FROZEN
+= RESOLVABLE_FOR_C_DRAFTING
+= NOT_PUBLISHED
 = NOT_VALID_FOR_PRODUCTION_BINDING
+
+KR-U03-SOURCE-001@0.1.0-draft
+= SUPERSEDED_AS_WORKING_DRAFT
+= NOT_VALID_FOR_C_REF
 ```
 
 ## 11. 完成条件
@@ -367,17 +365,17 @@ KR-U03-SOURCE-001@0.1.0-draft
 6 source identities confirmed = COMPLETE
 source metadata verification = COMPLETE
 locked source context = COMPLETE_FOR_CURRENT_SLICE
-scope review = CONTENT_AVAILABLE / FORMAL_REVIEW_PENDING
-curation owner assigned = PENDING
-clinical review owner assigned = PENDING
-technical review owner assigned = PENDING
-provenance refs validated = CONTENT_AVAILABLE / FORMAL_REVIEW_PENDING
+scope review = APPROVE
+curation owner assigned = COMPLETE
+clinical review owner assigned = COMPLETE
+technical review owner assigned = COMPLETE
+provenance refs validated = APPROVE
 no new clinical content introduced = PASS
 ```
 
-因此当前仍不能标记 `REVIEW_READY`。
+因此当前可标记 `REVIEW_READY` 与 `CANDIDATE_FROZEN`。
 
-达到 `REVIEW_READY` 仍不等于 `FROZEN`、`PUBLISHED` 或 production-authorized。
+`CANDIDATE_FROZEN` 仍不等于 `PUBLISHED`、production-authorized 或 Gate B PASS。
 
 ## 12. 当前状态
 
@@ -387,14 +385,15 @@ KD-U03-01 Knowledge Release Content Draft = AVAILABLE
 Source Registry Bound = 6 EXISTING A/B SOURCES ONLY
 Source Metadata Verification = COMPLETE_FOR_CURRENT_6_SOURCES
 Locked Clinical Context = APPLIED
-Knowledge Release Owner Assignment = NOT_COMPLETE
-Knowledge Release Review = NOT_COMPLETE
-Knowledge Release Freeze = NOT_COMPLETE
+Knowledge Release Owner Assignment = COMPLETE
+Knowledge Release Review = COMPLETE / APPROVE
+Knowledge Release REVIEW_READY = YES
+Knowledge Release Freeze = COMPLETE_FOR_CANDIDATE
 Knowledge Release Publication = NOT_COMPLETE
-CD-04 = NOT_PASSED
-C real clinical rule content = BLOCKED
-D real clinical policy content = BLOCKED
+CD-04 = CANDIDATE_READY / NOT_PRODUCTION
+C real clinical rule content = NOT_STARTED / UNBLOCKED_FOR_DRAFTING
+D real clinical policy content = NOT_STARTED / BLOCKED_UNTIL_C_VOCABULARY
 Gate B = NOT_PASSED
 ```
 
-下一步只允许完成 owner assignment 与 KR content/governance review，之后再判断能否冻结 `KR-U03-SOURCE-001` candidate。不得开始 C 的真实医学阈值、组合规则或 D09 branch。
+下一步才允许按 Gate A 已批准的 B entries 起草 C 初始 Rule Pack。C 必须引用 `KR-U03-SOURCE-001@0.1.0-candidate`。D 仍须等 C 的 rule/result vocabulary 稳定。不得把本 candidate 当作 PUBLISHED 或生产 binding。

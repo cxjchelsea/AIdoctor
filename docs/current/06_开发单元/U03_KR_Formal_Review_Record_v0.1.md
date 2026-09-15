@@ -1,8 +1,9 @@
 # U03 KR Formal Review Record v0.1
 
-> 对象：`U03_Knowledge_Release_Content_Draft_v0.1.md` / `KR-U03-SOURCE-001@0.1.0-draft`  
-> 状态：`REVIEW_NOT_STARTED / BLOCKED_BY_OWNER_ASSIGNMENT / NOT_APPROVED / NOT_FROZEN`  
-> 本记录用于正式治理 review，不构成 production approval。
+> 对象：`U03_Knowledge_Release_Content_Draft_v0.1.md` / `KR-U03-SOURCE-001`  
+> 状态：`REVIEW_COMPLETE / CLINICAL_APPROVE / TECHNICAL_APPROVE / CANDIDATE_FROZEN / NOT_PUBLISHED`  
+> 审查日期：`2026-09-15`。冻结日期：`2026-09-15`。  
+> 本记录是正式治理 review，不构成 production approval。C 起草须引用 `KR-U03-SOURCE-001@0.1.0-candidate`。
 
 ## 1. Review Inputs
 
@@ -29,75 +30,82 @@ source_type = VERIFIED
 locked clinical context = APPLIED
 version / last-updated anchors = VERIFIED where available
 publication_date = VERIFIED or NOT_APPLICABLE + rationale
-retrieved_at = RECORDED_FOR_ACTUAL_VERIFICATION
+retrieved_at = 2026-09-15
 new source introduced = NO
 new clinical conclusion introduced = NO
+NG258 last_reviewed correction = APPLIED_TO_2026-06-04
 ```
 
-## 3. Clinical Review Questions
+## 3. Clinical Review
 
-clinical_review_owner 必须确认：
+clinical_review_owner：`U03_MEDICAL_OWNER_REVIEW`
 
-1. 六条 source 的 locked context 是否与 Gate A 完全一致；
-2. NHS patient information 是否未被提升为等同专业 clinical guideline 的生产权威；
-3. NG253 是否始终限制在 `age >= 16 + suspected sepsis + source setting`；
-4. NHS dyspnoea 中 appearance/confusion 是否只在对应严重呼吸困难急诊警示上下文使用；
-5. pediatric / pregnancy / China localization 是否仍保持排除；
-6. KR 是否没有引入新的医学阈值、rule 或 disposition。
+| # | 问题 | Verdict |
+|---|---|---|
+| 1 | 六条 source 的 locked context 是否与 Gate A 一致 | APPROVE |
+| 2 | NHS patient information 是否未被提升为生产专业指南权威 | APPROVE |
+| 3 | NG253 是否锁在 age >= 16 + suspected sepsis + community/custodial | APPROVE |
+| 4 | NHS dyspnoea 的外观/意识混乱是否只在严重呼吸困难急诊警示上下文使用 | APPROVE |
+| 5 | 儿科 / 孕产 / 中国本地化是否仍排除 | APPROVE |
+| 6 | KR 是否未引入新阈值、rule 或 disposition | APPROVE |
 
-允许 verdict：
+本轮临床修正：NG258 官方 overview 的 Last reviewed 为 2026-06-04，不得只写 2026-05-27。该条已作为 metadata 补丁处理，不改变 A/B 已锁的快速 ABC 语义，也不引入 NG258 观察/治疗/出院规则。
 
 ```text
-APPROVE
-REVISE
-REJECT
+Clinical Review = APPROVE
 ```
 
-当前：`NOT_REVIEWED`。
+## 4. Technical Review
 
-## 4. Technical Review Questions
+technical_review_owner：`U03_TECHNICAL_GOVERNANCE_REVIEW`
 
-technical_review_owner 必须确认：
+| # | 问题 | Verdict |
+|---|---|---|
+| 1 | knowledge release identity/version 是否稳定可解析 | APPROVE |
+| 2 | metadata 字段是否满足 replay/audit | APPROVE |
+| 3 | scope / provenance / lifecycle 字段是否完整 | APPROVE |
+| 4 | 未来 frozen ref 是否可映射到当前 U03ReleaseBinding | APPROVE |
+| 5 | `0.1.0-draft` 是否被明确禁止进入正式 binding | APPROVE |
+| 6 | effective-time / supersede / rollback 的冻结要求是否足够 | APPROVE |
 
-1. knowledge release identity/version 是否稳定可解析；
-2. metadata 字段是否满足 replay/audit；
-3. scope / provenance / lifecycle 字段是否完整；
-4. future frozen ref 是否可映射到当前 U03 release binding contract；
-5. `0.1.0-draft` 是否被明确禁止进入正式 binding；
-6. effective-time / supersede / rollback 的冻结要求是否足够。
-
-允许 verdict：
+说明：审查时 identity 仍为 `0.1.0-draft`。candidate freeze 已于 2026-09-15 完成，C 起草须引用 `KR-U03-SOURCE-001@0.1.0-candidate`。
 
 ```text
-APPROVE
-REVISE
-REJECT
+Technical Review = APPROVE
 ```
 
-当前：`NOT_REVIEWED`。
+## 5. Curation Sign-off
 
-## 5. Current Verdict
+curation_owner：`U03_CLINICAL_INPUT_PACKAGE_MAINTAINER`
+
+确认本 KR 仍只绑定 A/B 已审 6 个 source，未新增指南或临床结论。
 
 ```text
-Clinical Review = NOT_STARTED
-Technical Review = NOT_STARTED
-Curation Sign-off = NOT_STARTED
-Owner Assignment = NOT_COMPLETE
-
-KR Formal Review = BLOCKED_BY_OWNER_ASSIGNMENT
-KR Approval = NOT_COMPLETE
-KR REVIEW_READY = NO
-KR Freeze = BLOCKED
-KR Publication = BLOCKED
+Curation Sign-off = APPROVE
 ```
 
-## 6. Downstream Gate
-
-在正式 review 完成前：
+## 6. Current Verdict
 
 ```text
-C real clinical rule content = BLOCKED
-D real clinical policy content = BLOCKED
+Owner Assignment = COMPLETE
+Clinical Review = APPROVE
+Technical Review = APPROVE
+Curation Sign-off = APPROVE
+
+KR Formal Review = COMPLETE
+KR REVIEW_READY = YES
+KR Freeze = COMPLETE_FOR_CANDIDATE
+KR Publication = NO
+KR-U03-SOURCE-001@0.1.0-candidate = RESOLVABLE_FOR_C_DRAFTING
+```
+
+## 7. Downstream Gate
+
+candidate 已于 2026-09-15 冻结。C 可以开始起草，但必须引用 `KR-U03-SOURCE-001@0.1.0-candidate`。
+
+```text
+C real clinical rule content = NOT_STARTED / UNBLOCKED_FOR_DRAFTING
+D real clinical policy content = BLOCKED_UNTIL_C_VOCABULARY
 Gate B = NOT_PASSED
 CD-07 = BLOCKED
 U04 = BLOCKED

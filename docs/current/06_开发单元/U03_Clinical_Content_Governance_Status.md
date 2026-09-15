@@ -45,6 +45,12 @@ U03_AB_Medical_Owner_Review_Record_v0.2.md
 U03_AB_Revision_Task_v0.2.md
 U03_AB_Medical_Review_Status.md
 U03_AB_Revision_Status_v0.2.md
+U03_Knowledge_Dependency_Applicability_Decision_v0.1.md
+U03_Knowledge_Release_Content_Draft_v0.1.md
+U03_KR_Source_Metadata_Verification_v0.1.md
+U03_KR_Governance_Owner_Assignment_v0.1.md
+U03_KR_Formal_Review_Record_v0.1.md
+U03_KR_Freeze_Readiness_v0.1.md
 ```
 
 ## 4. 当前 Gate
@@ -59,9 +65,12 @@ A/B v0.2 Source-locked Semantics = FROZEN
 
 Medical Owner Approval = NOT_COMPLETE
 Clinical Input Package = NOT_COMPLETE
-C Rule Pack Clinical Content = BLOCKED
-D D09 Production Clinical Policy = BLOCKED
-E Knowledge Applicability / Content Approval = PENDING
+C Rule Pack Clinical Content = NOT_STARTED / UNBLOCKED_FOR_DRAFTING
+D D09 Production Clinical Policy = BLOCKED_UNTIL_C_VOCABULARY
+E Applicability = APPROVED
+E KR REVIEW_READY = YES
+E KR Freeze = CANDIDATE_FROZEN
+E KR ref = KR-U03-SOURCE-001@0.1.0-candidate
 F Clinical Eval Content = PENDING
 CD-07 Implementation Readiness = BLOCKED
 U04 Implementation Readiness = BLOCKED_BY_U03_CLINICAL_DEPENDENCY
@@ -86,7 +95,7 @@ Production Authorization = GRANTED
 
 ## 6. 当前禁止事项
 
-- 不开始 C/D/E/F 真实临床内容；
+- 不把 `KR-U03-SOURCE-001@0.1.0-candidate` 当作 PUBLISHED；D 不得先于 C 开始；F 仍未开始；
 - 不打开中国生产本地化；
 - 不打开儿科或孕产 source pack；
 - 不把 NICE/NHS 直接视为中国最终生产规则；

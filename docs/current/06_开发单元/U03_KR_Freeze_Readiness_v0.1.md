@@ -1,8 +1,9 @@
 # U03 KR Freeze Readiness v0.1
 
 > 对象：`KR-U03-SOURCE-001`  
-> 状态：`FREEZE_READINESS_NOT_PASSED / NOT_FROZEN / NOT_PUBLISHED`  
-> 本文件只定义 candidate freeze 门禁，不创建 production release。
+> 状态：`FREEZE_READINESS_PASSED / CANDIDATE_FROZEN / NOT_PUBLISHED`  
+> 冻结日期：`2026-09-15`。  
+> 本文件只确认 candidate freeze，不创建 production release。
 
 ## 1. Freeze Preconditions
 
@@ -31,11 +32,14 @@ no new clinical content introduced = CONFIRMED
 
 ## 2. Candidate Freeze Semantics
 
-通过本 gate 只允许形成：
+本 gate 现已形成：
 
 ```text
-KR-U03-SOURCE-001@<candidate-version>
+KR-U03-SOURCE-001@0.1.0-candidate
 = RESOLVABLE_CANDIDATE
+frozen_at = 2026-09-15
+effective_from = 2026-09-15
+effective_until = OPEN_ENDED
 ```
 
 不等于：
@@ -46,39 +50,45 @@ ACTIVE_FOR_PRODUCTION
 PRODUCTION_AUTHORIZED
 C Rule Pack APPROVED
 D09 Policy APPROVED
+Gate B = PASS
 ```
 
 ## 3. Current Evaluation
-
-当前已满足：
 
 ```text
 Applicability = PASS
 Source metadata verification = PASS_FOR_CURRENT_6_SOURCES
 Locked clinical context = PASS
+Owner Assignment = COMPLETE
+Curation Sign-off = APPROVE
+Clinical Review = APPROVE
+Technical Review = APPROVE
 No new source = PASS
 No new clinical conclusion = PASS
+Provenance refs = VALIDATED
+Candidate version freeze = COMPLETE
+Effective-time freeze = COMPLETE
+Rollback/supersede finalization = COMPLETE
 ```
-
-当前未满足：
 
 ```text
-Owner Assignment = NOT_COMPLETE
-Curation Sign-off = NOT_STARTED
-Clinical Review = NOT_STARTED
-Technical Review = NOT_STARTED
-Candidate version freeze = NOT_STARTED
-Effective-time freeze = NOT_STARTED
-Rollback/supersede finalization = NOT_STARTED
+knowledge_release_id = KR-U03-SOURCE-001
+knowledge_version = 0.1.0-candidate
+supersedes_refs = []
+rollback_target_ref = NOT_APPLICABLE
 ```
+
+`KR-U03-SOURCE-001@0.1.0-draft` 仅为被替代的工作草稿，不再作为可引用版本。
 
 ## 4. Verdict
 
 ```text
-KR Freeze Readiness = NOT_PASSED
-Primary Blocker = REQUIRED_OWNERS_NOT_ASSIGNED
-Secondary Blocker = FORMAL_REVIEW_NOT_COMPLETE
-KR Candidate Freeze = BLOCKED
-C/D real content = BLOCKED
+KR Freeze Readiness = PASSED
+KR Candidate Freeze = COMPLETE
+KR Publication = NO
+C drafting = UNBLOCKED
+D drafting = BLOCKED_UNTIL_C_VOCABULARY
 Gate B = NOT_PASSED
 ```
+
+C 若开始起草，必须引用 `KR-U03-SOURCE-001@0.1.0-candidate`。不得把本 candidate 当作生产 binding。
