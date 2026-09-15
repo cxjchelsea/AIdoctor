@@ -1,7 +1,7 @@
 # U03 D09 Candidate Freeze Readiness Assessment v0.1
 
 > 对象：`PR-U03-D09-001@0.2.0-draft` candidate-freeze / CD-05 readiness。  
-> 状态：`ASSESSMENT_COMPLETE / CONTENT_APPROVED / COVERAGE_FROZEN / PRE_FREEZE_FIXTURE_CONTENT_AVAILABLE / PRE_FREEZE_EVAL_REVIEW_PENDING / FREEZE_NOT_READY / CD-05_NOT_PASSED / NOT_FOR_PRODUCTION`  
+> 状态：`ASSESSMENT_COMPLETE / CONTENT_APPROVED / COVERAGE_FROZEN / PRE_FREEZE_EVAL_PASS / BLOCKER-FZ-D-02_CLOSED / FREEZE_NOT_READY / CD-05_NOT_PASSED / NOT_FOR_PRODUCTION`  
 > 本文件只判断 freeze readiness；不创建 D candidate、不构成 Gate B/Gate C/Implementation Authorization。
 
 ---
@@ -70,7 +70,7 @@ fixture pack 已建立：
 
 ```text
 U03_D09_PreFreeze_Evaluation_Fixtures_v0.1.md
-8 required asset groups = CONTENT_AVAILABLE
+8 required asset groups = REVIEWED
 fixture_count = 48
 ```
 
@@ -78,9 +78,9 @@ fixture_count = 48
 
 ```text
 U03_D09_PreFreeze_Eval_Review_Record_v0.1.md
-Medical Review = NOT_STARTED
-Technical/Eval Review = NOT_STARTED
-D Pre-Freeze Eval PASS = NO
+Medical Review = COMPLETE / APPROVE
+Technical/Eval Review = COMPLETE / APPROVE
+D Pre-Freeze Eval PASS = YES
 ```
 
 48 条 fixture 已覆盖：
@@ -99,7 +99,7 @@ specialized SCOPE_MISMATCH vs overall scope mismatch
 version/release/currentness mismatch
 ```
 
-当前：`OPEN / FIXTURE_CONTENT_AVAILABLE / REVIEW_PENDING`。
+当前：`CLOSED / PRE_FREEZE_EVAL_PASS`。
 
 注意：D pre-freeze evaluation 只支持 policy candidate freeze，不等于完整 Gate C / CD-06 Clinical EvalSet。
 
@@ -199,12 +199,12 @@ Gate B 仍需 C/D/E cross-consistency review。
 ```text
 D Content Approval = PASS
 Coverage Contract Freeze = COMPLETE
-D Pre-Freeze Fixture Content = AVAILABLE / 48
-D Pre-Freeze Eval Review = NOT_COMPLETE
+D Pre-Freeze Fixture Content = REVIEWED / 48
+D Pre-Freeze Eval Review = COMPLETE_APPROVE
 D Candidate Freeze Readiness = NOT_PASSED
 
 BLOCKER-FZ-D-01 = CLOSED
-BLOCKER-FZ-D-02 = OPEN / REVIEW_PENDING
+BLOCKER-FZ-D-02 = CLOSED
 BLOCKER-FZ-D-03 = OPEN / MUST_REMAIN_AFTER_D-02
 BLOCKER-FZ-D-04 = OPEN / MUST_REMAIN_LAST
 
@@ -219,12 +219,9 @@ Runtime = BLOCKED
 正确顺序：
 
 ```text
-review 48 D pre-freeze fixtures
-↓
-if Medical + Technical/Eval APPROVE and blocking finding = 0
-→ close BLOCKER-FZ-D-02
-↓
 create independent D candidate identity
+↓
+do not rename 0.2.0-draft in place
 ↓
 freeze D candidate
 ↓

@@ -1,7 +1,7 @@
 # U03 D09 Pre-Freeze Evaluation Minimum v0.1
 
 > 对象：`PR-U03-D09-001` candidate freeze 前的最低 evaluation 要求。  
-> 状态：`MINIMUM_DEFINED / EVAL_CONTENT_NOT_BUILT / NOT_GATE_C / NOT_FOR_PRODUCTION`  
+> 状态：`MINIMUM_DEFINED / EVAL_CONTENT_REVIEWED / PRE_FREEZE_EVAL_PASS / NOT_GATE_C / NOT_FOR_PRODUCTION`  
 > 本文件只定义 D09 candidate freeze 前最低需要验证什么；不等于完整 Gate C / CD-06 Clinical EvalSet。
 
 ---
@@ -253,16 +253,17 @@ blocking eval finding = 0
 ```text
 D Pre-Freeze Evaluation Minimum = DEFINED
 Evaluation Asset Identities = DEFINED
-Fixture Content = NOT_STARTED
-Medical/Eval Review = NOT_STARTED
-D Pre-Freeze Eval PASS = NO
+Fixture Content = REVIEWED / 48
+Medical/Eval Review = COMPLETE / APPROVE
+D Pre-Freeze Eval PASS = YES
 Gate C = NOT_PASSED
 ```
 
 因此当前：
 
 ```text
-BLOCKER-FZ-D-02 = OPEN
+BLOCKER-FZ-D-02 = CLOSED
+BLOCKER-FZ-D-03 = OPEN
 D policy candidate freeze = BLOCKED
 CD-05 = NOT_PASSED
 ```

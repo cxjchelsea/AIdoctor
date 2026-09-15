@@ -2,7 +2,8 @@
 
 > 对象：`PR-U03-D09-001@0.2.0-draft` candidate freeze 前最低 evaluation fixture pack。  
 > 契约：`U03_D09_PreFreeze_Evaluation_Minimum_v0.1.md`。  
-> 状态：`FIXTURE_CONTENT_AVAILABLE / REVIEW_REQUIRED / PRE_FREEZE_EVAL_NOT_PASSED / NOT_GATE_C / NOT_FOR_PRODUCTION`。  
+> 状态：`FIXTURE_CONTENT_REVIEWED / PRE_FREEZE_EVAL_PASS / BLOCKER-FZ-D-02_CLOSED / NOT_GATE_C / NOT_FOR_PRODUCTION`。  
+> 审核记录：`U03_D09_PreFreeze_Eval_Review_Record_v0.1.md`。  
 > 本文件只验证已审核 D09 policy/coverage 的确定性映射；不新增 C rule、医学阈值、evidence、来源或 U04 语义。
 
 ---
@@ -55,7 +56,7 @@ Asset：`EVAL-U03-D-P0-INTEGRITY-SCOPE-FIXTURES`
 | D-P0-009 | outside overall channel scope | `FAILED / NONE / OVERALL_POLICY_SCOPE_MISMATCH` | 不得进入 P4 |
 | D-P0-010 | stale state + valid CRITICAL_RED_FLAG result simultaneously present | `FAILED / NONE / STALE_INPUT` | 验证 `P0 > P1` |
 
-Review status：`PENDING`。
+Review status：`APPROVE / APPROVE`。
 
 ---
 
@@ -80,7 +81,7 @@ HIGH 不得被另一条 insufficiency 降级
 HIGH + CAUTION 不得输出 CAUTION
 ```
 
-Review status：`PENDING`。
+Review status：`APPROVE / APPROVE`。
 
 ---
 
@@ -111,7 +112,7 @@ Negative assertions：
 UNKNOWN 不得折叠为 NOT_APPLICABLE
 ```
 
-Review status：`PENDING`。
+Review status：`APPROVE / APPROVE`。
 
 ---
 
@@ -151,7 +152,7 @@ all contributing matched_rule_refs[] retained
 
 不得 first-hit-wins。
 
-Review status：`PENDING`。
+Review status：`APPROVE / APPROVE`。
 
 ---
 
@@ -235,7 +236,7 @@ NO_HIGH_RISK_SIGNAL != NORMAL
 NO_HIGH_RISK_SIGNAL != no disease
 ```
 
-Review status：`PENDING`。
+Review status：`APPROVE / APPROVE`。
 
 ---
 
@@ -275,7 +276,7 @@ FAILED / NONE / UNRESOLVABLE_CONFLICT
 
 禁止 LLM synthesis / random branch / file-order branch。
 
-Review status：`PENDING`。
+Review status：`APPROVE / APPROVE`。
 
 ---
 
@@ -304,7 +305,7 @@ NOT_APPLICABLE
 
 不得在 coverage layer 发明 `HIGH_RISK / CAUTION / SAFE`。
 
-Review status：`PENDING`。
+Review status：`APPROVE / APPROVE`。
 
 ---
 
@@ -323,7 +324,7 @@ Asset：`EVAL-U03-D-RELEASE-VERSION-MISMATCH-FIXTURES`
 
 Negative assertion：任何 mismatch 都不得继续形成 `HIGH_RISK / CAUTION / NO_HIGH_RISK_SIGNAL`。
 
-Review status：`PENDING`。
+Review status：`APPROVE / APPROVE`。
 
 ---
 
@@ -373,16 +374,16 @@ Total fixtures = 48
 ## 12. Current Status
 
 ```text
-8 required asset groups = CONTENT_AVAILABLE
+8 required asset groups = REVIEWED
 Fixture Count = 48
-Medical Review = NOT_STARTED
-Technical/Eval Review = NOT_STARTED
-blocking eval finding = UNKNOWN
-D Pre-Freeze Eval PASS = NO
-BLOCKER-FZ-D-02 = OPEN
+Medical Review = COMPLETE / APPROVE
+Technical/Eval Review = COMPLETE / APPROVE
+blocking eval finding = 0
+D Pre-Freeze Eval PASS = YES
+BLOCKER-FZ-D-02 = CLOSED
 BLOCKER-FZ-D-03 = OPEN / MUST_REMAIN_AFTER_D-02
 BLOCKER-FZ-D-04 = OPEN / MUST_REMAIN_LAST
 Gate C = NOT_PASSED
 ```
 
-下一步：只审核本 fixture pack；在 Medical + Technical/Eval APPROVE 前不得创建 `PR-U03-D09-001@0.2.0-candidate`。
+下一步只允许创建独立 `PR-U03-D09-001@0.2.0-candidate`；不得把 `0.2.0-draft` 就地改名，不得把本 PASS 当成 Gate C。
