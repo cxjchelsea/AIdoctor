@@ -2,7 +2,7 @@
 
 > Contract ID：`U03_D09_COVERAGE_V0_2`  
 > 对象：`PR-U03-D09-001@0.2.0-draft` 的 deterministic coverage denominator。  
-> 状态：`REVIEW_DRAFT / RESOLVABLE / NOT_FROZEN / NOT_FOR_PRODUCTION`。  
+> 状态：`APPROVED_FOR_CONTENT / RESOLVABLE / NOT_FROZEN / NOT_FOR_PRODUCTION`。  
 > 权威输入：`RR-U03-RISK-001@0.2.0-candidate`、`PF-U03-C-POLICY-001`、`U03_D09_Clinical_Policy_Revision_Task_v0.1.md`。  
 > 本文件只定义 D09 如何确定“哪些 C rule 属于本次 disposition completeness 分母”；不新增医学 rule、阈值、evidence 或 disposition。
 
@@ -285,10 +285,10 @@ U03_SEPSIS_SHARED_SCOPE_V0_2
 ```text
 contract_ref = U03_D09_COVERAGE_V0_2
 Resolvable Object = YES
-Medical Review = NOT_COMPLETE
-Technical Review = NOT_COMPLETE
+Medical Review = COMPLETE / APPROVE
+Technical Review = COMPLETE / APPROVE
 Frozen = NO
 Production Eligible = NO
 ```
 
-当前只解决 BF-D-02 的“coverage denominator 有明确可解析对象”问题；在 Medical + Technical re-review 通过前，不得将其视为 frozen contract，不得冻结 D policy candidate。
+内容再审已通过；这不等于 coverage contract 已冻结，也不等于 D policy candidate freeze / CD-05 / Gate B。

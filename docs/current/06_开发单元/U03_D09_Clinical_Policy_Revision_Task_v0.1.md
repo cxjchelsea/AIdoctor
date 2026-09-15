@@ -3,7 +3,7 @@
 > 权威输入：`U03_D09_Clinical_Policy_Review_Record_v0.1.md`  
 > 目标对象：`U03_D09_Clinical_Policy_Content_Draft_v0.1.md`  
 > 目标版本：`PR-U03-D09-001@0.2.0-draft`  
-> 状态：`REVISION_REQUIRED / NOT_APPROVED / NOT_FROZEN`
+> 状态：`REVISION_APPLIED / RE_REVIEW_COMPLETE / BF-D-01_CLOSED / BF-D-02_CLOSED / NOT_FROZEN`
 
 本任务只关闭 BF-D-01 / BF-D-02，使 6 个 branch 与三组边界可执行。不改 C 阈值，不发明新 evidence，不冻结 D，不开始 runtime。
 

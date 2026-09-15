@@ -1,10 +1,11 @@
 # U03 D09 Clinical Policy Table — Content Draft v0.2
 
 > 对象：Clinical Input Package D / D09 deterministic Clinical Risk Disposition Policy 修订草案。  
-> 状态：`REVISION_DRAFT / BF-D-01_APPLIED / BF-D-02_APPLIED / RE_REVIEW_REQUIRED / NOT_APPROVED / NOT_FROZEN / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
+> 状态：`REVISION_DRAFT / RE_REVIEW_COMPLETE / APPROVED_FOR_CONTENT_AND_COVERAGE / NOT_FROZEN / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
 > 前置：`RR-U03-RISK-001@0.2.0-candidate = CANDIDATE_FROZEN`；`KR-U03-SOURCE-001@0.1.0-candidate = CANDIDATE_FROZEN / RESOLVABLE`。  
 > 修订依据：`U03_D09_Clinical_Policy_Revision_Task_v0.1.md`。  
-> Coverage contract：`U03_D09_COVERAGE_V0_2`（当前 `REVIEW_DRAFT / NOT_FROZEN`）。  
+> 再审记录：`U03_D09_Clinical_Policy_ReReview_Record_v0.2.md`。  
+> Coverage contract：`U03_D09_COVERAGE_V0_2`（当前 `APPROVED_FOR_CONTENT / NOT_FROZEN`）。  
 > 本文件只定义 D09 review draft；不修改 C、不定义 U04、不构成 Implementation Authorization。
 
 ---
@@ -451,13 +452,13 @@ precedence
 
 ```text
 PR-U03-D09-001@0.1.0-draft Review = COMPLETE / REVISE_REQUIRED
-PR-U03-D09-001@0.2.0-draft = AVAILABLE
-BF-D-01 Revision = APPLIED
-BF-D-02 Revision = APPLIED
-Coverage Contract = U03_D09_COVERAGE_V0_2 / REVIEW_DRAFT / NOT_FROZEN
-Medical Re-review = REQUIRED
-Technical Re-review = REQUIRED
-D Content Approval = NOT_COMPLETE
+PR-U03-D09-001@0.2.0-draft = REVIEWED
+BF-D-01 = CLOSED
+BF-D-02 = CLOSED
+Coverage Contract = U03_D09_COVERAGE_V0_2 / APPROVED_FOR_CONTENT / NOT_FROZEN
+Medical Re-review = COMPLETE
+Technical Re-review = COMPLETE
+D Content Approval = APPROVED_FOR_CONTENT_AND_COVERAGE
 D Candidate Freeze = NOT_COMPLETE
 CD-05 = NOT_PASSED
 C/D/E Cross-Consistency = NOT_STARTED
@@ -468,4 +469,4 @@ U04 = BLOCKED
 Production = BLOCKED
 ```
 
-下一步：只再审 BF-D-01 / BF-D-02、coverage contract 与 6 个 branch 的可执行一致性。通过前不冻结 D、不开始 runtime/CD-07/U04。
+下一步只评估 coverage-contract freeze / D policy candidate freeze / CD-05 readiness。不冻结 D、不开始 runtime/CD-07/U04。

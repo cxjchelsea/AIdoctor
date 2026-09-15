@@ -453,12 +453,13 @@ Version = FROZEN
 
 ```text
 D09 Policy Structural Schema = FROZEN
-Concrete Clinical Policy Branches = DRAFT_v0.1_REVIEWED
-Medical Priority / Precedence = REVIEWED_P0_TO_P5
+Concrete Clinical Policy Branches = DRAFT_v0.2_REVIEWED
+Medical Priority / Precedence = APPROVED_P0_TO_P5
 Medical Owner Review = COMPLETE
 Technical Review = COMPLETE
-Content Approval = REVISE_REQUIRED
-Policy Release = PR-U03-D09-001@0.1.0-draft / NOT_PUBLISHED
+Content Approval = APPROVED_FOR_CONTENT_AND_COVERAGE
+Policy Release = PR-U03-D09-001@0.2.0-draft / NOT_PUBLISHED
+Coverage Contract = U03_D09_COVERAGE_V0_2 / NOT_FROZEN
 Clinical Evaluation = NOT_COMPLETE
 ```
 
@@ -467,9 +468,9 @@ Clinical Evaluation = NOT_COMPLETE
 ```text
 D / D09 Clinical Policy Table
 = STRUCTURAL_SCHEMA_FROZEN
-/ CLINICAL_POLICY_CONTENT_DRAFT_v0.1_REVIEWED
-/ REVISE_REQUIRED
-/ NOT_APPROVED
+/ CLINICAL_POLICY_CONTENT_DRAFT_v0.2_REVIEWED
+/ APPROVED_FOR_CONTENT_AND_COVERAGE
+/ NOT_FROZEN
 ```
 
 这只代表结构准备完成，不代表 D09 临床策略已经可用于真实 Risk Decision。
