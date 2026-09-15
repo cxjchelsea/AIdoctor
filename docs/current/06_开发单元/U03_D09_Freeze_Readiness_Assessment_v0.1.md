@@ -1,7 +1,7 @@
 # U03 D09 Candidate Freeze Readiness Assessment v0.1
 
 > 对象：`PR-U03-D09-001@0.2.0-draft` candidate-freeze / CD-05 readiness。  
-> 状态：`ASSESSMENT_COMPLETE / CONTENT_APPROVED / COVERAGE_FROZEN / PRE_FREEZE_EVAL_PENDING / FREEZE_NOT_READY / CD-05_NOT_PASSED / NOT_FOR_PRODUCTION`  
+> 状态：`ASSESSMENT_COMPLETE / CONTENT_APPROVED / COVERAGE_FROZEN / PRE_FREEZE_FIXTURE_CONTENT_AVAILABLE / PRE_FREEZE_EVAL_REVIEW_PENDING / FREEZE_NOT_READY / CD-05_NOT_PASSED / NOT_FOR_PRODUCTION`  
 > 本文件只判断 freeze readiness；不创建 D candidate、不构成 Gate B/Gate C/Implementation Authorization。
 
 ---
@@ -60,7 +60,30 @@ P-020 / P-040 denominator behavior frozen
 
 ### BLOCKER-FZ-D-02 — D Pre-Freeze Evaluation
 
-D09 是正式 Risk Disposition Owner，candidate freeze 前至少需要可审核 evaluation evidence 验证：
+最低契约：
+
+```text
+U03_D09_PreFreeze_Evaluation_Minimum_v0.1.md
+```
+
+fixture pack 已建立：
+
+```text
+U03_D09_PreFreeze_Evaluation_Fixtures_v0.1.md
+8 required asset groups = CONTENT_AVAILABLE
+fixture_count = 48
+```
+
+对应 review record：
+
+```text
+U03_D09_PreFreeze_Eval_Review_Record_v0.1.md
+Medical Review = NOT_STARTED
+Technical/Eval Review = NOT_STARTED
+D Pre-Freeze Eval PASS = NO
+```
+
+48 条 fixture 已覆盖：
 
 ```text
 P0 overall scope/integrity failure
@@ -69,22 +92,14 @@ P2 insufficiency fail-closed
 P3 CAUTION gating
 P4 coverage-complete NO_HIGH_RISK_SIGNAL
 P5 unresolved conflict
-coverage contract denominator semantics
+frozen coverage denominator semantics
 HIGH + insufficiency
 CAUTION + insufficiency
 specialized SCOPE_MISMATCH vs overall scope mismatch
-version/release mismatch
+version/release/currentness mismatch
 ```
 
-当前：
-
-```text
-D evaluation_refs = NOT_AVAILABLE
-D pre-freeze fixture content = NOT_STARTED
-D pre-freeze Medical/Eval review = NOT_STARTED
-```
-
-因此：`OPEN`。
+当前：`OPEN / FIXTURE_CONTENT_AVAILABLE / REVIEW_PENDING`。
 
 注意：D pre-freeze evaluation 只支持 policy candidate freeze，不等于完整 Gate C / CD-06 Clinical EvalSet。
 
@@ -152,6 +167,8 @@ technical freeze review = APPROVE
 ```text
 D content = APPROVED_FOR_CONTENT_AND_COVERAGE
 coverage contract = CANDIDATE_FROZEN
+D pre-freeze fixture content = AVAILABLE
+D pre-freeze review = NOT_COMPLETE
 D candidate = NOT_CREATED
 D candidate freeze = NOT_COMPLETE
 CD-05 = NOT_PASSED
@@ -182,10 +199,12 @@ Gate B 仍需 C/D/E cross-consistency review。
 ```text
 D Content Approval = PASS
 Coverage Contract Freeze = COMPLETE
+D Pre-Freeze Fixture Content = AVAILABLE / 48
+D Pre-Freeze Eval Review = NOT_COMPLETE
 D Candidate Freeze Readiness = NOT_PASSED
 
 BLOCKER-FZ-D-01 = CLOSED
-BLOCKER-FZ-D-02 = OPEN
+BLOCKER-FZ-D-02 = OPEN / REVIEW_PENDING
 BLOCKER-FZ-D-03 = OPEN / MUST_REMAIN_AFTER_D-02
 BLOCKER-FZ-D-04 = OPEN / MUST_REMAIN_LAST
 
@@ -200,7 +219,10 @@ Runtime = BLOCKED
 正确顺序：
 
 ```text
-build + review minimum D pre-freeze evaluation
+review 48 D pre-freeze fixtures
+↓
+if Medical + Technical/Eval APPROVE and blocking finding = 0
+→ close BLOCKER-FZ-D-02
 ↓
 create independent D candidate identity
 ↓
