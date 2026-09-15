@@ -41,10 +41,7 @@ C Safety-critical Risk Rule Pack
 / CONTENT_DRAFT_v0.2_AVAILABLE
 / ACTIVE_RULE_CANDIDATES_15
 / ACTIVE_RULE_APPROVE_15_REVISE_0
-/ BF-C-01_CLOSED
-/ BF-C-02_CLOSED
-/ BF-C-03_CLOSED
-/ BF-C-04_CLOSED
+/ BF-C-01..04_CLOSED
 / PACKAGE_APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
 / POLICY_PAIR_CANDIDATE_FROZEN
 / PRE_FREEZE_EVAL_PASS
@@ -53,8 +50,12 @@ C Safety-critical Risk Rule Pack
 
 D D09 Clinical Policy Table
 = STRUCTURAL_SCHEMA_FROZEN
-/ CLINICAL_POLICY_CONTENT_NOT_STARTED
 / DRAFTING_READINESS_PASS
+/ CLINICAL_POLICY_CONTENT_DRAFT_v0.1_AVAILABLE
+/ POLICY_RELEASE = PR-U03-D09-001@0.1.0-draft
+/ MEDICAL_OWNER_REVIEW_REQUIRED
+/ TECHNICAL_REVIEW_REQUIRED
+/ POLICY_CANDIDATE_FREEZE_NOT_COMPLETE
 / CD-05_NOT_PASSED
 
 E Knowledge Release Manifest
@@ -86,35 +87,60 @@ B APPROVE = 11 / REVISE = 0
 C 已完成 initial candidate freeze：
 
 ```text
-BLOCKER-FZ-C-01 = CLOSED
-BLOCKER-FZ-C-02 = CLOSED
-BLOCKER-FZ-C-03 = CLOSED
-BLOCKER-FZ-C-04 = CLOSED
-
-RR-U03-RISK-001@0.2.0-draft = PRESERVED
 RR-U03-RISK-001@0.2.0-candidate = CANDIDATE_FROZEN
 CD-03 = PASSED_FOR_INITIAL_CANDIDATE
 ```
 
-但 Gate B 仍缺：
+D 已进入内容起草并形成 review draft：
 
 ```text
-D / D09 initial clinical policy content
+U03_D09_Clinical_Policy_Content_Draft_v0.1.md
+PR-U03-D09-001@0.1.0-draft
+```
+
+D v0.1 当前提出的确定性 precedence：
+
+```text
+P0 INTEGRITY_FAILURE
+> P1 HIGH_RISK_SIGNAL
+> P2 APPLICABLE_INPUT_INSUFFICIENT
+> P3 CAUTION_SIGNAL
+> P4 NO_HIGH_RISK_SIGNAL
+> P5 NO_VALID_DECISION
+```
+
+关键 draft 边界：
+
+```text
+specialized-family SCOPE_MISMATCH
+= NOT_APPLICABLE for that family
+!= whole D09 FAILED
+
+applicable INPUT_INSUFFICIENT with no HIGH
+= FAILED / INSUFFICIENT_INFORMATION
+
+valid HIGH-class signal
+= VALID + HIGH_RISK
+
+SEPSIS_MODERATE_HIGH with no HIGH / no applicable insufficiency
+= VALID + CAUTION
+
+fully evaluated applicable set with no risk signal
+= VALID + NO_HIGH_RISK_SIGNAL
+```
+
+以上均为待 Medical / Technical review 的 proposed policy，不是已批准策略。
+
+Gate B 仍缺：
+
+```text
 D Medical Owner review
 D Technical review
+D content approval / candidate readiness
 CD-05 approval
 C/D/E cross-consistency review
 Gate B final decision
 ```
-
-D drafting readiness 已单独评估：
-
-```text
-U03_D_Drafting_Readiness_Assessment_v0.1.md
-D Drafting Readiness = PASS_FOR_DRAFTING
-```
-
-这只允许开始 review draft，不是 D approval 或 Implementation Authorization。
 
 ### Gate C — Independent Evaluation Ready
 
@@ -130,26 +156,25 @@ Pre-Freeze Eval PASS 仅支持 C candidate freeze，不等于 Gate C PASS。
 
 上一轮 U03 工程实现授权不自动覆盖 CD-01～CD-08。后续实现仍需要独立、明确的 Implementation Authorization。
 
-## 4. C Freeze 状态
+## 4. Current Governed Release References
 
 ```text
-PF-U03-C-POLICY-001 = CANDIDATE_FROZEN
-U03_C_EVAL_REFS_V0_2 = RESOLVABLE
-Pre-Freeze Fixture Pack = 57 / REVIEW_APPROVED
-Pre-Freeze Eval PASS = YES
+Knowledge Release
+= KR-U03-SOURCE-001@0.1.0-candidate
+/ CANDIDATE_FROZEN
+/ NOT_PUBLISHED
 
-RR-U03-RISK-001@0.2.0-candidate
-= RESOLVABLE_CANDIDATE
-= CANDIDATE_FROZEN
-= NOT_PUBLISHED
-= NOT_VALID_FOR_PRODUCTION_BINDING
-```
+Rule Release
+= RR-U03-RISK-001@0.2.0-candidate
+/ CANDIDATE_FROZEN
+/ NOT_PUBLISHED
 
-Candidate freeze record：
-
-```text
-U03_C_Rule_Release_Candidate_v0.2.md
-U03_C_Rule_Release_Candidate_Freeze_Record_v0.2.md
+D09 Policy Release
+= PR-U03-D09-001@0.1.0-draft
+/ DRAFT
+/ NOT_APPROVED
+/ NOT_FROZEN
+/ NOT_PUBLISHED
 ```
 
 ## 5. 当前 Readiness 判定
@@ -158,20 +183,17 @@ U03_C_Rule_Release_Candidate_Freeze_Record_v0.2.md
 Engineering Prerequisites = PASS
 Gate A = PASS
 
-E Knowledge Release Candidate
-= KR-U03-SOURCE-001@0.1.0-candidate
-/ CANDIDATE_FROZEN
-/ NOT_PUBLISHED
-
-C Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
-C Rule Release Candidate = RR-U03-RISK-001@0.2.0-candidate
-C Candidate Freeze = COMPLETE
 CD-03 = PASSED_FOR_INITIAL_CANDIDATE
+CD-04 = CANDIDATE_READY / NOT_PRODUCTION
 
 D Drafting Readiness = PASS_FOR_DRAFTING
-D Clinical Policy Content = NOT_STARTED
+D Clinical Policy Content Draft v0.1 = AVAILABLE
+D Medical Review = NOT_COMPLETE
+D Technical Review = NOT_COMPLETE
+D Policy Candidate Freeze = NOT_COMPLETE
 CD-05 = NOT_PASSED
 
+C/D/E Cross-Consistency = NOT_STARTED
 Gate B = NOT_PASSED
 Gate C = NOT_PASSED
 Medical Owner Approval for whole Clinical Input Package = NOT_COMPLETE
@@ -194,30 +216,33 @@ U03 Clinical Dependency Readiness
 ## 6. 当前唯一下一步
 
 ```text
-Draft D / D09 Clinical Policy Table content
-using:
-  RR-U03-RISK-001@0.2.0-candidate
-  KR-U03-SOURCE-001@0.1.0-candidate
+Review
+U03_D09_Clinical_Policy_Content_Draft_v0.1.md
+using
+U03_D09_Clinical_Policy_Review_Record_v0.1.md
 ↓
-Medical + Technical review
+Medical + Technical verdicts
 ↓
-CD-05 decision
+revise if needed
 ↓
-C/D/E cross-consistency review
+only after D content approval
+→ assess D policy candidate freeze / CD-05 readiness
+↓
+C/D/E cross-consistency
 ↓
 Gate B decision
 ```
 
-这里只允许起草 D review draft；不构成 Implementation Authorization。
-
 ## 7. 当前禁止事项
 
+- 不把 `PR-U03-D09-001@0.1.0-draft` 当作 approved/frozen/published policy；
+- 不把 D draft 映射当成 Medical Owner 已批准策略；
 - 不修改或重命名 `RR-U03-RISK-001@0.2.0-candidate`；后续变更必须新建版本；
-- 不把 C candidate freeze 当作 PUBLISHED、runtime binding 或 production authorization；
-- 不把 Pre-Freeze Eval PASS 当成 Gate C PASS；
-- D drafting 不得扩大 Gate A / C candidate scope；
 - D 不得重新解释 C 阈值或新增 C evidence taxonomy；
-- 不把 D drafting readiness 解释为 CD-05 approval 或 implementation authorization；
+- `NO_HIGH_RISK_SIGNAL` 不得解释为 SAFE / NORMAL；
+- D09 不得形成 U04 Safety Gate Decision；
+- 不把 C Pre-Freeze Eval PASS 当成 Gate C PASS；
+- 不开始 D09 runtime implementation、C02 clinical implementation 或 U04；
 - 不新增未经过 A/B 审核链的医学来源或 evidence；
 - 不把 NICE/NHS 直接视为中国生产规则；
 - 不打开儿科或孕产 source pack。
