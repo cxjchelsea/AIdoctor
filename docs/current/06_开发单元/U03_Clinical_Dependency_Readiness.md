@@ -39,14 +39,14 @@ B Evidence Catalog
 C Safety-critical Risk Rule Pack
 = RR-U03-RISK-001@0.2.0-candidate_CANDIDATE_FROZEN
 / CD-03_PASSED_FOR_INITIAL_CANDIDATE
-/ BF-CDE-01_TARGETED_SCOPE_REVISION_DRAFT_v0.2.1_AVAILABLE
+/ BF-CDE-01_SCOPE_REVISION_v0.2.1_REVIEWED
 
 D D09 Clinical Policy Table
 = PR-U03-D09-001@0.2.0-candidate_CANDIDATE_FROZEN
 / U03_D09_COVERAGE_V0_2_CANDIDATE_FROZEN
 / CD-05_PASSED_FOR_INITIAL_CANDIDATE
-/ BF-CDE-01_POLICY_SCOPE_REVISION_DRAFT_v0.2.1_AVAILABLE
-/ BF-CDE-01_COVERAGE_REVISION_DRAFT_v0.2.1_AVAILABLE
+/ BF-CDE-01_POLICY_SCOPE_REVISION_v0.2.1_REVIEWED
+/ BF-CDE-01_COVERAGE_REVISION_v0.2.1_REVIEWED
 
 E Knowledge Release Manifest
 = KR-U03-SOURCE-001@0.1.0-candidate
@@ -77,79 +77,27 @@ Gate B = NOT_PASSED
 reason = BLOCKED_BY_CDE_SCOPE_INCONSISTENCY
 ```
 
-Cross-consistency review：
+历史 0.2.0 集合的 cross-consistency：
 
 ```text
-U03_CDE_Cross_Consistency_Review_v0.1.md
 PASS = 11
 REVISE = 1
-blocking finding = 1
-BF-CDE-01 = OPEN
+BF-CDE-01 = CLOSED_FOR_CONTENT
 ```
 
-阻塞项：
+0.2.1 targeted scope revision 已再审通过：
 
 ```text
-A/E authority:
-  pregnancy / puerperium = whole-slice exclusion
+C = RR-U03-RISK-001@0.2.1-draft / APPROVED_FOR_CONTENT
+D = PR-U03-D09-001@0.2.1-draft / APPROVED_FOR_CONTENT
+Coverage = U03_D09_COVERAGE_V0_2_1_DRAFT / APPROVED_FOR_CONTENT
 
-C/D frozen 0.2.0 metadata:
-  explicitly expresses only sepsis-specific exclusion
-```
-
-Gate B 决策：
-
-```text
-U03_Gate_B_Decision_v0.1.md
-= NOT_PASSED / BLOCKED_BY_CDE_SCOPE_INCONSISTENCY
-```
-
-BF-CDE-01 修订任务：
-
-```text
-U03_CDE_Cross_Consistency_Revision_Task_v0.1.md
-```
-
-当前已准备 targeted correction drafts：
-
-```text
-C scope revision
-= U03_C_Rule_Release_Scope_Revision_Draft_v0.2.1.md
-= RR-U03-RISK-001@0.2.1-draft
-
-D scope revision
-= U03_D09_Policy_Scope_Revision_Draft_v0.2.1.md
-= PR-U03-D09-001@0.2.1-draft
-
-Coverage revision
-= U03_D09_Coverage_Contract_Revision_Draft_v0.2.1.md
-= U03_D09_COVERAGE_V0_2_1_DRAFT
-```
-
-三个修订只做 scope alignment：
-
-```text
 pregnancy / puerperium
 = OUTSIDE_CURRENT_U03_WHOLE_POLICY_SLICE
+→ D09-P-001 / OVERALL_POLICY_SCOPE_MISMATCH
 ```
 
-保持不变：
-
-```text
-C 15 active rule predicates / thresholds / signal vocabulary
-D 6 branches / precedence / disposition mappings
-D denominator membership
-E source registry / source metadata
-```
-
-Targeted review record 已建立：
-
-```text
-U03_CDE_Scope_Alignment_Targeted_Review_Record_v0.2.1.md
-Medical Review = NOT_STARTED
-Technical Review = NOT_STARTED
-BF-CDE-01 = OPEN
-```
+这不等于新 candidate / freeze / Gate B PASS。
 
 旧冻结对象保持 immutable：
 
@@ -160,6 +108,8 @@ U03_D09_COVERAGE_V0_2
 KR-U03-SOURCE-001@0.1.0-candidate
 ```
 
+CD-03 / CD-05 仍代表历史 `0.2.0` initial candidate gate，不是当前 Gate B 可接受集合。
+
 ### Gate C — Independent Evaluation Ready
 
 ```text
@@ -168,7 +118,7 @@ CD-06 = NOT_REVIEW_READY
 Clinical Golden Cases = NOT_STARTED
 ```
 
-C/D pre-freeze evaluation 均只服务历史 candidate freeze，不自动认证新 0.2.1 scope revisions，也不等于 Gate C PASS。
+历史 C 57 / D 48 fixtures 不自动认证 0.2.1。
 
 ### Gate D — Authorization
 
@@ -199,10 +149,9 @@ D Historical Coverage
 / CANDIDATE_FROZEN
 
 Targeted Revision Drafts
-= C 0.2.1 scope draft
-= D 0.2.1 scope draft
-= Coverage 0.2.1 scope draft
-/ ALL REVIEW_REQUIRED / NOT_FROZEN
+= C 0.2.1 / D 0.2.1 / Coverage 0.2.1
+/ APPROVED_FOR_CONTENT
+/ NOT_FROZEN
 ```
 
 ## 5. 当前 Readiness 判定
@@ -214,11 +163,9 @@ CD-03 = PASSED_FOR_INITIAL_CANDIDATE (historical 0.2.0 candidate)
 CD-04 = CANDIDATE_READY / NOT_PRODUCTION
 CD-05 = PASSED_FOR_INITIAL_CANDIDATE (historical 0.2.0 candidate)
 
-C/D/E Cross-Consistency = REVISE_REQUIRED
-BF-CDE-01 = OPEN
-Targeted Scope Revision Drafts = AVAILABLE
-Targeted Medical Review = NOT_STARTED
-Targeted Technical Review = NOT_STARTED
+C/D/E Cross-Consistency = REVISE_REQUIRED / CONTENT_ALIGNMENT_APPROVED
+BF-CDE-01 = CLOSED_FOR_CONTENT
+Targeted Scope Revision Drafts = REVIEWED / APPROVED_FOR_CONTENT
 Gate B = NOT_PASSED
 Gate C = NOT_PASSED
 CD-07 = BLOCKED
@@ -230,12 +177,8 @@ Production Authorization = BLOCKED
 ## 6. 当前唯一下一步
 
 ```text
-review U03_CDE_Scope_Alignment_Targeted_Review_Record_v0.2.1.md
-↓
-if Medical + Technical APPROVE
-→ BF-CDE-01 content alignment approved
-↓
-assess whether historical pre-freeze eval can be reused or requires targeted scope fixtures
+assess whether historical C 57 / D 48 fixtures
+can be reused or need targeted scope fixtures
 ↓
 create independent new candidate identities
 ↓
@@ -252,6 +195,6 @@ only if PASS + blocking finding = 0
 - 不原地修改历史 frozen C/D/coverage candidates；
 - 不直接把 0.2.1 revision drafts 标记 candidate/frozen；
 - 不自动继承历史 C 57 / D 48 fixture PASS 到新 scope versions；
-- 不把当前修订解释为 Gate B PASS；
+- 不把 content alignment 解释为 Gate B PASS；
 - 不开始 CD-07 / runtime / U04；
 - 不打开儿科或孕产临床规则；当前修订只是在现有 authority 下明确“孕产不属于当前 slice”。

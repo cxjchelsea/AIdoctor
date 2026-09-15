@@ -2,7 +2,8 @@
 
 > 目标版本：`PR-U03-D09-001@0.2.1-draft`  
 > 来源：`PR-U03-D09-001@0.2.0-candidate`（保持 frozen / immutable）。  
-> 状态：`TARGETED_SCOPE_REVISION_DRAFT / REVIEW_REQUIRED / NOT_FROZEN / NOT_FOR_PRODUCTION`  
+> 状态：`TARGETED_SCOPE_REVISION_DRAFT / REVIEW_COMPLETE / APPROVED_FOR_CONTENT / NOT_FROZEN / NOT_FOR_PRODUCTION`  
+> 再审记录：`U03_CDE_Scope_Alignment_Targeted_Review_Record_v0.2.1.md`  
 > 依据：`BF-CDE-01`、A v0.2 whole-slice scope、`KR-U03-SOURCE-001@0.1.0-candidate` release scope。
 
 ---
@@ -118,11 +119,13 @@ D-SCOPE-R3
 Are all six branches / precedence / disposition mappings unchanged?
 ```
 
+正式裁决见 `U03_CDE_Scope_Alignment_Targeted_Review_Record_v0.2.1.md`。
+
 当前：
 
 ```text
-Medical Review = PENDING
-Technical Review = PENDING
+Medical Review = COMPLETE / APPROVE
+Technical Review = COMPLETE / APPROVE
 Candidate identity = NOT_CREATED
 Freeze = NOT_COMPLETE
 ```

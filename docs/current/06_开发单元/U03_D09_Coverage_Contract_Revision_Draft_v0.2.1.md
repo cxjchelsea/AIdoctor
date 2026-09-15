@@ -2,7 +2,8 @@
 
 > 目标对象：`U03_D09_COVERAGE_V0_2_1_DRAFT`  
 > 来源：`U03_D09_COVERAGE_V0_2`（保持 frozen / immutable）。  
-> 状态：`TARGETED_SCOPE_REVISION_DRAFT / REVIEW_REQUIRED / NOT_FROZEN / NOT_FOR_PRODUCTION`  
+> 状态：`TARGETED_SCOPE_REVISION_DRAFT / REVIEW_COMPLETE / APPROVED_FOR_CONTENT / NOT_FROZEN / NOT_FOR_PRODUCTION`  
+> 再审记录：`U03_CDE_Scope_Alignment_Targeted_Review_Record_v0.2.1.md`  
 > 依据：`BF-CDE-01`。
 
 ---
@@ -114,10 +115,12 @@ COV-SCOPE-R3
 Are internal denominator membership and C-signal mappings unchanged?
 ```
 
+正式裁决见 `U03_CDE_Scope_Alignment_Targeted_Review_Record_v0.2.1.md`。
+
 当前：
 
 ```text
-Medical Review = PENDING
-Technical Review = PENDING
+Medical Review = COMPLETE / APPROVE
+Technical Review = COMPLETE / APPROVE
 Freeze = NOT_COMPLETE
 ```

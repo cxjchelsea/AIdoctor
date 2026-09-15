@@ -82,6 +82,13 @@ U03_D09_Freeze_Readiness_Assessment_v0.1.md
 U03_D09_PreFreeze_Evaluation_Minimum_v0.1.md
 U03_D09_PreFreeze_Evaluation_Fixtures_v0.1.md
 U03_D09_PreFreeze_Eval_Review_Record_v0.1.md
+U03_CDE_Cross_Consistency_Review_v0.1.md
+U03_CDE_Cross_Consistency_Revision_Task_v0.1.md
+U03_Gate_B_Decision_v0.1.md
+U03_C_Rule_Release_Scope_Revision_Draft_v0.2.1.md
+U03_D09_Policy_Scope_Revision_Draft_v0.2.1.md
+U03_D09_Coverage_Contract_Revision_Draft_v0.2.1.md
+U03_CDE_Scope_Alignment_Targeted_Review_Record_v0.2.1.md
 ```
 
 ## 4. 当前 Gate
@@ -96,10 +103,14 @@ A/B v0.2 Source-locked Semantics = FROZEN
 
 Medical Owner Approval = NOT_COMPLETE
 Clinical Input Package = NOT_COMPLETE
-C Rule Pack Clinical Content = PACKAGE_APPROVED_FOR_CONTENT / POLICY_PAIR_FROZEN / PRE_FREEZE_EVAL_PASS / RR-U03-RISK-001@0.2.0-candidate_CANDIDATE_FROZEN
-D D09 Clinical Policy Draft v0.2 = REVIEWED / APPROVED_FOR_CONTENT_AND_COVERAGE / NOT_FROZEN
-D D09 Coverage Contract = U03_D09_COVERAGE_V0_2 / CANDIDATE_FROZEN
-D D09 Pre-Freeze Eval = PASS / 48 fixtures / BLOCKER-FZ-D-02_CLOSED
+C Historical Candidate = RR-U03-RISK-001@0.2.0-candidate_CANDIDATE_FROZEN
+C Scope Revision 0.2.1 = APPROVED_FOR_CONTENT / NOT_FROZEN
+D Historical Candidate = PR-U03-D09-001@0.2.0-candidate_CANDIDATE_FROZEN
+D Scope Revision 0.2.1 = APPROVED_FOR_CONTENT / NOT_FROZEN
+D Coverage 0.2.0 = U03_D09_COVERAGE_V0_2 / CANDIDATE_FROZEN
+D Coverage 0.2.1 = APPROVED_FOR_CONTENT / NOT_FROZEN
+BF-CDE-01 = CLOSED_FOR_CONTENT
+Gate B = NOT_PASSED / BLOCKED_BY_CDE_SCOPE_INCONSISTENCY
 D D09 Production Clinical Policy = NOT_FROZEN / NOT_PUBLISHED
 E Applicability = APPROVED
 E KR REVIEW_READY = YES
