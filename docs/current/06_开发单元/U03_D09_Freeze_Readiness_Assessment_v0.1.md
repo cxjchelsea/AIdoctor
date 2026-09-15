@@ -1,8 +1,8 @@
 # U03 D09 Candidate Freeze Readiness Assessment v0.1
 
 > 对象：`PR-U03-D09-001@0.2.0-draft` candidate-freeze / CD-05 readiness。  
-> 状态：`ASSESSMENT_COMPLETE / CONTENT_APPROVED / COVERAGE_FROZEN / PRE_FREEZE_EVAL_PASS / CANDIDATE_IDENTITY_CREATED / FREEZE_RECORD_PENDING / CD-05_NOT_PASSED / NOT_FOR_PRODUCTION`  
-> 本文件只判断 freeze readiness；不构成 Gate B/Gate C/Implementation Authorization。
+> 状态：`ASSESSMENT_COMPLETE / ALL_FREEZE_BLOCKERS_CLOSED / CANDIDATE_FROZEN / CD-05_PASSED_FOR_INITIAL_CANDIDATE / NOT_GATE_B / NOT_GATE_C / NOT_FOR_PRODUCTION`  
+> 本文件只记录 candidate-freeze / CD-05 readiness 结果；不构成 Gate B/Gate C/Implementation Authorization。
 
 ---
 
@@ -26,8 +26,6 @@ knowledge_release_ref = KR-U03-SOURCE-001@0.1.0-candidate / CANDIDATE_FROZEN
 policy_pair_freeze_ref = PF-U03-C-POLICY-001 / CANDIDATE_FROZEN
 coverage_contract_ref = U03_D09_COVERAGE_V0_2 / CANDIDATE_FROZEN
 ```
-
-因此，D 的医学/技术内容与 denominator immutability 已不再是 freeze blocker。
 
 ---
 
@@ -60,71 +58,69 @@ blocking eval finding = 0
 
 当前：`CLOSED / PRE_FREEZE_EVAL_PASS`。
 
-该 PASS 只支持 policy candidate freeze readiness，不等于 Gate C / CD-06。
-
 ### BLOCKER-FZ-D-03 — Independent D Candidate Identity
-
-已创建独立对象：
 
 ```text
 candidate_ref = PR-U03-D09-001@0.2.0-candidate
 candidate_object = U03_D09_Policy_Candidate_v0.2.md
 source_draft_ref = PR-U03-D09-001@0.2.0-draft
-```
-
-确认：
-
-```text
 source draft preserved = YES
-source draft renamed in place = NO
 candidate created as independent identity = YES
-candidate freeze = NOT_COMPLETE
 ```
 
-当前：`CLOSED / CANDIDATE_IDENTITY_CREATED`。
+当前：`CLOSED`。
 
 ### BLOCKER-FZ-D-04 — Candidate Freeze Record / CD-05 Decision
 
-前三项已关闭，现在才允许处理最后一步：
-
 ```text
-create D policy candidate freeze record
-↓
-freeze PR-U03-D09-001@0.2.0-candidate
-↓
-separately decide CD-05 = PASSED_FOR_INITIAL_CANDIDATE ?
+candidate_freeze_record
+= U03_D09_Policy_Candidate_Freeze_Record_v0.2.md
+
+PR-U03-D09-001@0.2.0-candidate
+= RESOLVABLE_CANDIDATE
+= CANDIDATE_FROZEN
+
+CD-05 decision record
+= U03_CD05_D09_Initial_Candidate_Decision_v0.1.md
+
+CD-05
+= PASSED_FOR_INITIAL_CANDIDATE
 ```
 
-candidate freeze 仍不等于 Gate B PASS。
-
-当前：`OPEN / MUST_REMAIN_LAST`。
+当前：`CLOSED`。
 
 ---
 
-## 3. Candidate Freeze Minimum
-
-当前已满足：
+## 3. Candidate Freeze Result
 
 ```text
 D Content Approval = APPROVED_FOR_CONTENT_AND_COVERAGE
-coverage contract = REVIEWED + FROZEN
-D pre-freeze evaluation refs = RESOLVABLE
-D pre-freeze fixture content = AVAILABLE
-D pre-freeze Medical review = APPROVE
-D pre-freeze Technical/Eval review = APPROVE
-blocking eval finding = 0
-rule release ref = frozen/resolvable
-knowledge release ref = frozen/resolvable
-policy candidate identity = independent/resolvable
+Coverage Contract Freeze = COMPLETE
+D Pre-Freeze Eval = PASS
+D Candidate Identity = INDEPENDENT / RESOLVABLE
+D Candidate Freeze = COMPLETE
+
+BLOCKER-FZ-D-01 = CLOSED
+BLOCKER-FZ-D-02 = CLOSED
+BLOCKER-FZ-D-03 = CLOSED
+BLOCKER-FZ-D-04 = CLOSED
 ```
 
-尚未执行：
+正式 candidate：
 
 ```text
-candidate freeze record
-clinical freeze decision
-technical freeze decision
-CD-05 decision
+PR-U03-D09-001@0.2.0-candidate
+= CANDIDATE_FROZEN
+= NOT_PUBLISHED
+= NOT_FOR_RUNTIME
+= NOT_FOR_PRODUCTION
+```
+
+source draft 保持：
+
+```text
+PR-U03-D09-001@0.2.0-draft
+= PRESERVED / NOT_RENAMED / NOT_FROZEN
 ```
 
 ---
@@ -132,16 +128,16 @@ CD-05 decision
 ## 4. CD-05 Boundary
 
 ```text
-D content = APPROVED_FOR_CONTENT_AND_COVERAGE
-coverage contract = CANDIDATE_FROZEN
-D pre-freeze fixture content = REVIEWED / 48
-D pre-freeze review = COMPLETE_APPROVE
-D candidate = PR-U03-D09-001@0.2.0-candidate / CREATED / NOT_FROZEN
-D candidate freeze = NOT_COMPLETE
-CD-05 = NOT_PASSED
+CD-05 = PASSED_FOR_INITIAL_CANDIDATE
 ```
 
-即使未来 `CD-05 = PASSED_FOR_INITIAL_CANDIDATE`，仍不等于：
+这只表示已经形成受治理、冻结、可解析的 D09 initial candidate，可进入：
+
+```text
+C / D / E cross-consistency review
+```
+
+仍不等于：
 
 ```text
 Gate B PASS
@@ -151,41 +147,50 @@ Runtime Active
 Production Authorized
 ```
 
-Gate B 仍需 C/D/E cross-consistency review。
+---
+
+## 5. Frozen Invariants
+
+```text
+P0 > P1 > P2 > P3 > P4 > P5
+FAILED != NO_HIGH_RISK_SIGNAL
+NO_HIGH_RISK_SIGNAL != SAFE
+NO_HIGH_RISK_SIGNAL != NORMAL
+Rule Signal != D09 Disposition
+D09 Decision != U04 Safety Gate Decision
+```
+
+以及：
+
+```text
+HIGH + insufficiency -> HIGH_RISK + retain insufficiency refs
+CAUTION + insufficiency -> FAILED / INSUFFICIENT_INFORMATION
+specialized RULE_SIGNAL_SCOPE_MISMATCH -> NOT_APPLICABLE
+overall policy scope mismatch -> P0 / OVERALL_POLICY_SCOPE_MISMATCH
+P4 requires complete frozen coverage denominator
+```
 
 ---
 
-## 5. Verdict
+## 6. Verdict
 
 ```text
-D Content Approval = PASS
-Coverage Contract Freeze = COMPLETE
-D Pre-Freeze Eval = PASS
-D Candidate Identity = CREATED / RESOLVABLE
-D Candidate Freeze Readiness = READY_FOR_FINAL_FREEZE_STEP
+D Candidate Freeze Readiness = COMPLETE
+D Policy Candidate Freeze = COMPLETE
+CD-05 = PASSED_FOR_INITIAL_CANDIDATE
 
-BLOCKER-FZ-D-01 = CLOSED
-BLOCKER-FZ-D-02 = CLOSED
-BLOCKER-FZ-D-03 = CLOSED
-BLOCKER-FZ-D-04 = OPEN / MUST_REMAIN_LAST
-
-PR-U03-D09-001@0.2.0-draft = PRESERVED / NOT_FROZEN
-PR-U03-D09-001@0.2.0-candidate = CREATED / NOT_FROZEN
-CD-05 = NOT_PASSED
+C/D/E Cross-Consistency = NOT_STARTED
 Gate B = NOT_PASSED
 Gate C = NOT_PASSED
 CD-07 = BLOCKED
 Runtime = BLOCKED
+Production = BLOCKED
 ```
 
-正确顺序：
+正确下一步：
 
 ```text
-freeze D policy candidate
-↓
-CD-05 decision
-↓
-C/D/E cross-consistency
+C / D / E cross-consistency review
 ↓
 Gate B decision
 ```
