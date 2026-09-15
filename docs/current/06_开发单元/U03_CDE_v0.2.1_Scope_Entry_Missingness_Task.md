@@ -1,7 +1,7 @@
 # U03 C / D / E v0.2.1 Scope-entry Missingness Task
 
 > 对象：0.2.1 whole-policy pregnancy/puerperium entry gate 的 missingness formalization。  
-> 状态：`TARGETED_FREEZE_TASK / DECISION_REQUIRED / NOT_A_CONTENT_REOPEN / NOT_FOR_PRODUCTION`  
+> 状态：`TARGETED_FREEZE_TASK / TECHNICAL_RECOMMENDATION_COMPLETE / MEDICAL_DECISION_PENDING / NOT_A_CONTENT_REOPEN / NOT_FOR_PRODUCTION`  
 > 来源：`U03_CDE_v0.2.1_Evaluation_Reuse_Assessment.md`。  
 > 本任务不重开 `BF-CDE-01`；只补 candidate freeze 前不可由实现者猜测的 formal handling。
 
@@ -64,39 +64,85 @@ must NOT produce P4 NO_HIGH_RISK_SIGNAL
 
 ---
 
-## 3. Decision Needed
+## 3. Technical Recommendation
 
-需要 Medical + Technical 明确唯一 formal handling。
-
-最低决策必须回答：
+Technical review recommends the following deterministic handling:
 
 ```text
-MISSING-SCOPE-R1
-UNKNOWN / NOT_ASKED / NOT_ESTABLISHED 是否都在 whole-policy entry gate fail closed？
-
-MISSING-SCOPE-R2
-其 D09 branch 是否保持 P0，而不是 P2？
-
-MISSING-SCOPE-R3
-formal reason_code 使用哪个既有/新增代码？
-
-MISSING-SCOPE-R4
-是否明确与 TRUE 的 OVERALL_POLICY_SCOPE_MISMATCH 区分？
+pregnancy_or_puerperium ∈ {UNKNOWN, NOT_ASKED, NOT_ESTABLISHED}
+→ D09-P-001
+→ FAILED / NONE
+→ OVERALL_POLICY_SCOPE_NOT_ESTABLISHED
+→ denominator NOT_CONSTRUCTED
 ```
 
-建议的技术边界：
+Rationale:
 
 ```text
-P2 = only after overall policy scope is established and an applicable governed rule/family is insufficient
+P2 = only after overall policy scope is established and an applicable governed rule/family is insufficient.
+Scope-entry missingness occurs before denominator construction.
 ```
 
-因此 scope applicability 尚未建立时不应进入 P2 denominator semantics。
+Therefore:
 
-这只是 Technical recommendation，不构成 Medical approval，也不自动决定 reason_code。
+```text
+UNKNOWN / NOT_ASKED / NOT_ESTABLISHED
+!= P2 INSUFFICIENT_INFORMATION
+!= OVERALL_POLICY_SCOPE_MISMATCH
+!= RULE_SIGNAL_SCOPE_MISMATCH
+```
+
+Formal proposal and review records:
+
+```text
+U03_CDE_v0.2.1_Scope_Entry_Missingness_Decision_Draft.md
+U03_CDE_v0.2.1_Scope_Entry_Missingness_Review_Record.md
+```
 
 ---
 
-## 4. Forbidden Shortcuts
+## 4. Review Questions
+
+| ID | Decision | Medical | Technical |
+|---|---|---|---|
+| MISSING-SCOPE-R1 | UNKNOWN / NOT_ASKED / NOT_ESTABLISHED fail closed at whole-policy entry | PENDING | APPROVE |
+| MISSING-SCOPE-R2 | remain P0 rather than P2 | PENDING | APPROVE |
+| MISSING-SCOPE-R3 | use `OVERALL_POLICY_SCOPE_NOT_ESTABLISHED` | PENDING | APPROVE |
+| MISSING-SCOPE-R4 | distinguish from TRUE → `OVERALL_POLICY_SCOPE_MISMATCH` | PENDING | APPROVE |
+
+---
+
+## 5. Targeted Evaluation Draft
+
+Targeted fixture content has been prepared:
+
+```text
+U03_CDE_v0.2.1_Targeted_Scope_Evaluation_Fixtures_Draft.md
+fixture_count = 6
+```
+
+Coverage includes:
+
+```text
+TRUE
+FALSE
+UNKNOWN
+NOT_ASKED
+NOT_ESTABLISHED
+P0 scope-entry failure + historical HIGH precedence check
+```
+
+Current fixture status:
+
+```text
+Technical/Eval = APPROVE recommendation
+Medical = PENDING
+Targeted Eval PASS = NO
+```
+
+---
+
+## 6. Forbidden Shortcuts
 
 不得：
 
@@ -115,7 +161,7 @@ UNKNOWN/NOT_ASKED/NOT_ESTABLISHED
 
 ---
 
-## 5. Exit Criteria
+## 7. Exit Criteria
 
 本 task 关闭至少需要：
 
@@ -124,28 +170,29 @@ MISSING-SCOPE-R1 = Medical APPROVE / Technical APPROVE
 MISSING-SCOPE-R2 = Medical APPROVE / Technical APPROVE
 MISSING-SCOPE-R3 = Medical APPROVE / Technical APPROVE
 MISSING-SCOPE-R4 = Medical APPROVE / Technical APPROVE
+TGT-CDE-01..06 = Medical APPROVE / Technical-Eval APPROVE
 blocking finding = 0
 ```
 
-之后才能生成完整 targeted scope fixtures，至少覆盖：
+之后才能：
 
 ```text
-TRUE
-FALSE
-UNKNOWN
-NOT_ASKED
-NOT_ESTABLISHED
+close BLOCKER-FZ-CDE-021-01
+create independent 0.2.1 candidate identities
+freeze affected candidates
+re-run C/D/E cross-consistency
 ```
 
 ---
 
-## 6. Current Status
+## 8. Current Status
 
 ```text
 BF-CDE-01 = CLOSED_FOR_CONTENT
 BLOCKER-FZ-CDE-021-01 = OPEN
-Scope-entry Missingness Decision = NOT_COMPLETE
-Targeted Scope Fixtures = NOT_COMPLETE
+Technical Decision = COMPLETE / APPROVE_RECOMMENDATION
+Medical Decision = PENDING
+Targeted Scope Fixtures = CONTENT_AVAILABLE / REVIEW_PENDING
 new 0.2.1 candidates = NOT_CREATED
 Gate B = NOT_PASSED
 Gate C = NOT_PASSED
