@@ -1,8 +1,8 @@
 # U03 D09 Candidate Freeze Readiness Assessment v0.1
 
 > 对象：`PR-U03-D09-001@0.2.0-draft` candidate-freeze / CD-05 readiness。  
-> 状态：`ASSESSMENT_COMPLETE / CONTENT_APPROVED / FREEZE_NOT_READY / CD-05_NOT_PASSED / NOT_FOR_PRODUCTION`  
-> 本文件只判断 freeze readiness；不冻结 coverage contract、不创建 D candidate、不构成 Gate B/Gate C/Implementation Authorization。
+> 状态：`ASSESSMENT_COMPLETE / CONTENT_APPROVED / COVERAGE_FROZEN / PRE_FREEZE_EVAL_PENDING / FREEZE_NOT_READY / CD-05_NOT_PASSED / NOT_FOR_PRODUCTION`  
+> 本文件只判断 freeze readiness；不创建 D candidate、不构成 Gate B/Gate C/Implementation Authorization。
 
 ---
 
@@ -24,9 +24,10 @@ P0 > P1 > P2 > P3 > P4 > P5 = APPROVE
 rule_release_ref = RR-U03-RISK-001@0.2.0-candidate / CANDIDATE_FROZEN
 knowledge_release_ref = KR-U03-SOURCE-001@0.1.0-candidate / CANDIDATE_FROZEN
 policy_pair_freeze_ref = PF-U03-C-POLICY-001 / CANDIDATE_FROZEN
+coverage_contract_ref = U03_D09_COVERAGE_V0_2 / CANDIDATE_FROZEN
 ```
 
-因此，D 的医学/技术内容本身不再是 freeze blocker。
+因此，D 的医学/技术内容与 denominator immutability 已不再是 freeze blocker。
 
 ---
 
@@ -41,20 +42,21 @@ U03_D09_COVERAGE_V0_2
 = RESOLVABLE
 = Medical APPROVE
 = Technical APPROVE
-= NOT_FROZEN
+= CANDIDATE_FROZEN
+freeze_record_ref = U03_D09_Coverage_Contract_Freeze_Record_v0.2.md
 ```
 
-D09-P-020 / P-040 的执行分母依赖该 contract。若 contract 未冻结，candidate policy 的 `INSUFFICIENT_INFORMATION` 与 `NO_HIGH_RISK_SIGNAL` 分母仍可被原地改变，因此不得先冻结 D policy。
-
-要求：
+冻结语义包括：
 
 ```text
-U03_D09_COVERAGE_V0_2
-→ independent freeze record
-→ frozen identity / immutable-after-freeze boundary
+ALWAYS_APPLICABLE baseline = 5 rules
+CONDITIONALLY_APPLICABLE = NHS_DYSPNOEA_FAMILY + NG253_SEPSIS_FAMILY
+RULE_SIGNAL_SCOPE_MISMATCH -> NOT_APPLICABLE
+RULE_SIGNAL_INPUT_INSUFFICIENT -> INSUFFICIENT_APPLICABLE
+P-020 / P-040 denominator behavior frozen
 ```
 
-当前：`OPEN`。
+当前：`CLOSED`。
 
 ### BLOCKER-FZ-D-02 — D Pre-Freeze Evaluation
 
@@ -88,7 +90,7 @@ D pre-freeze Medical/Eval review = NOT_STARTED
 
 ### BLOCKER-FZ-D-03 — Independent D Candidate Identity
 
-只有在 D-FZ-01 / D-FZ-02 关闭后，才允许创建：
+只有在 D-FZ-02 关闭后，才允许创建：
 
 ```text
 PR-U03-D09-001@0.2.0-candidate
@@ -104,7 +106,7 @@ PR-U03-D09-001@0.2.0-candidate
 
 不得把 draft 就地改名。
 
-当前：`OPEN / MUST_REMAIN_LAST_BEFORE_FREEZE_RECORD`。
+当前：`OPEN / MUST_REMAIN_AFTER_D-02`。
 
 ### BLOCKER-FZ-D-04 — Candidate Freeze Record / CD-05 Decision
 
@@ -149,6 +151,7 @@ technical freeze review = APPROVE
 
 ```text
 D content = APPROVED_FOR_CONTENT_AND_COVERAGE
+coverage contract = CANDIDATE_FROZEN
 D candidate = NOT_CREATED
 D candidate freeze = NOT_COMPLETE
 CD-05 = NOT_PASSED
@@ -178,11 +181,12 @@ Gate B 仍需 C/D/E cross-consistency review。
 
 ```text
 D Content Approval = PASS
+Coverage Contract Freeze = COMPLETE
 D Candidate Freeze Readiness = NOT_PASSED
 
-BLOCKER-FZ-D-01 = OPEN
+BLOCKER-FZ-D-01 = CLOSED
 BLOCKER-FZ-D-02 = OPEN
-BLOCKER-FZ-D-03 = OPEN / MUST_REMAIN_AFTER_D-01_D-02
+BLOCKER-FZ-D-03 = OPEN / MUST_REMAIN_AFTER_D-02
 BLOCKER-FZ-D-04 = OPEN / MUST_REMAIN_LAST
 
 PR-U03-D09-001@0.2.0-draft = REVIEWED / NOT_FROZEN
@@ -196,8 +200,6 @@ Runtime = BLOCKED
 正确顺序：
 
 ```text
-freeze coverage contract
-↓
 build + review minimum D pre-freeze evaluation
 ↓
 create independent D candidate identity
