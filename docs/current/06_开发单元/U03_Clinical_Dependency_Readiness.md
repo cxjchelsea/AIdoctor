@@ -51,13 +51,15 @@ C Safety-critical Risk Rule Pack
 D D09 Clinical Policy Table
 = STRUCTURAL_SCHEMA_FROZEN
 / DRAFTING_READINESS_PASS
-/ CLINICAL_POLICY_CONTENT_DRAFT_v0.1_REVIEWED
-/ POLICY_RELEASE = PR-U03-D09-001@0.1.0-draft
-/ MEDICAL_OWNER_REVIEW_COMPLETE
-/ TECHNICAL_REVIEW_COMPLETE
-/ CONTENT_APPROVAL = REVISE_REQUIRED
-/ BF-D-01_OPEN
-/ BF-D-02_OPEN
+/ v0.1_REVIEW_COMPLETE_REVISE_REQUIRED
+/ v0.2_REVISION_DRAFT_AVAILABLE
+/ POLICY_RELEASE = PR-U03-D09-001@0.2.0-draft
+/ BF-D-01_REVISION_APPLIED
+/ BF-D-02_REVISION_APPLIED
+/ COVERAGE_CONTRACT = U03_D09_COVERAGE_V0_2_REVIEW_DRAFT
+/ MEDICAL_RE_REVIEW_REQUIRED
+/ TECHNICAL_RE_REVIEW_REQUIRED
+/ CONTENT_APPROVAL_NOT_COMPLETE
 / POLICY_CANDIDATE_FREEZE_NOT_COMPLETE
 / CD-05_NOT_PASSED
 
@@ -94,63 +96,61 @@ RR-U03-RISK-001@0.2.0-candidate = CANDIDATE_FROZEN
 CD-03 = PASSED_FOR_INITIAL_CANDIDATE
 ```
 
-D v0.1 review 已完成，内容未通过：
+D v0.1 review 结论：
 
 ```text
-PR-U03-D09-001@0.1.0-draft
-Medical APPROVE = 6 / REVISE = 0
-Technical APPROVE = 4 / REVISE = 2
+Medical = 6 / 6 APPROVE
+Technical = 4 APPROVE / 2 REVISE
 D Content Approval = REVISE_REQUIRED
+BF-D-01 = OPEN at v0.1 review
+BF-D-02 = OPEN at v0.1 review
 ```
 
-D v0.1 已接受的确定性 precedence：
+现已按 revision task 形成 v0.2：
 
 ```text
-P0 INTEGRITY_FAILURE
-> P1 HIGH_RISK_SIGNAL
-> P2 APPLICABLE_INPUT_INSUFFICIENT
-> P3 CAUTION_SIGNAL
-> P4 NO_HIGH_RISK_SIGNAL
-> P5 NO_VALID_DECISION
+PR-U03-D09-001@0.2.0-draft = AVAILABLE
+BF-D-01 Revision = APPLIED
+BF-D-02 Revision = APPLIED
+U03_D09_COVERAGE_V0_2 = RESOLVABLE / REVIEW_DRAFT / NOT_FROZEN
 ```
 
-关键 draft 边界：
+v0.2 保持：
 
 ```text
-specialized-family SCOPE_MISMATCH
-= NOT_APPLICABLE for that family
-!= whole D09 FAILED
-
-applicable INPUT_INSUFFICIENT with no HIGH
-= FAILED / INSUFFICIENT_INFORMATION
-
-valid HIGH-class signal
-= VALID + HIGH_RISK
-
-SEPSIS_MODERATE_HIGH with no HIGH / no applicable insufficiency
-= VALID + CAUTION
-
-fully evaluated applicable set with no risk signal
-= VALID + NO_HIGH_RISK_SIGNAL
+P0 > P1 > P2 > P3 > P4 > P5
 ```
 
-以上方向已审过，但不是已批准策略。仍开放：
+并新增/固化：
 
 ```text
-BF-D-01
-overall D scope mismatch must be a formal P0 reason
-not section-8 prose only
+OVERALL_POLICY_SCOPE_MISMATCH
+= D09-P-001 / P0 failure
+!= C RULE_SIGNAL_SCOPE_MISMATCH
 
-BF-D-02
-P-040 / P-020 must cite an executable coverage contract
-5 always-on rules + 2 conditional families
+ALWAYS_APPLICABLE baseline denominator
+= RESP / NEURO-001 / NEURO-002 / CARD / ALLERGY
+
+CONDITIONALLY_APPLICABLE families
+= NHS_DYSPNOEA_FAMILY
+= NG253_SEPSIS_FAMILY
+
+C RULE_SIGNAL_SCOPE_MISMATCH
+→ NOT_APPLICABLE
+→ excluded from denominator
+
+C RULE_SIGNAL_INPUT_INSUFFICIENT
+→ INSUFFICIENT_APPLICABLE
+→ counts for P-020
+→ blocks P-030 / P-040
 ```
 
 Gate B 仍缺：
 
 ```text
-D v0.2 revision
-D content re-review / approval
+D v0.2 Medical + Technical re-review
+coverage contract approval/freeze decision
+D content approval
 D policy candidate freeze
 CD-05 approval
 C/D/E cross-consistency review
@@ -165,7 +165,7 @@ CD-06 = NOT_REVIEW_READY
 Clinical Golden Cases = NOT_STARTED
 ```
 
-Pre-Freeze Eval PASS 仅支持 C candidate freeze，不等于 Gate C PASS。
+C Pre-Freeze Eval PASS 仅支持 C candidate freeze，不等于 Gate C PASS。
 
 ### Gate D — Authorization
 
@@ -185,12 +185,18 @@ Rule Release
 / NOT_PUBLISHED
 
 D09 Policy Release
-= PR-U03-D09-001@0.1.0-draft
-/ REVIEWED
-/ REVISE_REQUIRED
+= PR-U03-D09-001@0.2.0-draft
+/ REVISION_DRAFT
+/ RE_REVIEW_REQUIRED
 / NOT_APPROVED
 / NOT_FROZEN
 / NOT_PUBLISHED
+
+D09 Coverage Contract
+= U03_D09_COVERAGE_V0_2
+/ RESOLVABLE
+/ REVIEW_DRAFT
+/ NOT_FROZEN
 ```
 
 ## 5. 当前 Readiness 判定
@@ -203,10 +209,12 @@ CD-03 = PASSED_FOR_INITIAL_CANDIDATE
 CD-04 = CANDIDATE_READY / NOT_PRODUCTION
 
 D Drafting Readiness = PASS_FOR_DRAFTING
-D Clinical Policy Content Draft v0.1 = REVIEWED
-D Medical Review = COMPLETE
-D Technical Review = COMPLETE
-D Content Approval = REVISE_REQUIRED
+D v0.1 Review = COMPLETE / REVISE_REQUIRED
+D v0.2 Revision Draft = AVAILABLE
+BF-D-01 Revision = APPLIED / RE_REVIEW_REQUIRED
+BF-D-02 Revision = APPLIED / RE_REVIEW_REQUIRED
+D Coverage Contract = AVAILABLE / NOT_FROZEN
+D Content Approval = NOT_COMPLETE
 D Policy Candidate Freeze = NOT_COMPLETE
 CD-05 = NOT_PASSED
 
@@ -233,17 +241,16 @@ U03 Clinical Dependency Readiness
 ## 6. 当前唯一下一步
 
 ```text
-Revise
-U03_D09_Clinical_Policy_Content_Draft_v0.1.md
-to v0.2 using
-U03_D09_Clinical_Policy_Revision_Task_v0.1.md
+Re-review
+PR-U03-D09-001@0.2.0-draft
++
+U03_D09_COVERAGE_V0_2
 ↓
-close BF-D-01 and BF-D-02
+close BF-D-01 / BF-D-02 only if review passes
 ↓
-Medical + Technical re-review
+then decide D Content Approval
 ↓
-only after D content approval
-→ assess D policy candidate freeze / CD-05 readiness
+then separately assess coverage-contract freeze / D policy candidate freeze / CD-05
 ↓
 C/D/E cross-consistency
 ↓
@@ -252,8 +259,8 @@ Gate B decision
 
 ## 7. 当前禁止事项
 
-- 不把 `PR-U03-D09-001@0.1.0-draft` 当作 approved/frozen/published policy；
-- 不把已接受的 precedence / 边界方向当成已关闭全部 D blocker；
+- 不把 `PR-U03-D09-001@0.2.0-draft` 当作 approved/frozen/published policy；
+- 不把 `U03_D09_COVERAGE_V0_2` 的“可解析”误当成“已审核冻结”；
 - 不修改或重命名 `RR-U03-RISK-001@0.2.0-candidate`；后续变更必须新建版本；
 - D 不得重新解释 C 阈值或新增 C evidence taxonomy；
 - `NO_HIGH_RISK_SIGNAL` 不得解释为 SAFE / NORMAL；
