@@ -2,8 +2,8 @@
 
 > 对象：D / D09 deterministic Clinical Risk Disposition Policy 的独立 candidate release identity。  
 > Candidate Ref：`PR-U03-D09-001@0.2.0-candidate`  
-> 状态：`CANDIDATE_OBJECT_CREATED / FREEZE_PENDING / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
-> 本文件只创建独立 candidate identity；**不修改、不重命名、不覆盖** `PR-U03-D09-001@0.2.0-draft`。
+> 状态：`CANDIDATE_FROZEN / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
+> 本文件只定义独立 candidate identity；**不修改、不重命名、不覆盖** `PR-U03-D09-001@0.2.0-draft`。
 
 ---
 
@@ -13,10 +13,11 @@
 policy_release_id = PR-U03-D09-001
 policy_set_id = U03-D09-CLINICAL-RISK-DISPOSITION
 policy_version = 0.2.0-candidate
-status = CANDIDATE_PENDING_FREEZE
+status = CANDIDATE_FROZEN
 contract_version = U03_D09_POLICY_SCHEMA_V1
 source_draft_ref = PR-U03-D09-001@0.2.0-draft
 candidate_created_from = U03_D09_Clinical_Policy_Content_Draft_v0.2.md
+candidate_freeze_record_ref = U03_D09_Policy_Candidate_Freeze_Record_v0.2.md
 ```
 
 必须保持：
@@ -81,9 +82,9 @@ U03_D09_Coverage_Contract_v0.2.md
 
 ---
 
-## 4. Frozen Output Vocabulary Target
+## 4. Frozen Output Vocabulary
 
-若后续 candidate freeze 通过，本 candidate 只允许正式 D09 结果：
+本 candidate 冻结后只允许正式 D09 结果：
 
 ```text
 VALID + HIGH_RISK
@@ -104,9 +105,7 @@ D09 Decision != U04 Safety Gate Decision
 
 ---
 
-## 5. Precedence Target
-
-候选对象固定引用已审核 precedence：
+## 5. Frozen Precedence
 
 ```text
 P0 INTEGRITY_OR_OVERALL_SCOPE_FAILURE
@@ -156,7 +155,7 @@ blocking_eval_finding = 0
 D Pre-Freeze Eval PASS = YES
 ```
 
-这只支持 D policy candidate freeze readiness：
+这只支持 D policy candidate freeze：
 
 ```text
 D Pre-Freeze Eval PASS
@@ -169,10 +168,11 @@ D Pre-Freeze Eval PASS
 
 ## 8. Lifecycle Boundary
 
-candidate 即使后续被 freeze，也仅表示：
+当前 candidate：
 
 ```text
 RESOLVABLE_CANDIDATE
+CANDIDATE_FROZEN
 FROZEN_D09_MAPPING_FOR_C_D_E_CONSISTENCY_REVIEW
 ```
 
@@ -188,21 +188,23 @@ CD-07_AUTHORIZED
 PRODUCTION_AUTHORIZED
 ```
 
+任何后续修改必须形成新的 D09 policy candidate version，不得原地改写 `0.2.0-candidate`。
+
 ---
 
 ## 9. Current Status
 
 ```text
 PR-U03-D09-001@0.2.0-draft = PRESERVED / NOT_RENAMED
-PR-U03-D09-001@0.2.0-candidate = CREATED / RESOLVABLE
-Candidate Freeze = NOT_COMPLETE
+PR-U03-D09-001@0.2.0-candidate = RESOLVABLE / CANDIDATE_FROZEN
+Candidate Freeze = COMPLETE
 BLOCKER-FZ-D-03 = CLOSED
-BLOCKER-FZ-D-04 = OPEN / MUST_REMAIN_LAST
-CD-05 = NOT_PASSED
+BLOCKER-FZ-D-04 = CLOSED
+CD-05 = DECISION_PENDING
 Gate B = NOT_PASSED
 Gate C = NOT_PASSED
 Runtime = BLOCKED
 Production = BLOCKED
 ```
 
-下一步只允许独立执行 candidate freeze record / CD-05 decision；不得把 candidate object 的存在解释为已经冻结。
+下一步只允许执行独立 CD-05 decision；不得把 candidate freeze 解释为 Gate B/C 或 runtime authorization。
