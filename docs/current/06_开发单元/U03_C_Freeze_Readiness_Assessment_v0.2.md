@@ -2,7 +2,7 @@
 
 > 对象：`RR-U03-RISK-001@0.2.0-draft` candidate-freeze readiness。  
 > 前置：C Package Approval = `APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT`。  
-> 状态：`ASSESSMENT_COMPLETE / POLICY_PAIR_FROZEN / EVAL_MINIMUM_NOT_BUILT / FREEZE_NOT_READY / D_STILL_BLOCKED / NOT_FOR_PRODUCTION`。  
+> 状态：`ASSESSMENT_UPDATED / POLICY_PAIR_FROZEN / EVAL_FIXTURE_CONTENT_AVAILABLE / EVAL_REVIEW_PENDING / FREEZE_NOT_READY / D_STILL_BLOCKED / NOT_FOR_PRODUCTION`。  
 > 本文件只判断 candidate freeze 条件，不构成 D09 drafting authorization、Gate C PASS、Implementation Authorization 或 Production Authorization。
 
 ---
@@ -18,6 +18,7 @@ Knowledge Release Ref = KR-U03-SOURCE-001@0.1.0-candidate
 Rule predicates / thresholds = REVIEWED
 Rule-level signal vocabulary = REVIEWED
 No D09 disposition in C = CONFIRMED
+Policy Pair Freeze = PF-U03-C-POLICY-001 / CANDIDATE_FROZEN
 ```
 
 因此，本次 freeze review 不重新审核 15 条 predicate / threshold。
@@ -38,12 +39,6 @@ frozen = YES
 policy_pair_freeze_ref = PF-U03-C-POLICY-001
 ```
 
-需要确认：
-- UNKNOWN / UNMEASURED / NOT_ASKED / AMBIGUOUS / CONFLICTING / REMOTE_NOT_OBSERVED / INVALID 不得静默转 NO_MATCH；
-- scope context 不可判定或 provenance independence 不可验证时走 INPUT_INSUFFICIENT；
-- SBP optional baseline branch 与 MODHIGH rule 可并存；
-- policy 不引入 D09 disposition。
-
 当前：`CLOSED`。
 
 ### FZ-C-02 — Sepsis Shared Scope Policy
@@ -57,38 +52,52 @@ frozen = YES
 policy_pair_freeze_ref = PF-U03-C-POLICY-001
 ```
 
-需要确认：
-- age >= 16；
-- pregnancy/recent-pregnancy excluded；
-- setting = source-supported community/custodial；
-- suspected_sepsis 必须先于本 pack 执行存在；
-- current pack measurement/evidence/result 单独或组合不得建立/升级 suspected_sepsis；
-- scope unknown 与 scope mismatch 的执行语义明确。
-
 当前：`CLOSED`。
 
-### FZ-C-03 — Evaluation Refs
+### FZ-C-03 — Minimum Pre-Freeze Evaluation
 
 ```text
 manifest_ref = U03_C_EVAL_REFS_V0_2
+minimum_contract_ref = U03_C_PreFreeze_Evaluation_Minimum_v0.2.md
+fixture_pack_ref = U03_C_PreFreeze_Evaluation_Fixtures_v0.2.md
+review_record_ref = U03_C_PreFreeze_Eval_Review_Record_v0.2.md
+
 reference_structure = AVAILABLE
-evaluation_asset_ids = RESOLVABLE_IDENTITIES
-clinical_golden_case_content = NOT_STARTED
-medical_eval_review = NOT_COMPLETE
+8 / 8 asset identities = RESOLVABLE
+8 / 8 minimum fixture groups = CONTENT_AVAILABLE
+total fixtures = 57
+medical_eval_review = NOT_STARTED
+technical_eval_review = NOT_STARTED
+pre_freeze_eval_pass = NO
 independent_evaluation = NOT_READY
 ```
 
 这里必须区分：
 
 ```text
-evaluation_refs identity 可解析
-!= evaluation assets 已存在
+minimum fixture content available
+!= pre-freeze evaluation reviewed/passed
+!= Clinical EvalSet complete
 != Gate C PASS
 ```
 
-当前 manifest 已足以定义后续 eval 资产应绑定到哪里，但尚不足以证明 Rule Release candidate 经受过 evaluation。
+当前 fixture pack 已覆盖：
 
-当前：`BLOCKING_FREEZE_UNTIL_PROJECT_DEFINED_MINIMUM_EVAL_LEVEL_IS_MET`。
+```text
+15 active-rule positive paths
+numeric threshold boundaries
+valid NO_MATCH paths
+all frozen missingness states
+scope mismatch
+BF-C-04 context independence
+SBP branch coexistence
+multi-rule coexistence
+version/release mismatch
+```
+
+但在 Medical + Technical/Eval review 全部 APPROVE 且 blocking finding=0 前，不能关闭 FZ-C-03。
+
+当前：`OPEN / CONTENT_BUILT_REVIEW_PENDING`。
 
 ---
 
@@ -97,8 +106,6 @@ evaluation_refs identity 可解析
 candidate freeze 与 Gate C 不是同一个 gate。
 
 ### Candidate freeze 最低要求
-
-candidate freeze 至少必须有：
 
 ```text
 C content/scope package approval = PASS
@@ -118,12 +125,11 @@ Gate C 仍要求独立 Clinical EvalSet / Safety Suite 达到 `REVIEW_READY`，�
 因此：
 
 ```text
-candidate freeze
+Pre-Freeze Eval PASS
 != Gate C PASS
+candidate freeze
 != production eligibility
 ```
-
-但当前不能把“仅有 evaluation refs manifest”当成已经满足 candidate freeze 的 minimum evaluation requirement。
 
 ---
 
@@ -137,13 +143,13 @@ BLOCKER-FZ-C-02
 = CLOSED / U03_SEPSIS_SHARED_SCOPE_V0_2 candidate-frozen
 
 BLOCKER-FZ-C-03
-= minimum pre-freeze evaluation content/review level not yet satisfied
+= OPEN / minimum fixture content built / Medical + Technical/Eval review pending
 
 BLOCKER-FZ-C-04
-= candidate release version/freeze record not yet created
+= OPEN / candidate release version/freeze record not yet created / MUST_REMAIN_LAST
 ```
 
-注意：`BLOCKER-FZ-C-04` 只能在前三项解除后处理，不能先把 `0.2.0-draft` 改名为 candidate 来制造 freeze 已完成的假象。
+注意：`BLOCKER-FZ-C-04` 只能在 FZ-C-03 解除后处理，不能先把 `0.2.0-draft` 改名为 candidate。
 
 ---
 
@@ -151,6 +157,9 @@ BLOCKER-FZ-C-04
 
 ```text
 C Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
+PF-U03-C-POLICY-001 = CANDIDATE_FROZEN
+Minimum Pre-Freeze Fixture Content = AVAILABLE
+Pre-Freeze Eval Review = NOT_COMPLETE
 RR-U03-RISK-001@0.2.0-draft = NOT_FROZEN
 Candidate Freeze Readiness = NOT_PASSED
 CD-03 = NOT_PASSED
@@ -162,12 +171,13 @@ Gate C = NOT_PASSED
 下一步：
 
 ```text
-build minimum pre-freeze evaluation fixtures
-per U03_C_PreFreeze_Evaluation_Minimum_v0.2.md
+Medical + Technical/Eval review
+of U03_C_PreFreeze_Evaluation_Fixtures_v0.2.md
 ↓
-pre-freeze Medical + Technical/Eval review
+if blocking finding = 0
+→ close BLOCKER-FZ-C-03
 ↓
 re-run candidate freeze readiness
 ↓
-only then create RR-U03-RISK-001 candidate version
+only then handle BLOCKER-FZ-C-04 and create RR-U03-RISK-001 candidate version
 ```
