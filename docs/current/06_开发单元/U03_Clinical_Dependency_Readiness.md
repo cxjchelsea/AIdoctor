@@ -101,10 +101,10 @@ U03_C_Freeze_Readiness_Assessment_v0.2.md
 
 ```text
 BLOCKER-FZ-C-01
-= U03_C_MISSINGNESS_V0_2 review/freeze incomplete
+= U03_C_MISSINGNESS_V0_2 review complete / technical REVISE / not frozen
 
 BLOCKER-FZ-C-02
-= U03_SEPSIS_SHARED_SCOPE_V0_2 review/freeze incomplete
+= U03_SEPSIS_SHARED_SCOPE_V0_2 reviewed APPROVE / freeze held until missingness
 
 BLOCKER-FZ-C-03
 = minimum pre-freeze evaluation content/review not satisfied
@@ -134,8 +134,8 @@ candidate freeze 与 Gate C 分离：candidate freeze 需要最低 pre-freeze ev
 ```text
 policy_ref = U03_C_MISSINGNESS_V0_2
 Resolvable = YES
-Medical Review = NOT_COMPLETE
-Technical Review = NOT_COMPLETE
+Medical Review = COMPLETE_APPROVE
+Technical Review = COMPLETE_REVISE
 Frozen = NO
 ```
 
@@ -144,8 +144,8 @@ Frozen = NO
 ```text
 policy_ref = U03_SEPSIS_SHARED_SCOPE_V0_2
 Resolvable = YES
-Medical Review = NOT_COMPLETE
-Technical Review = NOT_COMPLETE
+Medical Review = COMPLETE_APPROVE
+Technical Review = COMPLETE_APPROVE
 Frozen = NO
 ```
 
@@ -153,7 +153,9 @@ Frozen = NO
 
 ```text
 U03_C_Freeze_Policy_Review_Record_v0.2.md
-= REVIEW_NOT_STARTED
+= REVIEW_COMPLETE
+/ MISSINGNESS_REVISE
+/ SHARED_SCOPE_APPROVE
 ```
 
 ### Evaluation Refs
@@ -220,20 +222,14 @@ U03 Clinical Dependency Readiness
 ## 6. 当前唯一下一步
 
 ```text
-Medical + Technical review
-of
-U03_C_MISSINGNESS_V0_2
-and
-U03_SEPSIS_SHARED_SCOPE_V0_2
+Revise U03_C_MISSINGNESS_V0_2
+per U03_C_Missingness_Policy_Revision_Task_v0.2.md
 ↓
-if both approved, freeze those policy objects
+re-review M2 only
 ↓
-build minimum pre-freeze evaluation assets
-per U03_C_PreFreeze_Evaluation_Minimum_v0.2.md
+if both policies APPROVE, freeze those policy objects together
 ↓
-pre-freeze eval review
-↓
-re-run RR-U03-RISK-001 candidate freeze readiness
+then build minimum pre-freeze evaluation assets
 ```
 
 ## 7. 当前禁止事项

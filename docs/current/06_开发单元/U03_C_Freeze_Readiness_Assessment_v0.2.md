@@ -31,8 +31,8 @@ No D09 disposition in C = CONFIRMED
 ```text
 policy_ref = U03_C_MISSINGNESS_V0_2
 object = RESOLVABLE
-medical_review = NOT_COMPLETE
-technical_review = NOT_COMPLETE
+medical_review = COMPLETE_APPROVE
+technical_review = COMPLETE_REVISE
 frozen = NO
 ```
 
@@ -42,15 +42,15 @@ frozen = NO
 - SBP optional baseline branch 与 MODHIGH rule 可并存；
 - policy 不引入 D09 disposition。
 
-当前：`BLOCKING_FREEZE`。
+当前：`BLOCKING_FREEZE / M2_MEASUREMENT_STATE_MAPPING_INCOMPLETE`。
 
 ### FZ-C-02 — Sepsis Shared Scope Policy
 
 ```text
 policy_ref = U03_SEPSIS_SHARED_SCOPE_V0_2
 object = RESOLVABLE
-medical_review = NOT_COMPLETE
-technical_review = NOT_COMPLETE
+medical_review = COMPLETE_APPROVE
+technical_review = COMPLETE_APPROVE
 frozen = NO
 ```
 
@@ -62,7 +62,7 @@ frozen = NO
 - current pack measurement/evidence/result 单独或组合不得建立/升级 suspected_sepsis；
 - scope unknown 与 scope mismatch 的执行语义明确。
 
-当前：`BLOCKING_FREEZE`。
+当前：`REVIEWED_APPROVE / FREEZE_HELD_UNTIL_MISSINGNESS_APPROVE`。
 
 ### FZ-C-03 — Evaluation Refs
 
@@ -159,13 +159,13 @@ Gate C = NOT_PASSED
 下一步：
 
 ```text
-review U03_C_MISSINGNESS_V0_2
-+
-review U03_SEPSIS_SHARED_SCOPE_V0_2
+revise U03_C_MISSINGNESS_V0_2
+per U03_C_Missingness_Policy_Revision_Task_v0.2.md
 ↓
-freeze policy objects only if both reviews approve
+re-review M2 only
 ↓
-define/build minimum pre-freeze evaluation assets under U03_C_EVAL_REFS_V0_2
+if both policies APPROVE
+→ freeze the two policy objects together
 ↓
-then re-run candidate freeze readiness
+then build minimum pre-freeze evaluation fixtures
 ```

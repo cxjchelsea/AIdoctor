@@ -1,7 +1,7 @@
 # U03 C Missingness Policy v0.2
 
 > Policy ID：`U03_C_MISSINGNESS_V0_2`  
-> 状态：`RESOLVABLE_DRAFT / REVIEW_REQUIRED / NOT_FROZEN / NOT_FOR_PRODUCTION`  
+> 状态：`RESOLVABLE_DRAFT / REVIEW_COMPLETE / TECHNICAL_REVISE / NOT_FROZEN / NOT_FOR_PRODUCTION`  
 > 目的：把 C v0.2 中已经写入各 rule 的 missingness 语义变成可解析对象，供后续 candidate-freeze 审查引用。  
 > 本文件不新增医学阈值、rule 或 D09 disposition。
 
@@ -149,8 +149,8 @@ U03_C_BF_C_04_Closure_Amendment_v0.2.md
 ```text
 policy_ref = U03_C_MISSINGNESS_V0_2
 Resolvable Object = YES
-Medical Review = NOT_COMPLETE
-Technical Review = NOT_COMPLETE
+Medical Review = COMPLETE_APPROVE
+Technical Review = COMPLETE_REVISE
 Frozen = NO
 Production Eligible = NO
 ```
