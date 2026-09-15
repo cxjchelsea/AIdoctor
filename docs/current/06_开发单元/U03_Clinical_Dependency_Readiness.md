@@ -29,21 +29,18 @@ failure semantics = AVAILABLE
 ```text
 A Clinical Risk Semantics
 = STRUCTURAL_SEMANTICS_FROZEN
-/ SOURCE_GROUNDED_CONTENT_DRAFT_v0.1_AVAILABLE
-/ SOURCE_REVIEW_PASS_FOR_MEDICAL_OWNER_REVIEW
-/ MEDICAL_OWNER_REVIEW_RECORD_v0.1_COMPLETE
-/ A_APPROVE_2_REVISE_4
-/ CONTENT_DRAFT_v0.2_REVISION_REQUIRED
+/ CONTENT_DRAFT_v0.2_AVAILABLE
+/ SECOND_MEDICAL_OWNER_REVIEW_COMPLETE
+/ A_APPROVE_6_REVISE_1
+/ A-RS-02A_SCOPE_FIX_APPLIED_CONFIRMATION_PENDING
 / NOT_APPROVED
 
 B Evidence Catalog
 = STRUCTURAL_SCHEMA_FROZEN
-/ SOURCE_GROUNDED_CONTENT_DRAFT_v0.1_AVAILABLE
-/ 11 CANDIDATE ENTRIES
-/ SOURCE_REVIEW_PASS_FOR_MEDICAL_OWNER_REVIEW
-/ MEDICAL_OWNER_REVIEW_RECORD_v0.1_COMPLETE
-/ B_APPROVE_4_REVISE_6_NEED_MORE_SOURCE_1
-/ CONTENT_DRAFT_v0.2_REVISION_REQUIRED
+/ CONTENT_DRAFT_v0.2_AVAILABLE
+/ SECOND_MEDICAL_OWNER_REVIEW_COMPLETE
+/ B_APPROVE_10_REVISE_1
+/ EV-RF-NEURO-001_SCOPE_FIX_APPLIED_CONFIRMATION_PENDING
 / NOT_APPROVED
 
 C Safety-critical Risk Rule Pack
@@ -59,39 +56,35 @@ F Risk EvalSet / Safety Suite
 = STRUCTURAL_SCHEMA_FROZEN / GOLDEN_CASE_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / EVALUATION_OWNER_REVIEW_REQUIRED / NOT_REVIEW_READY
 ```
 
-A/B v0.1 已完成 Medical Owner Review，但不能整包批准；下一动作是 A/B Content Draft v0.2 修订。C/D/E/F 仍未完成真实内容，本轮不授权进入 C。
+A/B v0.2 已完成第二轮 Medical Owner Review。上一轮主要病因先验与 sepsis scope 问题已经闭合；当前仅剩 A-RS-02A 与 EV-RF-NEURO-001 的定向 scope 修订等待 Medical Owner 确认。C/D/E/F 仍无真实临床内容，本轮不授权进入 C。
 
 ---
 
-## 3. A/B review 结果
+## 3. A/B 第二轮 review 结果
 
-当前审核工作材料：
+当前权威审核材料：
 
 ```text
-U03_Clinical_Risk_Semantics_Content_Draft_v0.1.md
-U03_Evidence_Catalog_Content_Draft_v0.1.md
-U03_AB_Source_Review_v0.1.md
-U03_AB_Medical_Review_Recommendation_v0.1.md
-U03_AB_Medical_Owner_Review_Record_v0.1.md
-U03_AB_Revision_Task_v0.2.md
+U03_Clinical_Risk_Semantics_Content_Draft_v0.2.md
+U03_Evidence_Catalog_Content_Draft_v0.2.md
+U03_AB_Medical_Owner_Review_Record_v0.2.md
+U03_AB_Medical_Review_Status.md
 ```
 
-条目计数以 Review Record 为准，不再使用 Recommendation v0.1 的 3/7 APPROVE 计数：
+当前计数：
 
 ```text
-A: APPROVE 2 / REVISE 4 / REJECT 0 / NEED_MORE_SOURCE 0
-B: APPROVE 4 / REVISE 6 / REJECT 0 / NEED_MORE_SOURCE 1
-Source-supported for review: A 6/6, B 11/11
+A: APPROVE 6 / REVISE 1 / REJECT 0 / NEED_MORE_SOURCE 0
+B: APPROVE 10 / REVISE 1 / REJECT 0 / NEED_MORE_SOURCE 0
 Medical Owner Approval = NOT_COMPLETE
 Production Eligibility = NO
 ```
 
-主要待决问题：
-- v0.1 正文仍保留病因命名与过宽 infection-context，必须先完成 v0.2 修订；
-- 通用 new altered mental state 若要扩大为跨病种全局 red flag，须补更直接的通用急性病来源，否则收窄 scope；
-- 成人来源不能扩展到儿科、妊娠/近期妊娠；
-- 生命体征具体阈值留在 C Rule Pack，不由 B Catalog 承担；
-- NICE/NHS 初始来源最终仍需根据目标地区做 localization adjudication。
+当前残留仅为：
+- A-RS-02A：默认 scope 已锁定到 NG253 suspected sepsis 上下文与 NHS Shortness of breath 所描述的严重呼吸困难急诊警示上下文；等待确认；
+- EV-RF-NEURO-001：同样已锁定到明确来源上下文；未来若申请全局 RED_FLAG，仍需额外通用来源与重新审核。
+
+`NEED_MORE_SOURCE` 不再作为 EV-RF-NEURO-001 当前条目的 verdict，只作为未来“全局升格”的前置条件。
 
 ---
 
@@ -104,7 +97,7 @@ CD-01 APPROVED
 CD-02 APPROVED
 ```
 
-当前：`NOT_PASSED`。A/B v0.1 review 已完成，但因 REVISE / NEED_MORE_SOURCE 未清零，仍未达到 semantics frozen。
+当前：`NOT_PASSED`。原因已经从“v0.2 尚未产出”收敛为“两条定向 scope 修订待 Medical Owner confirmation”。
 
 ### Gate B — Governed Content Ready
 
@@ -141,9 +134,10 @@ Implementation Authorization
 ```text
 Engineering Prerequisites = PASS
 Clinical Structural Definitions = COMPLETE_FOR_SCHEMA_LAYER
-A/B Source-grounded Content = AVAILABLE / REVIEWED_FOR_SOURCE_CONSISTENCY
-A/B Medical Owner Review Record v0.1 = COMPLETE
-A/B Content Draft v0.2 Revision = REQUIRED / NOT_STARTED
+A/B Content Draft v0.2 = AVAILABLE
+A/B Second Medical Owner Review = COMPLETE
+A-RS-02A Scope Confirmation = PENDING
+EV-RF-NEURO-001 Scope Confirmation = PENDING
 Medical Owner Approval = NOT_COMPLETE
 Governed Clinical Content = NOT_COMPLETE
 Clinical Evaluation Content = NOT_COMPLETE
@@ -164,16 +158,16 @@ U03 Clinical Dependency Readiness
 
 ## 6. 下一步
 
-当前最合理的下一步是：
+当前唯一允许的临床内容动作：
 
 ```text
-Execute U03_AB_Revision_Task_v0.2.md
+Medical Owner confirm A-RS-02A targeted scope revision
++
+Medical Owner confirm EV-RF-NEURO-001 targeted scope revision
 ↓
-produce A/B Content Draft v0.2
+若两条均明确 APPROVE
 ↓
-re-review revised entries
-↓
-only approved B entries may enter C Rule Pack content design
+重新判定 Gate A
 ```
 
-不得进入 C/D/E/F 真实临床内容。不得把 Review Record 中的 APPROVE 条目直接提升为 Rule Pack 或生产规则。不得由工程侧自行把 A/B 标记为 APPROVED。
+确认前不得进入 C/D/E/F 真实临床内容，不得把任何 B 条目提升为 Rule Pack 或生产规则。
