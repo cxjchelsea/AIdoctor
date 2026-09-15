@@ -44,13 +44,15 @@ PRODUCTION AUTHORIZATION = NOT_IMPLIED
 
 ## 3. 非权威临床内容 / 审核工作材料
 
-以下文件是 source-grounded draft、review recommendation 或 revision status，只用于支持 Medical Owner review；不得被实现、测试或 Runtime 当成已批准生产临床内容：
+以下文件是 source-grounded draft、历史审稿意见、本轮 review record、修订任务或状态快照，只用于 A/B 审核与 v0.2 修订；不得被实现、测试或 Runtime 当成已批准生产临床内容：
 
 ```text
 U03_Clinical_Risk_Semantics_Content_Draft_v0.1.md
 U03_Evidence_Catalog_Content_Draft_v0.1.md
 U03_AB_Source_Review_v0.1.md
 U03_AB_Medical_Review_Recommendation_v0.1.md
+U03_AB_Medical_Owner_Review_Record_v0.1.md
+U03_AB_Revision_Task_v0.2.md
 U03_AB_Medical_Review_Status.md
 U03_AB_Revision_Status_v0.2.md
 ```
@@ -69,7 +71,9 @@ RULE_PACK_PROMOTION = BLOCKED_UNTIL_APPROVAL
 ## 4. 当前 Gate
 
 ```text
-A/B Medical Owner Review = PENDING
+A/B Medical Owner Review Record v0.1 = COMPLETE
+A/B Package Approval = NOT_COMPLETE
+A/B Content Draft v0.2 Revision = REQUIRED
 C Rule Pack Clinical Content = BLOCKED
 D D09 Production Clinical Policy = BLOCKED
 E Knowledge Applicability / Content Approval = PENDING
@@ -102,4 +106,6 @@ Production Authorization = GRANTED
 
 ## 6. 下一步
 
-下一 Gate 仍为 Medical Owner 对 A/B 的逐条审核与签署。只有明确批准的临床内容才允许被提升到后续 C/D/E/F governed content 或工程实现输入。
+下一动作是按 `U03_AB_Revision_Task_v0.2.md` 产出 A/B Content Draft v0.2 并再审。只有再审后明确批准的 B entries 才允许进入 C。本轮不进入 C/D/E/F 真实临床内容。
+
+A/B 条目计数以 `U03_AB_Medical_Owner_Review_Record_v0.1.md` 为准；Recommendation v0.1 只保留为历史审稿意见。

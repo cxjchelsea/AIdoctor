@@ -31,7 +31,9 @@ A Clinical Risk Semantics
 = STRUCTURAL_SEMANTICS_FROZEN
 / SOURCE_GROUNDED_CONTENT_DRAFT_v0.1_AVAILABLE
 / SOURCE_REVIEW_PASS_FOR_MEDICAL_OWNER_REVIEW
-/ MEDICAL_OWNER_REVIEW_REQUIRED
+/ MEDICAL_OWNER_REVIEW_RECORD_v0.1_COMPLETE
+/ A_APPROVE_2_REVISE_4
+/ CONTENT_DRAFT_v0.2_REVISION_REQUIRED
 / NOT_APPROVED
 
 B Evidence Catalog
@@ -39,7 +41,9 @@ B Evidence Catalog
 / SOURCE_GROUNDED_CONTENT_DRAFT_v0.1_AVAILABLE
 / 11 CANDIDATE ENTRIES
 / SOURCE_REVIEW_PASS_FOR_MEDICAL_OWNER_REVIEW
-/ MEDICAL_OWNER_REVIEW_REQUIRED
+/ MEDICAL_OWNER_REVIEW_RECORD_v0.1_COMPLETE
+/ B_APPROVE_4_REVISE_6_NEED_MORE_SOURCE_1
+/ CONTENT_DRAFT_v0.2_REVISION_REQUIRED
 / NOT_APPROVED
 
 C Safety-critical Risk Rule Pack
@@ -55,31 +59,36 @@ F Risk EvalSet / Safety Suite
 = STRUCTURAL_SCHEMA_FROZEN / GOLDEN_CASE_CONTENT_PENDING / MEDICAL_OWNER_REVIEW_REQUIRED / EVALUATION_OWNER_REVIEW_REQUIRED / NOT_REVIEW_READY
 ```
 
-A/B 已进入真实、来源可追溯的医学内容草案阶段；C/D/E/F 仍未完成真实内容。
+A/B v0.1 已完成 Medical Owner Review，但不能整包批准；下一动作是 A/B Content Draft v0.2 修订。C/D/E/F 仍未完成真实内容，本轮不授权进入 C。
 
 ---
 
-## 3. A/B source review 结果
+## 3. A/B review 结果
 
-新增：
+当前审核工作材料：
 
 ```text
 U03_Clinical_Risk_Semantics_Content_Draft_v0.1.md
 U03_Evidence_Catalog_Content_Draft_v0.1.md
 U03_AB_Source_Review_v0.1.md
+U03_AB_Medical_Review_Recommendation_v0.1.md
+U03_AB_Medical_Owner_Review_Record_v0.1.md
+U03_AB_Revision_Task_v0.2.md
 ```
 
-当前 source review 结论：
+条目计数以 Review Record 为准，不再使用 Recommendation v0.1 的 3/7 APPROVE 计数：
 
 ```text
-A: 6/6 source-supported for medical review
-B: 11/11 source-supported for medical review
-Medical Owner Approval = 0
+A: APPROVE 2 / REVISE 4 / REJECT 0 / NEED_MORE_SOURCE 0
+B: APPROVE 4 / REVISE 6 / REJECT 0 / NEED_MORE_SOURCE 1
+Source-supported for review: A 6/6, B 11/11
+Medical Owner Approval = NOT_COMPLETE
 Production Eligibility = NO
 ```
 
 主要待决问题：
-- 通用 new altered mental state 若要扩大为跨病种全局 red flag，建议补更直接的通用急性病来源；
+- v0.1 正文仍保留病因命名与过宽 infection-context，必须先完成 v0.2 修订；
+- 通用 new altered mental state 若要扩大为跨病种全局 red flag，须补更直接的通用急性病来源，否则收窄 scope；
 - 成人来源不能扩展到儿科、妊娠/近期妊娠；
 - 生命体征具体阈值留在 C Rule Pack，不由 B Catalog 承担；
 - NICE/NHS 初始来源最终仍需根据目标地区做 localization adjudication。
@@ -95,7 +104,7 @@ CD-01 APPROVED
 CD-02 APPROVED
 ```
 
-当前：`NOT_PASSED`，但 A/B 已达到 `READY_FOR_MEDICAL_OWNER_REVIEW`。
+当前：`NOT_PASSED`。A/B v0.1 review 已完成，但因 REVISE / NEED_MORE_SOURCE 未清零，仍未达到 semantics frozen。
 
 ### Gate B — Governed Content Ready
 
@@ -133,6 +142,8 @@ Implementation Authorization
 Engineering Prerequisites = PASS
 Clinical Structural Definitions = COMPLETE_FOR_SCHEMA_LAYER
 A/B Source-grounded Content = AVAILABLE / REVIEWED_FOR_SOURCE_CONSISTENCY
+A/B Medical Owner Review Record v0.1 = COMPLETE
+A/B Content Draft v0.2 Revision = REQUIRED / NOT_STARTED
 Medical Owner Approval = NOT_COMPLETE
 Governed Clinical Content = NOT_COMPLETE
 Clinical Evaluation Content = NOT_COMPLETE
@@ -156,11 +167,13 @@ U03 Clinical Dependency Readiness
 当前最合理的下一步是：
 
 ```text
-Medical Owner review A/B
+Execute U03_AB_Revision_Task_v0.2.md
 ↓
-approve / revise / reject individual entries
+produce A/B Content Draft v0.2
+↓
+re-review revised entries
 ↓
 only approved B entries may enter C Rule Pack content design
 ```
 
-若暂时没有医学 Owner，可继续做来源扩充、地区本地化资料整理和 review package 准备，但不得由工程侧自行把 A/B 标记为 APPROVED。
+不得进入 C/D/E/F 真实临床内容。不得把 Review Record 中的 APPROVE 条目直接提升为 Rule Pack 或生产规则。不得由工程侧自行把 A/B 标记为 APPROVED。
