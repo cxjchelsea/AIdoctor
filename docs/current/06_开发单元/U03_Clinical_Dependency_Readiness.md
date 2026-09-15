@@ -50,9 +50,12 @@ E Knowledge Release Manifest
 / KD-U03-01_CONTENT_DRAFT_v0.1_AVAILABLE
 / SOURCE_METADATA_VERIFICATION_COMPLETE_FOR_CURRENT_6_SOURCES
 / LOCKED_CLINICAL_CONTEXT_APPLIED
+/ OWNER_ASSIGNMENT_GATE_DEFINED
 / OWNER_ASSIGNMENT_NOT_COMPLETE
-/ KNOWLEDGE_RELEASE_REVIEW_NOT_COMPLETE
-/ KNOWLEDGE_RELEASE_FREEZE_NOT_COMPLETE
+/ FORMAL_REVIEW_RECORD_DEFINED
+/ KNOWLEDGE_RELEASE_REVIEW_NOT_STARTED
+/ FREEZE_READINESS_GATE_DEFINED
+/ KNOWLEDGE_RELEASE_FREEZE_NOT_PASSED
 / NOT_PUBLISHED
 
 F Risk EvalSet / Safety Suite
@@ -86,14 +89,23 @@ C/D/E cross-consistency = PASS
 
 当前：`NOT_PASSED`
 
-当前 Gate B 主 blocker 已从 source metadata 收敛为：
+当前 Gate B 主 blocker：
 
 ```text
 KR curation owner = PENDING_ASSIGNMENT
 KR clinical review owner = PENDING_ASSIGNMENT
 KR technical review owner = PENDING_ASSIGNMENT
-KR formal content/governance review = NOT_COMPLETE
+KR formal content/governance review = NOT_STARTED
+KR freeze readiness = NOT_PASSED
 KR frozen candidate = NOT_AVAILABLE
+```
+
+治理记录：
+
+```text
+U03_KR_Governance_Owner_Assignment_v0.1.md
+U03_KR_Formal_Review_Record_v0.1.md
+U03_KR_Freeze_Readiness_v0.1.md
 ```
 
 当前 `KR-U03-SOURCE-001@0.1.0-draft` 仍然：
@@ -133,9 +145,12 @@ E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
 KD-U03-01 Knowledge Release Draft = AVAILABLE
 KD-U03-01 Source Metadata Verification = COMPLETE_FOR_CURRENT_6_SOURCES
 KD-U03-01 Locked Clinical Context = APPLIED
+KD-U03-01 Governance Owner Gate = DEFINED
 KD-U03-01 Owner Assignment = NOT_COMPLETE
-KD-U03-01 Review = NOT_COMPLETE
-KD-U03-01 Freeze = NOT_COMPLETE
+KD-U03-01 Formal Review Record = DEFINED
+KD-U03-01 Review = NOT_STARTED / BLOCKED_BY_OWNER_ASSIGNMENT
+KD-U03-01 Freeze Readiness Gate = DEFINED
+KD-U03-01 Freeze Readiness = NOT_PASSED
 KD-U03-01 Publication = NOT_COMPLETE
 
 C Clinical Rule Content = NOT_STARTED / BLOCKED
@@ -166,7 +181,9 @@ Assign KR curation / clinical / technical review owners
 ↓
 formal review of U03_Knowledge_Release_Content_Draft_v0.1.md
 ↓
-if approved, freeze a resolvable KR-U03-SOURCE-001 candidate
+if all reviews approve, evaluate U03_KR_Freeze_Readiness_v0.1.md
+↓
+only then freeze a resolvable KR-U03-SOURCE-001 candidate
 ```
 
 不得在此之前进入 C Rule Pack 的真实医学阈值、组合规则或 D09 branch。
@@ -180,4 +197,5 @@ if approved, freeze a resolvable KR-U03-SOURCE-001 candidate
 - 不打开儿科或孕产 source pack；
 - 不把 Gate A PASS 或 E applicability approval 解释为整包 Medical Owner Approval；
 - 不以模型常识、实时网页、mutable RAG 或未版本化内容绕过 KD-U03-01；
-- 不把 `KR-U03-SOURCE-001@0.1.0-draft` 作为 C 的 frozen knowledge ref。
+- 不把 `KR-U03-SOURCE-001@0.1.0-draft` 作为 C 的 frozen knowledge ref；
+- 不在 owner assignment / formal review 完成前把 KR 标记为 REVIEW_READY 或 FROZEN。
