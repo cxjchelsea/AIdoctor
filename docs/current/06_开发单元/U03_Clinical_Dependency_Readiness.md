@@ -1,7 +1,7 @@
 # U03 Clinical Dependency Readiness
 
 > 阶段：U03 Clinical Dependency Completion / Readiness  
-> 基线：`impl/u03-current-version-risk-assessment@b6913433b72a7156855db048f524efdd5175abd6`  
+> 基线：`main@765fb9ca1178c47a6ecfc660bd650edb5bffaf8b`（包含 PR #86 + #87）  
 > 本文件判断是否可以进入真实 C02/D09 临床依赖实现；不构成 Implementation Authorization。
 
 ---
