@@ -2,7 +2,7 @@
 
 > 对象：Clinical Input Package C / Safety-critical Risk Rule Pack 修订临床内容草案。  
 > 权威输入：`U03_C_Medical_Owner_Review_Record_v0.1.md`、`U03_C_Revision_Task_v0.1.md`。  
-> 状态：`REVISION_DRAFT_REVIEWED / RULE_LEVEL_APPROVED / PACKAGE_SCOPE_CONTEXT_REVISE / NOT_APPROVED / NOT_FROZEN / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
+> 状态：`REVISION_DRAFT_REVIEWED / RULE_LEVEL_APPROVED / BF-C-04_CLOSED / PACKAGE_APPROVED_FOR_CONTENT / NOT_FROZEN / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
 > 前置：Gate A = PASS；`KR-U03-SOURCE-001@0.1.0-candidate` = frozen resolvable candidate for C drafting。  
 > 本文件只定义 C 层 executable rule candidate；不形成 D09 disposition，不形成 U04 Safety Gate，不构成 Implementation Authorization。
 
@@ -638,7 +638,8 @@ Knowledge Release Ref = KR-U03-SOURCE-001@0.1.0-candidate
 Medical Re-review = COMPLETE
 Technical Re-review = COMPLETE
 Active-rule APPROVE = 15 / REVISE = 0
-Package remaining blocker = BF-C-04
+Package remaining blocker = NONE_FOR_CONTENT
+BF-C-04 = CLOSED
 Initial Rule Release Freeze = NOT_COMPLETE
 CD-03 = NOT_PASSED
 
@@ -649,4 +650,4 @@ U04 = BLOCKED
 Production = BLOCKED
 ```
 
-下一步：按 `U03_C_Revision_Task_v0.2.md` 关闭 BF-C-04。在 package REVISE 清零并再确认 freeze 卫生条件前，不冻结 `RR-U03-RISK-001` candidate，不开始 D09。
+下一步：独立进行 candidate-freeze readiness。在 missingness / shared-scope / evaluation refs 达到 freeze 水位前，不冻结 `RR-U03-RISK-001` candidate，不开始 D09。

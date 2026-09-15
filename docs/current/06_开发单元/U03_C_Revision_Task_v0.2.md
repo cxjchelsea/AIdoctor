@@ -2,7 +2,7 @@
 
 > 权威输入：`U03_C_Medical_Owner_ReReview_Record_v0.2.md`  
 > 目标：在 C v0.2 上关闭 BF-C-04，不必重写 15 条已批准 rule。  
-> 状态：`PACKAGE_REVISION_REQUIRED / FREEZE_BLOCKED / D_STILL_BLOCKED`
+> 状态：`REVISION_TASK_COMPLETE / BF-C-04_CLOSED / FREEZE_STILL_BLOCKED / D_STILL_BLOCKED`
 
 v0.1 的 3 个 blocker 已关闭。本任务只处理再审新发现的 scope-context 独立性。
 

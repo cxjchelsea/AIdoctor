@@ -58,6 +58,11 @@ U03_C_Revision_Task_v0.1.md
 U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.2.md
 U03_C_Medical_Owner_ReReview_Record_v0.2.md
 U03_C_Revision_Task_v0.2.md
+U03_C_BF_C_04_Closure_Amendment_v0.2.md
+U03_C_Missingness_Policy_v0.2.md
+U03_Sepsis_Shared_Scope_Policy_v0.2.md
+U03_C_Evaluation_Refs_Manifest_v0.2.md
+U03_C_Package_Reconfirmation_Record_v0.2.md
 ```
 
 ## 4. 当前 Gate
@@ -72,7 +77,7 @@ A/B v0.2 Source-locked Semantics = FROZEN
 
 Medical Owner Approval = NOT_COMPLETE
 Clinical Input Package = NOT_COMPLETE
-C Rule Pack Clinical Content = DRAFT_v0.2_REVIEWED / RULE_LEVEL_APPROVED / PACKAGE_REVISE_BF-C-04
+C Rule Pack Clinical Content = PACKAGE_APPROVED_FOR_CONTENT / BF-C-04_CLOSED / NOT_FROZEN
 D D09 Production Clinical Policy = BLOCKED_UNTIL_C_VOCABULARY
 E Applicability = APPROVED
 E KR REVIEW_READY = YES

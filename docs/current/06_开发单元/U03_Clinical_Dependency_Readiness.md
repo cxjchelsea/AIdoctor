@@ -45,15 +45,16 @@ C Safety-critical Risk Rule Pack
 / BF-C-01_CLOSED
 / BF-C-02_CLOSED
 / BF-C-03_CLOSED
-/ BF-C-04_REVISION_APPLIED
-/ PACKAGE_RECONFIRMATION_REQUIRED
+/ BF-C-04_CLOSED
+/ PACKAGE_RECONFIRMATION_COMPLETE
+/ PACKAGE_APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
 / MISSINGNESS_POLICY_OBJECT_AVAILABLE
 / SEPSIS_SHARED_SCOPE_POLICY_OBJECT_AVAILABLE
 / EVALUATION_REFS_MANIFEST_AVAILABLE
 / INITIAL_RULE_RELEASE_FREEZE_NOT_COMPLETE
 
 D D09 Clinical Policy Table
-= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_POLICY_CONTENT_NOT_STARTED / BLOCKED_UNTIL_C_PACKAGE_APPROVAL_AND_FREEZE
+= STRUCTURAL_SCHEMA_FROZEN / CLINICAL_POLICY_CONTENT_NOT_STARTED / BLOCKED_UNTIL_C_CANDIDATE_FREEZE
 
 E Knowledge Release Manifest
 = STRUCTURAL_SCHEMA_FROZEN
@@ -95,27 +96,12 @@ C/D/E cross-consistency = PASS
 
 当前：`NOT_PASSED`
 
-当前 C package blocker 已收敛为：
+当前 C package 内容门已通过；剩余 blocker 已转到 freeze hygiene：
 
 ```text
-BF-C-04 amendment = APPLIED
-Package-level Medical / Technical Reconfirmation = NOT_COMPLETE
-```
-
-BF-C-04 补丁：
-
-```text
-U03_C_BF_C_04_Closure_Amendment_v0.2.md
-```
-
-其强制不变量：
-
-```text
-suspected_sepsis
-AND NHS dyspnoea emergency warning context
-必须先于当前 RR-U03-RISK-001 执行独立存在
-并有独立 provenance
-不得由当前 pack 的 evidence / criterion / rule result 建立或升级
+BF-C-04 amendment = CLOSED
+C Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
+Candidate freeze readiness = NOT_COMPLETE
 ```
 
 C freeze 卫生对象当前为：
@@ -170,9 +156,9 @@ KD-U03-01 Knowledge Release Candidate
 C Content Draft v0.2 = AVAILABLE
 C Active-rule Review = COMPLETE
 C Active-rule APPROVE = 15 / REVISE = 0
-C BF-C-04 Revision = APPLIED
-C Package Reconfirmation = NOT_COMPLETE
-C Package Approval = NOT_COMPLETE
+C BF-C-04 = CLOSED
+C Package Reconfirmation = COMPLETE
+C Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
 C Initial Rule Release Freeze = NOT_COMPLETE
 CD-03 = NOT_PASSED
 
@@ -204,14 +190,11 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-Medical + Technical package reconfirmation
-for BF-C-04 amendment
-↓
-if APPROVE
-→ C Package Approval may be reconsidered
-↓
-then separate candidate-freeze readiness review
-for missingness/scope/evaluation refs
+Independent candidate-freeze readiness review
+for
+U03_C_MISSINGNESS_V0_2
+U03_SEPSIS_SHARED_SCOPE_V0_2
+U03_C_EVAL_REFS_V0_2
 ↓
 only after candidate freeze
 → reassess D drafting readiness
@@ -223,7 +206,8 @@ only after candidate freeze
 - 不把 `RR-U03-RISK-001@0.2.0-draft` 当作 frozen/runtime rule release；
 - 不把 `U03_C_MISSINGNESS_V0_2` / `U03_SEPSIS_SHARED_SCOPE_V0_2` 的“可解析”误当成“已审核冻结”；
 - 不把 evaluation ref identity 的存在误当成 EvalSet 已完成；
-- D 不得先于 C package approval + candidate freeze 开始；
+- 不把 C Package Approval 误当成 candidate freeze 或 D09 授权；
+- D 不得先于 C candidate freeze 开始；
 - 不新增未经过 A/B 审核链的医学来源或 evidence；
 - 不把 NICE/NHS 直接视为中国生产规则；
 - 不打开儿科或孕产 source pack；

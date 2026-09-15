@@ -2,7 +2,7 @@
 
 > 对象：`U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.2.md` 的 package-level scope-context 独立性补丁。  
 > 权威输入：`U03_C_Medical_Owner_ReReview_Record_v0.2.md`、`U03_C_Revision_Task_v0.2.md`。  
-> 状态：`REVISION_APPLIED / PACKAGE_RECONFIRMATION_REQUIRED / NOT_FROZEN / D_STILL_BLOCKED`。  
+> 状态：`REVISION_APPLIED / PACKAGE_RECONFIRMATION_COMPLETE / BF-C-04_CLOSED / PACKAGE_APPROVED_FOR_CONTENT / NOT_FROZEN / D_STILL_BLOCKED`。  
 > 本补丁不改写 15 条已 APPROVE active rule 的 predicate / threshold；只补充所有相关 rule 必须共同遵守的 scope-context provenance 约束。
 
 ---
@@ -199,8 +199,8 @@ scope_context provenance must be independent from current pack criteria/results
 
 ```text
 15 active-rule medical verdicts = UNCHANGED
-BF-C-04 = REVISION_APPLIED
-Package Approval = RECONFIRMATION_REQUIRED
+BF-C-04 = CLOSED
+Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
 ```
 
 ---
@@ -234,15 +234,15 @@ context 必须作为已存在、可追溯、独立于本 pack 的输入被消费
 BF-C-01 = CLOSED
 BF-C-02 = CLOSED
 BF-C-03 = CLOSED
-BF-C-04 = REVISION_APPLIED / RECONFIRMATION_REQUIRED
+BF-C-04 = CLOSED
 
 Active rule APPROVE = 15
 Active rule REVISE = 0
+C Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
 
 RR-U03-RISK-001@0.2.0-draft = NOT_FROZEN
-Package Approval = NOT_COMPLETE
 D = STILL_BLOCKED
 Gate B = NOT_PASSED
 ```
 
-下一步只能对本 amendment 做 package-level Medical / Technical reconfirmation。通过后才重新评估 package approval；candidate freeze 仍需独立检查 missingness/scope policy refs 与 evaluation refs。
+下一步是独立的 candidate-freeze readiness：审查并冻结 missingness / shared-scope policy，以及确认 evaluation refs 达到项目定义的 freeze 水位。在此之前不开始 D09。
