@@ -38,7 +38,6 @@ B Evidence Catalog
 
 C Safety-critical Risk Rule Pack
 = STRUCTURAL_SCHEMA_FROZEN
-/ CONTENT_DRAFT_v0.1_REVIEW_COMPLETE
 / CONTENT_DRAFT_v0.2_AVAILABLE
 / ACTIVE_RULE_CANDIDATES_15
 / ACTIVE_RULE_APPROVE_15_REVISE_0
@@ -48,9 +47,8 @@ C Safety-critical Risk Rule Pack
 / BF-C-04_CLOSED
 / PACKAGE_RECONFIRMATION_COMPLETE
 / PACKAGE_APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
-/ MISSINGNESS_POLICY_OBJECT_AVAILABLE
-/ SEPSIS_SHARED_SCOPE_POLICY_OBJECT_AVAILABLE
-/ EVALUATION_REFS_MANIFEST_AVAILABLE
+/ CANDIDATE_FREEZE_READINESS_ASSESSED
+/ CANDIDATE_FREEZE_NOT_READY
 / INITIAL_RULE_RELEASE_FREEZE_NOT_COMPLETE
 
 D D09 Clinical Policy Table
@@ -83,69 +81,105 @@ B APPROVE = 11 / REVISE = 0
 
 ### Gate B — Governed Content Ready
 
-目标：
-
-```text
-CD-03 APPROVED
-CD-04 initial release READY
-CD-05 APPROVED
-E applicability = APPROVED
-KD-U03-01 Knowledge Release = REVIEWED / RESOLVABLE
-C/D/E cross-consistency = PASS
-```
-
 当前：`NOT_PASSED`
 
-当前 C package 内容门已通过；剩余 blocker 已转到 freeze hygiene：
+C package 内容门已通过，但 candidate freeze 尚未通过：
 
 ```text
-BF-C-04 amendment = CLOSED
 C Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
-Candidate freeze readiness = NOT_COMPLETE
+RR-U03-RISK-001@0.2.0-draft = NOT_FROZEN
+Candidate Freeze Readiness = NOT_PASSED
 ```
 
-C freeze 卫生对象当前为：
+正式 freeze assessment：
 
 ```text
-U03_C_MISSINGNESS_V0_2
-= RESOLVABLE_DRAFT / REVIEW_REQUIRED / NOT_FROZEN
-
-U03_SEPSIS_SHARED_SCOPE_V0_2
-= RESOLVABLE_DRAFT / REVIEW_REQUIRED / NOT_FROZEN
-
-U03_C_EVAL_REFS_V0_2
-= REFERENCE_STRUCTURE_AVAILABLE
-/ CLINICAL_EVAL_CONTENT_NOT_COMPLETE
-/ NOT_REVIEW_READY
+U03_C_Freeze_Readiness_Assessment_v0.2.md
 ```
 
-因此：
+当前 blocker：
 
 ```text
-ref identities = RESOLVABLE
-!=
-freeze conditions = SATISFIED
-```
+BLOCKER-FZ-C-01
+= U03_C_MISSINGNESS_V0_2 review/freeze incomplete
 
-D 仍不得开始。
+BLOCKER-FZ-C-02
+= U03_SEPSIS_SHARED_SCOPE_V0_2 review/freeze incomplete
+
+BLOCKER-FZ-C-03
+= minimum pre-freeze evaluation content/review not satisfied
+
+BLOCKER-FZ-C-04
+= candidate version/freeze record not yet created
+```
 
 ### Gate C — Independent Evaluation Ready
 
 ```text
-CD-06 REVIEW_READY
+Gate C = NOT_PASSED
+CD-06 = NOT_REVIEW_READY
+Clinical Golden Cases = NOT_STARTED
 ```
 
-当前：`NOT_PASSED`
+candidate freeze 与 Gate C 分离：candidate freeze 需要最低 pre-freeze evaluation evidence；Gate C 仍要求完整、独立的 Clinical EvalSet / Safety Suite 达到 REVIEW_READY。
 
 ### Gate D — Authorization
 
 上一轮 U03 工程实现授权不自动覆盖 CD-01～CD-08。后续实现仍需要独立、明确的 Implementation Authorization。
 
-## 4. 当前 Readiness 判定
+## 4. Freeze Hygiene 当前状态
+
+### Missingness Policy
+
+```text
+policy_ref = U03_C_MISSINGNESS_V0_2
+Resolvable = YES
+Medical Review = NOT_COMPLETE
+Technical Review = NOT_COMPLETE
+Frozen = NO
+```
+
+### Sepsis Shared Scope Policy
+
+```text
+policy_ref = U03_SEPSIS_SHARED_SCOPE_V0_2
+Resolvable = YES
+Medical Review = NOT_COMPLETE
+Technical Review = NOT_COMPLETE
+Frozen = NO
+```
+
+两项 review 记录：
+
+```text
+U03_C_Freeze_Policy_Review_Record_v0.2.md
+= REVIEW_NOT_STARTED
+```
+
+### Evaluation Refs
+
+```text
+manifest_ref = U03_C_EVAL_REFS_V0_2
+Reference Structure = AVAILABLE
+Asset Identities = RESOLVABLE
+Golden-case Content = NOT_STARTED
+Pre-Freeze Eval Review = NOT_STARTED
+Gate C = NOT_PASSED
+```
+
+candidate freeze 前最低 evaluation 契约：
+
+```text
+U03_C_PreFreeze_Evaluation_Minimum_v0.2.md
+= MINIMUM_DEFINED
+/ EVAL_CONTENT_NOT_BUILT
+/ NOT_GATE_C
+```
+
+## 5. 当前 Readiness 判定
 
 ```text
 Engineering Prerequisites = PASS
-Clinical Structural Definitions = COMPLETE_FOR_SCHEMA_LAYER
 Gate A = PASS
 
 KD-U03-01 Knowledge Release Candidate
@@ -156,15 +190,11 @@ KD-U03-01 Knowledge Release Candidate
 C Content Draft v0.2 = AVAILABLE
 C Active-rule Review = COMPLETE
 C Active-rule APPROVE = 15 / REVISE = 0
-C BF-C-04 = CLOSED
-C Package Reconfirmation = COMPLETE
+C BF-C-01..04 = CLOSED
 C Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
+C Candidate Freeze Readiness = NOT_PASSED
 C Initial Rule Release Freeze = NOT_COMPLETE
 CD-03 = NOT_PASSED
-
-C Missingness Policy Ref = RESOLVABLE_DRAFT / NOT_FROZEN
-C Sepsis Shared Scope Ref = RESOLVABLE_DRAFT / NOT_FROZEN
-C Evaluation Refs Manifest = AVAILABLE / EVAL_CONTENT_NOT_COMPLETE
 
 D Clinical Policy Content = NOT_STARTED / BLOCKED
 Gate B = NOT_PASSED
@@ -187,25 +217,31 @@ U03 Clinical Dependency Readiness
 = BLOCKED_BY_CLINICAL_INPUT_PACKAGE
 ```
 
-## 5. 当前唯一下一步
+## 6. 当前唯一下一步
 
 ```text
-Independent candidate-freeze readiness review
-for
+Medical + Technical review
+of
 U03_C_MISSINGNESS_V0_2
+and
 U03_SEPSIS_SHARED_SCOPE_V0_2
-U03_C_EVAL_REFS_V0_2
 ↓
-only after candidate freeze
-→ reassess D drafting readiness
+if both approved, freeze those policy objects
+↓
+build minimum pre-freeze evaluation assets
+per U03_C_PreFreeze_Evaluation_Minimum_v0.2.md
+↓
+pre-freeze eval review
+↓
+re-run RR-U03-RISK-001 candidate freeze readiness
 ```
 
-## 6. 当前禁止事项
+## 7. 当前禁止事项
 
 - 不把 `KR-U03-SOURCE-001@0.1.0-candidate` 当作 PUBLISHED 或生产 binding；
 - 不把 `RR-U03-RISK-001@0.2.0-draft` 当作 frozen/runtime rule release；
 - 不把 `U03_C_MISSINGNESS_V0_2` / `U03_SEPSIS_SHARED_SCOPE_V0_2` 的“可解析”误当成“已审核冻结”；
-- 不把 evaluation ref identity 的存在误当成 EvalSet 已完成；
+- 不把 evaluation ref identity 的存在误当成 EvalSet 或 pre-freeze eval 已完成；
 - 不把 C Package Approval 误当成 candidate freeze 或 D09 授权；
 - D 不得先于 C candidate freeze 开始；
 - 不新增未经过 A/B 审核链的医学来源或 evidence；
