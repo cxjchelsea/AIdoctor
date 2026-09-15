@@ -49,7 +49,7 @@ C Safety-critical Risk Rule Pack
 / PACKAGE_APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
 / POLICY_PAIR_CANDIDATE_FROZEN
 / PRE_FREEZE_FIXTURE_CONTENT_AVAILABLE
-/ PRE_FREEZE_EVAL_REVIEW_NOT_COMPLETE
+/ PRE_FREEZE_EVAL_PASS
 / CANDIDATE_FREEZE_NOT_READY
 / INITIAL_RULE_RELEASE_FREEZE_NOT_COMPLETE
 
@@ -85,33 +85,20 @@ B APPROVE = 11 / REVISE = 0
 
 当前：`NOT_PASSED`
 
-C package 内容门与 policy pair freeze 已通过，但 Rule Release candidate freeze 尚未通过：
-
 ```text
 C Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
 PF-U03-C-POLICY-001 = CANDIDATE_FROZEN
+Pre-Freeze Eval PASS = YES
 RR-U03-RISK-001@0.2.0-draft = NOT_FROZEN
 Candidate Freeze Readiness = NOT_PASSED
-```
-
-正式 freeze assessment：
-
-```text
-U03_C_Freeze_Readiness_Assessment_v0.2.md
 ```
 
 当前 blocker：
 
 ```text
-BLOCKER-FZ-C-01
-= CLOSED / U03_C_MISSINGNESS_V0_2 candidate-frozen
-
-BLOCKER-FZ-C-02
-= CLOSED / U03_SEPSIS_SHARED_SCOPE_V0_2 candidate-frozen
-
-BLOCKER-FZ-C-03
-= OPEN / minimum pre-freeze fixture content built / Medical + Technical/Eval review pending
-
+BLOCKER-FZ-C-01 = CLOSED
+BLOCKER-FZ-C-02 = CLOSED
+BLOCKER-FZ-C-03 = CLOSED
 BLOCKER-FZ-C-04
 = OPEN / candidate version/freeze record not yet created / MUST_REMAIN_LAST
 ```
@@ -124,55 +111,20 @@ CD-06 = NOT_REVIEW_READY
 Clinical Golden Cases = NOT_STARTED
 ```
 
-candidate freeze 与 Gate C 分离：candidate freeze 只要求最低 pre-freeze evaluation evidence 达到审核通过；Gate C 仍要求完整、独立的 Clinical EvalSet / Safety Suite 达到 REVIEW_READY。
+Pre-Freeze Eval PASS 不等于 Gate C PASS。
 
 ### Gate D — Authorization
 
-上一轮 U03 工程实现授权不自动覆盖 CD-01～CD-08。后续实现仍需要独立、明确的 Implementation Authorization。
+上一轮 U03 工程实现授权不自动覆盖 CD-01～CD-08。
 
 ## 4. Freeze Hygiene 当前状态
 
-### Policy Pair
-
 ```text
-policy_pair_freeze_ref = PF-U03-C-POLICY-001
-U03_C_MISSINGNESS_V0_2 = CANDIDATE_FROZEN
-U03_SEPSIS_SHARED_SCOPE_V0_2 = CANDIDATE_FROZEN
-BLOCKER-FZ-C-01 = CLOSED
-BLOCKER-FZ-C-02 = CLOSED
-```
-
-### Evaluation Refs / Minimum Pre-Freeze Fixtures
-
-```text
-manifest_ref = U03_C_EVAL_REFS_V0_2
-Reference Structure = AVAILABLE
-Asset Identities = RESOLVABLE
-Minimum Pre-Freeze Fixture Pack = AVAILABLE
-Fixture Pack Ref = U03_C_PreFreeze_Evaluation_Fixtures_v0.2.md
-Required Asset Groups = 8 / 8 CONTENT_AVAILABLE
-Total Fixtures = 57
-Medical Review = NOT_STARTED
-Technical/Eval Review = NOT_STARTED
-Pre-Freeze Eval PASS = NO
-Gate C = NOT_PASSED
-```
-
-candidate freeze 前最低 evaluation 契约：
-
-```text
-U03_C_PreFreeze_Evaluation_Minimum_v0.2.md
-= MINIMUM_DEFINED
-/ FIXTURE_CONTENT_BUILT
-/ REVIEW_PENDING
-/ NOT_GATE_C
-```
-
-对应 review record：
-
-```text
-U03_C_PreFreeze_Eval_Review_Record_v0.2.md
-= REVIEW_NOT_STARTED
+PF-U03-C-POLICY-001 = CANDIDATE_FROZEN
+U03_C_EVAL_REFS_V0_2 = RESOLVABLE
+U03_C_PreFreeze_Evaluation_Fixtures_v0.2.md = REVIEW_APPROVED
+Pre-Freeze Eval PASS = YES
+BLOCKER-FZ-C-03 = CLOSED
 ```
 
 ## 5. 当前 Readiness 判定
@@ -181,19 +133,11 @@ U03_C_PreFreeze_Eval_Review_Record_v0.2.md
 Engineering Prerequisites = PASS
 Gate A = PASS
 
-KD-U03-01 Knowledge Release Candidate
-= KR-U03-SOURCE-001@0.1.0-candidate
-/ FROZEN_FOR_C_DRAFTING
-/ NOT_PUBLISHED
-
-C Content Draft v0.2 = AVAILABLE
-C Active-rule Review = COMPLETE
-C Active-rule APPROVE = 15 / REVISE = 0
-C BF-C-01..04 = CLOSED
 C Package Approval = APPROVED_FOR_CONTENT_AND_SCOPE_INVARIANT
 C Policy Pair Freeze = PF-U03-C-POLICY-001 / CANDIDATE_FROZEN
 C Minimum Pre-Freeze Fixture Content = AVAILABLE
-C Pre-Freeze Eval Review = NOT_COMPLETE
+C Pre-Freeze Eval Review = COMPLETE_APPROVE
+C Pre-Freeze Eval PASS = YES
 C Candidate Freeze Readiness = NOT_PASSED
 C Initial Rule Release Freeze = NOT_COMPLETE
 CD-03 = NOT_PASSED
@@ -201,14 +145,8 @@ CD-03 = NOT_PASSED
 D Clinical Policy Content = NOT_STARTED / BLOCKED
 Gate B = NOT_PASSED
 Gate C = NOT_PASSED
-
-Medical Owner Approval for whole Clinical Input Package = NOT_COMPLETE
-Governed Clinical Content = NOT_COMPLETE
-Clinical Evaluation Content = NOT_COMPLETE
-Independent Evaluation Readiness = NOT_READY
-CD-07 Implementation Readiness = BLOCKED
-U04 Implementation Readiness = BLOCKED_BY_U03_CLINICAL_DEPENDENCY
-Clinical Runtime Production = NOT_ENABLED
+CD-07 = BLOCKED
+U04 = BLOCKED_BY_U03_CLINICAL_DEPENDENCY
 Production Authorization = BLOCKED
 ```
 
@@ -222,29 +160,21 @@ U03 Clinical Dependency Readiness
 ## 6. 当前唯一下一步
 
 ```text
-Medical + Technical/Eval review
-of U03_C_PreFreeze_Evaluation_Fixtures_v0.2.md
+Handle BLOCKER-FZ-C-04 only
+create independent RR-U03-RISK-001 candidate version
+and freeze record
 ↓
-if all 8 groups + cross-cutting checks APPROVE
-and blocking eval finding = 0
+do not rename 0.2.0-draft in place
 ↓
-close BLOCKER-FZ-C-03
-↓
-re-run RR-U03-RISK-001 candidate freeze readiness
-↓
-only then handle BLOCKER-FZ-C-04 and create candidate version
+then reassess D drafting readiness
 ```
 
 ## 7. 当前禁止事项
 
-- 不把 `KR-U03-SOURCE-001@0.1.0-candidate` 当作 PUBLISHED 或生产 binding；
-- 不把 `RR-U03-RISK-001@0.2.0-draft` 当作 frozen/runtime rule release；
-- 不把 `PF-U03-C-POLICY-001` 误当成 Rule Release candidate freeze；
-- 不把 minimum fixture content 的存在误当成 Pre-Freeze Eval PASS 或 Gate C PASS；
-- 不把 C Package Approval 或 policy pair freeze 误当成 RR candidate freeze 或 D09 授权；
-- 不先把 `0.2.0-draft` 改名成 candidate；
+- 不把 `RR-U03-RISK-001@0.2.0-draft` 改名成 candidate；
+- 不把 Pre-Freeze Eval PASS 当成 Gate C PASS 或生产发布；
+- 不把 `PF-U03-C-POLICY-001` 当成 Rule Release freeze；
 - D 不得先于 C candidate freeze 开始；
 - 不新增未经过 A/B 审核链的医学来源或 evidence；
 - 不把 NICE/NHS 直接视为中国生产规则；
-- 不打开儿科或孕产 source pack；
-- 不把 Rule Signal 直接提升为 `NO_HIGH_RISK_SIGNAL / CAUTION / HIGH_RISK / FAILED`。
+- 不把 Rule Signal 提升为 `NO_HIGH_RISK_SIGNAL / CAUTION / HIGH_RISK / FAILED`。

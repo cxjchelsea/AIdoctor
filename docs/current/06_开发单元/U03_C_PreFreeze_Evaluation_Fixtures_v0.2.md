@@ -1,8 +1,8 @@
-# U03 C Pre-Freeze Evaluation Fixtures v0.2
+﻿# U03 C Pre-Freeze Evaluation Fixtures v0.2
 
 > 对象：`RR-U03-RISK-001@0.2.0-draft` candidate freeze 前的 minimum evaluation fixture content。  
 > 权威输入：`U03_C_PreFreeze_Evaluation_Minimum_v0.2.md`、`U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.2.md`、`PF-U03-C-POLICY-001`。  
-> 状态：`FIXTURE_CONTENT_AVAILABLE / REVIEW_REQUIRED / PRE_FREEZE_EVAL_NOT_PASSED / NOT_GATE_C / NOT_FOR_PRODUCTION`。  
+> 状态：`FIXTURE_CONTENT_AVAILABLE / REVIEW_COMPLETE_APPROVE / PRE_FREEZE_EVAL_PASS / NOT_GATE_C / NOT_FOR_PRODUCTION`。  
 > 本文件只把已批准 C rule/policy 语义转成可审核 fixture，不新增医学来源、阈值、D09 disposition 或生产结论。
 
 ---
@@ -17,7 +17,7 @@ bound_knowledge_release_ref = KR-U03-SOURCE-001@0.1.0-candidate
 bound_policy_pair_ref = PF-U03-C-POLICY-001
 bound_policy_refs = [U03_C_MISSINGNESS_V0_2, U03_SEPSIS_SHARED_SCOPE_V0_2] where applicable
 clinical_state_version = TEST_STATE_V0_2_<fixture_id>
-review_status = PENDING_PRE_FREEZE_REVIEW
+review_status = PRE_FREEZE_REVIEW_APPROVED
 ```
 
 统一负面断言：
@@ -58,7 +58,7 @@ current pack must not create its own required scope context
 | C-POS-019 | C-RULE-SEPSIS-RASH-HIGH-001 | shared scope valid; `EV-RF-SEPSIS-001=PRESENT` | MATCHED | SEPSIS_HIGH_RISK_CRITERION | 只消费已批准 B evidence | C v0.2 §7 |
 | C-POS-020 | C-RULE-SEPSIS-RR-HIGH-001 | shared scope valid; RR=26 | MATCHED | SEPSIS_HIGH_RISK_CRITERION | rule result 不得反建 scope | BF-C-04 / C v0.2 §6 |
 
-Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
+Group status：`CONTENT_AVAILABLE / REVIEW_APPROVED`。
 
 ---
 
@@ -77,7 +77,7 @@ Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
 | C-NEG-007 | C-RULE-SEPSIS-HR-HIGH-001 | shared scope valid; HR=130 | NO_MATCH | 130 属于 MODHIGH | C §6 |
 | C-NEG-008 | C-RULE-SEPSIS-HR-MODHIGH-001 | shared scope valid; HR=90 | NO_MATCH | 不得升级/降级 D09 | C §6 |
 
-Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
+Group status：`CONTENT_AVAILABLE / REVIEW_APPROVED`。
 
 ---
 
@@ -96,7 +96,7 @@ Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
 | C-MISS-007 | required measurement HR | INVALID | INPUT_INSUFFICIENT | RULE_SIGNAL_INPUT_INSUFFICIENT | != NO_MATCH |
 
 Rationale refs：`PF-U03-C-POLICY-001 / U03_C_MISSINGNESS_V0_2`。  
-Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
+Group status：`CONTENT_AVAILABLE / REVIEW_APPROVED`。
 
 ---
 
@@ -111,7 +111,7 @@ Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
 | C-SCOPE-005 | dyspnoea source-locked rule | NHS dyspnoea emergency context=FALSE | SCOPE_MISMATCH | RULE_SIGNAL_SCOPE_MISMATCH | appearance/confusion 不得全局化 |
 
 Rationale refs：`U03_SEPSIS_SHARED_SCOPE_V0_2 / BF-C-04 / C v0.2`。  
-Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
+Group status：`CONTENT_AVAILABLE / REVIEW_APPROVED`。
 
 ---
 
@@ -129,7 +129,7 @@ Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
 | C-CTX-006 | valid independent suspected-sepsis context | pre-existing context_ref + provenance_ref independent of current pack; remaining shared scope valid | proceed to predicate evaluation | 不得错误拒绝合法独立 context |
 
 Rationale refs：`U03_C_BF_C_04_Closure_Amendment_v0.2.md / PF-U03-C-POLICY-001`。  
-Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
+Group status：`CONTENT_AVAILABLE / REVIEW_APPROVED`。
 
 ---
 
@@ -143,7 +143,7 @@ Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
 | C-SBP-004 | shared scope valid; SBP=110; usual=151 with provenance | MATCHED / HIGH criterion | NO_MATCH | drop=41 命中 relative branch |
 
 Rationale refs：`C v0.2 §6 / U03_C_MISSINGNESS_V0_2`。  
-Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
+Group status：`CONTENT_AVAILABLE / REVIEW_APPROVED`。
 
 ---
 
@@ -156,7 +156,7 @@ Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
 | C-MULTI-003 | independently-established NHS dyspnoea context; appearance=PRESENT; confusion=PRESENT | both dyspnoea rules MATCHED | 不得由命中结果反向创建 context |
 
 Rationale refs：`C v0.2 §10 / BF-C-04 / frozen policies`。  
-Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
+Group status：`CONTENT_AVAILABLE / REVIEW_APPROVED`。
 
 ---
 
@@ -174,7 +174,7 @@ Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
 说明：`REJECT/FAIL_C_EVALUATION_INPUT` 是 fixture harness 的评估期待，不是新增 C rule signal，也不是 D09 `FAILED` disposition。
 
 Rationale refs：`U03_C_PreFreeze_Evaluation_Minimum_v0.2.md / C release binding invariants`。  
-Group status：`CONTENT_AVAILABLE / REVIEW_PENDING`。
+Group status：`CONTENT_AVAILABLE / REVIEW_APPROVED`。
 
 ---
 
@@ -212,16 +212,16 @@ Gate C full independent evaluation = NOT_CLAIMED
 
 ```text
 Pre-Freeze Fixture Content = AVAILABLE
-All 8 Asset Groups = CONTENT_AVAILABLE
-Medical Review = NOT_STARTED
-Technical/Eval Review = NOT_STARTED
-Blocking Eval Finding = UNKNOWN_UNTIL_REVIEW
-Pre-Freeze Eval PASS = NO
-BLOCKER-FZ-C-03 = OPEN
+All 8 Asset Groups = REVIEW_APPROVED
+Medical Review = COMPLETE_APPROVE
+Technical/Eval Review = COMPLETE_APPROVE
+Blocking Eval Finding = 0
+Pre-Freeze Eval PASS = YES
+BLOCKER-FZ-C-03 = CLOSED
 BLOCKER-FZ-C-04 = OPEN / MUST_REMAIN_LAST
 RR-U03-RISK-001@0.2.0-draft = NOT_FROZEN
 Gate C = NOT_PASSED
 D = STILL_BLOCKED
 ```
 
-下一步：只对本 fixture pack 做 Medical + Technical/Eval review。审核通过且 blocking finding=0 后，才能重新运行 Candidate Freeze Readiness；不得先创建 Rule Release candidate version。
+下一步：独立处理 `BLOCKER-FZ-C-04`，创建 Rule Release candidate version / freeze record。不得把 `0.2.0-draft` 改名成 candidate，不得开始 D09，不得宣称 Gate C PASS。
