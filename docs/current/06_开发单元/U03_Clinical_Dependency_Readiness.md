@@ -48,8 +48,11 @@ E Knowledge Release Manifest
 / APPLICABILITY_APPROVAL_COMPLETE_FOR_ROLE_APPLICABILITY
 / KD-U03-01_REQUIRED
 / KD-U03-01_CONTENT_DRAFT_v0.1_AVAILABLE
-/ SOURCE_METADATA_VERIFICATION_PENDING
+/ SOURCE_METADATA_VERIFICATION_COMPLETE_FOR_CURRENT_6_SOURCES
+/ LOCKED_CLINICAL_CONTEXT_APPLIED
+/ OWNER_ASSIGNMENT_NOT_COMPLETE
 / KNOWLEDGE_RELEASE_REVIEW_NOT_COMPLETE
+/ KNOWLEDGE_RELEASE_FREEZE_NOT_COMPLETE
 / NOT_PUBLISHED
 
 F Risk EvalSet / Safety Suite
@@ -83,14 +86,23 @@ C/D/E cross-consistency = PASS
 
 当前：`NOT_PASSED`
 
-当前 Gate B 主 blocker：
+当前 Gate B 主 blocker 已从 source metadata 收敛为：
 
 ```text
-U03_Knowledge_Release_Content_Draft_v0.1.md
-= CONTENT_DRAFT_AVAILABLE
-/ SOURCE_METADATA_VERIFICATION_PENDING
-/ REVIEW_NOT_COMPLETE
-/ NOT_PUBLISHED
+KR curation owner = PENDING_ASSIGNMENT
+KR clinical review owner = PENDING_ASSIGNMENT
+KR technical review owner = PENDING_ASSIGNMENT
+KR formal content/governance review = NOT_COMPLETE
+KR frozen candidate = NOT_AVAILABLE
+```
+
+当前 `KR-U03-SOURCE-001@0.1.0-draft` 仍然：
+
+```text
+NOT_REVIEW_READY
+NOT_FROZEN
+NOT_VALID_FOR_C_FROZEN_REF
+NOT_VALID_FOR_PRODUCTION_BINDING
 ```
 
 因此 C/D 真实内容仍不得开始。Gate B 详细依赖顺序与完成定义见 `U03_Gate_B_Readiness_Decomposition.md`。
@@ -119,8 +131,11 @@ Gate A = PASS
 E Applicability Decision v0.1 = APPROVED
 E Applicability Approval = COMPLETE_FOR_ROLE_APPLICABILITY
 KD-U03-01 Knowledge Release Draft = AVAILABLE
-KD-U03-01 Source Metadata Verification = NOT_COMPLETE
+KD-U03-01 Source Metadata Verification = COMPLETE_FOR_CURRENT_6_SOURCES
+KD-U03-01 Locked Clinical Context = APPLIED
+KD-U03-01 Owner Assignment = NOT_COMPLETE
 KD-U03-01 Review = NOT_COMPLETE
+KD-U03-01 Freeze = NOT_COMPLETE
 KD-U03-01 Publication = NOT_COMPLETE
 
 C Clinical Rule Content = NOT_STARTED / BLOCKED
@@ -147,12 +162,11 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-Review / verify
-U03_Knowledge_Release_Content_Draft_v0.1.md
+Assign KR curation / clinical / technical review owners
 ↓
-confirm existing 6-source registry metadata
+formal review of U03_Knowledge_Release_Content_Draft_v0.1.md
 ↓
-freeze a resolvable KD-U03-01 Knowledge Release candidate
+if approved, freeze a resolvable KR-U03-SOURCE-001 candidate
 ```
 
 不得在此之前进入 C Rule Pack 的真实医学阈值、组合规则或 D09 branch。
@@ -165,4 +179,5 @@ freeze a resolvable KD-U03-01 Knowledge Release candidate
 - 不把 NICE/NHS 直接视为中国生产规则；
 - 不打开儿科或孕产 source pack；
 - 不把 Gate A PASS 或 E applicability approval 解释为整包 Medical Owner Approval；
-- 不以模型常识、实时网页、mutable RAG 或未版本化内容绕过 KD-U03-01。
+- 不以模型常识、实时网页、mutable RAG 或未版本化内容绕过 KD-U03-01；
+- 不把 `KR-U03-SOURCE-001@0.1.0-draft` 作为 C 的 frozen knowledge ref。
