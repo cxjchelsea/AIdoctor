@@ -51,6 +51,10 @@ U03_KR_Source_Metadata_Verification_v0.1.md
 U03_KR_Governance_Owner_Assignment_v0.1.md
 U03_KR_Formal_Review_Record_v0.1.md
 U03_KR_Freeze_Readiness_v0.1.md
+U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.1.md
+U03_C_Rule_Pack_Formal_Review_Record_v0.1.md
+U03_C_Medical_Owner_Review_Record_v0.1.md
+U03_C_Revision_Task_v0.1.md
 ```
 
 ## 4. 当前 Gate
@@ -65,7 +69,7 @@ A/B v0.2 Source-locked Semantics = FROZEN
 
 Medical Owner Approval = NOT_COMPLETE
 Clinical Input Package = NOT_COMPLETE
-C Rule Pack Clinical Content = NOT_STARTED / UNBLOCKED_FOR_DRAFTING
+C Rule Pack Clinical Content = DRAFT_v0.1_REVIEWED / REVISION_REQUIRED
 D D09 Production Clinical Policy = BLOCKED_UNTIL_C_VOCABULARY
 E Applicability = APPROVED
 E KR REVIEW_READY = YES

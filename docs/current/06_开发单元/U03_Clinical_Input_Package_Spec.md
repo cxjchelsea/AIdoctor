@@ -33,13 +33,16 @@ B 条目只允许作为后续 C 的受治理 evidence 输入；不得直接解�
 
 ```text
 STRUCTURAL_SCHEMA_FROZEN
-CLINICAL_RULE_CONTENT = NOT_STARTED
-MEDICAL_OWNER_REVIEW = NOT_COMPLETE
-INITIAL_RULE_RELEASE = NOT_AVAILABLE
+CLINICAL_RULE_CONTENT = DRAFT_v0.1_AVAILABLE
+INITIAL_RULE_RELEASE = RR-U03-RISK-001@0.1.0-draft
+MEDICAL_OWNER_REVIEW = COMPLETE
+TECHNICAL_REVIEW = COMPLETE
+MEDICAL_APPROVE_13_REVISE_3
+REVISION_REQUIRED
 CD-03 = NOT_PASSED
 ```
 
-C 的真实内容现已解除 KR 解析 blocker，可按 `KR-U03-SOURCE-001@0.1.0-candidate` 起草；D 仍须等 C 的 rule/result vocabulary。
+C v0.1 已完成审核，不能冻结。下一动作是按 `U03_C_Revision_Task_v0.1.md` 修订为 v0.2；D 仍须等 C 的 rule/result vocabulary 再审通过。
 
 ## 5. D：D09 Clinical Policy Table
 
@@ -152,4 +155,4 @@ CD-07 Implementation Readiness = BLOCKED
 U04 = BLOCKED_BY_U03_CLINICAL_DEPENDENCY
 ```
 
-当前唯一合理的下一步：按 Gate A 已批准 B entries 起草 C 初始 Rule Pack，并引用 `KR-U03-SOURCE-001@0.1.0-candidate`。D 不得先于 C 开始。
+当前唯一合理的下一步：按 `U03_C_Revision_Task_v0.1.md` 修订 C Content Draft v0.2。D 不得先于 C 的再审/freeze 开始。

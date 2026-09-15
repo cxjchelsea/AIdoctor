@@ -40,8 +40,10 @@ C Safety-critical Risk Rule Pack
 = STRUCTURAL_SCHEMA_FROZEN
 / CLINICAL_RULE_CONTENT_DRAFT_v0.1_AVAILABLE
 / INITIAL_RULE_RELEASE = RR-U03-RISK-001@0.1.0-draft
-/ MEDICAL_OWNER_REVIEW_REQUIRED
-/ TECHNICAL_REVIEW_REQUIRED
+/ MEDICAL_OWNER_REVIEW_COMPLETE
+/ TECHNICAL_REVIEW_COMPLETE
+/ MEDICAL_APPROVE_13_REVISE_3
+/ REVISION_REQUIRED
 / INITIAL_RULE_RELEASE_FREEZE_NOT_COMPLETE
 
 D D09 Clinical Policy Table
@@ -97,7 +99,7 @@ C/D/E cross-consistency = PASS
 
 ```text
 KR-U03-SOURCE-001@0.1.0-candidate = CANDIDATE_FROZEN
-C initial Rule Pack clinical content = DRAFT_AVAILABLE / REVIEW_NOT_COMPLETE
+C initial Rule Pack clinical content = DRAFT_AVAILABLE / REVIEW_COMPLETE / REVISION_REQUIRED
 D D09 clinical policy content = NOT_STARTED
 C/D/E cross-consistency = NOT_STARTED
 ```
@@ -142,8 +144,9 @@ KD-U03-01 Freeze = COMPLETE_FOR_CANDIDATE
 KD-U03-01 Publication = NOT_COMPLETE
 
 C Clinical Rule Content Draft v0.1 = AVAILABLE
-C Medical Owner Review = NOT_COMPLETE
-C Technical Review = NOT_COMPLETE
+C Medical Owner Review = COMPLETE
+C Technical Review = COMPLETE
+C Medical APPROVE = 13 / REVISE = 3
 C Initial Rule Release Freeze = NOT_COMPLETE
 CD-03 = NOT_PASSED
 
@@ -170,11 +173,12 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-Medical Owner / Technical Review
-of
-U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.1.md
+Revise C to Content Draft v0.2
+per U03_C_Revision_Task_v0.1.md
 ↓
-if approved
+re-review Medical Owner + Technical
+↓
+only if no remaining blocking REVISE
 ↓
 freeze RR-U03-RISK-001 candidate rule/result vocabulary
 ↓

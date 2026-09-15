@@ -1,7 +1,7 @@
 # U03 Safety-critical Risk Rule Pack — Content Draft v0.1
 
 > 对象：Clinical Input Package C / Safety-critical Risk Rule Pack 初始临床内容草案。  
-> 状态：`CLINICAL_CONTENT_DRAFT / MEDICAL_OWNER_REVIEW_REQUIRED / NOT_APPROVED / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
+> 状态：`CLINICAL_CONTENT_DRAFT / REVIEW_COMPLETE / REVISION_REQUIRED / NOT_APPROVED / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
 > 前置：Gate A = PASS；`KR-U03-SOURCE-001@0.1.0-candidate` = frozen resolvable candidate for C drafting。  
 > 本文件只定义 C 层可执行 rule candidate；不形成 D09 disposition，不形成 U04 Safety Gate，不构成 Implementation Authorization。
 
@@ -341,8 +341,9 @@ C Structural Schema = FROZEN
 C Clinical Rule Content Draft v0.1 = AVAILABLE
 Initial Rule Release = RR-U03-RISK-001@0.1.0-draft
 Knowledge Release Ref = KR-U03-SOURCE-001@0.1.0-candidate
-Medical Owner Review = NOT_COMPLETE
-Technical Review = NOT_COMPLETE
+Medical Owner Review = COMPLETE
+Technical Review = COMPLETE
+Medical APPROVE = 13 / REVISE = 3
 Initial Rule Release Freeze = NOT_COMPLETE
 CD-03 = NOT_PASSED
 
@@ -352,4 +353,4 @@ CD-07 = BLOCKED
 U04 = BLOCKED
 ```
 
-下一步：对本 C v0.1 做 Medical Owner / Technical review。审核完成前，不进入 D09 真实 branch，不把 `RR-U03-RISK-001@0.1.0-draft` 用于 runtime 或 production binding。
+下一步：按 `U03_C_Revision_Task_v0.1.md` 产出 C Content Draft v0.2。在全部 blocking REVISE 消除并再审通过前，不进入 D09 真实 branch，不把 `RR-U03-RISK-001@0.1.0-draft` 用于 runtime 或 production binding。
