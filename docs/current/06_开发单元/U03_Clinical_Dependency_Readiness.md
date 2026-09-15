@@ -60,10 +60,7 @@ D D09 Clinical Policy Table
 / CONTENT_APPROVAL = APPROVED_FOR_CONTENT_AND_COVERAGE
 / PRE_FREEZE_FIXTURE_CONTENT_REVIEWED_48
 / PRE_FREEZE_EVAL_PASS
-/ BLOCKER-FZ-D-01_CLOSED
-/ BLOCKER-FZ-D-02_CLOSED
-/ BLOCKER-FZ-D-03_CLOSED
-/ BLOCKER-FZ-D-04_CLOSED
+/ BLOCKER-FZ-D-01..04_CLOSED
 / CD-05_PASSED_FOR_INITIAL_CANDIDATE
 
 E Knowledge Release Manifest
@@ -90,51 +87,75 @@ B APPROVE = 11 / REVISE = 0
 
 ### Gate B — Governed Content Ready
 
-当前：`NOT_PASSED`
+当前：`NOT_PASSED / BLOCKED_BY_CDE_SCOPE_INCONSISTENCY`
 
-C 已完成 initial candidate freeze：
+C / D / E 各自 initial candidate gate 已满足：
 
 ```text
-RR-U03-RISK-001@0.2.0-candidate = CANDIDATE_FROZEN
 CD-03 = PASSED_FOR_INITIAL_CANDIDATE
+CD-04 = CANDIDATE_READY / NOT_PRODUCTION
+CD-05 = PASSED_FOR_INITIAL_CANDIDATE
+
+E = KR-U03-SOURCE-001@0.1.0-candidate / CANDIDATE_FROZEN
+C = RR-U03-RISK-001@0.2.0-candidate / CANDIDATE_FROZEN
+D = PR-U03-D09-001@0.2.0-candidate / CANDIDATE_FROZEN
 ```
 
-D 已完成 initial candidate freeze 与 CD-05：
+Cross-consistency review 已完成：
 
 ```text
-PR-U03-D09-001@0.2.0-draft
-= PRESERVED / NOT_RENAMED
-
-PR-U03-D09-001@0.2.0-candidate
-= RESOLVABLE / CANDIDATE_FROZEN
-
-candidate_freeze_record
-= U03_D09_Policy_Candidate_Freeze_Record_v0.2.md
-
-CD-05 decision
-= U03_CD05_D09_Initial_Candidate_Decision_v0.1.md
-
-CD-05
-= PASSED_FOR_INITIAL_CANDIDATE
+U03_CDE_Cross_Consistency_Review_v0.1.md
+PASS items = 11
+REVISE items = 1
+blocking finding = 1
+BF-CDE-01 = OPEN
+C/D/E Cross-Consistency = REVISE_REQUIRED
 ```
 
-D freeze blockers：
+阻塞项：
 
 ```text
-BLOCKER-FZ-D-01 = CLOSED
-BLOCKER-FZ-D-02 = CLOSED
-BLOCKER-FZ-D-03 = CLOSED
-BLOCKER-FZ-D-04 = CLOSED
+BF-CDE-01
+= pregnancy / puerperium scope inconsistency
 ```
 
-Gate B 现在仍缺：
+当前上游 authority：
 
 ```text
-C / D / E cross-consistency review
-Gate B final decision
+A v0.2 overall scope
+→ pregnancy / puerperium NOT COVERED
+
+E KR-U03-SOURCE-001@0.1.0-candidate
+→ pregnancy / puerperium in whole-release exclusions
 ```
 
-不能因 C/D/E 各自 candidate 已冻结而自动宣称 Gate B PASS。
+但冻结的 C/D candidate metadata 只显式表达：
+
+```text
+C
+→ pregnancy_recent_pregnancy = EXCLUDED_FOR_NG253_SEPSIS_RULES
+
+D
+→ pregnancy/recent-pregnancy sepsis policy = NOT_INCLUDED
+```
+
+因此 whole-policy scope 与 D coverage denominator 存在可执行歧义。
+
+Gate B 决策已记录：
+
+```text
+U03_Gate_B_Decision_v0.1.md
+Gate B = NOT_PASSED
+reason = BLOCKED_BY_CDE_SCOPE_INCONSISTENCY
+```
+
+修订任务：
+
+```text
+U03_CDE_Cross_Consistency_Revision_Task_v0.1.md
+```
+
+不得原地修改已冻结的 C/D/E/coverage 对象；必须形成新的受影响 candidate version 后 targeted review / freeze / re-review。
 
 ### Gate C — Independent Evaluation Ready
 
@@ -192,18 +213,11 @@ CD-03 = PASSED_FOR_INITIAL_CANDIDATE
 CD-04 = CANDIDATE_READY / NOT_PRODUCTION
 CD-05 = PASSED_FOR_INITIAL_CANDIDATE
 
-D Content Approval = APPROVED_FOR_CONTENT_AND_COVERAGE
-D Coverage Contract Freeze = COMPLETE
-D Pre-Freeze Evaluation = PASS
-D Policy Candidate Identity = CREATED / RESOLVABLE
-D Policy Candidate Freeze = COMPLETE
-BLOCKER-FZ-D-01 = CLOSED
-BLOCKER-FZ-D-02 = CLOSED
-BLOCKER-FZ-D-03 = CLOSED
-BLOCKER-FZ-D-04 = CLOSED
+C/D/E Cross-Consistency Review = COMPLETE
+C/D/E Cross-Consistency = REVISE_REQUIRED
+BF-CDE-01 = OPEN
+Gate B = NOT_PASSED / BLOCKED_BY_CDE_SCOPE_INCONSISTENCY
 
-C/D/E Cross-Consistency = NOT_STARTED
-Gate B = NOT_PASSED
 Gate C = NOT_PASSED
 Medical Owner Approval for whole Clinical Input Package = NOT_COMPLETE
 Governed Clinical Content = NOT_COMPLETE
@@ -225,24 +239,38 @@ U03 Clinical Dependency Readiness
 ## 6. 当前唯一下一步
 
 ```text
-C / D / E cross-consistency review
+execute U03_CDE_Cross_Consistency_Revision_Task_v0.1.md
 ↓
-Gate B decision
+resolve BF-CDE-01 with new affected candidate versions
+↓
+targeted Medical / Technical review
+↓
+freeze new affected candidates
+↓
+C/D/E cross-consistency re-review
+↓
+only if PASS + blocking finding = 0
+→ reconsider Gate B
 ```
 
-只有 Gate B 单独通过后，才可继续判断后续 Gate C / CD-07 readiness；本文件不自动推进任何实现授权。
+默认修订路径必须以当前 A/E 已批准 authority 为准：
+
+```text
+pregnancy / puerperium
+= OUTSIDE_CURRENT_U03_WHOLE_POLICY_SLICE
+```
+
+若要改成“仅 sepsis family 排除”，则必须先重新打开 A/E 的 Medical/source scope review；不能作为纯技术 metadata 修正处理。
 
 ## 7. 当前禁止事项
 
-- 不把 `PR-U03-D09-001@0.2.0-candidate` 的 candidate freeze 当成 PUBLISHED / runtime active / production active；
+- 不原地修改已冻结的 `RR-U03-RISK-001@0.2.0-candidate`；
+- 不原地修改已冻结的 `PR-U03-D09-001@0.2.0-candidate`；
+- 不原地修改已冻结的 `U03_D09_COVERAGE_V0_2`；
+- 不把 C/D/E individually frozen 当成 Gate B PASS；
 - 不把 `CD-05 = PASSED_FOR_INITIAL_CANDIDATE` 当成 Gate B PASS；
-- 不把 `0.2.0-draft` 改名为 candidate；source draft 必须保留；
-- 不把 coverage contract freeze 当成 production release；
-- 不把 D Pre-Freeze Eval PASS 误当成 Gate C PASS；
-- 不修改或重命名 `RR-U03-RISK-001@0.2.0-candidate`；
-- D 不得重新解释 C 阈值或新增 C evidence taxonomy；
-- `NO_HIGH_RISK_SIGNAL` 不得解释为 SAFE / NORMAL；
-- D09 不得形成 U04 Safety Gate Decision；
+- 不把 D/C Pre-Freeze Eval PASS 误当成 Gate C PASS；
+- 不把 `NO_HIGH_RISK_SIGNAL` 解释为 SAFE / NORMAL；
 - 不开始 D09 runtime implementation、C02 clinical implementation 或 U04；
 - 不新增未经过 A/B 审核链的医学来源或 evidence；
 - 不把 NICE/NHS 直接视为中国生产规则；
