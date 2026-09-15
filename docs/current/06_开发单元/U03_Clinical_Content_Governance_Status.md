@@ -6,9 +6,7 @@
 
 ## 1. 总体原则
 
-`docs/current` 表示当前项目正在采用的设计与治理资料，但并不自动把其中标记为 Draft / Review Pending 的医学内容提升为已批准 Clinical Truth。
-
-必须区分：
+`docs/current` 中的结构/治理资料可作为当前项目参考，但 Draft / Review Material 不会因此自动升级为生产 Clinical Truth。
 
 ```text
 STRUCTURAL / GOVERNANCE AUTHORITY
@@ -16,11 +14,7 @@ STRUCTURAL / GOVERNANCE AUTHORITY
 CLINICAL CONTENT APPROVAL
 ```
 
-任何文件只有在其自身状态明确达到相应 review / approval gate 后，才可承担对应层级的权威性。
-
-## 2. 可作为当前结构/治理基线的文件
-
-以下文件用于定义治理结构、schema、边界、readiness 与 review gate；它们不等于真实临床内容已批准：
+## 2. 当前结构/治理基线
 
 ```text
 U03_Clinical_Dependency_Assessment.md
@@ -35,17 +29,9 @@ U03_Risk_EvalSet_Safety_Suite_Schema.md
 U03_AB_Revision_Readiness_v0.2.md
 ```
 
-治理状态：
+## 3. 临床审核工作材料
 
-```text
-STRUCTURAL / GOVERNANCE REFERENCE = CURRENT
-CLINICAL CONTENT APPROVAL = NOT_IMPLIED
-PRODUCTION AUTHORIZATION = NOT_IMPLIED
-```
-
-## 3. 非权威临床内容 / 审核工作材料
-
-以下文件是 source-grounded draft、历史审稿意见、Medical Owner review record、修订任务、v0.2 修订草案或状态快照，只用于 A/B 审核与确认；不得被实现、测试或 Runtime 当成已批准生产临床内容：
+以下材料用于 A/B 审核、修订与审计记录；不得被 Runtime 当作已发布生产规则：
 
 ```text
 U03_Clinical_Risk_Semantics_Content_Draft_v0.1.md
@@ -61,28 +47,18 @@ U03_AB_Medical_Review_Status.md
 U03_AB_Revision_Status_v0.2.md
 ```
 
-统一权威状态：
-
-```text
-REVIEW_WORKING_MATERIAL = YES
-CLINICAL_AUTHORITY = NO
-MEDICAL_OWNER_APPROVAL = NOT_COMPLETE
-PRODUCTION_ELIGIBILITY = NO
-RUNTIME_CONSUMPTION = PROHIBITED
-RULE_PACK_PROMOTION = BLOCKED_UNTIL_APPROVAL
-```
-
 ## 4. 当前 Gate
 
 ```text
-A/B Medical Owner Review Record v0.1 = COMPLETE
 A/B Content Draft v0.2 = AVAILABLE
-A/B Medical Owner Review Record v0.2 = COMPLETE
-A second-round verdict = APPROVE_6 / REVISE_1
-B second-round verdict = APPROVE_10 / REVISE_1
-A-RS-02A targeted scope revision = APPLIED / CONFIRMATION_PENDING
-EV-RF-NEURO-001 targeted scope revision = APPLIED / CONFIRMATION_PENDING
-A/B Package Approval = NOT_COMPLETE
+A/B Medical Owner Review v0.2 = COMPLETE
+A final verdict = APPROVE_7 / REVISE_0
+B final verdict = APPROVE_11 / REVISE_0
+Gate A = PASS
+A/B v0.2 Source-locked Semantics = FROZEN
+
+Medical Owner Approval = NOT_COMPLETE
+Clinical Input Package = NOT_COMPLETE
 C Rule Pack Clinical Content = BLOCKED
 D D09 Production Clinical Policy = BLOCKED
 E Knowledge Applicability / Content Approval = PENDING
@@ -93,16 +69,9 @@ Clinical Runtime Production = NOT_ENABLED
 Production Authorization = BLOCKED
 ```
 
-## 5. 合并语义
+## 5. Gate A 的边界
 
-即使 PR #88 未来被授权合并，也只能表示：
-
-```text
-Clinical dependency governance package / review workspace
-= merged as project documentation
-```
-
-不能表示：
+Gate A PASS 仅表示当前 v0.2 来源锁定语义已冻结。它不表示：
 
 ```text
 Medical Owner Approval = COMPLETE
@@ -113,8 +82,12 @@ Clinical Runtime = ENABLED
 Production Authorization = GRANTED
 ```
 
-## 6. 下一步
+未来若扩大任何条目的 population / setting / disease scope，必须重新走来源与 Medical Owner 审核。
 
-当前唯一允许的临床内容动作，是由 Medical Owner 对 A-RS-02A 与 EV-RF-NEURO-001 已应用的定向 scope 修订进行确认。
+## 6. 当前禁止事项
 
-只有这两项得到明确确认后，才可重新判定 Gate A。确认前不进入 C/D/E/F 真实临床内容。
+- 不开始 C/D/E/F 真实临床内容；
+- 不打开中国生产本地化；
+- 不打开儿科或孕产 source pack；
+- 不把 NICE/NHS 直接视为中国最终生产规则；
+- 不把 Gate A PASS 解释为 Merge Authorization 或 Production Authorization。
