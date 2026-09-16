@@ -39,13 +39,21 @@ jobs:
           p = Path('build/u03-gatec-eval/result-bundle.json')
           data = json.loads(p.read_text(encoding='utf-8'))
           s = data['summary']
-          assert s['golden_total'] == 31
-          assert s['golden_pass'] == 31
+          assert s['approved_golden_id_total'] == 31
+          assert s['executable_golden_total'] == 30
+          assert s['excluded_golden_ids'] == ['GC-026']
+          assert s['golden_pass'] == 30
           assert s['golden_fail'] == 0
-          assert s['critical_safety_total'] == 20
-          assert s['critical_safety_pass'] == 20
+          assert s['approved_critical_safety_id_total'] == 20
+          assert s['executable_critical_safety_total'] == 19
+          assert s['excluded_critical_safety_ids'] == ['SS-012']
+          assert s['critical_safety_pass'] == 19
           assert s['critical_safety_fail'] == 0
+          assert s['failed_non_case_checks'] == []
           assert s['gate_c_execution_blocked_by_critical_failure'] is False
+          assert data['shared_scope_invariant_evidence']['status'] == 'PASS'
+          assert data['d09_p5_defensive_contract_boundary']['status'] == 'PASS'
+          assert data['d09_p5_defensive_contract_boundary']['counts_as_governed_c_execution'] is False
           assert data['production_state_mutation_capability'] is False
           assert data['network_access_required'] is False
           print(json.dumps(s, indent=2, ensure_ascii=False))

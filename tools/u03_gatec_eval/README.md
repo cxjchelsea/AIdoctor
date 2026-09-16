@@ -13,6 +13,22 @@ It is intentionally isolated from `diagnosis-service` runtime code. It has no ne
 - `PR-U03-D09-001@0.2.1-candidate`
 - `PF-U03-C-POLICY-001`
 
+## Independent-review remediation
+
+BF-IR-01 removed the `forced_rule_results` bypass. Valid C execution always comes from `evaluate_rules()` and returns the full 15-rule set on non-P0 paths.
+
+`GC-026` and `SS-012` are retained as governed identities but classified `UNPRODUCIBLE_UNDER_SHARED_SCOPE` and excluded from executable GC/SS counts. The frozen C semantics require one shared scope outcome across the dyspnoea family and one shared scope outcome across the sepsis family, so a family-level `SCOPE_MISMATCH + MATCHED` result cannot be produced by a valid C execution. P5 remains covered only as an explicitly labeled D09 defensive contract-boundary check and is not reported as governed C output.
+
+BF-IR-02 splits the three P4 paths into distinct coverage states:
+
+- GC-012: both conditional families `NOT_APPLICABLE`
+- GC-014: dyspnoea family applicable/all `NO_MATCH`; sepsis family `NOT_APPLICABLE`
+- GC-015: sepsis family applicable/all `NO_MATCH`; dyspnoea family `NOT_APPLICABLE`
+
+SS-014 / SS-016 also execute a structural side-effect boundary check rather than relying only on dataclass defaults.
+
+Current executable counts after this review correction are 30 Golden Cases and 19 critical Safety Suite cases, with the two excluded identities recorded separately in the result bundle. This is implementation-verification structure only; it does not mean Governed Evaluation Execution has started.
+
 ## Run
 
 ```bash
@@ -21,6 +37,15 @@ python3 -m unittest -v
 python3 run_evaluation.py
 ```
 
-The second command writes `build/u03-gatec-eval/result-bundle.json`. Any Golden Case failure or any critical Safety Suite failure exits non-zero.
+The second command writes `build/u03-gatec-eval/result-bundle.json`.
 
-The harness is evaluation evidence only. It does not authorize or implement runtime/production wiring.
+The result bundle records:
+
+- executable GC / Safety results;
+- excluded unproducible governed identities;
+- shared-scope invariant evidence;
+- D09 P5 defensive contract-boundary evidence;
+- `Governed Evaluation Execution = NOT_STARTED_PENDING_TARGETED_RE_REVIEW`;
+- `Gate C = NOT_PASSED`.
+
+The harness is evaluation-only implementation evidence. It does not authorize runtime/production wiring or Gate C PASS.

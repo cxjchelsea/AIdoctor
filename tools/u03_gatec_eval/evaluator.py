@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 EVALSET_REF = "ER-U03-RISK-001@0.1.0-candidate"
@@ -73,12 +73,14 @@ HIGH_SIGNALS = {
     RULE_SIGNAL_SEPSIS_HIGH,
 }
 
+
 @dataclass(frozen=True)
 class RuleResult:
     rule_id: str
     execution_state: str
     signal: Optional[str] = None
     evidence_refs: Tuple[str, ...] = ()
+
 
 @dataclass(frozen=True)
 class Decision:
@@ -88,6 +90,7 @@ class Decision:
     reason_code: str
     matched_rule_refs: Tuple[str, ...] = ()
     insufficient_rule_refs: Tuple[str, ...] = ()
+
 
 @dataclass
 class EvaluationOutcome:
@@ -123,8 +126,7 @@ def evidence_rule(rule_id: str, evidence_ref: str, signal: str, fixture: Dict[st
         return RuleResult(rule_id, "INPUT_INSUFFICIENT", RULE_SIGNAL_INPUT_INSUFFICIENT, (evidence_ref,))
     if scope == "FALSE":
         return RuleResult(rule_id, "SCOPE_MISMATCH", RULE_SIGNAL_SCOPE_MISMATCH, (evidence_ref,))
-    value = fixture.get("evidence", {}).get(evidence_ref, "ABSENT")
-    state = state_value(value)
+    state = state_value(fixture.get("evidence", {}).get(evidence_ref, "ABSENT"))
     if state == "PRESENT":
         return RuleResult(rule_id, "MATCHED", signal, (evidence_ref,))
     if state == "ABSENT":
@@ -160,7 +162,8 @@ def _shared_sepsis_scope(fixture: Dict[str, Any]) -> str:
     if not isinstance(age, (int, float)):
         return "INSUFFICIENT"
     if age < 16 or pregnancy == "TRUE" or suspected == "FALSE" or setting not in {
-        "SOURCE_SUPPORTED_COMMUNITY", "SOURCE_SUPPORTED_CUSTODIAL"
+        "SOURCE_SUPPORTED_COMMUNITY",
+        "SOURCE_SUPPORTED_CUSTODIAL",
     }:
         return "MISMATCH"
     if suspected != "TRUE" or pregnancy != "FALSE":
@@ -270,9 +273,11 @@ def evaluate_sepsis_rules(fixture: Dict[str, Any]) -> List[RuleResult]:
 
 
 def evaluate_rules(fixture: Dict[str, Any]) -> List[RuleResult]:
-    if fixture.get("forced_rule_results"):
-        return [RuleResult(**item) for item in fixture["forced_rule_results"]]
+    """Execute the frozen C rule set.
 
+    There is deliberately no fixture-provided rule-result override. BF-IR-01 requires every
+    executable C path to be produced by the rule evaluator itself.
+    """
     results: List[RuleResult] = []
     for rule_id, (evidence_ref, signal) in BASELINE_EVIDENCE.items():
         results.append(evidence_rule(rule_id, evidence_ref, signal, fixture))
@@ -312,6 +317,16 @@ def _p0_decision(reason: str) -> Decision:
     return Decision("D09-P-001", "FAILED", "NONE", reason)
 
 
+def family_state_conflict(results: List[RuleResult], rule_ids: List[str]) -> bool:
+    by_id = {r.rule_id: r for r in results}
+    states = [by_id[r].execution_state for r in rule_ids if r in by_id]
+    return bool(states) and "SCOPE_MISMATCH" in states and any(s != "SCOPE_MISMATCH" for s in states)
+
+
+def has_shared_scope_conflict(results: List[RuleResult]) -> bool:
+    return family_state_conflict(results, DYSPNOEA_RULES) or family_state_conflict(results, SEPSIS_RULES)
+
+
 def decide(fixture: Dict[str, Any], results: List[RuleResult]) -> Decision:
     release_error = _release_check(fixture)
     if release_error:
@@ -333,36 +348,46 @@ def decide(fixture: Dict[str, Any], results: List[RuleResult]) -> Decision:
     if fixture.get("region_scope_ok", True) is False or fixture.get("channel_scope_ok", True) is False:
         return _p0_decision("OVERALL_POLICY_SCOPE_MISMATCH")
 
-    by_id = {r.rule_id: r for r in results}
-
-    def family_state_conflict(rule_ids: List[str]) -> bool:
-        states = [by_id[r].execution_state for r in rule_ids if r in by_id]
-        return bool(states) and "SCOPE_MISMATCH" in states and any(s != "SCOPE_MISMATCH" for s in states)
-
-    if family_state_conflict(DYSPNOEA_RULES) or family_state_conflict(SEPSIS_RULES):
+    if has_shared_scope_conflict(results):
         return Decision("D09-P-090", "FAILED", "NONE", "UNRESOLVABLE_CONFLICT")
 
+    by_id = {r.rule_id: r for r in results}
     matched_high = [r.rule_id for r in results if r.execution_state == "MATCHED" and r.signal in HIGH_SIGNALS]
     insufficient = [r.rule_id for r in results if r.execution_state == "INPUT_INSUFFICIENT"]
     matched_mod = [r.rule_id for r in results if r.execution_state == "MATCHED" and r.signal == RULE_SIGNAL_SEPSIS_MODHIGH]
 
     if matched_high:
         return Decision(
-            "D09-P-010", "VALID", "HIGH_RISK", "HIGH_RISK_RULE_SIGNAL_PRESENT",
-            tuple(sorted(matched_high)), tuple(sorted(insufficient))
+            "D09-P-010",
+            "VALID",
+            "HIGH_RISK",
+            "HIGH_RISK_RULE_SIGNAL_PRESENT",
+            tuple(sorted(matched_high)),
+            tuple(sorted(insufficient)),
         )
     if insufficient:
         return Decision(
-            "D09-P-020", "FAILED", "NONE", "INSUFFICIENT_INFORMATION",
-            tuple(sorted(matched_mod)), tuple(sorted(insufficient))
+            "D09-P-020",
+            "FAILED",
+            "NONE",
+            "INSUFFICIENT_INFORMATION",
+            tuple(sorted(matched_mod)),
+            tuple(sorted(insufficient)),
         )
     if matched_mod:
         return Decision(
-            "D09-P-030", "VALID", "CAUTION", "MODERATE_HIGH_RULE_SIGNAL_PRESENT",
-            tuple(sorted(matched_mod)), ()
+            "D09-P-030",
+            "VALID",
+            "CAUTION",
+            "MODERATE_HIGH_RULE_SIGNAL_PRESENT",
+            tuple(sorted(matched_mod)),
+            (),
         )
 
-    baseline_complete = all(by_id.get(rule) is not None and by_id[rule].execution_state == "NO_MATCH" for rule in BASELINE_RULES)
+    baseline_complete = all(
+        by_id.get(rule) is not None and by_id[rule].execution_state == "NO_MATCH"
+        for rule in BASELINE_RULES
+    )
 
     def family_complete_or_na(rule_ids: List[str]) -> bool:
         states = [by_id[r].execution_state for r in rule_ids if r in by_id]
@@ -376,14 +401,16 @@ def decide(fixture: Dict[str, Any], results: List[RuleResult]) -> Decision:
 
     if baseline_complete and family_complete_or_na(DYSPNOEA_RULES) and family_complete_or_na(SEPSIS_RULES):
         return Decision(
-            "D09-P-040", "VALID", "NO_HIGH_RISK_SIGNAL",
-            "COVERAGE_COMPLETE_GOVERNED_RULE_SET_EVALUATED_NO_SIGNAL"
+            "D09-P-040",
+            "VALID",
+            "NO_HIGH_RISK_SIGNAL",
+            "COVERAGE_COMPLETE_GOVERNED_RULE_SET_EVALUATED_NO_SIGNAL",
         )
     return Decision("D09-P-090", "FAILED", "NONE", "UNRESOLVABLE_CONFLICT")
 
 
 class ClinicalEvaluator:
-    """Offline-only evaluator. It has no state-commit, U04, network, DB, or runtime wiring capability."""
+    """Offline-only evaluator with no state-commit, U04, network, DB, or runtime integration."""
 
     def __init__(self) -> None:
         self._seen_idempotency: set[str] = set()
