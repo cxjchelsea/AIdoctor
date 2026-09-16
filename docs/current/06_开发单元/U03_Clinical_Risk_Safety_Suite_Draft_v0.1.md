@@ -1,7 +1,8 @@
 # U03 Clinical Risk Safety Suite Draft v0.1
 
 > 对象：Gate C / CD-06 Safety Suite candidate pack。  
-> 状态：`CANDIDATE_SAFETY_CASES_AVAILABLE / MEDICAL_REVIEW_PENDING / POLICY_EVAL_REVIEW_PENDING / NOT_APPROVED / NOT_FOR_PRODUCTION`。  
+> 状态：`CANDIDATE_SAFETY_CASES_REVIEWED / MEDICAL_APPROVE / POLICY_EVAL_APPROVE / CRITICAL_BLOCKING_APPROVED / NOT_FOR_PRODUCTION`。  
+> 审核记录：`U03_CD06_Evaluation_Review_Record_v0.1.md`。  
 > 本文件验证“绝对不能发生什么”；不新增临床规则、阈值、来源或 disposition。
 
 ## 1. Common Binding
@@ -95,9 +96,11 @@ Gate C PASS = PROHIBITED
 
 ```text
 candidate_safety_case_count = 20
-Medical Review = NOT_STARTED
-Policy/Eval Review = NOT_STARTED
-Approved Safety Cases = 0
+Medical Review = COMPLETE / APPROVE
+Policy/Eval Review = COMPLETE / APPROVE
+criticality = CRITICAL_BLOCKING_APPROVED
+Approved Safety Cases = 20 CONTENT_APPROVED
+Formal Execution Binding = PENDING_GC_FIXTURE_ALIGNMENT
 Execution = NOT_STARTED
 CD-06 = NOT_REVIEW_READY
 Gate C = NOT_PASSED

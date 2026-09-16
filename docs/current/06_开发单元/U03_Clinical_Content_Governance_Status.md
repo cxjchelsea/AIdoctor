@@ -73,7 +73,8 @@ CD-05 = APPROVED_FOR_GATE_B
 
 Gate C = NOT_PASSED
 CD-06 = NOT_REVIEW_READY
-F Clinical Eval Content = NOT_STARTED / NOT_COMPLETE
+F Clinical Eval Content = CANDIDATES_REVIEWED / REVISE_REQUIRED
+blocking review finding = BF-CD06-01, BF-CD06-02
 
 CD-07 Implementation Readiness = BLOCKED
 Implementation Authorization = NOT_GRANTED
@@ -96,14 +97,16 @@ Production Authorized
 
 ## 5. Gate B 后的当前边界
 
-下一步必须进入 F / Gate C：
+下一步必须关闭 CD-06 revision，再进入 evaluation execution：
 
 ```text
-build complete Clinical Risk EvalSet / Safety Suite
+close BF-CD06-01 / BF-CD06-02
 ↓
-independent Medical + Technical/Eval review
+re-review Coverage Manifest + Golden Case pack
 ↓
 CD-06 REVIEW_READY / decision
+↓
+governed evaluation execution
 ↓
 Gate C decision
 ```

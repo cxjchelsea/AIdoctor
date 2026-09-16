@@ -1,7 +1,8 @@
 # U03 Clinical Risk Golden Cases Draft v0.1
 
 > 对象：Gate C / CD-06 Clinical Golden Case candidate pack。  
-> 状态：`CANDIDATE_CASES_AVAILABLE / MEDICAL_REVIEW_PENDING / POLICY_EVAL_REVIEW_PENDING / NOT_APPROVED / NOT_FOR_PRODUCTION`。  
+> 状态：`CANDIDATE_CASES_REVIEWED / MEDICAL_PURPOSE_APPROVED / POLICY_EVAL_REVISE_REQUIRED / BF-CD06-02_OPEN / NOT_APPROVED / NOT_FOR_PRODUCTION`。  
+> 审核记录：`U03_CD06_Evaluation_Review_Record_v0.1.md`。  
 > 说明：这些 case 由当前已批准 C/D/E policy 机械展开为评估候选；**尚不是 Medical-approved Golden Cases**。
 
 ## 1. Common Binding
@@ -14,7 +15,7 @@ rule_release_ref = RR-U03-RISK-001@0.2.1-candidate
 coverage_contract_ref = U03_D09_COVERAGE_V0_2_1_CANDIDATE
 policy_release_ref = PR-U03-D09-001@0.2.1-candidate
 policy_pair_ref = PF-U03-C-POLICY-001
-review_status = MEDICAL_REVIEW_PENDING
+review_status = MEDICAL_PURPOSE_APPROVED / POLICY_EVAL_REVISE_REQUIRED
 ```
 
 除非 case 明确测试 P0/versioning，否则：
@@ -105,9 +106,10 @@ case 是否与实现 owner 独立
 
 ```text
 candidate_case_count = 28
-content = AVAILABLE
-Medical Review = NOT_STARTED
-Policy/Eval Review = NOT_STARTED
+content = REVIEWED
+Medical Review = COMPLETE / PURPOSE_APPROVE
+Policy/Eval Review = COMPLETE / REVISE_REQUIRED
+blocking finding = BF-CD06-02
 Approved Golden Cases = 0
 CD-06 = NOT_REVIEW_READY
 Gate C = NOT_PASSED

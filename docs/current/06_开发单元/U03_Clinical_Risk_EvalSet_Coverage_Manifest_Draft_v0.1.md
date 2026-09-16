@@ -1,7 +1,8 @@
 # U03 Clinical Risk EvalSet Coverage Manifest Draft v0.1
 
 > 对象：Gate C / CD-06 的 Coverage Manifest。  
-> 状态：`DRAFT / COVERAGE_DEFINED / CASE_BINDING_PENDING_REVIEW / NOT_GATE_C / NOT_FOR_PRODUCTION`。  
+> 状态：`DRAFT / REVIEWED / REVISE_REQUIRED / BF-CD06-01_OPEN / NOT_GATE_C / NOT_FOR_PRODUCTION`。  
+> 审核记录：`U03_CD06_Evaluation_Review_Record_v0.1.md`。  
 > 绑定：E `0.1.0-candidate` + C `0.2.1-candidate` + Coverage `V0_2_1_CANDIDATE` + D `0.2.1-candidate`。
 
 ---
@@ -23,7 +24,7 @@ policy_pair_ref = PF-U03-C-POLICY-001
 | Coverage dimension | Required | Candidate case refs |
 |---|---|---|
 | evidence category | YES | GC-001..GC-010, SS-001..SS-004 |
-| all 15 active C rules | YES | GC-001..GC-015 |
+| all 15 active C rules | YES | GC-001..GC-015  # REVIEW_FLAGGED: see BF-CD06-01 |
 | D P0 | YES | GC-020..GC-025, SS-005..SS-010 |
 | D P1 HIGH | YES | GC-001..GC-008, GC-016 |
 | D P2 insufficiency | YES | GC-017..GC-019, SS-001..SS-004 |
@@ -83,11 +84,13 @@ RR HIGH → GC-008
 RR MODHIGH → GC-009
 SBP HIGH → GC-010
 SBP MODHIGH → GC-011
-HR HIGH → GC-016
+HR HIGH → GC-016   # REVIEW_FLAGGED: GC-016 is HIGH+insufficiency, not dedicated HR HIGH
 HR MODHIGH → GC-013
-APPEAR HIGH → GC-014
-RASH HIGH → GC-015
+APPEAR HIGH → GC-014   # REVIEW_FLAGGED: GC-014 is specialized SCOPE_MISMATCH P4
+RASH HIGH → GC-015     # REVIEW_FLAGGED: GC-015 is specialized SCOPE_MISMATCH P4
 ```
+
+`BF-CD06-01`：APPEAR HIGH / RASH HIGH / HR HIGH 当前没有独立阳性代表性 case。GC-014 / GC-015 继续只作为 specialized-family SCOPE_MISMATCH → P4 例。
 
 Boundary values remain inherited from approved C57 evidence; Gate C cases verify representative clinical-policy behavior rather than duplicating every pre-freeze threshold fixture.
 
@@ -133,14 +136,15 @@ scope expansion prohibited → SS-020
 
 ---
 
-## 6. Coverage Verdict Before Review
+## 6. Coverage Verdict After Review
 
 ```text
 required dimensions = DECLARED
-case mapping = COMPLETE_FOR_DRAFT
-Medical validation = PENDING
-Policy/Eval validation = PENDING
+case mapping = REVISE_REQUIRED
+Medical validation = APPROVE
+Policy/Eval validation = REVISE
+blocking finding = BF-CD06-01
 Execution evidence = NOT_STARTED
 ```
 
-该 manifest 只有在 case pack 审核后才能升级为 `REVIEWED`；当前不构成 CD-06 REVIEW_READY。
+15 条 C rule 的代表性覆盖因 APPEAR / RASH / HR HIGH 误绑而不成立。当前不构成 CD-06 REVIEW_READY。

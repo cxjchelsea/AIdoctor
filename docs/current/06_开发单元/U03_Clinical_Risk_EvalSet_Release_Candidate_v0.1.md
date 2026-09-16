@@ -2,7 +2,8 @@
 
 > 对象：Gate C / CD-06 评估数据集的独立版本化 release candidate。  
 > Candidate Ref：`ER-U03-RISK-001@0.1.0-candidate`  
-> 状态：`CANDIDATE_OBJECT_CREATED / REVIEW_PENDING / NOT_ACTIVE_FOR_EVALUATION / NOT_FOR_PRODUCTION`。
+> 状态：`CANDIDATE_OBJECT_CREATED / REVIEWED / NOT_READY / BF-CD06-01_OPEN / BF-CD06-02_OPEN / NOT_ACTIVE_FOR_EVALUATION / NOT_FOR_PRODUCTION`。  
+> 审核记录：`U03_CD06_Evaluation_Review_Record_v0.1.md`。
 
 ---
 
@@ -11,7 +12,7 @@
 ```text
 evalset_release_id = ER-U03-RISK-001
 evalset_version = 0.1.0-candidate
-status = REVIEW_PENDING
+status = REVIEWED / NOT_READY
 ```
 
 当前绑定：
@@ -43,7 +44,7 @@ total_candidate_cases = 48
 critical_blocking_safety_cases = 20
 ```
 
-这些 case 当前只是 review candidates；Medical / Policy / Eval 审核完成前不得标记为 APPROVED 或 ACTIVE_FOR_EVALUATION。
+这些 case 已完成独立审核，但因 `BF-CD06-01` / `BF-CD06-02` 仍不得标记为 APPROVED 或 ACTIVE_FOR_EVALUATION。
 
 ---
 
@@ -118,7 +119,9 @@ REVIEW_PENDING
 
 ```text
 ER-U03-RISK-001@0.1.0-candidate
-= REVIEW_PENDING
+= REVIEWED / NOT_READY
+= BF-CD06-01 OPEN
+= BF-CD06-02 OPEN
 = NOT_ACTIVE_FOR_EVALUATION
 = NOT_FOR_RUNTIME
 = NOT_FOR_PRODUCTION

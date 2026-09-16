@@ -278,13 +278,14 @@ Gate B = PASS / GOVERNED_CONTENT_READY
 Gate C = NOT_PASSED
 CD-06 = NOT_REVIEW_READY
 
-Coverage Manifest = NOT_CREATED
-Golden Case Candidate Pack = NOT_CREATED
-Safety Suite Candidate Pack = NOT_CREATED
-EvalSet Release Candidate = NOT_CREATED
-Medical Review = NOT_STARTED
-Policy/Eval Review = NOT_STARTED
+Coverage Manifest = CREATED / REVIEWED / REVISE_REQUIRED
+Golden Case Candidate Pack = CREATED / REVIEWED / REVISE_REQUIRED
+Safety Suite Candidate Pack = CREATED / REVIEWED / CONTENT_APPROVED
+EvalSet Release Candidate = CREATED / REVIEWED / NOT_READY
+Medical Review = COMPLETE
+Policy/Eval Review = COMPLETE / REVISE_REQUIRED
+blocking review finding = BF-CD06-01, BF-CD06-02
 Evaluation Execution = NOT_STARTED
 ```
 
-下一步：创建 F1-F6 review-ready evaluation package。
+下一步：按 `U03_CD06_Evaluation_Revision_Task_v0.1.md` 关闭 BF-CD06-01 / BF-CD06-02。

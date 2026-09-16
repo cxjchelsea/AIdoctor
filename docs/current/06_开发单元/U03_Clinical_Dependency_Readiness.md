@@ -123,54 +123,47 @@ Gate C = NOT_PASSED
 CD-06 = NOT_REVIEW_READY
 ```
 
-但评估内容已从 `NOT_STARTED` 推进到 review package available：
+评估内容包已完成独立审核，结论为 REVISE：
 
 ```text
 U03_Gate_C_Readiness_Decomposition_v0.1.md
 = AVAILABLE
 
 U03_Clinical_Risk_EvalSet_Coverage_Manifest_Draft_v0.1.md
-= AVAILABLE / REVIEW_PENDING
+= REVIEWED / REVISE_REQUIRED / BF-CD06-01_OPEN
 
 U03_Clinical_Risk_Golden_Cases_Draft_v0.1.md
-= 28 CANDIDATE CASES / MEDICAL_REVIEW_PENDING
+= 28 CANDIDATE CASES / MEDICAL_PURPOSE_APPROVED / POLICY_EVAL_REVISE / BF-CD06-02_OPEN
 
 U03_Clinical_Risk_Safety_Suite_Draft_v0.1.md
-= 20 CANDIDATE SAFETY CASES / MEDICAL_REVIEW_PENDING
+= 20 CANDIDATE SAFETY CASES / MEDICAL_APPROVE / POLICY_EVAL_APPROVE / CRITICAL_BLOCKING_APPROVED
 
 ER-U03-RISK-001@0.1.0-candidate
-= REVIEW_PENDING
+= REVIEWED / NOT_READY
 = NOT_ACTIVE_FOR_EVALUATION
 
 U03_CD06_Evaluation_Review_Record_v0.1.md
-= REVIEW_NOT_STARTED
+= REVIEW_COMPLETE / REVISE_REQUIRED
+
+U03_CD06_Evaluation_Revision_Task_v0.1.md
+= OPEN
 ```
 
-Coverage currently declares:
+Coverage currently declares but does not yet correctly bind:
 
 ```text
 all 15 active C rules
-D P0-P5
-whole-policy TRUE/FALSE/UNKNOWN/NOT_ASKED/NOT_ESTABLISHED
-specialized family scope mismatch
-missingness
-conflict
-stale/currentness
-release mismatch
-multi-hit precedence
-coverage-complete P4
-idempotency / duplicate-effect prevention
-direct-commit prohibition
-authority and scope-expansion protection
 ```
+
+`BF-CD06-01`：APPEAR HIGH / RASH HIGH / HR HIGH 被误绑到 GC-014 / GC-015 / GC-016。
+
+`BF-CD06-02`：Golden Case pack 仍缺 schema 最小 fixture 字段。
 
 Critical safety cases：
 
 ```text
-SS-001..SS-020 = PROPOSED_CRITICAL_BLOCKING
+SS-001..SS-020 = CRITICAL_BLOCKING_APPROVED
 ```
-
-在 Medical + Policy/Eval 审核完成前不得标记为 APPROVED。
 
 C57 / D48 historical fixture reuse + 6 targeted delta fixtures 仍只支持 candidate governance / Gate B；不能替代本 Gate C package。
 
@@ -199,13 +192,14 @@ CD-05 = APPROVED_FOR_GATE_B
 C/D/E Cross-Consistency = PASS
 BF-CDE-01 = CLOSED
 
-Gate C Evaluation Package = CONTENT_AVAILABLE
-Coverage Manifest = DRAFT_AVAILABLE
-Golden Case Candidates = 28 AVAILABLE
-Safety Suite Candidates = 20 AVAILABLE
-EvalSet Release Candidate = CREATED / REVIEW_PENDING
-Medical Review = NOT_STARTED
-Policy/Eval Review = NOT_STARTED
+Gate C Evaluation Package = REVIEWED / REVISE_REQUIRED
+Coverage Manifest = REVIEWED / REVISE_REQUIRED
+Golden Case Candidates = 28 PURPOSE_APPROVED / SCHEMA_INCOMPLETE
+Safety Suite Candidates = 20 CONTENT_APPROVED
+EvalSet Release Candidate = REVIEWED / NOT_READY
+Medical Review = COMPLETE
+Policy/Eval Review = COMPLETE / REVISE_REQUIRED
+blocking review finding = BF-CD06-01, BF-CD06-02
 CD-06 = NOT_REVIEW_READY
 Gate C = NOT_PASSED
 
@@ -220,8 +214,8 @@ Production Authorization = BLOCKED
 ```text
 U03 Clinical Dependency Readiness
 = GATE_B_PASSED
-/ GATE_C_CONTENT_AVAILABLE
-/ BLOCKED_AT_CD06_REVIEW
+/ GATE_C_PACKAGE_REVIEWED
+/ BLOCKED_AT_CD06_REVISION
 ```
 
 ---
@@ -229,14 +223,12 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-Medical Owner review
-+
-Policy / Evaluation Owner review
-of:
-  Coverage Manifest
-  GC-001..GC-028
-  SS-001..SS-020
-  ER-U03-RISK-001@0.1.0-candidate
+close BF-CD06-01
+  correct APPEAR / RASH / HR HIGH representative bindings
+close BF-CD06-02
+  complete Golden Case schema / fixture fields
+↓
+re-review Coverage Manifest + GC pack
 ↓
 only if all APPROVE + blocking finding = 0
 → CD-06 REVIEW_READY
