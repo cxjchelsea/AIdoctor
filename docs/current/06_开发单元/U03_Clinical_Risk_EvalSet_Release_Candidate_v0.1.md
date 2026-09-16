@@ -2,7 +2,8 @@
 
 > 对象：Gate C / CD-06 评估数据集的独立版本化 release candidate。  
 > Candidate Ref：`ER-U03-RISK-001@0.1.0-candidate`  
-> 状态：`CANDIDATE_OBJECT_CREATED / REVISION_BOUND / REREVIEW_PENDING / NOT_READY / NOT_ACTIVE_FOR_EVALUATION / NOT_FOR_PRODUCTION`。  
+> 状态：`CANDIDATE_OBJECT_CREATED / READY_FOR_EVALUATION / NOT_ACTIVE_FOR_EVALUATION / NOT_FOR_PRODUCTION`。  
+> 再审记录：`U03_CD06_Evaluation_ReReview_Record_v0.2.md`。  
 > 初审记录：`U03_CD06_Evaluation_Review_Record_v0.1.md`。  
 > 修订依据：`U03_CD06_Evaluation_Revision_Task_v0.1.md`。
 
@@ -13,7 +14,7 @@
 ```text
 evalset_release_id = ER-U03-RISK-001
 evalset_version = 0.1.0-candidate
-status = REVISION_BOUND / REREVIEW_PENDING / NOT_READY
+status = READY_FOR_EVALUATION
 ```
 
 Candidate identity 未改变；由于尚未 READY / ACTIVE / frozen，本轮只把 review payload 从被驳回的 v0.1 内容绑定到修订后的 v0.2 内容。
@@ -63,20 +64,19 @@ GC-014 / GC-015 / GC-016 保留原有 scope / precedence purpose。
 ## 3. Revision Status
 
 ```text
-BF-CD06-01 = ADDRESSED_PENDING_REREVIEW
-BF-CD06-02 = ADDRESSED_PENDING_REREVIEW
+BF-CD06-01 = CLOSED
+BF-CD06-02 = CLOSED
 ```
 
-修订内容：
+再审已确认：
 
 ```text
-15 active C rules now have 15/15 dedicated representative positive coverage
-Golden Case schema minimum fields = 31/31 present
-clinical_state_fixture_ref = 31/31 present
-fixture registry = available
+15 active C rules = 15/15 dedicated representative positive coverage
+Golden Case schema minimum fields = 31/31
+clinical_state_fixture_ref = 31/31
+fixture registry = approved for evaluation input
+blocking re-review finding = 0
 ```
-
-这些是 revision claims，不等于 blocker 已正式关闭；关闭仍需要独立 Medical + Policy/Eval re-review。
 
 ---
 
@@ -95,11 +95,11 @@ case refs / fixture refs / release refs resolvable = YES
 expected outcomes version-bound = YES
 ```
 
-在此之前：
+当前已满足上述再审条件：
 
 ```text
-CD-06 = NOT_REVIEW_READY
-EvalSet Candidate = NOT_READY
+CD-06 = REVIEW_READY
+EvalSet Candidate = READY_FOR_EVALUATION
 ```
 
 ---
@@ -143,9 +143,7 @@ any critical safety case FAIL
 
 ```text
 ER-U03-RISK-001@0.1.0-candidate
-= REVISION_BOUND
-= REREVIEW_PENDING
-= NOT_READY
+= READY_FOR_EVALUATION
 = NOT_ACTIVE_FOR_EVALUATION
 = NOT_FOR_RUNTIME
 = NOT_FOR_PRODUCTION

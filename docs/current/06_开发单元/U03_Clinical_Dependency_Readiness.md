@@ -45,7 +45,7 @@ F Risk EvalSet / Safety Suite 当前：
 
 ```text
 STRUCTURAL_SCHEMA_FROZEN
-Gate C package initial review = COMPLETE / REVISE_REQUIRED
+Gate C package re-review = COMPLETE / APPROVE
 Safety Suite = 20 CONTENT_APPROVED / CRITICAL_BLOCKING_APPROVED
 
 Revision package now available:
@@ -54,10 +54,10 @@ Revision package now available:
 - U03_Clinical_Risk_Golden_Case_Fixtures_v0.2.md
 - U03_CD06_Evaluation_ReReview_Record_v0.2.md
 
-Golden Case candidates = 31
+Golden Case candidates = 31 APPROVED_FOR_EVALUATION_CONTENT
 schema minimum fields = 31 / 31
 fixture refs = 31 / 31
-EvalSet candidate = ER-U03-RISK-001@0.1.0-candidate / REVISION_BOUND / REREVIEW_PENDING / NOT_READY
+EvalSet candidate = ER-U03-RISK-001@0.1.0-candidate / READY_FOR_EVALUATION
 ```
 
 ---
@@ -81,27 +81,27 @@ BF-CDE-01 = CLOSED
 
 ### Gate C
 
-当前仍为：
+当前：
 
 ```text
 Gate C = NOT_PASSED
-CD-06 = NOT_REVIEW_READY
+CD-06 = REVIEW_READY
 Evaluation Execution = NOT_STARTED
 ```
 
-初审：
+初审 + 再审：
 
 ```text
-Medical Review = COMPLETE
-Policy/Eval Review = COMPLETE / REVISE_REQUIRED
-blocking review finding = BF-CD06-01, BF-CD06-02
+Medical Review = COMPLETE / APPROVE
+Policy/Eval Review = COMPLETE / APPROVE
+blocking re-review finding = 0
 ```
 
-两条 blocker 的修订内容现已完成，但尚待独立再审：
+两条 blocker 已关闭：
 
 ```text
 BF-CD06-01
-= ADDRESSED_PENDING_REREVIEW
+= CLOSED
 
 correction:
 C-RULE-SEPSIS-APPEAR-HIGH-001 → GC-029
@@ -114,14 +114,14 @@ C-RULE-SEPSIS-HR-HIGH-001     → GC-031
 
 ```text
 BF-CD06-02
-= ADDRESSED_PENDING_REREVIEW
+= CLOSED
 
 Golden Cases v0.2:
 candidate count = 31
 schema minimum fields = 31 / 31
 clinical_state_fixture_ref = 31 / 31
 fixture registry = U03_Clinical_Risk_Golden_Case_Fixtures_v0.2.md
-Approved Golden Cases = 0 until re-review completes
+Approved Golden Cases = 31 APPROVED_FOR_EVALUATION_CONTENT
 ```
 
 保留原用途：
@@ -142,20 +142,15 @@ SS-001..SS-020 = Medical APPROVE / Policy-Eval APPROVE / CRITICAL_BLOCKING_APPRO
 
 ```text
 U03_CD06_Evaluation_ReReview_Record_v0.2.md
-= REREVIEW_PENDING
+= REREVIEW_COMPLETE / APPROVE
 ```
 
-只有再审满足：
+已满足：
 
 ```text
 R1-01..R1-05 = APPROVE / APPROVE
 R2-01..R2-06 = APPROVE / APPROVE
 blocking re-review finding = 0
-```
-
-才允许：
-
-```text
 BF-CD06-01 = CLOSED
 BF-CD06-02 = CLOSED
 CD-06 = REVIEW_READY
@@ -177,16 +172,16 @@ Engineering Prerequisites = PASS
 Gate A = PASS
 Gate B = PASS / GOVERNED_CONTENT_READY
 
-Gate C Evaluation Package Initial Review = REVISE_REQUIRED
-Coverage Manifest v0.2 = REVISION_CONTENT_AVAILABLE / REREVIEW_PENDING
-Golden Case Candidates v0.2 = 31 / SCHEMA_COMPLETE_FOR_REVISION / REREVIEW_PENDING
-Golden Case Fixture Registry v0.2 = AVAILABLE
+Gate C Evaluation Package Re-review = COMPLETE / APPROVE
+Coverage Manifest v0.2 = APPROVED_FOR_EVALUATION
+Golden Case Candidates v0.2 = 31 APPROVED_FOR_EVALUATION_CONTENT
+Golden Case Fixture Registry v0.2 = APPROVED_FOR_EVALUATION_INPUT
 Safety Suite Candidates = 20 CONTENT_APPROVED / CRITICAL_BLOCKING_APPROVED
-EvalSet Release Candidate = REVISION_BOUND / REREVIEW_PENDING / NOT_READY
+EvalSet Release Candidate = READY_FOR_EVALUATION
 
-BF-CD06-01 = ADDRESSED_PENDING_REREVIEW
-BF-CD06-02 = ADDRESSED_PENDING_REREVIEW
-CD-06 = NOT_REVIEW_READY
+BF-CD06-01 = CLOSED
+BF-CD06-02 = CLOSED
+CD-06 = REVIEW_READY
 Gate C = NOT_PASSED
 Evaluation Execution = NOT_STARTED
 
@@ -201,8 +196,8 @@ Production Authorization = BLOCKED
 ```text
 U03 Clinical Dependency Readiness
 = GATE_B_PASSED
-/ GATE_C_REVISION_CONTENT_AVAILABLE
-/ BLOCKED_AT_CD06_REREVIEW
+/ GATE_C_CD06_REVIEW_READY
+/ BLOCKED_AT_EVALUATION_EXECUTION
 ```
 
 ---
@@ -210,16 +205,17 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-independent Medical + Policy/Eval re-review
-of Manifest v0.2 + Golden Cases v0.2 + Fixture Registry v0.2
+governed evaluation execution
+of ER-U03-RISK-001@0.1.0-candidate
+  GC-001..GC-031
+  SS-001..SS-020
 ↓
-close BF-CD06-01 / BF-CD06-02 only if APPROVE + blocking finding = 0
+any critical safety case FAIL
+→ Gate C PASS prohibited
 ↓
-then decide CD-06 REVIEW_READY
-↓
-then governed evaluation execution
-↓
-then Gate C decision
+only if execution evidence complete
+and blocking clinical/eval finding = 0
+→ Gate C decision
 ```
 
 ---
@@ -227,11 +223,10 @@ then Gate C decision
 ## 6. 当前禁止事项
 
 - 不原地修改当前 frozen 0.2.1 C/D/Coverage candidates；
-- 不把修订内容 available 当成 blocker 已关闭；
-- 不把 31 个 candidate cases 当成已批准 Clinical Golden Cases；
+- 不把 CD-06 REVIEW_READY 当成 Gate C PASS；
+- 不把 31 个 APPROVED_FOR_EVALUATION_CONTENT cases 当成已执行通过的 Clinical Golden Cases；
 - 不把 Safety Suite 内容审批当成执行通过；
-- 不把 EvalSet candidate 设为 ACTIVE_FOR_EVALUATION；
-- 不开始 governed evaluation execution，直到 CD-06 REVIEW_READY；
+- 不把 EvalSet candidate 设为 ACTIVE_FOR_EVALUATION / RUNTIME / PRODUCTION；
 - 不开始 CD-07 / C02 clinical runtime / D09 runtime / U04；
-- 不宣称 Gate C PASS 或 Production Authorization；
+- 不宣称 Production Authorization；
 - 不打开儿科或孕产临床规则；当前只明确其不属于 current U03 slice。

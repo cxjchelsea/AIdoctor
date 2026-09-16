@@ -72,9 +72,11 @@ CD-04 = INITIAL_RELEASE_GOVERNANCE_READY
 CD-05 = APPROVED_FOR_GATE_B
 
 Gate C = NOT_PASSED
-CD-06 = NOT_REVIEW_READY
-F Clinical Eval Content = CANDIDATES_REVIEWED / REVISE_REQUIRED
-blocking review finding = BF-CD06-01, BF-CD06-02
+CD-06 = REVIEW_READY
+F Clinical Eval Content = APPROVED_FOR_EVALUATION
+BF-CD06-01 = CLOSED
+BF-CD06-02 = CLOSED
+Evaluation Execution = NOT_STARTED
 
 CD-07 Implementation Readiness = BLOCKED
 Implementation Authorization = NOT_GRANTED
@@ -97,16 +99,14 @@ Production Authorized
 
 ## 5. Gate B 后的当前边界
 
-下一步必须关闭 CD-06 revision，再进入 evaluation execution：
+下一步必须进入 governed evaluation execution：
 
 ```text
-close BF-CD06-01 / BF-CD06-02
+execute ER-U03-RISK-001@0.1.0-candidate
+  GC-001..GC-031
+  SS-001..SS-020
 ↓
-re-review Coverage Manifest + Golden Case pack
-↓
-CD-06 REVIEW_READY / decision
-↓
-governed evaluation execution
+record execution evidence
 ↓
 Gate C decision
 ```

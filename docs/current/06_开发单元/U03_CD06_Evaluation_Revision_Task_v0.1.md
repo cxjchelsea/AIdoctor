@@ -1,7 +1,8 @@
 # U03 CD-06 Evaluation Revision Task v0.1
 
 > 权威输入：`U03_CD06_Evaluation_Review_Record_v0.1.md`  
-> 状态：`REVISION_REQUIRED / CD-06_NOT_REVIEW_READY / NOT_GATE_C`
+> 状态：`REVISION_COMPLETE / BF-CD06-01_CLOSED / BF-CD06-02_CLOSED / CD-06_REVIEW_READY / NOT_GATE_C`  
+> 再审记录：`U03_CD06_Evaluation_ReReview_Record_v0.2.md`。
 
 本任务只关闭 BF-CD06-01 / BF-CD06-02。不改 C/D/E 冻结对象，不开始 evaluation execution。
 
@@ -82,4 +83,4 @@ APPEAR / RASH / HR HIGH 不再误绑 P4 scope 例
 BF-CD06-01 / BF-CD06-02 = CLOSED
 ```
 
-之后才能再评估 CD-06 REVIEW_READY。
+再审已关闭 BF-CD06-01 / BF-CD06-02，并判定 `CD-06 = REVIEW_READY`。下一步是 governed evaluation execution，不是 Gate C PASS。

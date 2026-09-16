@@ -1,7 +1,8 @@
 # U03 Clinical Risk EvalSet Coverage Manifest Draft v0.2
 
 > 对象：Gate C / CD-06 revised Coverage Manifest。  
-> 状态：`REVISION_CONTENT_AVAILABLE / REVIEW_PENDING / BF-CD06-01_ADDRESSED_PENDING_REREVIEW / NOT_GATE_C / NOT_FOR_PRODUCTION`。  
+> 状态：`REVIEWED / APPROVED_FOR_EVALUATION / BF-CD06-01_CLOSED / NOT_GATE_C / NOT_FOR_PRODUCTION`。  
+> 再审记录：`U03_CD06_Evaluation_ReReview_Record_v0.2.md`。  
 > 依据：`U03_CD06_Evaluation_Revision_Task_v0.1.md`。  
 > 绑定：E `0.1.0-candidate` + C `0.2.1-candidate` + Coverage `V0_2_1_CANDIDATE` + D `0.2.1-candidate`。
 
@@ -147,13 +148,13 @@ Safety Suite v0.1 remains content-approved and critical-blocking. Mandatory inva
 
 ```text
 required dimensions = DECLARED
-15 active rule mapping = CORRECTED / 15_OF_15
+15 active rule mapping = APPROVED / 15_OF_15
 Golden Case schema coverage = 31_OF_31
-Medical re-review = NOT_STARTED
-Policy/Eval re-review = NOT_STARTED
-BF-CD06-01 = ADDRESSED_PENDING_REREVIEW
-BF-CD06-02 = ADDRESSED_PENDING_REREVIEW
+Medical re-review = COMPLETE / APPROVE
+Policy/Eval re-review = COMPLETE / APPROVE
+BF-CD06-01 = CLOSED
+BF-CD06-02 = CLOSED
 Execution evidence = NOT_STARTED
-CD-06 = NOT_REVIEW_READY
+CD-06 = REVIEW_READY
 Gate C = NOT_PASSED
 ```

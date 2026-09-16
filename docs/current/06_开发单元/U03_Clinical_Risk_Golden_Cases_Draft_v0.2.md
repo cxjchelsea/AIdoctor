@@ -1,7 +1,8 @@
 # U03 Clinical Risk Golden Cases Draft v0.2
 
 > 对象：Gate C / CD-06 Clinical Golden Case revised candidate pack。  
-> 状态：`REVISION_CONTENT_AVAILABLE / REVIEW_PENDING / BF-CD06-02_ADDRESSED_PENDING_REREVIEW / NOT_APPROVED / NOT_EXECUTED / NOT_FOR_PRODUCTION`。  
+> 状态：`REVIEWED / APPROVED_FOR_EVALUATION_CONTENT / BF-CD06-02_CLOSED / NOT_EXECUTED / NOT_FOR_PRODUCTION`。  
+> 再审记录：`U03_CD06_Evaluation_ReReview_Record_v0.2.md`。  
 > 依据：`U03_CD06_Evaluation_Revision_Task_v0.1.md`。  
 > 本版保留 v0.1 的 28 个 purpose，并新增 3 个 dedicated positive case（APPEAR HIGH / RASH HIGH / HR HIGH）。本文件不把 candidate case 升级为已批准 Golden Case。
 
@@ -16,7 +17,7 @@ coverage_contract_ref = U03_D09_COVERAGE_V0_2_1_CANDIDATE
 policy_release_ref = PR-U03-D09-001@0.2.1-candidate
 policy_pair_ref = PF-U03-C-POLICY-001
 case_version = 0.2
-review_status = REVISION_CONTENT_AVAILABLE / REVIEW_PENDING
+review_status = APPROVED_FOR_EVALUATION_CONTENT
 ```
 
 公共 source / rationale / provenance authority：
@@ -99,7 +100,7 @@ Fixture 具体输入见：
 U03_Clinical_Risk_Golden_Case_Fixtures_v0.2.md
 ```
 
-这些字段现在是 reviewable / executable input specification，但在 Medical + Policy/Eval 再审完成前仍不是正式批准 Golden Cases。
+这些字段现在是 reviewable / executable input specification，并已获 Medical + Policy/Eval 再审批准为 evaluation content。它们仍不是已执行通过的 Clinical Golden Cases，也不构成 Gate C PASS。
 
 ## 4. BF-CD06-01 Correction
 
@@ -125,14 +126,14 @@ GC-016 = HIGH + insufficiency precedence（保留）
 
 ```text
 candidate_case_count = 31
-schema_minimum_fields = COMPLETE_FOR_REVISION
+schema_minimum_fields = COMPLETE
 fixture_registry = AVAILABLE
-Medical re-review = NOT_STARTED
-Policy/Eval re-review = NOT_STARTED
-BF-CD06-01 = ADDRESSED_PENDING_REREVIEW
-BF-CD06-02 = ADDRESSED_PENDING_REREVIEW
-Approved Golden Cases = 0
+Medical re-review = COMPLETE / APPROVE
+Policy/Eval re-review = COMPLETE / APPROVE
+BF-CD06-01 = CLOSED
+BF-CD06-02 = CLOSED
+Approved Golden Cases = 31 APPROVED_FOR_EVALUATION_CONTENT
 Evaluation Execution = NOT_STARTED
-CD-06 = NOT_REVIEW_READY
+CD-06 = REVIEW_READY
 Gate C = NOT_PASSED
 ```

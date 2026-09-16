@@ -276,16 +276,17 @@ blocking clinical/eval finding = 0
 Gate A = PASS
 Gate B = PASS / GOVERNED_CONTENT_READY
 Gate C = NOT_PASSED
-CD-06 = NOT_REVIEW_READY
+CD-06 = REVIEW_READY
 
-Coverage Manifest = CREATED / REVIEWED / REVISE_REQUIRED
-Golden Case Candidate Pack = CREATED / REVIEWED / REVISE_REQUIRED
-Safety Suite Candidate Pack = CREATED / REVIEWED / CONTENT_APPROVED
-EvalSet Release Candidate = CREATED / REVIEWED / NOT_READY
-Medical Review = COMPLETE
-Policy/Eval Review = COMPLETE / REVISE_REQUIRED
-blocking review finding = BF-CD06-01, BF-CD06-02
+Coverage Manifest = APPROVED_FOR_EVALUATION
+Golden Case Candidate Pack = APPROVED_FOR_EVALUATION_CONTENT
+Safety Suite Candidate Pack = CONTENT_APPROVED / CRITICAL_BLOCKING_APPROVED
+EvalSet Release Candidate = READY_FOR_EVALUATION
+Medical Review = COMPLETE / APPROVE
+Policy/Eval Review = COMPLETE / APPROVE
+BF-CD06-01 = CLOSED
+BF-CD06-02 = CLOSED
 Evaluation Execution = NOT_STARTED
 ```
 
-下一步：按 `U03_CD06_Evaluation_Revision_Task_v0.1.md` 关闭 BF-CD06-01 / BF-CD06-02。
+下一步：对 `ER-U03-RISK-001@0.1.0-candidate` 执行 governed evaluation。CD-06 REVIEW_READY 不等于 Gate C PASS。

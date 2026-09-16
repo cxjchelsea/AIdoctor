@@ -1,7 +1,8 @@
 # U03 Clinical Risk Golden Case Fixtures v0.2
 
 > 角色：Gate C / CD-06 Golden Case 的受控 Clinical State fixture registry。  
-> 状态：`REVISION_CONTENT_AVAILABLE / REVIEW_PENDING / NOT_EXECUTED / NOT_FOR_PRODUCTION`。  
+> 状态：`REVIEWED / APPROVED_FOR_EVALUATION_INPUT / NOT_EXECUTED / NOT_FOR_PRODUCTION`。  
+> 再审记录：`U03_CD06_Evaluation_ReReview_Record_v0.2.md`。  
 > 依据：`U03_CD06_Evaluation_Revision_Task_v0.1.md`。  
 > 本文件只把已批准 Gate A/B/Candidate policy 语义结构化为可执行评估输入；不新增医学来源、规则、阈值或 disposition。
 
