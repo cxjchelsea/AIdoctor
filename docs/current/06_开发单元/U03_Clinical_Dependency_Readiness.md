@@ -47,13 +47,6 @@ F Risk EvalSet / Safety Suite 当前：
 STRUCTURAL_SCHEMA_FROZEN
 Gate C package re-review = COMPLETE / APPROVE
 Safety Suite = 20 CONTENT_APPROVED / CRITICAL_BLOCKING_APPROVED
-
-Revision package now available:
-- U03_Clinical_Risk_EvalSet_Coverage_Manifest_Draft_v0.2.md
-- U03_Clinical_Risk_Golden_Cases_Draft_v0.2.md
-- U03_Clinical_Risk_Golden_Case_Fixtures_v0.2.md
-- U03_CD06_Evaluation_ReReview_Record_v0.2.md
-
 Golden Case candidates = 31 APPROVED_FOR_EVALUATION_CONTENT
 schema minimum fields = 31 / 31
 fixture refs = 31 / 31
@@ -86,75 +79,46 @@ BF-CDE-01 = CLOSED
 ```text
 Gate C = NOT_PASSED
 CD-06 = REVIEW_READY
-Evaluation Execution = NOT_STARTED
+ER-U03-RISK-001@0.1.0-candidate = READY_FOR_EVALUATION
 ```
 
-初审 + 再审：
+内容审核状态：
 
 ```text
+Coverage Manifest v0.2 = APPROVED_FOR_EVALUATION
+Golden Case Candidates v0.2 = 31 APPROVED_FOR_EVALUATION_CONTENT
+Golden Case Fixture Registry v0.2 = APPROVED_FOR_EVALUATION_INPUT
+Safety Suite Candidates = 20 CONTENT_APPROVED / CRITICAL_BLOCKING_APPROVED
 Medical Review = COMPLETE / APPROVE
 Policy/Eval Review = COMPLETE / APPROVE
-blocking re-review finding = 0
-```
-
-两条 blocker 已关闭：
-
-```text
-BF-CD06-01
-= CLOSED
-
-correction:
-C-RULE-SEPSIS-APPEAR-HIGH-001 → GC-029
-C-RULE-SEPSIS-RASH-HIGH-001   → GC-030
-C-RULE-SEPSIS-HR-HIGH-001     → GC-031
-
-15 active C rules
-= 15 / 15 representative positive coverage
-```
-
-```text
-BF-CD06-02
-= CLOSED
-
-Golden Cases v0.2:
-candidate count = 31
-schema minimum fields = 31 / 31
-clinical_state_fixture_ref = 31 / 31
-fixture registry = U03_Clinical_Risk_Golden_Case_Fixtures_v0.2.md
-Approved Golden Cases = 31 APPROVED_FOR_EVALUATION_CONTENT
-```
-
-保留原用途：
-
-```text
-GC-014 = specialized sepsis-family SCOPE_MISMATCH → P4
-GC-015 = specialized dyspnoea-family SCOPE_MISMATCH → P4
-GC-016 = HIGH + insufficiency precedence
-```
-
-Safety Suite 未修改：
-
-```text
-SS-001..SS-020 = Medical APPROVE / Policy-Eval APPROVE / CRITICAL_BLOCKING_APPROVED
-```
-
-再审记录：
-
-```text
-U03_CD06_Evaluation_ReReview_Record_v0.2.md
-= REREVIEW_COMPLETE / APPROVE
-```
-
-已满足：
-
-```text
-R1-01..R1-05 = APPROVE / APPROVE
-R2-01..R2-06 = APPROVE / APPROVE
-blocking re-review finding = 0
 BF-CD06-01 = CLOSED
 BF-CD06-02 = CLOSED
-CD-06 = REVIEW_READY
 ```
+
+但 execution readiness 独立核验发现：
+
+```text
+U03_Gate_C_Evaluation_Execution_Readiness_v0.1.md
+= ASSESSMENT_COMPLETE / EXECUTION_BLOCKED
+
+BF-CD06-EXEC-01
+= OPEN
+= NO_EXECUTABLE_GOVERNED_EVALUATION_PATH
+```
+
+原因：当前工程已有 U03 governance/application skeleton，但未发现可执行当前冻结 C/D clinical semantics 的真实 C02 adapter / D09 clinical evaluator，也未发现可加载 GC-001..GC-031 + SS-001..SS-020 并输出逐 case evidence bundle 的独立 governed evaluation harness。
+
+现有 `U03RiskAssessmentFlowTest` 使用 synthetic/stub/lambda decision，只能作为 engineering governance evidence，不能作为 Gate C clinical evaluation execution evidence。
+
+因此：
+
+```text
+Evaluation Content = READY
+Evaluation Execution = BLOCKED_BEFORE_START
+Execution Result Bundle = NOT_AVAILABLE
+```
+
+任一 `SS-001..SS-020` 未来执行 FAIL 仍为 critical blocking，不能被总体通过率掩盖。
 
 ### Gate D / Authorization
 
@@ -182,8 +146,10 @@ EvalSet Release Candidate = READY_FOR_EVALUATION
 BF-CD06-01 = CLOSED
 BF-CD06-02 = CLOSED
 CD-06 = REVIEW_READY
+
+BF-CD06-EXEC-01 = OPEN / NO_EXECUTABLE_GOVERNED_EVALUATION_PATH
+Evaluation Execution = BLOCKED_BEFORE_START
 Gate C = NOT_PASSED
-Evaluation Execution = NOT_STARTED
 
 CD-07 Implementation Readiness = BLOCKED
 U04 Implementation Readiness = BLOCKED_BY_U03_CLINICAL_DEPENDENCY
@@ -197,7 +163,7 @@ Production Authorization = BLOCKED
 U03 Clinical Dependency Readiness
 = GATE_B_PASSED
 / GATE_C_CD06_REVIEW_READY
-/ BLOCKED_AT_EVALUATION_EXECUTION
+/ BLOCKED_BY_EVALUATION_EXECUTION_PATH
 ```
 
 ---
@@ -205,16 +171,25 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-governed evaluation execution
-of ER-U03-RISK-001@0.1.0-candidate
+identify existing executable clinical evaluator / harness
+OR
+perform Evaluation Harness Boundary Decision
+↓
+ensure no CD-07 / runtime Implementation Authorization bypass
+↓
+provide runnable isolated exact-release-bound evaluation path
+↓
+close BF-CD06-EXEC-01
+↓
+start governed evaluation execution
+  ER-U03-RISK-001@0.1.0-candidate
   GC-001..GC-031
   SS-001..SS-020
 ↓
-any critical safety case FAIL
-→ Gate C PASS prohibited
+produce case-level execution evidence bundle
 ↓
 only if execution evidence complete
-and blocking clinical/eval finding = 0
+and critical blocking failure = 0
 → Gate C decision
 ```
 
@@ -226,7 +201,9 @@ and blocking clinical/eval finding = 0
 - 不把 CD-06 REVIEW_READY 当成 Gate C PASS；
 - 不把 31 个 APPROVED_FOR_EVALUATION_CONTENT cases 当成已执行通过的 Clinical Golden Cases；
 - 不把 Safety Suite 内容审批当成执行通过；
-- 不把 EvalSet candidate 设为 ACTIVE_FOR_EVALUATION / RUNTIME / PRODUCTION；
+- 不把 synthetic/stub unit tests 当成 governed clinical evaluation execution；
+- 不人工对照 expected table 后伪造 PASS result bundle；
+- 不借 Gate C evaluation 名义实现未经授权的 C02/D09 clinical runtime；
 - 不开始 CD-07 / C02 clinical runtime / D09 runtime / U04；
 - 不宣称 Production Authorization；
 - 不打开儿科或孕产临床规则；当前只明确其不属于 current U03 slice。
