@@ -2,7 +2,8 @@
 
 > Object: PR #89 targeted remediation after `U03_Gate_C_Independent_Implementation_Review_v0.1.md`  
 > Scope: BF-IR-01 / BF-IR-02 only, plus N-IR-01 executable-boundary strengthening  
-> Status: `REMEDIATED_PENDING_TARGETED_RE_REVIEW / NOT_GATE_C / NOT_FOR_PRODUCTION`  
+> Status: `REMEDIATED / TARGETED_REREVIEW_PASS / NOT_GATE_C / NOT_FOR_PRODUCTION`  
+> 再审记录：`U03_Gate_C_Independent_Implementation_ReReview_v0.1.md`。  
 > Governed Evaluation Execution: `NOT_STARTED`  
 > Gate C: `NOT_PASSED`
 
@@ -121,20 +122,19 @@ These expected results are not yet governed evaluation evidence and do not close
 
 ---
 
-## 6. Required next gate
+## 6. Current gate after targeted re-review
+
+Targeted Independent Re-Review 已对 `d51536f` 完成，结论见 `U03_Gate_C_Independent_Implementation_ReReview_v0.1.md`。
+
+下一步才是单独启动 Governed Evaluation Execution；不得把本 remediation 或 unittest 当成 Gate C evidence。
 
 ```text
-Targeted Independent Re-Review
-→ verify BF-IR-01 closure
-→ verify BF-IR-02 closure
-→ verify no new semantic/runtime scope expansion
-```
-
-Only after targeted Independent Re-Review PASS may a separate governance action mark the implementation review complete and proceed to Governed Evaluation Execution.
-
-```text
-Independent Implementation Review = REVISE_REQUIRED historically preserved
-Remediation = APPLIED_PENDING_TARGETED_RE_REVIEW
+Independent Implementation Review historical = REVISE_REQUIRED
+Targeted Independent Re-Review = PASS
+Independent Implementation Review current = PASS
+Remediation = ACCEPTED
+BF-IR-01 = CLOSED
+BF-IR-02 = CLOSED
 Governed Evaluation Execution = NOT_STARTED
 Gate C = NOT_PASSED
 Runtime / U04 / Production = BLOCKED
