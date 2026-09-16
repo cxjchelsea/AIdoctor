@@ -333,7 +333,13 @@ def decide(fixture: Dict[str, Any], results: List[RuleResult]) -> Decision:
     if fixture.get("region_scope_ok", True) is False or fixture.get("channel_scope_ok", True) is False:
         return _p0_decision("OVERALL_POLICY_SCOPE_MISMATCH")
 
-    if fixture.get("forced_family_conflict"):
+    by_id = {r.rule_id: r for r in results}
+
+    def family_state_conflict(rule_ids: List[str]) -> bool:
+        states = [by_id[r].execution_state for r in rule_ids if r in by_id]
+        return bool(states) and "SCOPE_MISMATCH" in states and any(s != "SCOPE_MISMATCH" for s in states)
+
+    if family_state_conflict(DYSPNOEA_RULES) or family_state_conflict(SEPSIS_RULES):
         return Decision("D09-P-090", "FAILED", "NONE", "UNRESOLVABLE_CONFLICT")
 
     matched_high = [r.rule_id for r in results if r.execution_state == "MATCHED" and r.signal in HIGH_SIGNALS]
@@ -356,7 +362,6 @@ def decide(fixture: Dict[str, Any], results: List[RuleResult]) -> Decision:
             tuple(sorted(matched_mod)), ()
         )
 
-    by_id = {r.rule_id: r for r in results}
     baseline_complete = all(by_id.get(rule) is not None and by_id[rule].execution_state == "NO_MATCH" for rule in BASELINE_RULES)
 
     def family_complete_or_na(rule_ids: List[str]) -> bool:
