@@ -89,6 +89,7 @@ U03_C_Rule_Release_Scope_Revision_Draft_v0.2.1.md
 U03_D09_Policy_Scope_Revision_Draft_v0.2.1.md
 U03_D09_Coverage_Contract_Revision_Draft_v0.2.1.md
 U03_CDE_Scope_Alignment_Targeted_Review_Record_v0.2.1.md
+U03_CDE_Cross_Consistency_Review_v0.2.1.md
 ```
 
 ## 4. 当前 Gate
@@ -104,13 +105,14 @@ A/B v0.2 Source-locked Semantics = FROZEN
 Medical Owner Approval = NOT_COMPLETE
 Clinical Input Package = NOT_COMPLETE
 C Historical Candidate = RR-U03-RISK-001@0.2.0-candidate_CANDIDATE_FROZEN
-C Scope Revision 0.2.1 = APPROVED_FOR_CONTENT / NOT_FROZEN
+C Current Candidate = RR-U03-RISK-001@0.2.1-candidate_CANDIDATE_FROZEN
 D Historical Candidate = PR-U03-D09-001@0.2.0-candidate_CANDIDATE_FROZEN
-D Scope Revision 0.2.1 = APPROVED_FOR_CONTENT / NOT_FROZEN
+D Current Candidate = PR-U03-D09-001@0.2.1-candidate_CANDIDATE_FROZEN
 D Coverage 0.2.0 = U03_D09_COVERAGE_V0_2 / CANDIDATE_FROZEN
-D Coverage 0.2.1 = APPROVED_FOR_CONTENT / NOT_FROZEN
-BF-CDE-01 = CLOSED_FOR_CONTENT
-Gate B = NOT_PASSED / BLOCKED_BY_CDE_SCOPE_INCONSISTENCY
+D Coverage Current = U03_D09_COVERAGE_V0_2_1_CANDIDATE / CANDIDATE_FROZEN
+BF-CDE-01 = CLOSED
+C/D/E Cross-Consistency v0.2.1 = PASS
+Gate B = NOT_PASSED / FINAL_DECISION_REQUIRED
 D D09 Production Clinical Policy = NOT_FROZEN / NOT_PUBLISHED
 E Applicability = APPROVED
 E KR REVIEW_READY = YES

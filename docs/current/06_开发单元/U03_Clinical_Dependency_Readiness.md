@@ -81,7 +81,7 @@ Gate A = PASS
 
 ```text
 Gate B = NOT_PASSED
-reason = CDE_CROSS_CONSISTENCY_RE_REVIEW_REQUIRED
+reason = GATE_B_FINAL_DECISION_REQUIRED
 ```
 
 0.2.1 targeted correction 已满足：
@@ -122,14 +122,23 @@ U03_CD03_C_Rule_Release_Recertification_v0.2.1.md
 U03_CD05_D09_Initial_Candidate_Recertification_v0.2.1.md
 ```
 
-因此 Gate B 当前唯一剩余前置：
+C/D/E 交叉一致性再审已完成：
 
 ```text
-C / D / E cross-consistency re-review
-↓
-if PASS + blocking finding = 0
-→ Gate B final decision
+U03_CDE_Cross_Consistency_Review_v0.2.1.md
+PASS = 14
+REVISE = 0
+blocking finding = 0
+BF-CDE-01 = CLOSED
 ```
+
+因此 Gate B 当前唯一剩余动作：
+
+```text
+Gate B final decision
+```
+
+本再审 PASS 不自动等于 Gate B PASS。
 
 ### Gate C
 
@@ -187,8 +196,8 @@ Targeted Scope Eval = PASS
 CD-03 targeted re-certification = PASS
 CD-05 targeted re-certification = PASS
 
-C/D/E Cross-Consistency Re-review = NOT_STARTED
-Gate B = NOT_PASSED
+C/D/E Cross-Consistency Re-review = COMPLETE / PASS
+Gate B = NOT_PASSED / FINAL_DECISION_REQUIRED
 Gate C = NOT_PASSED
 CD-07 = BLOCKED
 U04 = BLOCKED
@@ -208,10 +217,9 @@ U03 Clinical Dependency Readiness
 ## 6. 当前唯一下一步
 
 ```text
-C / D / E cross-consistency re-review
+Gate B final decision
 ↓
-only if PASS + blocking finding = 0
-→ Gate B final decision
+do not treat C/D/E PASS as automatic Gate B PASS
 ```
 
 ---
