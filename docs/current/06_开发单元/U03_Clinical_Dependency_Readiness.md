@@ -126,9 +126,10 @@ Evaluation-only implementation readiness 已准备：
 ```text
 U03_Evaluation_Only_Clinical_Implementation_Authorization_Readiness_v0.1.md
 AUTH-U03-GATEC-EVAL-IMPL-001
-= PROPOSED
-= READINESS_COMPLETE
-= NOT_AUTHORIZED
+= AUTHORIZED / EVALUATION_ONLY
+Semantic Mapping Review
+= U03_Gate_C_Semantic_Mapping_Review_v0.1.md
+= COMPLETE / NO_BLOCKING_GAP
 ```
 
 该 proposed authorization 仅允许：
@@ -155,9 +156,11 @@ production authorization
 
 ```text
 Evaluation Content = READY
-Evaluation Execution = BLOCKED_BEFORE_START
+Semantic Mapping Review = COMPLETE / NO_BLOCKING_GAP
+Evaluation-only Implementation = NOT_STARTED / AUTHORIZED_TO_START
+Evaluation Execution = NOT_STARTED
 Execution Result Bundle = NOT_AVAILABLE
-Evaluation-only Implementation Authorization = REQUIRED / NOT_GRANTED
+Evaluation-only Implementation Authorization = GRANTED / EVALUATION_ONLY
 ```
 
 任一 `SS-001..SS-020` 未来执行 FAIL 仍为 critical blocking，不能被总体通过率掩盖。
@@ -167,7 +170,7 @@ Evaluation-only Implementation Authorization = REQUIRED / NOT_GRANTED
 ```text
 CD-07 Implementation Readiness = BLOCKED
 Runtime Implementation Authorization = NOT_GRANTED
-Evaluation-only Implementation Authorization = NOT_GRANTED
+Evaluation-only Implementation Authorization = GRANTED / EVALUATION_ONLY
 ```
 
 ---
@@ -193,8 +196,10 @@ CD-06 = REVIEW_READY
 BF-CD06-EXEC-01 = OPEN / NO_EXECUTABLE_GOVERNED_EVALUATION_PATH
 Evaluation Harness Boundary = DECIDED
 Evaluation-only Implementation Readiness = PASS
-AUTH-U03-GATEC-EVAL-IMPL-001 = NOT_AUTHORIZED
-Evaluation Execution = BLOCKED_BEFORE_START
+AUTH-U03-GATEC-EVAL-IMPL-001 = AUTHORIZED / EVALUATION_ONLY
+Semantic Mapping Review = COMPLETE / NO_BLOCKING_GAP
+Evaluation-only Implementation = NOT_STARTED / AUTHORIZED_TO_START
+Evaluation Execution = NOT_STARTED
 Gate C = NOT_PASSED
 
 CD-07 Runtime Implementation Readiness = BLOCKED
@@ -209,7 +214,8 @@ Production Authorization = BLOCKED
 U03 Clinical Dependency Readiness
 = GATE_B_PASSED
 / GATE_C_CD06_REVIEW_READY
-/ EVALUATION_ONLY_IMPLEMENTATION_AUTHORIZATION_REQUIRED
+/ EVALUATION_ONLY_IMPLEMENTATION_AUTHORIZED
+/ BLOCKED_AT_EVALUATION_ONLY_IMPLEMENTATION
 ```
 
 ---
@@ -217,13 +223,13 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-explicit user decision on
-AUTH-U03-GATEC-EVAL-IMPL-001
+create impl/u03-gatec-eval-only
 ↓
-if authorized:
-  implement isolated evaluation harness
-  + evaluation-only executable C/D semantics
-  + independent implementation review
+implement isolated evaluator + harness
+  using U03_Gate_C_Semantic_Mapping_Review_v0.1.md
+  no medical invention
+↓
+independent implementation review
 ↓
 prove exact-release binding / no runtime wiring
 ↓

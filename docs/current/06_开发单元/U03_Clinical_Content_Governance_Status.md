@@ -78,8 +78,12 @@ BF-CD06-01 = CLOSED
 BF-CD06-02 = CLOSED
 Evaluation Execution = NOT_STARTED
 
+Evaluation-only Implementation Authorization = GRANTED / AUTH-U03-GATEC-EVAL-IMPL-001
+Semantic Mapping Review = COMPLETE / NO_BLOCKING_GAP
+Evaluation-only Implementation = NOT_STARTED / AUTHORIZED_TO_START
+
 CD-07 Implementation Readiness = BLOCKED
-Implementation Authorization = NOT_GRANTED
+Runtime Implementation Authorization = NOT_GRANTED
 U04 Implementation Readiness = BLOCKED_BY_U03_CLINICAL_DEPENDENCY
 Clinical Runtime Production = NOT_ENABLED
 Production Authorization = BLOCKED
