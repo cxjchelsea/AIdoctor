@@ -1,0 +1,139 @@
+# U03 Clinical Risk Golden Cases Draft v0.2
+
+> 对象：Gate C / CD-06 Clinical Golden Case revised candidate pack。  
+> 状态：`REVIEWED / APPROVED_FOR_EVALUATION_CONTENT / BF-CD06-02_CLOSED / NOT_EXECUTED / NOT_FOR_PRODUCTION`。  
+> 再审记录：`U03_CD06_Evaluation_ReReview_Record_v0.2.md`。  
+> 依据：`U03_CD06_Evaluation_Revision_Task_v0.1.md`。  
+> 本版保留 v0.1 的 28 个 purpose，并新增 3 个 dedicated positive case（APPEAR HIGH / RASH HIGH / HR HIGH）。本文件不把 candidate case 升级为已批准 Golden Case。
+
+## 1. Common Binding
+
+所有 case 统一绑定：
+
+```text
+knowledge_release_ref = KR-U03-SOURCE-001@0.1.0-candidate
+rule_release_ref = RR-U03-RISK-001@0.2.1-candidate
+coverage_contract_ref = U03_D09_COVERAGE_V0_2_1_CANDIDATE
+policy_release_ref = PR-U03-D09-001@0.2.1-candidate
+policy_pair_ref = PF-U03-C-POLICY-001
+case_version = 0.2
+review_status = APPROVED_FOR_EVALUATION_CONTENT
+```
+
+公共 source / rationale / provenance authority：
+
+```text
+SRC-A = U03_Clinical_Risk_Semantics_Content_Draft_v0.2.md
+SRC-B = U03_Evidence_Catalog_Content_Draft_v0.2.md
+SRC-C = U03_Safety_Critical_Risk_Rule_Pack_Content_Draft_v0.2.md
+SRC-D = U03_D09_Clinical_Policy_Content_Draft_v0.2.md + 0.2.1 scope revision/candidate
+SRC-E = KR-U03-SOURCE-001@0.1.0-candidate
+SRC-COV = U03_D09_COVERAGE_V0_2_1_CANDIDATE
+SRC-SCOPE = U03_CDE_v0.2.1_Scope_Entry_Missingness_Review_Record.md
+SRC-IDEM = U03 engineering governed commit/idempotency path
+```
+
+## 2. Schema-complete Candidate Records
+
+下表中的数组字段均为显式最小集合；`must_not_commit[]` 默认至少包含 `UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT`，除非 case 另有更具体禁止项。
+
+| case_id | fixture / version | input_fact_refs[] | expected_evidence_refs[] | expected_rule_refs[] | expected_policy_ref | expected result / disposition / reason | must_not_output[] | must_not_commit[] | source / rationale / provenance |
+|---|---|---|---|---|---|---|---|---|---|
+| GC-001 | `FX-GC-001` / CURRENT | `[EV-RF-RESP-001]` | `[EV-RF-RESP-001]` | `[C-RULE-RESP-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[SAFE,NORMAL]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-A,SRC-B,SRC-C,SRC-D] / HIGH red-flag mapping / governed refs` |
+| GC-002 | `FX-GC-002` / CURRENT | `[EV-MNM-NEURO-001]` | `[EV-MNM-NEURO-001]` | `[C-RULE-NEURO-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[DIAGNOSTIC_CERTAINTY,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-A,SRC-B,SRC-C,SRC-D] / MUST_NOT_MISS mapping / governed refs` |
+| GC-003 | `FX-GC-003` / CURRENT | `[EV-MNM-NEURO-002]` | `[EV-MNM-NEURO-002]` | `[C-RULE-NEURO-002]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[FIRST_HIT_MUTATION,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-A,SRC-B,SRC-C,SRC-D] / speech-language MNM mapping / governed refs` |
+| GC-004 | `FX-GC-004` / CURRENT | `[EV-MNM-CARD-001]` | `[EV-MNM-CARD-001]` | `[C-RULE-CARD-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[CONFIRMED_ACS,CONFIRMED_MI,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-A,SRC-B,SRC-C,SRC-D] / cardiac MNM mapping / governed refs` |
+| GC-005 | `FX-GC-005` / CURRENT | `[EV-RF-ALLERGY-001]` | `[EV-RF-ALLERGY-001]` | `[C-RULE-ALLERGY-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[MILD_ALLERGY_GENERALIZATION,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-A,SRC-B,SRC-C,SRC-D] / allergy red-flag mapping / governed refs` |
+| GC-006 | `FX-GC-006` / CURRENT | `[NHS_DYSPNOEA_CONTEXT,EV-RF-APPEAR-001]` | `[EV-RF-APPEAR-001]` | `[C-RULE-DYSPNOEA-APPEAR-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[CONTEXT_CREATED_BY_APPEARANCE,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-A,SRC-B,SRC-C,SRC-D] / dyspnoea context independence / context provenance` |
+| GC-007 | `FX-GC-007` / CURRENT | `[NHS_DYSPNOEA_CONTEXT,EV-RF-NEURO-001]` | `[EV-RF-NEURO-001]` | `[C-RULE-DYSPNOEA-CONFUSION-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[GLOBAL_CONFUSION_REDFLAG,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-A,SRC-B,SRC-C,SRC-D] / source-context lock / context provenance` |
+| GC-008 | `FX-GC-008` / CURRENT | `[SUSPECTED_SEPSIS_CONTEXT,RR=25]` | `[MEAS-RR]` | `[C-RULE-SEPSIS-RR-HIGH-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[RR_CREATES_SEPSIS_CONTEXT,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-A,SRC-C,SRC-D,SRC-E] / NG253 high criterion / independent context provenance` |
+| GC-009 | `FX-GC-009` / CURRENT | `[SUSPECTED_SEPSIS_CONTEXT,RR=21]` | `[MEAS-RR]` | `[C-RULE-SEPSIS-RR-MODHIGH-001]` | `D09-P-030` | `VALID / CAUTION / MODERATE_HIGH_RULE_SIGNAL_PRESENT` | `[HIGH_RISK,NO_HIGH_RISK_SIGNAL]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-E] / moderate-high mapping / governed refs` |
+| GC-010 | `FX-GC-010` / CURRENT | `[SUSPECTED_SEPSIS_CONTEXT,SBP=90,USUAL_BP=UNKNOWN]` | `[MEAS-SBP]` | `[C-RULE-SEPSIS-SBP-HIGH-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[DOWNGRADE_DUE_TO_USUAL_BP_UNKNOWN,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-E] / absolute SBP branch / governed refs` |
+| GC-011 | `FX-GC-011` / CURRENT | `[SUSPECTED_SEPSIS_CONTEXT,SBP=95]` | `[MEAS-SBP]` | `[C-RULE-SEPSIS-SBP-MODHIGH-001]` | `D09-P-030` | `VALID / CAUTION / MODERATE_HIGH_RULE_SIGNAL_PRESENT` | `[NO_HIGH_RISK_SIGNAL]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-E] / SBP moderate-high mapping / governed refs` |
+| GC-012 | `FX-GC-012` / CURRENT | `[BASELINE5_RESOLVABLE_NEGATIVE,COND_FAMILIES_NOT_APPLICABLE]` | `[]` | `[C-RULE-RESP-001,C-RULE-NEURO-001,C-RULE-NEURO-002,C-RULE-CARD-001,C-RULE-ALLERGY-001]` | `D09-P-040` | `VALID / NO_HIGH_RISK_SIGNAL / COVERAGE_COMPLETE_GOVERNED_RULE_SET_EVALUATED_NO_SIGNAL` | `[SAFE,NORMAL,NO_DISEASE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-COV] / complete denominator / coverage provenance` |
+| GC-013 | `FX-GC-013` / CURRENT | `[SUSPECTED_SEPSIS_CONTEXT,HR=100]` | `[MEAS-HR]` | `[C-RULE-SEPSIS-HR-MODHIGH-001]` | `D09-P-030` | `VALID / CAUTION / MODERATE_HIGH_RULE_SIGNAL_PRESENT` | `[NO_HIGH_RISK_SIGNAL]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-E] / HR moderate-high mapping / governed refs` |
+| GC-014 | `FX-GC-014` / CURRENT | `[BASELINE5_NO_MATCH,SEPSIS_FAMILY_SCOPE_MISMATCH]` | `[]` | `[NG253_SEPSIS_FAMILY]` | `D09-P-040` | `VALID / NO_HIGH_RISK_SIGNAL / COVERAGE_COMPLETE_GOVERNED_RULE_SET_EVALUATED_NO_SIGNAL` | `[OVERALL_POLICY_SCOPE_MISMATCH,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-COV] / specialized family non-applicability / governed refs` |
+| GC-015 | `FX-GC-015` / CURRENT | `[BASELINE5_NO_MATCH,DYSPNOEA_FAMILY_SCOPE_MISMATCH]` | `[]` | `[NHS_DYSPNOEA_FAMILY]` | `D09-P-040` | `VALID / NO_HIGH_RISK_SIGNAL / COVERAGE_COMPLETE_GOVERNED_RULE_SET_EVALUATED_NO_SIGNAL` | `[OVERALL_POLICY_SCOPE_MISMATCH,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-COV] / specialized family non-applicability / governed refs` |
+| GC-016 | `FX-GC-016` / CURRENT | `[HIGH_MATCH,APPLICABLE_INPUT_INSUFFICIENT]` | `[MATCHED_EVIDENCE,INSUFFICIENT_EVIDENCE_REF]` | `[HIGH_RULE_REF,INSUFFICIENT_RULE_REF]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[P2_DOWNGRADE,P3_DOWNGRADE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-COV] / P1>P2/P3 precedence / governed refs` |
+| GC-017 | `FX-GC-017` / CURRENT | `[REQUIRED_EVIDENCE=UNKNOWN]` | `[INSUFFICIENT_EVIDENCE_REF]` | `[APPLICABLE_RULE_REF]` | `D09-P-020` | `FAILED / NONE / INSUFFICIENT_INFORMATION` | `[NO_MATCH,NO_HIGH_RISK_SIGNAL]` | `[CLINICAL_RISK_DISPOSITION_COMMIT,UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-COV] / unknown fail-closed / governed refs` |
+| GC-018 | `FX-GC-018` / CURRENT | `[REQUIRED_MEASUREMENT=UNMEASURED]` | `[INSUFFICIENT_MEASUREMENT_REF]` | `[APPLICABLE_RULE_REF]` | `D09-P-020` | `FAILED / NONE / INSUFFICIENT_INFORMATION` | `[NORMAL,NO_HIGH_RISK_SIGNAL]` | `[CLINICAL_RISK_DISPOSITION_COMMIT,UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-COV] / unmeasured fail-closed / governed refs` |
+| GC-019 | `FX-GC-019` / CURRENT | `[REMOTE_EVIDENCE=REMOTE_NOT_OBSERVED]` | `[INSUFFICIENT_REMOTE_EVIDENCE_REF]` | `[APPLICABLE_RULE_REF]` | `D09-P-020` | `FAILED / NONE / INSUFFICIENT_INFORMATION` | `[EXCLUDED,NO_HIGH_RISK_SIGNAL]` | `[CLINICAL_RISK_DISPOSITION_COMMIT,UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-COV] / remote-not-observed fail-closed / governed refs` |
+| GC-020 | `FX-GC-020` / CURRENT | `[PREGNANCY_OR_PUERPERIUM=TRUE]` | `[]` | `[]` | `D09-P-001` | `FAILED / NONE / OVERALL_POLICY_SCOPE_MISMATCH` | `[C_RULE_EVALUATION,BASELINE_DENOMINATOR,HIGH_RISK,NO_HIGH_RISK_SIGNAL]` | `[CLINICAL_RISK_DISPOSITION_COMMIT]` | `[SRC-A,SRC-E,SRC-SCOPE,SRC-D] / whole-slice exclusion / scope provenance` |
+| GC-021 | `FX-GC-021` / CURRENT | `[PREGNANCY_OR_PUERPERIUM=UNKNOWN]` | `[]` | `[]` | `D09-P-001` | `FAILED / NONE / OVERALL_POLICY_SCOPE_NOT_ESTABLISHED` | `[FALSE_INFERENCE,BASELINE_DENOMINATOR,NO_HIGH_RISK_SIGNAL]` | `[CLINICAL_RISK_DISPOSITION_COMMIT]` | `[SRC-SCOPE,SRC-D] / scope not established / scope provenance` |
+| GC-022 | `FX-GC-022` / CURRENT | `[PREGNANCY_OR_PUERPERIUM=NOT_ASKED]` | `[]` | `[]` | `D09-P-001` | `FAILED / NONE / OVERALL_POLICY_SCOPE_NOT_ESTABLISHED` | `[INFER_NON_PREGNANT,BASELINE_DENOMINATOR]` | `[CLINICAL_RISK_DISPOSITION_COMMIT]` | `[SRC-SCOPE,SRC-D] / scope not established / scope provenance` |
+| GC-023 | `FX-GC-023` / CURRENT | `[PREGNANCY_OR_PUERPERIUM=NOT_ESTABLISHED]` | `[]` | `[]` | `D09-P-001` | `FAILED / NONE / OVERALL_POLICY_SCOPE_NOT_ESTABLISHED` | `[RULE_SIGNAL_SCOPE_MISMATCH,BASELINE_DENOMINATOR]` | `[CLINICAL_RISK_DISPOSITION_COMMIT]` | `[SRC-SCOPE,SRC-D] / scope not established / scope provenance` |
+| GC-024 | `FX-GC-024` / STALE | `[STALE_STATE,HIGH_MATCH]` | `[MATCHED_EVIDENCE]` | `[C-RULE-RESP-001]` | `D09-P-001` | `FAILED / NONE / STALE_INPUT` | `[HIGH_RISK,CURRENT_ACCEPTANCE]` | `[CLINICAL_RISK_DISPOSITION_COMMIT]` | `[SRC-D] / P0>P1 currentness / version provenance` |
+| GC-025 | `FX-GC-025` / CURRENT | `[RELEASE_REF_MISMATCH]` | `[]` | `[]` | `D09-P-001` | `FAILED / NONE / RELEASE_MISMATCH` | `[LATEST_FALLBACK,HIGH_RISK,CAUTION,NO_HIGH_RISK_SIGNAL]` | `[CLINICAL_RISK_DISPOSITION_COMMIT]` | `[SRC-D] / immutable release binding / binding provenance` |
+| GC-026 | `FX-GC-026` / CURRENT | `[INCOMPATIBLE_FAMILY_STATES]` | `[]` | `[CONFLICTING_FAMILY_RULE_REFS]` | `D09-P-090` | `FAILED / NONE / UNRESOLVABLE_CONFLICT` | `[FILE_ORDER_BRANCH,LLM_SYNTHESIS,RANDOM_BRANCH]` | `[CLINICAL_RISK_DISPOSITION_COMMIT]` | `[SRC-C,SRC-D,SRC-COV] / deterministic conflict failure / governed refs` |
+| GC-027 | `FX-GC-027` / CURRENT | `[MODHIGH_MATCH,INSUFFICIENT_APPLICABLE]` | `[MATCHED_EVIDENCE,INSUFFICIENT_EVIDENCE_REF]` | `[MODHIGH_RULE_REF,INSUFFICIENT_RULE_REF]` | `D09-P-020` | `FAILED / NONE / INSUFFICIENT_INFORMATION` | `[CAUTION,NO_HIGH_RISK_SIGNAL]` | `[CLINICAL_RISK_DISPOSITION_COMMIT]` | `[SRC-C,SRC-D,SRC-COV] / P2>P3 / governed refs` |
+| GC-028 | `FX-GC-028` / CURRENT | `[EV-RF-RESP-001,IDEMP-GC-028,REPLAY]` | `[EV-RF-RESP-001]` | `[C-RULE-RESP-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` on first execution; replay returns same governed outcome with one clinical effect | `[SECOND_DISTINCT_CLINICAL_EFFECT]` | `[DUPLICATE_RISK_ASSESSMENT_COMMIT]` | `[SRC-C,SRC-D,SRC-IDEM] / idempotent replay / event+commit provenance` |
+| GC-029 | `FX-GC-029` / CURRENT | `[SUSPECTED_SEPSIS_CONTEXT,EV-RF-APPEAR-001]` | `[EV-RF-APPEAR-001]` | `[C-RULE-SEPSIS-APPEAR-HIGH-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[APPEARANCE_CREATES_SEPSIS_CONTEXT,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-A,SRC-B,SRC-C,SRC-D,SRC-E] / dedicated sepsis appearance HIGH / independent context provenance` |
+| GC-030 | `FX-GC-030` / CURRENT | `[SUSPECTED_SEPSIS_CONTEXT,EV-RF-SEPSIS-001]` | `[EV-RF-SEPSIS-001]` | `[C-RULE-SEPSIS-RASH-HIGH-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[RASH_CREATES_SEPSIS_CONTEXT,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-A,SRC-B,SRC-C,SRC-D,SRC-E] / dedicated sepsis rash HIGH / independent context provenance` |
+| GC-031 | `FX-GC-031` / CURRENT | `[SUSPECTED_SEPSIS_CONTEXT,HR=131]` | `[MEAS-HR]` | `[C-RULE-SEPSIS-HR-HIGH-001]` | `D09-P-010` | `VALID / HIGH_RISK / HIGH_RISK_RULE_SIGNAL_PRESENT` | `[MODHIGH_ONLY,SAFE]` | `[UNAUTHORIZED_DIRECT_CLINICAL_STATE_COMMIT]` | `[SRC-C,SRC-D,SRC-E] / dedicated HR HIGH / independent context provenance` |
+
+## 3. Required Schema Fields and Traceability
+
+每个 case 均显式具备：
+
+```text
+case_id
+case_version
+clinical_state_fixture_ref = FX-<case_id>
+clinical_state_version
+input_fact_refs[]
+expected_evidence_refs[]
+expected_rule_refs[]
+expected_policy_ref
+expected_result_status
+expected_disposition
+expected_reason_code
+must_not_output[]
+must_not_commit[]
+source_refs[]
+rationale_ref
+provenance_refs[]
+```
+
+Fixture 具体输入见：
+
+```text
+U03_Clinical_Risk_Golden_Case_Fixtures_v0.2.md
+```
+
+这些字段现在是 reviewable / executable input specification，并已获 Medical + Policy/Eval 再审批准为 evaluation content。它们仍不是已执行通过的 Clinical Golden Cases，也不构成 Gate C PASS。
+
+## 4. BF-CD06-01 Correction
+
+新增 dedicated positive representatives：
+
+```text
+C-RULE-SEPSIS-APPEAR-HIGH-001 → GC-029
+C-RULE-SEPSIS-RASH-HIGH-001   → GC-030
+C-RULE-SEPSIS-HR-HIGH-001     → GC-031
+```
+
+因此：
+
+```text
+GC-014 = specialized sepsis-family SCOPE_MISMATCH → P4（保留）
+GC-015 = specialized dyspnoea-family SCOPE_MISMATCH → P4（保留）
+GC-016 = HIGH + insufficiency precedence（保留）
+```
+
+不再把三者错误当作 APPEAR / RASH / HR-HIGH dedicated positive representative。
+
+## 5. Current Status
+
+```text
+candidate_case_count = 31
+schema_minimum_fields = COMPLETE
+fixture_registry = AVAILABLE
+Medical re-review = COMPLETE / APPROVE
+Policy/Eval re-review = COMPLETE / APPROVE
+BF-CD06-01 = CLOSED
+BF-CD06-02 = CLOSED
+Approved Golden Cases = 31 APPROVED_FOR_EVALUATION_CONTENT
+Evaluation Execution = NOT_STARTED
+CD-06 = REVIEW_READY
+Gate C = NOT_PASSED
+```

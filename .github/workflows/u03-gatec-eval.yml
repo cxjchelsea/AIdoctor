@@ -1,0 +1,145 @@
+name: U03 Gate C Governed Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      independent_review_confirmed:
+        description: 'Set to EXACTLY REVIEW_COMPLETE before governed GC/SS execution'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  governed-offline-evaluation:
+    if: ${{ inputs.independent_review_confirmed == 'REVIEW_COMPLETE' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Governance guard
+        run: |
+          test "${{ inputs.independent_review_confirmed }}" = "REVIEW_COMPLETE"
+          echo "Independent implementation review explicitly confirmed."
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Verify Python runtime
+        run: python3 --version
+
+      - name: Run evaluation harness self-tests
+        working-directory: tools/u03_gatec_eval
+        run: python3 -m unittest -v
+
+      - name: Execute governed Gate C evaluation
+        working-directory: tools/u03_gatec_eval
+        run: python3 run_evaluation.py
+
+      - name: Bind immutable workflow execution provenance
+        working-directory: tools/u03_gatec_eval
+        env:
+          REVIEW_CONFIRMATION: ${{ inputs.independent_review_confirmed }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          p = Path('build/u03-gatec-eval/result-bundle.json')
+          data = json.loads(p.read_text(encoding='utf-8'))
+          summary = data['summary']
+
+          # Governance state is owned by review/decision records, not by the
+          # evaluation harness. Remove the two static pre-execution strings
+          # before the bundle becomes durable evidence.
+          summary.pop('governed_evaluation_execution_status', None)
+          summary.pop('gate_c_status', None)
+
+          data['execution_provenance'] = {
+              'execution_kind': 'GITHUB_ACTIONS_WORKFLOW_DISPATCH',
+              'run_id': os.environ['GITHUB_RUN_ID'],
+              'run_attempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+              'repository': os.environ['GITHUB_REPOSITORY'],
+              'commit_sha': os.environ['GITHUB_SHA'],
+              'ref': os.environ['GITHUB_REF'],
+              'ref_name': os.environ['GITHUB_REF_NAME'],
+              'event_name': os.environ['GITHUB_EVENT_NAME'],
+              'workflow': os.environ['GITHUB_WORKFLOW'],
+              'job': os.environ['GITHUB_JOB'],
+              'review_confirmation': os.environ['REVIEW_CONFIRMATION'],
+              'gate_c_decision_embedded': False,
+          }
+          data['evidence_capture_status'] = 'CASE_LEVEL_BUNDLE_READY_FOR_ARTIFACT_UPLOAD'
+
+          p.write_text(
+              json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True),
+              encoding='utf-8',
+          )
+          print(json.dumps(data['execution_provenance'], indent=2, ensure_ascii=False))
+          PY
+
+      - name: Verify result bundle and provenance
+        working-directory: tools/u03_gatec_eval
+        env:
+          REVIEW_CONFIRMATION: ${{ inputs.independent_review_confirmed }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          p = Path('build/u03-gatec-eval/result-bundle.json')
+          data = json.loads(p.read_text(encoding='utf-8'))
+          s = data['summary']
+          prov = data['execution_provenance']
+
+          assert s['approved_golden_id_total'] == 31
+          assert s['executable_golden_total'] == 30
+          assert s['excluded_golden_ids'] == ['GC-026']
+          assert s['golden_pass'] == 30
+          assert s['golden_fail'] == 0
+          assert s['approved_critical_safety_id_total'] == 20
+          assert s['executable_critical_safety_total'] == 19
+          assert s['excluded_critical_safety_ids'] == ['SS-012']
+          assert s['critical_safety_pass'] == 19
+          assert s['critical_safety_fail'] == 0
+          assert s['failed_non_case_checks'] == []
+          assert s['gate_c_execution_blocked_by_critical_failure'] is False
+
+          assert 'governed_evaluation_execution_status' not in s
+          assert 'gate_c_status' not in s
+          assert prov['execution_kind'] == 'GITHUB_ACTIONS_WORKFLOW_DISPATCH'
+          assert prov['run_id'] == os.environ['GITHUB_RUN_ID']
+          assert prov['commit_sha'] == os.environ['GITHUB_SHA']
+          assert prov['event_name'] == 'workflow_dispatch'
+          assert prov['review_confirmation'] == os.environ['REVIEW_CONFIRMATION'] == 'REVIEW_COMPLETE'
+          assert prov['gate_c_decision_embedded'] is False
+          assert data['evidence_capture_status'] == 'CASE_LEVEL_BUNDLE_READY_FOR_ARTIFACT_UPLOAD'
+
+          assert data['shared_scope_invariant_evidence']['status'] == 'PASS'
+          assert data['d09_p5_defensive_contract_boundary']['status'] == 'PASS'
+          assert data['d09_p5_defensive_contract_boundary']['counts_as_governed_c_execution'] is False
+          assert data['production_state_mutation_capability'] is False
+          assert data['network_access_required'] is False
+
+          print(json.dumps(s, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Upload governed Gate C result bundle
+        id: upload-governed-evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: u03-gatec-governed-evidence-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: tools/u03_gatec_eval/build/u03-gatec-eval/result-bundle.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 6
+          overwrite: false
+
+      - name: Report durable evidence identity
+        run: |
+          echo "artifact_id=${{ steps.upload-governed-evidence.outputs.artifact-id }}"
+          echo "artifact_url=${{ steps.upload-governed-evidence.outputs.artifact-url }}"
+          echo "artifact_digest=${{ steps.upload-governed-evidence.outputs.artifact-digest }}"
+          echo "execution_sha=${{ github.sha }}"
+          echo "execution_run_id=${{ github.run_id }}"
