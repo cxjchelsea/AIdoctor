@@ -2,8 +2,9 @@
 
 > 对象：Gate C / CD-06 评估数据集的独立版本化 release candidate。  
 > Candidate Ref：`ER-U03-RISK-001@0.1.0-candidate`  
-> 状态：`CANDIDATE_OBJECT_CREATED / REVIEWED / NOT_READY / BF-CD06-01_OPEN / BF-CD06-02_OPEN / NOT_ACTIVE_FOR_EVALUATION / NOT_FOR_PRODUCTION`。  
-> 审核记录：`U03_CD06_Evaluation_Review_Record_v0.1.md`。
+> 状态：`CANDIDATE_OBJECT_CREATED / REVISION_BOUND / REREVIEW_PENDING / NOT_READY / NOT_ACTIVE_FOR_EVALUATION / NOT_FOR_PRODUCTION`。  
+> 初审记录：`U03_CD06_Evaluation_Review_Record_v0.1.md`。  
+> 修订依据：`U03_CD06_Evaluation_Revision_Task_v0.1.md`。
 
 ---
 
@@ -12,18 +13,21 @@
 ```text
 evalset_release_id = ER-U03-RISK-001
 evalset_version = 0.1.0-candidate
-status = REVIEWED / NOT_READY
+status = REVISION_BOUND / REREVIEW_PENDING / NOT_READY
 ```
+
+Candidate identity 未改变；由于尚未 READY / ACTIVE / frozen，本轮只把 review payload 从被驳回的 v0.1 内容绑定到修订后的 v0.2 内容。
 
 当前绑定：
 
 ```text
-coverage_manifest_ref = U03_Clinical_Risk_EvalSet_Coverage_Manifest_Draft_v0.1.md
-golden_case_pack_ref = U03_Clinical_Risk_Golden_Cases_Draft_v0.1.md
+coverage_manifest_ref = U03_Clinical_Risk_EvalSet_Coverage_Manifest_Draft_v0.2.md
+golden_case_pack_ref = U03_Clinical_Risk_Golden_Cases_Draft_v0.2.md
+clinical_state_fixture_registry_ref = U03_Clinical_Risk_Golden_Case_Fixtures_v0.2.md
 safety_suite_ref = U03_Clinical_Risk_Safety_Suite_Draft_v0.1.md
 ```
 
-受测 governed set：
+受测 governed set 保持不变：
 
 ```text
 knowledge_release_ref = KR-U03-SOURCE-001@0.1.0-candidate
@@ -35,45 +39,74 @@ policy_pair_ref = PF-U03-C-POLICY-001
 
 ---
 
-## 2. Candidate Composition
+## 2. Revised Candidate Composition
 
 ```text
-golden_case_candidates = 28
+golden_case_candidates = 31
 safety_suite_candidates = 20
-total_candidate_cases = 48
+total_candidate_cases = 51
 critical_blocking_safety_cases = 20
 ```
 
-这些 case 已完成独立审核，但因 `BF-CD06-01` / `BF-CD06-02` 仍不得标记为 APPROVED 或 ACTIVE_FOR_EVALUATION。
+新增 Golden Cases：
+
+```text
+GC-029 = dedicated C-RULE-SEPSIS-APPEAR-HIGH-001 positive representative
+GC-030 = dedicated C-RULE-SEPSIS-RASH-HIGH-001 positive representative
+GC-031 = dedicated C-RULE-SEPSIS-HR-HIGH-001 positive representative
+```
+
+GC-014 / GC-015 / GC-016 保留原有 scope / precedence purpose。
 
 ---
 
-## 3. Review Gate
+## 3. Revision Status
+
+```text
+BF-CD06-01 = ADDRESSED_PENDING_REREVIEW
+BF-CD06-02 = ADDRESSED_PENDING_REREVIEW
+```
+
+修订内容：
+
+```text
+15 active C rules now have 15/15 dedicated representative positive coverage
+Golden Case schema minimum fields = 31/31 present
+clinical_state_fixture_ref = 31/31 present
+fixture registry = available
+```
+
+这些是 revision claims，不等于 blocker 已正式关闭；关闭仍需要独立 Medical + Policy/Eval re-review。
+
+---
+
+## 4. Re-review Gate
 
 升级到 `READY_FOR_EVALUATION` 至少要求：
 
 ```text
-Coverage Manifest = REVIEWED / COMPLETE
-Golden Cases 28/28 Medical = APPROVE
-Golden Cases 28/28 Policy/Eval = APPROVE
-Safety Cases 20/20 Medical = APPROVE
-Safety Cases 20/20 Policy/Eval = APPROVE
+Coverage Manifest v0.2 = Medical APPROVE / Policy-Eval APPROVE
+Golden Cases v0.2 31/31 = Medical APPROVE / Policy-Eval APPROVE
+Safety Cases 20/20 = prior Medical APPROVE / Policy-Eval APPROVE remains valid
+BF-CD06-01 = CLOSED
+BF-CD06-02 = CLOSED
 blocking review finding = 0
-case refs / release refs resolvable = YES
+case refs / fixture refs / release refs resolvable = YES
 expected outcomes version-bound = YES
 ```
 
-若任何 case 需要 REVISE：
+在此之前：
 
 ```text
-EvalSet Release Candidate = NOT_READY
+CD-06 = NOT_REVIEW_READY
+EvalSet Candidate = NOT_READY
 ```
 
 ---
 
-## 4. Execution Gate
+## 5. Execution Gate
 
-即使 review 完成，仍需独立执行记录：
+即使 re-review 完成，也仍需独立 governed evaluation execution：
 
 ```text
 actual execution harness/result bundle
@@ -85,43 +118,34 @@ release mismatch acceptance checks
 idempotency checks
 ```
 
-在这些执行证据完成前：
+因此：
 
 ```text
-Gate C = NOT_PASSED
+REVIEW_READY != Gate C PASS
 ```
 
 ---
 
-## 5. Critical Gate Rule
+## 6. Critical Gate Rule
 
-所有 `SS-001..SS-020` 为 critical blocking：
+所有 `SS-001..SS-020` 继续为 critical blocking：
 
 ```text
 any critical safety case FAIL
 → Gate C PASS prohibited
 ```
 
-不允许用总体百分比掩盖 critical safety failure。
+不允许总体通过率掩盖 critical safety failure。
 
 ---
 
-## 6. Lifecycle
-
-```text
-REVIEW_PENDING
-→ READY_FOR_EVALUATION
-→ ACTIVE_FOR_EVALUATION
-→ DEPRECATED / RETIRED
-```
-
-当前：
+## 7. Current Lifecycle
 
 ```text
 ER-U03-RISK-001@0.1.0-candidate
-= REVIEWED / NOT_READY
-= BF-CD06-01 OPEN
-= BF-CD06-02 OPEN
+= REVISION_BOUND
+= REREVIEW_PENDING
+= NOT_READY
 = NOT_ACTIVE_FOR_EVALUATION
 = NOT_FOR_RUNTIME
 = NOT_FOR_PRODUCTION
