@@ -22,53 +22,14 @@ New Foundation = NOT_REQUIRED
 ## 2. 当前 Governed Clinical Content Set
 
 ```text
-A Clinical Risk Semantics
-= SOURCE_LOCKED_SEMANTICS_FROZEN
-/ MEDICAL_OWNER_REVIEW_COMPLETE
-
-B Evidence Catalog
-= SOURCE_LOCKED_SEMANTICS_FROZEN
-/ MEDICAL_OWNER_REVIEW_COMPLETE
-
-E Knowledge Release
-= KR-U03-SOURCE-001@0.1.0-candidate
-/ CANDIDATE_FROZEN
-/ RESOLVABLE
-/ REVIEWED
-/ NOT_PUBLISHED
-
-C Current Rule Candidate
-= RR-U03-RISK-001@0.2.1-candidate
-/ CANDIDATE_FROZEN
-/ CD-03_APPROVED_FOR_GATE_B
-
-Coverage Current Candidate
-= U03_D09_COVERAGE_V0_2_1_CANDIDATE
-/ CANDIDATE_FROZEN
-/ RESOLVABLE
-
-D Current Policy Candidate
-= PR-U03-D09-001@0.2.1-candidate
-/ CANDIDATE_FROZEN
-/ CD-05_APPROVED_FOR_GATE_B
-
-C Policy Pair
-= PF-U03-C-POLICY-001
-/ CANDIDATE_FROZEN
-
-Historical 0.2.0 C/D/Coverage candidates
-= FROZEN / IMMUTABLE / NOT_CURRENT_GATE_B_SET
-
-F Risk EvalSet / Safety Suite
-= STRUCTURAL_SCHEMA_FROZEN
-/ GATE_C_READINESS_DECOMPOSITION_AVAILABLE
-/ COVERAGE_MANIFEST_DRAFT_AVAILABLE
-/ GOLDEN_CASE_CANDIDATES_28_AVAILABLE
-/ SAFETY_SUITE_CANDIDATES_20_AVAILABLE
-/ EVALSET_RELEASE_CANDIDATE = ER-U03-RISK-001@0.1.0-candidate
-/ MEDICAL_REVIEW_PENDING
-/ POLICY_EVAL_REVIEW_PENDING
-/ NOT_REVIEW_READY
+A Clinical Risk Semantics = SOURCE_LOCKED_SEMANTICS_FROZEN / MEDICAL_OWNER_REVIEW_COMPLETE
+B Evidence Catalog = SOURCE_LOCKED_SEMANTICS_FROZEN / MEDICAL_OWNER_REVIEW_COMPLETE
+E Knowledge Release = KR-U03-SOURCE-001@0.1.0-candidate / CANDIDATE_FROZEN / RESOLVABLE / REVIEWED
+C Current Rule Candidate = RR-U03-RISK-001@0.2.1-candidate / CANDIDATE_FROZEN / CD-03_APPROVED_FOR_GATE_B
+Coverage Current Candidate = U03_D09_COVERAGE_V0_2_1_CANDIDATE / CANDIDATE_FROZEN / RESOLVABLE
+D Current Policy Candidate = PR-U03-D09-001@0.2.1-candidate / CANDIDATE_FROZEN / CD-05_APPROVED_FOR_GATE_B
+C Policy Pair = PF-U03-C-POLICY-001 / CANDIDATE_FROZEN
+Historical 0.2.0 C/D/Coverage candidates = FROZEN / IMMUTABLE / NOT_CURRENT_GATE_B_SET
 ```
 
 Current immutable binding chain:
@@ -80,92 +41,125 @@ KR-U03-SOURCE-001@0.1.0-candidate
 → PR-U03-D09-001@0.2.1-candidate
 ```
 
+F Risk EvalSet / Safety Suite 当前：
+
+```text
+STRUCTURAL_SCHEMA_FROZEN
+Gate C package initial review = COMPLETE / REVISE_REQUIRED
+Safety Suite = 20 CONTENT_APPROVED / CRITICAL_BLOCKING_APPROVED
+
+Revision package now available:
+- U03_Clinical_Risk_EvalSet_Coverage_Manifest_Draft_v0.2.md
+- U03_Clinical_Risk_Golden_Cases_Draft_v0.2.md
+- U03_Clinical_Risk_Golden_Case_Fixtures_v0.2.md
+- U03_CD06_Evaluation_ReReview_Record_v0.2.md
+
+Golden Case candidates = 31
+schema minimum fields = 31 / 31
+fixture refs = 31 / 31
+EvalSet candidate = ER-U03-RISK-001@0.1.0-candidate / REVISION_BOUND / REREVIEW_PENDING / NOT_READY
+```
+
 ---
 
 ## 3. Gate 状态
 
-### Gate A — Source-locked Clinical Semantics
+### Gate A
 
 ```text
 Gate A = PASS
 ```
 
-### Gate B — Governed Content Ready
+### Gate B
 
 ```text
 U03_Gate_B_Decision_v0.2.1.md
 Gate B = PASSED / GOVERNED_CONTENT_READY
-```
-
-Current Gate-B-qualified set:
-
-```text
-E = KR-U03-SOURCE-001@0.1.0-candidate
-C = RR-U03-RISK-001@0.2.1-candidate
-Coverage = U03_D09_COVERAGE_V0_2_1_CANDIDATE
-D = PR-U03-D09-001@0.2.1-candidate
-```
-
-C/D/E cross-consistency:
-
-```text
-CDE-01..14 = PASS
-blocking finding = 0
+C/D/E Cross-Consistency = PASS
 BF-CDE-01 = CLOSED
 ```
 
-### Gate C — Independent Evaluation Ready
+### Gate C
 
-当前：
+当前仍为：
 
 ```text
 Gate C = NOT_PASSED
 CD-06 = NOT_REVIEW_READY
+Evaluation Execution = NOT_STARTED
 ```
 
-评估内容包已完成独立审核，结论为 REVISE：
+初审：
 
 ```text
-U03_Gate_C_Readiness_Decomposition_v0.1.md
-= AVAILABLE
-
-U03_Clinical_Risk_EvalSet_Coverage_Manifest_Draft_v0.1.md
-= REVIEWED / REVISE_REQUIRED / BF-CD06-01_OPEN
-
-U03_Clinical_Risk_Golden_Cases_Draft_v0.1.md
-= 28 CANDIDATE CASES / MEDICAL_PURPOSE_APPROVED / POLICY_EVAL_REVISE / BF-CD06-02_OPEN
-
-U03_Clinical_Risk_Safety_Suite_Draft_v0.1.md
-= 20 CANDIDATE SAFETY CASES / MEDICAL_APPROVE / POLICY_EVAL_APPROVE / CRITICAL_BLOCKING_APPROVED
-
-ER-U03-RISK-001@0.1.0-candidate
-= REVIEWED / NOT_READY
-= NOT_ACTIVE_FOR_EVALUATION
-
-U03_CD06_Evaluation_Review_Record_v0.1.md
-= REVIEW_COMPLETE / REVISE_REQUIRED
-
-U03_CD06_Evaluation_Revision_Task_v0.1.md
-= OPEN
+Medical Review = COMPLETE
+Policy/Eval Review = COMPLETE / REVISE_REQUIRED
+blocking review finding = BF-CD06-01, BF-CD06-02
 ```
 
-Coverage currently declares but does not yet correctly bind:
+两条 blocker 的修订内容现已完成，但尚待独立再审：
 
 ```text
-all 15 active C rules
+BF-CD06-01
+= ADDRESSED_PENDING_REREVIEW
+
+correction:
+C-RULE-SEPSIS-APPEAR-HIGH-001 → GC-029
+C-RULE-SEPSIS-RASH-HIGH-001   → GC-030
+C-RULE-SEPSIS-HR-HIGH-001     → GC-031
+
+15 active C rules
+= 15 / 15 representative positive coverage
 ```
-
-`BF-CD06-01`：APPEAR HIGH / RASH HIGH / HR HIGH 被误绑到 GC-014 / GC-015 / GC-016。
-
-`BF-CD06-02`：Golden Case pack 仍缺 schema 最小 fixture 字段。
-
-Critical safety cases：
 
 ```text
-SS-001..SS-020 = CRITICAL_BLOCKING_APPROVED
+BF-CD06-02
+= ADDRESSED_PENDING_REREVIEW
+
+Golden Cases v0.2:
+candidate count = 31
+schema minimum fields = 31 / 31
+clinical_state_fixture_ref = 31 / 31
+fixture registry = U03_Clinical_Risk_Golden_Case_Fixtures_v0.2.md
+Approved Golden Cases = 0 until re-review completes
 ```
 
-C57 / D48 historical fixture reuse + 6 targeted delta fixtures 仍只支持 candidate governance / Gate B；不能替代本 Gate C package。
+保留原用途：
+
+```text
+GC-014 = specialized sepsis-family SCOPE_MISMATCH → P4
+GC-015 = specialized dyspnoea-family SCOPE_MISMATCH → P4
+GC-016 = HIGH + insufficiency precedence
+```
+
+Safety Suite 未修改：
+
+```text
+SS-001..SS-020 = Medical APPROVE / Policy-Eval APPROVE / CRITICAL_BLOCKING_APPROVED
+```
+
+再审记录：
+
+```text
+U03_CD06_Evaluation_ReReview_Record_v0.2.md
+= REREVIEW_PENDING
+```
+
+只有再审满足：
+
+```text
+R1-01..R1-05 = APPROVE / APPROVE
+R2-01..R2-06 = APPROVE / APPROVE
+blocking re-review finding = 0
+```
+
+才允许：
+
+```text
+BF-CD06-01 = CLOSED
+BF-CD06-02 = CLOSED
+CD-06 = REVIEW_READY
+```
 
 ### Gate D / Authorization
 
@@ -173,8 +167,6 @@ C57 / D48 historical fixture reuse + 6 targeted delta fixtures 仍只支持 cand
 CD-07 Implementation Readiness = BLOCKED
 Implementation Authorization = NOT_GRANTED
 ```
-
-Gate B PASS 和 Gate C content availability 都不授权 implementation。
 
 ---
 
@@ -185,23 +177,18 @@ Engineering Prerequisites = PASS
 Gate A = PASS
 Gate B = PASS / GOVERNED_CONTENT_READY
 
-CD-03 = APPROVED_FOR_GATE_B
-CD-04 = INITIAL_RELEASE_GOVERNANCE_READY
-CD-05 = APPROVED_FOR_GATE_B
+Gate C Evaluation Package Initial Review = REVISE_REQUIRED
+Coverage Manifest v0.2 = REVISION_CONTENT_AVAILABLE / REREVIEW_PENDING
+Golden Case Candidates v0.2 = 31 / SCHEMA_COMPLETE_FOR_REVISION / REREVIEW_PENDING
+Golden Case Fixture Registry v0.2 = AVAILABLE
+Safety Suite Candidates = 20 CONTENT_APPROVED / CRITICAL_BLOCKING_APPROVED
+EvalSet Release Candidate = REVISION_BOUND / REREVIEW_PENDING / NOT_READY
 
-C/D/E Cross-Consistency = PASS
-BF-CDE-01 = CLOSED
-
-Gate C Evaluation Package = REVIEWED / REVISE_REQUIRED
-Coverage Manifest = REVIEWED / REVISE_REQUIRED
-Golden Case Candidates = 28 PURPOSE_APPROVED / SCHEMA_INCOMPLETE
-Safety Suite Candidates = 20 CONTENT_APPROVED
-EvalSet Release Candidate = REVIEWED / NOT_READY
-Medical Review = COMPLETE
-Policy/Eval Review = COMPLETE / REVISE_REQUIRED
-blocking review finding = BF-CD06-01, BF-CD06-02
+BF-CD06-01 = ADDRESSED_PENDING_REREVIEW
+BF-CD06-02 = ADDRESSED_PENDING_REREVIEW
 CD-06 = NOT_REVIEW_READY
 Gate C = NOT_PASSED
+Evaluation Execution = NOT_STARTED
 
 CD-07 Implementation Readiness = BLOCKED
 U04 Implementation Readiness = BLOCKED_BY_U03_CLINICAL_DEPENDENCY
@@ -214,8 +201,8 @@ Production Authorization = BLOCKED
 ```text
 U03 Clinical Dependency Readiness
 = GATE_B_PASSED
-/ GATE_C_PACKAGE_REVIEWED
-/ BLOCKED_AT_CD06_REVISION
+/ GATE_C_REVISION_CONTENT_AVAILABLE
+/ BLOCKED_AT_CD06_REREVIEW
 ```
 
 ---
@@ -223,31 +210,28 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-close BF-CD06-01
-  correct APPEAR / RASH / HR HIGH representative bindings
-close BF-CD06-02
-  complete Golden Case schema / fixture fields
+independent Medical + Policy/Eval re-review
+of Manifest v0.2 + Golden Cases v0.2 + Fixture Registry v0.2
 ↓
-re-review Coverage Manifest + GC pack
+close BF-CD06-01 / BF-CD06-02 only if APPROVE + blocking finding = 0
 ↓
-only if all APPROVE + blocking finding = 0
-→ CD-06 REVIEW_READY
+then decide CD-06 REVIEW_READY
 ↓
-then execute governed evaluation
+then governed evaluation execution
 ↓
-Gate C decision
+then Gate C decision
 ```
 
 ---
 
 ## 6. 当前禁止事项
 
-- 不原地修改当前 frozen 0.2.1 C/D/Coverage candidates；任何修改必须形成新版本；
-- 不把 Gate B PASS 解释为 Gate C PASS；
-- 不把 28 个 candidate golden cases 当成已经医学批准的 Golden Cases；
-- 不把 20 个 safety candidate cases 当成已经通过执行的 Safety Suite；
-- 不把 EvalSet candidate creation 当成 `ACTIVE_FOR_EVALUATION`；
+- 不原地修改当前 frozen 0.2.1 C/D/Coverage candidates；
+- 不把修订内容 available 当成 blocker 已关闭；
+- 不把 31 个 candidate cases 当成已批准 Clinical Golden Cases；
+- 不把 Safety Suite 内容审批当成执行通过；
+- 不把 EvalSet candidate 设为 ACTIVE_FOR_EVALUATION；
+- 不开始 governed evaluation execution，直到 CD-06 REVIEW_READY；
 - 不开始 CD-07 / C02 clinical runtime / D09 runtime / U04；
-- 不发布 current candidates 为 production release；
-- 不打开儿科或孕产临床规则；当前只明确其不属于 current U03 slice；
-- 不把 NICE/NHS 直接视为中国生产本地化规则。
+- 不宣称 Gate C PASS 或 Production Authorization；
+- 不打开儿科或孕产临床规则；当前只明确其不属于 current U03 slice。
