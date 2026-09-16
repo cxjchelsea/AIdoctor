@@ -61,7 +61,13 @@ Historical 0.2.0 C/D/Coverage candidates
 
 F Risk EvalSet / Safety Suite
 = STRUCTURAL_SCHEMA_FROZEN
-/ GOLDEN_CASE_CONTENT_NOT_STARTED
+/ GATE_C_READINESS_DECOMPOSITION_AVAILABLE
+/ COVERAGE_MANIFEST_DRAFT_AVAILABLE
+/ GOLDEN_CASE_CANDIDATES_28_AVAILABLE
+/ SAFETY_SUITE_CANDIDATES_20_AVAILABLE
+/ EVALSET_RELEASE_CANDIDATE = ER-U03-RISK-001@0.1.0-candidate
+/ MEDICAL_REVIEW_PENDING
+/ POLICY_EVAL_REVIEW_PENDING
 / NOT_REVIEW_READY
 ```
 
@@ -86,76 +92,87 @@ Gate A = PASS
 
 ### Gate B — Governed Content Ready
 
-Final decision：
-
 ```text
 U03_Gate_B_Decision_v0.2.1.md
 Gate B = PASSED / GOVERNED_CONTENT_READY
 ```
 
-Gate B minimum conditions：
+Current Gate-B-qualified set:
 
 ```text
-Gate A = PASS
-CD-03 = APPROVED_FOR_GATE_B
-CD-04 = INITIAL_RELEASE_GOVERNANCE_READY
-CD-05 = APPROVED_FOR_GATE_B
-E Knowledge Applicability = APPROVED
-KD-U03-01 Knowledge Release = RESOLVABLE / REVIEWED
-C/D/E Cross-Consistency = PASS
+E = KR-U03-SOURCE-001@0.1.0-candidate
+C = RR-U03-RISK-001@0.2.1-candidate
+Coverage = U03_D09_COVERAGE_V0_2_1_CANDIDATE
+D = PR-U03-D09-001@0.2.1-candidate
 ```
 
-全部满足。
-
-0.2.1 C/D/E cross-consistency re-review：
+C/D/E cross-consistency:
 
 ```text
-U03_CDE_Cross_Consistency_Review_v0.2.1.md
 CDE-01..14 = PASS
-REVISE = 0
 blocking finding = 0
 BF-CDE-01 = CLOSED
 ```
 
-Scope-entry targeted governance：
-
-```text
-BF-CDE-01 = CLOSED
-BLOCKER-FZ-CDE-021-01 = CLOSED
-Targeted Scope Eval = PASS
-Targeted fixture_count = 6
-C57 reuse = APPROVED_FOR_UNCHANGED_C_SEMANTICS
-D48 reuse = APPROVED_FOR_UNCHANGED_D_COVERAGE_SEMANTICS
-```
-
-Current pregnancy / puerperium whole-slice semantics：
-
-```text
-TRUE
-→ current-slice C evaluation NOT_ENTERED
-→ denominator NOT_CONSTRUCTED
-→ D09-P-001 / FAILED / NONE / OVERALL_POLICY_SCOPE_MISMATCH
-
-UNKNOWN / NOT_ASKED / NOT_ESTABLISHED
-→ current-slice C evaluation NOT_ENTERED
-→ denominator NOT_CONSTRUCTED
-→ D09-P-001 / FAILED / NONE / OVERALL_POLICY_SCOPE_NOT_ESTABLISHED
-
-FALSE
-→ continue remaining overall-scope validation
-→ only after all overall-scope predicates pass may 5+2 denominator be constructed
-```
-
 ### Gate C — Independent Evaluation Ready
+
+当前：
 
 ```text
 Gate C = NOT_PASSED
 CD-06 = NOT_REVIEW_READY
-Clinical Golden Cases = NOT_STARTED
-Clinical Risk EvalSet / Safety Suite = NOT_COMPLETE
 ```
 
-C57 / D48 historical fixture reuse + 6 targeted delta fixtures only support candidate governance / Gate B. They do not replace complete independent Clinical EvalSet / Safety Suite.
+但评估内容已从 `NOT_STARTED` 推进到 review package available：
+
+```text
+U03_Gate_C_Readiness_Decomposition_v0.1.md
+= AVAILABLE
+
+U03_Clinical_Risk_EvalSet_Coverage_Manifest_Draft_v0.1.md
+= AVAILABLE / REVIEW_PENDING
+
+U03_Clinical_Risk_Golden_Cases_Draft_v0.1.md
+= 28 CANDIDATE CASES / MEDICAL_REVIEW_PENDING
+
+U03_Clinical_Risk_Safety_Suite_Draft_v0.1.md
+= 20 CANDIDATE SAFETY CASES / MEDICAL_REVIEW_PENDING
+
+ER-U03-RISK-001@0.1.0-candidate
+= REVIEW_PENDING
+= NOT_ACTIVE_FOR_EVALUATION
+
+U03_CD06_Evaluation_Review_Record_v0.1.md
+= REVIEW_NOT_STARTED
+```
+
+Coverage currently declares:
+
+```text
+all 15 active C rules
+D P0-P5
+whole-policy TRUE/FALSE/UNKNOWN/NOT_ASKED/NOT_ESTABLISHED
+specialized family scope mismatch
+missingness
+conflict
+stale/currentness
+release mismatch
+multi-hit precedence
+coverage-complete P4
+idempotency / duplicate-effect prevention
+direct-commit prohibition
+authority and scope-expansion protection
+```
+
+Critical safety cases：
+
+```text
+SS-001..SS-020 = PROPOSED_CRITICAL_BLOCKING
+```
+
+在 Medical + Policy/Eval 审核完成前不得标记为 APPROVED。
+
+C57 / D48 historical fixture reuse + 6 targeted delta fixtures 仍只支持 candidate governance / Gate B；不能替代本 Gate C package。
 
 ### Gate D / Authorization
 
@@ -164,7 +181,7 @@ CD-07 Implementation Readiness = BLOCKED
 Implementation Authorization = NOT_GRANTED
 ```
 
-Gate B PASS does not authorize implementation.
+Gate B PASS 和 Gate C content availability 都不授权 implementation。
 
 ---
 
@@ -182,10 +199,15 @@ CD-05 = APPROVED_FOR_GATE_B
 C/D/E Cross-Consistency = PASS
 BF-CDE-01 = CLOSED
 
-Gate C = NOT_PASSED
+Gate C Evaluation Package = CONTENT_AVAILABLE
+Coverage Manifest = DRAFT_AVAILABLE
+Golden Case Candidates = 28 AVAILABLE
+Safety Suite Candidates = 20 AVAILABLE
+EvalSet Release Candidate = CREATED / REVIEW_PENDING
+Medical Review = NOT_STARTED
+Policy/Eval Review = NOT_STARTED
 CD-06 = NOT_REVIEW_READY
-Clinical Evaluation Content = NOT_COMPLETE
-Independent Evaluation Readiness = NOT_READY
+Gate C = NOT_PASSED
 
 CD-07 Implementation Readiness = BLOCKED
 U04 Implementation Readiness = BLOCKED_BY_U03_CLINICAL_DEPENDENCY
@@ -197,7 +219,9 @@ Production Authorization = BLOCKED
 
 ```text
 U03 Clinical Dependency Readiness
-= GATE_B_PASSED / BLOCKED_AT_GATE_C_PREPARATION
+= GATE_B_PASSED
+/ GATE_C_CONTENT_AVAILABLE
+/ BLOCKED_AT_CD06_REVIEW
 ```
 
 ---
@@ -205,16 +229,22 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-build complete Clinical Risk EvalSet / Safety Suite
+Medical Owner review
++
+Policy / Evaluation Owner review
+of:
+  Coverage Manifest
+  GC-001..GC-028
+  SS-001..SS-020
+  ER-U03-RISK-001@0.1.0-candidate
 ↓
-independent Medical + Technical/Eval review
+only if all APPROVE + blocking finding = 0
+→ CD-06 REVIEW_READY
 ↓
-CD-06 REVIEW_READY / decision
+then execute governed evaluation
 ↓
 Gate C decision
 ```
-
-只有 Gate C 通过并完成后续 implementation-readiness 检查，才允许重新评估 CD-07；真实 clinical runtime implementation 仍必须另有明确 `Implementation Authorization`。
 
 ---
 
@@ -222,7 +252,9 @@ Gate C decision
 
 - 不原地修改当前 frozen 0.2.1 C/D/Coverage candidates；任何修改必须形成新版本；
 - 不把 Gate B PASS 解释为 Gate C PASS；
-- 不把 C57 / D48 / targeted delta eval 当成完整 Clinical EvalSet；
+- 不把 28 个 candidate golden cases 当成已经医学批准的 Golden Cases；
+- 不把 20 个 safety candidate cases 当成已经通过执行的 Safety Suite；
+- 不把 EvalSet candidate creation 当成 `ACTIVE_FOR_EVALUATION`；
 - 不开始 CD-07 / C02 clinical runtime / D09 runtime / U04；
 - 不发布 current candidates 为 production release；
 - 不打开儿科或孕产临床规则；当前只明确其不属于 current U03 slice；
