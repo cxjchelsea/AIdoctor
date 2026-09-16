@@ -1,0 +1,53 @@
+name: U03 Gate C Evaluation-Only Verification
+
+on:
+  push:
+    branches:
+      - impl/u03-gatec-eval-only
+    paths:
+      - 'tools/u03_gatec_eval/**'
+      - '.github/workflows/u03-gatec-eval.yml'
+  pull_request:
+    branches:
+      - prep/u03-clinical-dependency-completion
+    paths:
+      - 'tools/u03_gatec_eval/**'
+      - '.github/workflows/u03-gatec-eval.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  governed-offline-evaluation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Verify Python runtime
+        run: python3 --version
+      - name: Run evaluation harness self-tests
+        working-directory: tools/u03_gatec_eval
+        run: python3 -m unittest -v
+      - name: Execute governed Gate C evaluation
+        working-directory: tools/u03_gatec_eval
+        run: python3 run_evaluation.py
+      - name: Verify result bundle summary
+        working-directory: tools/u03_gatec_eval
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('build/u03-gatec-eval/result-bundle.json')
+          data = json.loads(p.read_text(encoding='utf-8'))
+          s = data['summary']
+          assert s['golden_total'] == 31
+          assert s['golden_pass'] == 31
+          assert s['golden_fail'] == 0
+          assert s['critical_safety_total'] == 20
+          assert s['critical_safety_pass'] == 20
+          assert s['critical_safety_fail'] == 0
+          assert s['gate_c_execution_blocked_by_critical_failure'] is False
+          assert data['production_state_mutation_capability'] is False
+          assert data['network_access_required'] is False
+          print(json.dumps(s, indent=2, ensure_ascii=False))
+          PY
