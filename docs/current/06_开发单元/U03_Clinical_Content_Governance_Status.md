@@ -2,7 +2,7 @@
 
 > 角色：U03 clinical content / gate 状态治理索引。  
 > 本文件只声明文档成熟度与权威边界，不包含临床规则、阈值或医学决策。  
-> 当前状态已同步至 Gate C PASS 后事实；不因此授权 CD-07、U04、runtime、merge 或 production。
+> 当前状态已同步至 Gate C PASS 与 PR #89 完成合并后的治理事实；不因此授权 CD-07、U04、runtime 或 production。
 
 ## 1. 总体原则
 
@@ -99,7 +99,6 @@ CD-07 Implementation Authorization
 U04 Implementation Authorization
 Runtime Active
 Production Authorized
-Merge Authorized
 ```
 
 ## 4. Post-Gate-C 当前边界
@@ -113,8 +112,10 @@ U04 Implementation Readiness = NOT_READY
 U04 blocker = BLOCKED_BY_U03_RUNTIME_CLINICAL_DEPENDENCY
 U04 Implementation Authorization = NOT_GRANTED
 
-PR #89 Merge Authorization Review = IN_PROGRESS / SEPARATE_GOVERNANCE
-Merge Authorization = NOT_GRANTED
+PR #89 = MERGED
+PR #89 Merge Commit = a185efcdc7c84107563a562b516f0d015bd10fd8
+PR #89 Merge Method = STANDARD_MERGE_COMMIT
+PR #89 PMV = PASS_WITH_POST_MERGE_DOC_SYNC_REQUIRED
 
 Clinical Runtime Production = NOT_ENABLED
 Production Authorization = BLOCKED
@@ -129,9 +130,11 @@ candidate / frozen / evaluated
 != active for production
 ```
 
+PR #89 完成合并只表示 evaluation-only Gate C harness 与其治理/证据记录进入当前基线；不改变任何 runtime / production 授权边界。
+
 ## 5. 当前剩余 runtime clinical dependency
 
-Gate C 已闭环，但 runtime clinical dependency 仍缺：
+Gate C 已闭环，PR #89 已完成合并，但 runtime clinical dependency 仍缺：
 
 ```text
 Runtime Implementation Authorization
@@ -155,22 +158,20 @@ pediatrics / pregnancy-puerperium / China production localization
 ```text
 A. CD-07 Implementation Readiness / Authorization
 B. U03→U04 input contract + U04 readiness
-C. PR #89 Merge Authorization Review
-D. release publication / activation governance（未来如需）
+C. release publication / activation governance（未来如需）
 ```
 
-任何一项都不能从 Gate C PASS 自动继承授权。
+任何一项都不能从 Gate C PASS 或 PR #89 MERGED 自动继承授权。
 
 ## 7. 当前禁止事项
 
 - 不把 current frozen candidates 当作 PUBLISHED / ACTIVE_FOR_RUNTIME / ACTIVE_FOR_PRODUCTION；
-- 不把 Gate C PASS 解释为 CD-07 Implementation Authorization；
-- 不把 Gate C PASS 解释为 U04 Implementation Authorization；
+- 不把 Gate C PASS 或 PR #89 MERGED 解释为 CD-07 Implementation Authorization；
+- 不把 Gate C PASS 或 PR #89 MERGED 解释为 U04 Implementation Authorization；
 - 不开始未经授权的 C02/D09 runtime；
 - 不打开真实患者流量或 production Clinical State mutation；
 - 不打开中国生产本地化；
 - 不打开儿科或孕产 source pack；
 - 不把 NICE/NHS 直接视为中国最终生产规则；
-- 不把 Gate C PASS 解释为 Merge Authorization；
 - 不宣称 Clinical Runtime Production Enabled；
 - 不宣称 Production Authorization。
