@@ -2,7 +2,7 @@
 
 > 对象：BF-CDE-01 targeted scope correction 后的独立 D09 policy candidate identity。  
 > Candidate Ref：`PR-U03-D09-001@0.2.1-candidate`  
-> 状态：`CANDIDATE_OBJECT_CREATED / FREEZE_PENDING / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
+> 状态：`CANDIDATE_FROZEN / RESOLVABLE / NOT_PUBLISHED / NOT_FOR_RUNTIME / NOT_FOR_PRODUCTION`  
 > 本对象不修改、不覆盖 `PR-U03-D09-001@0.2.0-candidate`。
 
 ---
@@ -13,9 +13,10 @@
 policy_release_id = PR-U03-D09-001
 policy_set_id = U03-D09-CLINICAL-RISK-DISPOSITION
 policy_version = 0.2.1-candidate
-status = CANDIDATE_PENDING_FREEZE
+status = CANDIDATE_FROZEN
 source_draft_ref = PR-U03-D09-001@0.2.1-draft
 candidate_created_from = U03_D09_Policy_Scope_Revision_Draft_v0.2.1.md
+freeze_record_ref = U03_D09_Policy_Candidate_Freeze_Record_v0.2.1.md
 ```
 
 Historical candidate remains immutable:
@@ -118,11 +119,11 @@ china_localized_production_policy = NOT_INCLUDED
 
 ```text
 PR-U03-D09-001@0.2.1-candidate
-= CREATED / RESOLVABLE
-= NOT_FROZEN
+= RESOLVABLE_CANDIDATE
+= CANDIDATE_FROZEN
 = NOT_PUBLISHED
 = NOT_FOR_RUNTIME
 = NOT_FOR_PRODUCTION
 ```
 
-Candidate creation does not mean CD-05 re-certification, Gate B PASS, Gate C PASS, runtime authorization, or production authorization.
+Candidate freeze does not mean CD-05 re-certification, Gate B PASS, Gate C PASS, runtime authorization, or production authorization.
