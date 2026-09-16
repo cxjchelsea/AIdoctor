@@ -2,7 +2,7 @@
 
 > 对象：BF-CDE-01 targeted scope correction 后的独立 C Rule Release candidate identity。  
 > Candidate Ref：`RR-U03-RISK-001@0.2.1-candidate`  
-> 状态：`CANDIDATE_OBJECT_CREATED / FREEZE_PENDING / NOT_PUBLISHED / NOT_FOR_PRODUCTION`  
+> 状态：`CANDIDATE_FROZEN / RESOLVABLE / NOT_PUBLISHED / NOT_FOR_RUNTIME / NOT_FOR_PRODUCTION`  
 > 本对象不修改、不覆盖 `RR-U03-RISK-001@0.2.0-candidate`。
 
 ---
@@ -13,9 +13,10 @@
 rule_release_id = RR-U03-RISK-001
 rule_set_id = U03-SAFETY-CRITICAL-RISK
 release_version = 0.2.1-candidate
-status = CANDIDATE_PENDING_FREEZE
+status = CANDIDATE_FROZEN
 source_draft_ref = RR-U03-RISK-001@0.2.1-draft
 candidate_created_from = U03_C_Rule_Release_Scope_Revision_Draft_v0.2.1.md
+freeze_record_ref = U03_C_Rule_Release_Candidate_Freeze_Record_v0.2.1.md
 ```
 
 Historical candidate remains immutable:
@@ -99,11 +100,11 @@ NG253 sepsis shared-scope remains an additional family-level constraint, not the
 
 ```text
 RR-U03-RISK-001@0.2.1-candidate
-= CREATED / RESOLVABLE
-= NOT_FROZEN
+= RESOLVABLE_CANDIDATE
+= CANDIDATE_FROZEN
 = NOT_PUBLISHED
 = NOT_FOR_RUNTIME
 = NOT_FOR_PRODUCTION
 ```
 
-Candidate creation does not mean CD-03 re-certification, Gate B PASS, Gate C PASS, runtime authorization, or production authorization.
+Candidate freeze does not mean CD-03 re-certification, Gate B PASS, Gate C PASS, runtime authorization, or production authorization.
