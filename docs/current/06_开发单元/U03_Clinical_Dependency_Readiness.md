@@ -2,7 +2,7 @@
 
 > 阶段：U03 Clinical Dependency Completion / Readiness  
 > 本文件判断 Clinical Dependency Completion 的当前门禁状态；不构成 Implementation Authorization。  
-> 当前状态已同步至 Gate C PASS 后的治理事实；不因此授权 CD-07、U04、runtime、merge 或 production。
+> 当前状态已同步至 Gate C PASS 与 PR #89 完成合并后的治理事实；不因此授权 CD-07、U04、runtime 或 production。
 
 ## 1. 已满足工程前置
 
@@ -129,6 +129,7 @@ Gate A = PASS
 Gate B = PASS / GOVERNED_CONTENT_READY
 Gate C = PASS
 Governed Evaluation Evidence = FROZEN / VERIFIED
+PR #89 = MERGED / STANDARD_MERGE_COMMIT / PMV_COMPLETED
 
 Current governed releases = CANDIDATE / NOT_PUBLISHED / NOT_ACTIVE_FOR_RUNTIME
 
@@ -147,6 +148,7 @@ U03 Clinical Dependency Readiness
 = GATE_A_PASS
 / GATE_B_PASS
 / GATE_C_PASS
+/ PR89_MERGED
 / RUNTIME_CLINICAL_DEPENDENCY_NOT_READY
 ```
 
@@ -167,7 +169,7 @@ R9  U03 runtime E2E
 R10 pediatrics / pregnancy-puerperium / China production localization
 ```
 
-这些缺口不能由 Gate C PASS 自动补齐。
+这些缺口不能由 Gate C PASS 或 PR #89 MERGED 自动补齐。
 
 ## 6. 下一步治理路径
 
@@ -176,8 +178,7 @@ R10 pediatrics / pregnancy-puerperium / China production localization
 ```text
 A. CD-07 Implementation Readiness / Authorization
 B. U03→U04 input contract + U04 readiness
-C. PR #89 Merge Authorization Review
-D. release publication / activation governance（若未来单独授权）
+C. release publication / activation governance（若未来单独授权）
 ```
 
 其中任何一项都必须独立审查，不得捆绑放行。
@@ -185,12 +186,11 @@ D. release publication / activation governance（若未来单独授权）
 ## 7. 当前禁止事项
 
 - 不原地修改当前 frozen 0.2.1 C/D/Coverage candidates；
-- 不把 Gate C PASS 解释为 CD-07 Implementation Authorization；
-- 不把 Gate C PASS 解释为 U04 Implementation Authorization；
+- 不把 Gate C PASS 或 PR #89 MERGED 解释为 CD-07 Implementation Authorization；
+- 不把 Gate C PASS 或 PR #89 MERGED 解释为 U04 Implementation Authorization；
 - 不把 current frozen candidates 当作 PUBLISHED / ACTIVE_FOR_RUNTIME / ACTIVE_FOR_PRODUCTION；
 - 不开始未经授权的 C02/D09 runtime wiring；
 - 不打开真实患者流量或生产 Clinical State mutation；
 - 不宣称 Clinical Runtime Production Enabled；
 - 不宣称 Production Authorization；
-- 不打开儿科、孕产或中国生产本地化；
-- 不把 Gate C PASS 解释为 Merge Authorization。
+- 不打开儿科、孕产或中国生产本地化。
