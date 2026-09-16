@@ -95,27 +95,69 @@ BF-CD06-01 = CLOSED
 BF-CD06-02 = CLOSED
 ```
 
-但 execution readiness 独立核验发现：
+Execution readiness：
 
 ```text
 U03_Gate_C_Evaluation_Execution_Readiness_v0.1.md
-= ASSESSMENT_COMPLETE / EXECUTION_BLOCKED
+= EXECUTION_BLOCKED
 
 BF-CD06-EXEC-01
 = OPEN
 = NO_EXECUTABLE_GOVERNED_EVALUATION_PATH
 ```
 
-原因：当前工程已有 U03 governance/application skeleton，但未发现可执行当前冻结 C/D clinical semantics 的真实 C02 adapter / D09 clinical evaluator，也未发现可加载 GC-001..GC-031 + SS-001..SS-020 并输出逐 case evidence bundle 的独立 governed evaluation harness。
+Evaluation Harness Boundary 已完成裁决：
 
-现有 `U03RiskAssessmentFlowTest` 使用 synthetic/stub/lambda decision，只能作为 engineering governance evidence，不能作为 Gate C clinical evaluation execution evidence。
+```text
+U03_Gate_C_Evaluation_Harness_Boundary_Decision_v0.1.md
 
-因此：
+Layer A evaluation infrastructure
+= MAY_PROCEED_AS_DESIGN / NON-CLINICAL TOOLING
+
+Layer B executable clinical semantics
+= CLINICAL IMPLEMENTATION
+= EXPLICIT IMPLEMENTATION AUTHORIZATION REQUIRED
+```
+
+原因：当前 `main` 虽有 U03 governance/application skeleton，但缺少真正可执行当前冻结 C/D clinical semantics 的 C02 evaluator / D09 evaluator。仅建设 loader/comparator/reporter 外壳不能形成有效 Gate C evidence。
+
+Evaluation-only implementation readiness 已准备：
+
+```text
+U03_Evaluation_Only_Clinical_Implementation_Authorization_Readiness_v0.1.md
+AUTH-U03-GATEC-EVAL-IMPL-001
+= PROPOSED
+= READINESS_COMPLETE
+= NOT_AUTHORIZED
+```
+
+该 proposed authorization 仅允许：
+
+```text
+isolated offline evaluation harness
++ evaluation-only executable frozen C/D semantics
++ exact Gate-B-qualified release binding
++ Gate C evidence generation
+```
+
+明确不允许：
+
+```text
+runtime wiring
+real patient traffic
+production Clinical State mutation
+U04 / U14 routing
+release publication / activation
+production authorization
+```
+
+因此当前：
 
 ```text
 Evaluation Content = READY
 Evaluation Execution = BLOCKED_BEFORE_START
 Execution Result Bundle = NOT_AVAILABLE
+Evaluation-only Implementation Authorization = REQUIRED / NOT_GRANTED
 ```
 
 任一 `SS-001..SS-020` 未来执行 FAIL 仍为 critical blocking，不能被总体通过率掩盖。
@@ -124,7 +166,8 @@ Execution Result Bundle = NOT_AVAILABLE
 
 ```text
 CD-07 Implementation Readiness = BLOCKED
-Implementation Authorization = NOT_GRANTED
+Runtime Implementation Authorization = NOT_GRANTED
+Evaluation-only Implementation Authorization = NOT_GRANTED
 ```
 
 ---
@@ -148,10 +191,13 @@ BF-CD06-02 = CLOSED
 CD-06 = REVIEW_READY
 
 BF-CD06-EXEC-01 = OPEN / NO_EXECUTABLE_GOVERNED_EVALUATION_PATH
+Evaluation Harness Boundary = DECIDED
+Evaluation-only Implementation Readiness = PASS
+AUTH-U03-GATEC-EVAL-IMPL-001 = NOT_AUTHORIZED
 Evaluation Execution = BLOCKED_BEFORE_START
 Gate C = NOT_PASSED
 
-CD-07 Implementation Readiness = BLOCKED
+CD-07 Runtime Implementation Readiness = BLOCKED
 U04 Implementation Readiness = BLOCKED_BY_U03_CLINICAL_DEPENDENCY
 Clinical Runtime Production = NOT_ENABLED
 Production Authorization = BLOCKED
@@ -163,7 +209,7 @@ Production Authorization = BLOCKED
 U03 Clinical Dependency Readiness
 = GATE_B_PASSED
 / GATE_C_CD06_REVIEW_READY
-/ BLOCKED_BY_EVALUATION_EXECUTION_PATH
+/ EVALUATION_ONLY_IMPLEMENTATION_AUTHORIZATION_REQUIRED
 ```
 
 ---
@@ -171,13 +217,15 @@ U03 Clinical Dependency Readiness
 ## 5. 当前唯一下一步
 
 ```text
-identify existing executable clinical evaluator / harness
-OR
-perform Evaluation Harness Boundary Decision
+explicit user decision on
+AUTH-U03-GATEC-EVAL-IMPL-001
 ↓
-ensure no CD-07 / runtime Implementation Authorization bypass
+if authorized:
+  implement isolated evaluation harness
+  + evaluation-only executable C/D semantics
+  + independent implementation review
 ↓
-provide runnable isolated exact-release-bound evaluation path
+prove exact-release binding / no runtime wiring
 ↓
 close BF-CD06-EXEC-01
 ↓
@@ -203,7 +251,8 @@ and critical blocking failure = 0
 - 不把 Safety Suite 内容审批当成执行通过；
 - 不把 synthetic/stub unit tests 当成 governed clinical evaluation execution；
 - 不人工对照 expected table 后伪造 PASS result bundle；
-- 不借 Gate C evaluation 名义实现未经授权的 C02/D09 clinical runtime；
-- 不开始 CD-07 / C02 clinical runtime / D09 runtime / U04；
+- 不借 Gate C evaluation 名义实现未经授权的 C02/D09 clinical semantics；
+- 不把 Evaluation-only Implementation Authorization 等同于 CD-07 runtime authorization；
+- 不开始 CD-07 runtime wiring / U04 / production activation；
 - 不宣称 Production Authorization；
 - 不打开儿科或孕产临床规则；当前只明确其不属于 current U03 slice。
