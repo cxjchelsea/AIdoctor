@@ -1,0 +1,57 @@
+name: U03 Gate C Governed Evaluation
+
+on:
+  push:
+    branches:
+      - impl/u03-gatec-evaluation-only
+  pull_request:
+    branches:
+      - prep/u03-clinical-dependency-completion
+    paths:
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/eval/**'
+      - 'docs/current/06_开发单元/**'
+      - '.github/workflows/u03-gatec-evaluation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  gate-c-offline-evaluation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      - name: Install Shared Contracts v1 Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+
+      - name: Compile diagnosis-service tests
+        run: mvn -f diagnosis-service/pom.xml -DskipTests test-compile
+
+      - name: Execute governed Gate C evaluation
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest='com.aidoctor.diagnosis.runtime.u03.eval.U03GateCEvaluationExecutionTest'
+          test
+
+      - name: Publish execution evidence to job summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f diagnosis-service/target/u03-gatec-evaluation-result.txt ]; then
+            echo '## U03 Gate C Evaluation Result' >> "$GITHUB_STEP_SUMMARY"
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            cat diagnosis-service/target/u03-gatec-evaluation-result.txt | tee -a "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '## U03 Gate C Evaluation Result' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Execution bundle not produced.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
