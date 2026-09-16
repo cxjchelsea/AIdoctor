@@ -30,39 +30,41 @@ B Evidence Catalog
 = SOURCE_LOCKED_SEMANTICS_FROZEN
 / MEDICAL_OWNER_REVIEW_COMPLETE
 
-C Historical Rule Candidate
-= RR-U03-RISK-001@0.2.0-candidate
-/ CANDIDATE_FROZEN
-/ CD-03_PASSED_FOR_INITIAL_CANDIDATE
-
-C Targeted Revision
-= RR-U03-RISK-001@0.2.1-draft APPROVED_FOR_CONTENT
-/ RR-U03-RISK-001@0.2.1-candidate CREATED_NOT_FROZEN
-
-D Historical Policy Candidate
-= PR-U03-D09-001@0.2.0-candidate
-/ CANDIDATE_FROZEN
-/ CD-05_PASSED_FOR_INITIAL_CANDIDATE
-
-D Targeted Revision
-= PR-U03-D09-001@0.2.1-draft APPROVED_FOR_CONTENT
-/ PR-U03-D09-001@0.2.1-candidate CREATED_NOT_FROZEN
-
-Coverage Historical
-= U03_D09_COVERAGE_V0_2
-/ CANDIDATE_FROZEN
-
-Coverage Targeted Revision
-= U03_D09_COVERAGE_V0_2_1_DRAFT APPROVED_FOR_CONTENT
-/ U03_D09_COVERAGE_V0_2_1_CANDIDATE CREATED_NOT_FROZEN
-
 E Knowledge Release
 = KR-U03-SOURCE-001@0.1.0-candidate
 / CANDIDATE_FROZEN
 / NOT_PUBLISHED
 
+C Historical Candidate
+= RR-U03-RISK-001@0.2.0-candidate
+/ CANDIDATE_FROZEN
+
+C Current Targeted Candidate
+= RR-U03-RISK-001@0.2.1-candidate
+/ CANDIDATE_FROZEN
+/ CD-03_PASSED_FOR_INITIAL_CANDIDATE_TARGETED_RECERTIFICATION
+
+Coverage Historical
+= U03_D09_COVERAGE_V0_2
+/ CANDIDATE_FROZEN
+
+Coverage Current Targeted Candidate
+= U03_D09_COVERAGE_V0_2_1_CANDIDATE
+/ CANDIDATE_FROZEN
+
+D Historical Candidate
+= PR-U03-D09-001@0.2.0-candidate
+/ CANDIDATE_FROZEN
+
+D Current Targeted Candidate
+= PR-U03-D09-001@0.2.1-candidate
+/ CANDIDATE_FROZEN
+/ CD-05_PASSED_FOR_INITIAL_CANDIDATE_TARGETED_RECERTIFICATION
+
 F Risk EvalSet / Safety Suite
-= STRUCTURAL_SCHEMA_FROZEN / GOLDEN_CASE_CONTENT_NOT_STARTED / NOT_REVIEW_READY
+= STRUCTURAL_SCHEMA_FROZEN
+/ GOLDEN_CASE_CONTENT_NOT_STARTED
+/ NOT_REVIEW_READY
 ```
 
 ## 3. Gate 状态
@@ -79,95 +81,54 @@ Gate A = PASS
 
 ```text
 Gate B = NOT_PASSED
-reason = TARGETED_0_2_1_SET_NOT_FROZEN_OR_RE_REVIEWED
+reason = CDE_CROSS_CONSISTENCY_RE_REVIEW_REQUIRED
 ```
 
-Historical 0.2.0 C/D/E cross-consistency:
+0.2.1 targeted correction 已满足：
 
 ```text
 BF-CDE-01 = CLOSED_FOR_CONTENT
-```
-
-0.2.1 targeted content review:
-
-```text
-C 0.2.1 Medical/Technical = APPROVE / APPROVE
-D 0.2.1 Medical/Technical = APPROVE / APPROVE
-Coverage 0.2.1 Medical/Technical = APPROVE / APPROVE
-CDE-SCOPE-X1..X4 = APPROVE / APPROVE
-```
-
-Approved whole-slice semantics:
-
-```text
-pregnancy / puerperium
-= OUTSIDE_CURRENT_U03_WHOLE_POLICY_SLICE
-```
-
-Approved scope-entry formal handling:
-
-```text
-TRUE
-→ P0 / FAILED / NONE / OVERALL_POLICY_SCOPE_MISMATCH
-
-FALSE
-→ continue remaining overall-scope validation
-
-UNKNOWN / NOT_ASKED / NOT_ESTABLISHED
-→ P0 / FAILED / NONE / OVERALL_POLICY_SCOPE_NOT_ESTABLISHED
-→ denominator NOT_CONSTRUCTED
-```
-
-Review status:
-
-```text
-MISSING-SCOPE-R1..R4 = APPROVE / APPROVE
 BLOCKER-FZ-CDE-021-01 = CLOSED
+Targeted Scope Eval = PASS
+Targeted fixture_count = 6
+C57 reuse = APPROVED_FOR_UNCHANGED_SEMANTICS
+D48 reuse = APPROVED_FOR_UNCHANGED_SEMANTICS
 ```
 
-Evaluation status:
+冻结状态：
 
 ```text
-C57 historical fixtures = REUSABLE_FOR_UNCHANGED_C_SEMANTICS
-D48 historical fixtures = REUSABLE_FOR_UNCHANGED_D_COVERAGE_SEMANTICS
-full rebuild = NOT_REQUIRED
-
-targeted delta fixture_count = 6
-TGT-CDE-01..06 = APPROVE / APPROVE
-blocking finding = 0
-Targeted Eval PASS = YES
+U03_D09_COVERAGE_V0_2_1_CANDIDATE = CANDIDATE_FROZEN
+RR-U03-RISK-001@0.2.1-candidate = CANDIDATE_FROZEN
+PR-U03-D09-001@0.2.1-candidate = CANDIDATE_FROZEN
 ```
 
-Independent new candidate identities now exist:
+Targeted re-certification：
 
 ```text
-RR-U03-RISK-001@0.2.1-candidate
-= CREATED / RESOLVABLE / NOT_FROZEN
+CD-03
+= PASSED_FOR_INITIAL_CANDIDATE
+= RR-U03-RISK-001@0.2.1-candidate
 
-PR-U03-D09-001@0.2.1-candidate
-= CREATED / RESOLVABLE / NOT_FROZEN
-
-U03_D09_COVERAGE_V0_2_1_CANDIDATE
-= CREATED / RESOLVABLE / NOT_FROZEN
+CD-05
+= PASSED_FOR_INITIAL_CANDIDATE
+= PR-U03-D09-001@0.2.1-candidate
 ```
 
-Targeted freeze readiness:
+记录：
 
 ```text
-U03_CDE_v0.2.1_Targeted_Freeze_Readiness_Assessment.md
-= READY_FOR_TARGETED_FREEZE
+U03_CD03_C_Rule_Release_Recertification_v0.2.1.md
+U03_CD05_D09_Initial_Candidate_Recertification_v0.2.1.md
 ```
 
-Gate B still requires:
+因此 Gate B 当前唯一剩余前置：
 
 ```text
-freeze affected 0.2.1 candidates
+C / D / E cross-consistency re-review
 ↓
-re-certify targeted CD-03/CD-05 as applicable
-↓
-C/D/E cross-consistency re-review
-↓
-Gate B decision
+if PASS + blocking finding = 0
+→ Gate B final decision
 ```
 
 ### Gate C
@@ -178,7 +139,7 @@ CD-06 = NOT_REVIEW_READY
 Clinical Golden Cases = NOT_STARTED
 ```
 
-Historical C/D pre-freeze eval plus targeted delta eval are not full Gate C.
+C57 / D48 + targeted delta fixtures 只服务 candidate governance，不等于完整 Gate C。
 
 ### Gate D / Authorization
 
@@ -192,19 +153,24 @@ Implementation Authorization = NOT_GRANTED
 ## 4. Current Governed References
 
 ```text
-E = KR-U03-SOURCE-001@0.1.0-candidate / CANDIDATE_FROZEN
+E
+= KR-U03-SOURCE-001@0.1.0-candidate
+/ CANDIDATE_FROZEN
 
-C historical = RR-U03-RISK-001@0.2.0-candidate / CANDIDATE_FROZEN
-C current targeted candidate = RR-U03-RISK-001@0.2.1-candidate / NOT_FROZEN
+C current
+= RR-U03-RISK-001@0.2.1-candidate
+/ CANDIDATE_FROZEN
 
-D historical = PR-U03-D09-001@0.2.0-candidate / CANDIDATE_FROZEN
-D current targeted candidate = PR-U03-D09-001@0.2.1-candidate / NOT_FROZEN
+Coverage current
+= U03_D09_COVERAGE_V0_2_1_CANDIDATE
+/ CANDIDATE_FROZEN
 
-Coverage historical = U03_D09_COVERAGE_V0_2 / CANDIDATE_FROZEN
-Coverage current targeted candidate = U03_D09_COVERAGE_V0_2_1_CANDIDATE / NOT_FROZEN
+D current
+= PR-U03-D09-001@0.2.1-candidate
+/ CANDIDATE_FROZEN
 ```
 
-Historical frozen candidates remain immutable.
+Historical 0.2.0 candidates remain immutable and are not overwritten.
 
 ---
 
@@ -217,10 +183,10 @@ Gate A = PASS
 BF-CDE-01 = CLOSED_FOR_CONTENT
 BLOCKER-FZ-CDE-021-01 = CLOSED
 Targeted Scope Eval = PASS
-0.2.1 Candidate Identities = CREATED
-0.2.1 Targeted Freeze Readiness = READY_FOR_TARGETED_FREEZE
+0.2.1 Candidate Freeze = COMPLETE
+CD-03 targeted re-certification = PASS
+CD-05 targeted re-certification = PASS
 
-0.2.1 Freeze = NOT_COMPLETE
 C/D/E Cross-Consistency Re-review = NOT_STARTED
 Gate B = NOT_PASSED
 Gate C = NOT_PASSED
@@ -242,18 +208,10 @@ U03 Clinical Dependency Readiness
 ## 6. 当前唯一下一步
 
 ```text
-freeze U03_D09_COVERAGE_V0_2_1_CANDIDATE
-↓
-freeze RR-U03-RISK-001@0.2.1-candidate
-↓
-freeze PR-U03-D09-001@0.2.1-candidate
-↓
-targeted CD-03 / CD-05 re-certification
-↓
-C/D/E cross-consistency re-review
+C / D / E cross-consistency re-review
 ↓
 only if PASS + blocking finding = 0
-→ reconsider Gate B
+→ Gate B final decision
 ```
 
 ---
@@ -261,8 +219,8 @@ only if PASS + blocking finding = 0
 ## 7. 当前禁止事项
 
 - 不原地修改历史 frozen 0.2.0 C/D/coverage candidates；
-- 不把 candidate identity creation 解释为 freeze；
-- 不把 Targeted Eval PASS 解释为 Gate C PASS；
-- 不把 READY_FOR_TARGETED_FREEZE 解释为 Gate B PASS；
+- 不原地修改当前 frozen 0.2.1 C/D/coverage candidates；任何修改必须新版本；
+- 不把 targeted CD-03 / CD-05 re-certification 当成 Gate B PASS；
+- 不把 Targeted Eval PASS 当成 Gate C PASS；
 - 不开始 CD-07 / runtime / U04；
 - 不打开儿科或孕产临床规则；当前仅明确其不属于 current U03 slice。
