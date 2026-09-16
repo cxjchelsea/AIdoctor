@@ -1,26 +1,25 @@
-name: U03 Gate C Evaluation-Only Verification
+name: U03 Gate C Governed Evaluation
 
 on:
-  push:
-    branches:
-      - impl/u03-gatec-eval-only
-    paths:
-      - 'tools/u03_gatec_eval/**'
-      - '.github/workflows/u03-gatec-eval.yml'
-  pull_request:
-    branches:
-      - prep/u03-clinical-dependency-completion
-    paths:
-      - 'tools/u03_gatec_eval/**'
-      - '.github/workflows/u03-gatec-eval.yml'
+  workflow_dispatch:
+    inputs:
+      independent_review_confirmed:
+        description: 'Set to EXACTLY REVIEW_COMPLETE before governed GC/SS execution'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   governed-offline-evaluation:
+    if: ${{ inputs.independent_review_confirmed == 'REVIEW_COMPLETE' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Governance guard
+        run: |
+          test "${{ inputs.independent_review_confirmed }}" = "REVIEW_COMPLETE"
+          echo "Independent implementation review explicitly confirmed."
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Verify Python runtime
