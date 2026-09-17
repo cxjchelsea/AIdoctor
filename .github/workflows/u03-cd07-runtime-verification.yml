@@ -41,6 +41,7 @@ jobs:
       CD07_REAL_PATIENT_TRAFFIC: 'false'
       CD07_PRODUCTION_MUTATION: 'false'
       CD07_U04_EXECUTION: 'false'
+      CD07_IMPLEMENTATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Governance environment guard
@@ -50,10 +51,18 @@ jobs:
           test "$CD07_REAL_PATIENT_TRAFFIC" = "false"
           test "$CD07_PRODUCTION_MUTATION" = "false"
           test "$CD07_U04_EXECUTION" = "false"
+          test -n "$CD07_IMPLEMENTATION_SHA"
           echo "NON_PRODUCTION_RUNTIME_E2E"
 
       - name: Checkout exact implementation SHA
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.CD07_IMPLEMENTATION_SHA }}
+
+      - name: Verify checked-out implementation identity
+        run: |
+          test "$(git rev-parse HEAD)" = "$CD07_IMPLEMENTATION_SHA"
+          echo "implementation_sha=$CD07_IMPLEMENTATION_SHA"
 
       - name: Set up JDK 8
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
@@ -115,7 +124,7 @@ jobs:
       - name: Build E1-E11 runtime evidence
         run: |
           python3 tools/u03_cd07_runtime_verification/build_evidence.py \
-            --implementation-sha "$GITHUB_SHA" \
+            --implementation-sha "$CD07_IMPLEMENTATION_SHA" \
             --workflow-run-id "$GITHUB_RUN_ID" \
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --repository "$GITHUB_REPOSITORY" \
@@ -133,7 +142,8 @@ jobs:
         run: |
           mkdir -p build/u03-cd07-runtime-verification
           {
-            echo "implementation_sha=$GITHUB_SHA"
+            echo "implementation_sha=$CD07_IMPLEMENTATION_SHA"
+            echo "github_event_sha=$GITHUB_SHA"
             echo "repository=$GITHUB_REPOSITORY"
             echo "ref=$GITHUB_REF"
             echo "event_name=$GITHUB_EVENT_NAME"
@@ -174,7 +184,8 @@ jobs:
           echo "artifact_id=${{ steps.upload-runtime-evidence.outputs.artifact-id }}"
           echo "artifact_url=${{ steps.upload-runtime-evidence.outputs.artifact-url }}"
           echo "artifact_digest=${{ steps.upload-runtime-evidence.outputs.artifact-digest }}"
-          echo "implementation_sha=${{ github.sha }}"
+          echo "implementation_sha=$CD07_IMPLEMENTATION_SHA"
+          echo "github_event_sha=$GITHUB_SHA"
           echo "artifact_is_time_limited_copy=true"
           echo "persistent_pr_review_record_required=true"
           echo "merge_authorization=NOT_GRANTED"
