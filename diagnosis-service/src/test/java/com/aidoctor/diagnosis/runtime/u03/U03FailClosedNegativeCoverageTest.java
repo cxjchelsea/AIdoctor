@@ -30,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * S12 closure evidence for R5 N1-N13 mandatory fail-closed cases.
@@ -279,7 +278,6 @@ class U03FailClosedNegativeCoverageTest {
         U03OutboundHandoff handoff = committedHandoff();
         assertEquals("COMMITTED", handoff.getCommitStatus());
         assertEquals("CAUTION", handoff.getDispositionCode());
-        // The payload ends at the U03 producer boundary; it has no U04 decision field.
         assertThrows(NoSuchMethodException.class, () ->
                 U03OutboundHandoff.class.getMethod("getU04Decision"));
         assertThrows(NoSuchMethodException.class, () ->
