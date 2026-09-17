@@ -282,6 +282,10 @@ class U03FailClosedNegativeCoverageTest {
                 U03OutboundHandoff.class.getMethod("getU04Decision"));
         assertThrows(NoSuchMethodException.class, () ->
                 U03OutboundHandoff.class.getMethod("isSafe"));
+        assertThrows(NoSuchMethodException.class, () ->
+                U03OutboundHandoff.class.getMethod("isU04Passed"));
+        assertThrows(NoSuchMethodException.class, () ->
+                U03OutboundHandoff.class.getMethod("continueWithoutSafetyGate"));
     }
 
     private static U03GovernedCandidateGateway gateway(U03AcceptedEvidenceAwareCandidateProvider provider) {
