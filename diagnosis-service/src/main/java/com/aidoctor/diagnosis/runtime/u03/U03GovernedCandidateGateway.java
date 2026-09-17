@@ -5,8 +5,8 @@ import com.aidoctor.diagnosis.runtime.governance.CapabilityExecutionContext;
 import com.aidoctor.diagnosis.runtime.governance.CapabilityInvocationGuard;
 
 /**
- * U03 governed invocation boundary. Authorization and release binding must both succeed
- * before the candidate provider is called.
+ * U03 governed invocation boundary. Authorization, accepted evidence, and release
+ * binding must all succeed before the CD-07 candidate provider is called.
  */
 public final class U03GovernedCandidateGateway {
     public static final String BINDING_ID = "c02-u03-v1-active";
@@ -42,21 +42,29 @@ public final class U03GovernedCandidateGateway {
     }
 
     /**
-     * Authorized CD-07 path: explicit non-production execution context plus the
-     * Gate-C-frozen release set. No active/latest release discovery occurs here.
+     * Authorized CD-07 path: explicit non-production execution context, accepted
+     * evidence, and the Gate-C-frozen release set. No active/latest release
+     * discovery occurs here.
      */
     public GovernedResult assess(U03NonProductionExecutionContext context) {
         if (context == null) throw new IllegalArgumentException("context is required");
         if (!enabled) throw new IllegalStateException("U03 capability binding is not active");
+        if (!(provider instanceof U03AcceptedEvidenceAwareCandidateProvider)) {
+            throw new IllegalStateException(
+                    "CD-07 explicit runtime requires an accepted-evidence-aware C02 provider");
+        }
 
+        U03AcceptedEvidenceBinding acceptedEvidence = context.requireAcceptedEvidenceBinding();
         CapabilityBindingRecord capabilityBinding = authorizeCapability();
         U03ResolvedNonProductionReleaseSet resolved =
                 exactReleaseResolver.resolve(context, capabilityBinding);
         U03ReleaseBinding candidateReleaseBinding = resolved.asCandidateReleaseBinding();
 
         U03RiskAssessmentCandidate candidate =
-                provider.assess(context.getCommand(), capabilityBinding, candidateReleaseBinding);
+                ((U03AcceptedEvidenceAwareCandidateProvider) provider).assess(
+                        context.getCommand(), capabilityBinding, candidateReleaseBinding, acceptedEvidence);
         if (candidate == null) throw new IllegalStateException("U03 candidate provider returned null");
+        verifyAcceptedEvidencePreserved(candidate, acceptedEvidence);
         return new GovernedResult(candidate, capabilityBinding, candidateReleaseBinding, resolved);
     }
 
@@ -87,6 +95,21 @@ public final class U03GovernedCandidateGateway {
                         CapabilityBindingRecord.ANY,
                         CapabilityBindingRecord.ANY,
                         CapabilityBindingRecord.ANY));
+    }
+
+    private static void verifyAcceptedEvidencePreserved(
+            U03RiskAssessmentCandidate candidate,
+            U03AcceptedEvidenceBinding acceptedEvidence) {
+        if (candidate.isFailed()) return;
+        if (!acceptedEvidence.getEvidenceRefs().equals(candidate.getEvidenceRefs())) {
+            throw new IllegalStateException("C02 candidate did not preserve the accepted evidence binding");
+        }
+        if (!candidate.getSourceRefs().containsAll(acceptedEvidence.getSourceRefs())) {
+            throw new IllegalStateException("C02 candidate did not preserve accepted evidence source refs");
+        }
+        if (!candidate.getProvenance().containsAll(acceptedEvidence.getProvenanceRefs())) {
+            throw new IllegalStateException("C02 candidate did not preserve accepted evidence provenance");
+        }
     }
 
     public static final class GovernedResult {
