@@ -133,9 +133,13 @@ class U03NonProductionRuntimeE2ETest {
         assertEquals(1, repository.commitCalls());
 
         RecordingTracePort tracePort = new RecordingTracePort();
-        U03RuntimeTraceWriteOutcome traceOutcome = new U03RuntimeTraceService(tracePort)
-                .record(context, governed, decision, proposal, commit);
-        assertEquals(U03RuntimeTraceWriteOutcome.RECORDED, traceOutcome.getStatus());
+        U03PostCommitFinalizationOutcome finalization = new U03PostCommitFinalizer(
+                new U03RuntimeTraceService(tracePort),
+                new U03OutboundProducer())
+                .finalizeCommittedExecution(context, governed, decision, proposal, commit);
+        assertEquals(U03PostCommitFinalizationOutcome.DELIVERABLE, finalization.getStatus());
+        assertEquals(U03RuntimeTraceWriteOutcome.RECORDED,
+                finalization.getTraceOutcome().getStatus());
         assertEquals(1, tracePort.records.size());
         U03RuntimeTraceRecord trace = tracePort.records.get(0);
         assertEquals("thread-e2e-1", trace.getThreadId());
@@ -145,8 +149,8 @@ class U03NonProductionRuntimeE2ETest {
         assertEquals("COMMITTED", trace.getCommitStatus());
         assertEquals(Integer.valueOf(8), trace.getCommitCommittedVersion());
 
-        U03OutboundHandoff outbound = new U03OutboundProducer()
-                .produce(context, governed, decision, proposal, commit);
+        U03OutboundHandoff outbound = finalization.getOutboundHandoff();
+        assertNotNull(outbound);
         assertEquals(7, outbound.getSourceClinicalStateVersion());
         assertEquals(Integer.valueOf(8), outbound.getCommittedClinicalStateVersion());
         assertEquals("VALID", outbound.getExecutionStatus());
