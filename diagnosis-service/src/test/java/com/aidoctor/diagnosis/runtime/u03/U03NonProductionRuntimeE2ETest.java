@@ -42,7 +42,7 @@ class U03NonProductionRuntimeE2ETest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-17T00:00:00Z"), ZoneOffset.UTC);
 
     @Test
-    void nonProductionRuntimeE2EBindsConcreteGateCC02D09K09P01TraceAndOutboundWithoutU04Execution() {
+    void nonProductionRuntimeE2EBindsC02D09K09P01TraceAndOutboundWithoutU04Execution() {
         U03NonProductionExecutionContext context = context();
         CapabilityBindingRecord capability = capabilityBinding();
         CapabilityInvocationGuard guard = new CapabilityInvocationGuard(null) {
