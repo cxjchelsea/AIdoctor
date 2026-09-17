@@ -71,7 +71,7 @@ jobs:
       - name: Run CD-07 focused V1-V6 V8 verification
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Dtest='U03ExplicitNonProductionGatewayTest,U03NonProductionExecutionContextTest,U03NonProductionEvidenceAcceptanceTest,U03NonProductionDecisionExecutionTest,U03NonProductionStateProposalTest,U03NonProductionCommitIntegrationTest,U03RuntimeTraceServiceTest,U03OutboundProducerTest,U03FailClosedNegativeCoverageTest,U03NonProductionRuntimeE2ETest,Foundation1GovernanceTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest'
+          -Dtest='U03ExplicitNonProductionGatewayTest,U03NonProductionExecutionContextTest,U03NonProductionEvidenceAcceptanceTest,U03NonProductionDecisionExecutionTest,U03NonProductionStateProposalTest,U03NonProductionCommitIntegrationTest,U03RuntimeTraceServiceTest,U03PostCommitFinalizerTest,U03OutboundProducerTest,U03FailClosedNegativeCoverageTest,U03UnauthorizedU04AttemptTest,U03NonProductionRuntimeE2ETest,Foundation1GovernanceTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest'
           test
 
       - name: Run diagnosis-service regression suite
@@ -112,7 +112,7 @@ jobs:
           print('V7_GATE_C_SEMANTIC_REGRESSION=PASS')
           PY
 
-      - name: Build durable E1-E11 runtime evidence
+      - name: Build E1-E11 runtime evidence
         run: |
           python3 tools/u03_cd07_runtime_verification/build_evidence.py \
             --implementation-sha "$GITHUB_SHA" \
@@ -121,6 +121,10 @@ jobs:
             --repository "$GITHUB_REPOSITORY" \
             --ref "$GITHUB_REF" \
             --event-name "$GITHUB_EVENT_NAME" \
+            --environment-id "$CD07_RUNTIME_ENVIRONMENT" \
+            --real-patient-traffic-attested "$CD07_REAL_PATIENT_TRAFFIC" \
+            --production-mutation-attested "$CD07_PRODUCTION_MUTATION" \
+            --u04-execution-attested "$CD07_U04_EXECUTION" \
             --java-report-dir diagnosis-service/target/surefire-reports \
             --gatec-bundle tools/u03_gatec_eval/build/u03-gatec-eval/result-bundle.json \
             --output build/u03-cd07-runtime-verification/evidence.json
@@ -148,7 +152,7 @@ jobs:
             > build/u03-cd07-runtime-verification/SHA256SUMS
           cat build/u03-cd07-runtime-verification/SHA256SUMS
 
-      - name: Upload durable CD-07 runtime verification evidence
+      - name: Upload retained artifact copy of CD-07 runtime verification evidence
         id: upload-runtime-evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -164,13 +168,15 @@ jobs:
           compression-level: 6
           overwrite: false
 
-      - name: Report durable evidence identity
+      - name: Report evidence identity and retention boundary
         run: |
           echo "verification_label=NON_PRODUCTION_RUNTIME_E2E"
           echo "artifact_id=${{ steps.upload-runtime-evidence.outputs.artifact-id }}"
           echo "artifact_url=${{ steps.upload-runtime-evidence.outputs.artifact-url }}"
           echo "artifact_digest=${{ steps.upload-runtime-evidence.outputs.artifact-digest }}"
           echo "implementation_sha=${{ github.sha }}"
+          echo "artifact_is_time_limited_copy=true"
+          echo "persistent_pr_review_record_required=true"
           echo "merge_authorization=NOT_GRANTED"
           echo "production_authorization=BLOCKED"
           echo "u04_implementation_authorization=NOT_GRANTED"
