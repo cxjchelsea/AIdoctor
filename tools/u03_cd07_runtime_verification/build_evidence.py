@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Build durable, machine-reviewable CD-07 non-production runtime evidence.
+"""Build machine-reviewable CD-07 non-production runtime evidence.
 
 This tool summarizes verification facts only. It does not authorize merge,
 production activation, clinical semantics, U04 execution, or real-patient use.
+The generated file is intended to be retained in both the Actions artifact and a
+persistent PR review record; the time-limited artifact alone is not treated as a
+permanent evidence store.
 """
 
 from __future__ import annotations
@@ -34,8 +37,15 @@ MANDATORY_NEGATIVES = {
     "N10": "n10AttemptedDirectMutationBypassIsRejectedBeforeStateRepository",
     "N11": "n11ImplicitLatestReleaseSelectionIsRejectedBeforeRuntimeOutput",
     "N12": "n12ProductionEnvironmentUseIsRejectedBeforeC02OrCommit",
-    "N13": "n13OutboundProducerExposesNoUnauthorizedU04OwnerExecutionOrRoutingSurface",
+    "N13": "n13AttemptedU04OwnerExecutionWithoutAuthorizationFailsClosedWithNoOwnerCallOrOutput",
 }
+
+TRACE_RECONCILIATION_TEST = (
+    "committedStateRemainsCommittedWhenTracePersistenceFailsAndNoNormalOutboundIsProduced"
+)
+RUNTIME_E2E_TEST = (
+    "nonProductionRuntimeE2EBindsC02D09K09P01TraceAndOutboundWithoutU04Execution"
+)
 
 
 def sha256(path: Path) -> str:
@@ -44,6 +54,15 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(65536), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def parse_bool(value: str, name: str) -> bool:
+    normalized = value.strip().lower()
+    if normalized == "true":
+        return True
+    if normalized == "false":
+        return False
+    raise SystemExit(f"{name} must be true or false, got {value!r}")
 
 
 def read_surefire(report_dir: Path) -> tuple[dict, set[str]]:
@@ -102,10 +121,26 @@ def main() -> None:
     parser.add_argument("--repository", required=True)
     parser.add_argument("--ref", required=True)
     parser.add_argument("--event-name", required=True)
+    parser.add_argument("--environment-id", required=True)
+    parser.add_argument("--real-patient-traffic-attested", required=True)
+    parser.add_argument("--production-mutation-attested", required=True)
+    parser.add_argument("--u04-execution-attested", required=True)
     parser.add_argument("--java-report-dir", type=Path, required=True)
     parser.add_argument("--gatec-bundle", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+
+    real_patient_attested = parse_bool(
+        args.real_patient_traffic_attested, "real-patient-traffic-attested"
+    )
+    production_mutation_attested = parse_bool(
+        args.production_mutation_attested, "production-mutation-attested"
+    )
+    u04_execution_attested = parse_bool(
+        args.u04_execution_attested, "u04-execution-attested"
+    )
+    if real_patient_attested or production_mutation_attested or u04_execution_attested:
+        raise SystemExit("controlled CD-07 verification attestation must remain non-production / no-U04")
 
     totals, passed = read_surefire(args.java_report_dir)
     missing_negatives = {
@@ -114,9 +149,10 @@ def main() -> None:
     if missing_negatives:
         raise SystemExit(f"mandatory negative tests missing/not passed: {missing_negatives}")
 
-    e2e_name = "nonProductionRuntimeE2EBindsC02D09K09P01TraceAndOutboundWithoutU04Execution"
-    if e2e_name not in passed:
+    if RUNTIME_E2E_TEST not in passed:
         raise SystemExit("NON_PRODUCTION_RUNTIME_E2E test missing or not passed")
+    if TRACE_RECONCILIATION_TEST not in passed:
+        raise SystemExit("trace-failure reconciliation test missing or not passed")
 
     if totals["failures"] or totals["errors"]:
         raise SystemExit(f"Java verification has failures/errors: {totals}")
@@ -124,8 +160,13 @@ def main() -> None:
     gatec = load_gatec(args.gatec_bundle)
 
     evidence = {
-        "schema": "u03-cd07-runtime-verification-evidence-v1",
+        "schema": "u03-cd07-runtime-verification-evidence-v2",
         "verification_label": "NON_PRODUCTION_RUNTIME_E2E",
+        "retention_model": {
+            "actions_artifact_is_time_limited_copy": True,
+            "persistent_review_record_required": True,
+            "persistent_review_record_location": "PR_CONVERSATION_RECORD",
+        },
         "governance_disclaimer": {
             "runtime_verified_does_not_mean_clinically_evaluated": True,
             "clinical_evaluation_does_not_mean_production_authorized": True,
@@ -136,12 +177,16 @@ def main() -> None:
         "E1_exact_implementation_commit_sha": args.implementation_sha,
         "E2_test_evaluation_code_identity": {
             "same_repository_sha": args.implementation_sha,
-            "negative_test_class": "U03FailClosedNegativeCoverageTest",
+            "negative_test_classes": [
+                "U03FailClosedNegativeCoverageTest",
+                "U03UnauthorizedU04AttemptTest",
+            ],
+            "trace_reconciliation_test_class": "U03PostCommitFinalizerTest",
             "runtime_e2e_test_class": "U03NonProductionRuntimeE2ETest",
             "gate_c_harness": "tools/u03_gatec_eval",
         },
         "E3_runtime_environment_identity": {
-            "environment_id": "ci-nonprod-e2e",
+            "environment_id": args.environment_id,
             "binding_mode": "EXPLICIT_NON_PRODUCTION_BINDING_ONLY",
             "execution_kind": "GITHUB_ACTIONS",
             "repository": args.repository,
@@ -159,7 +204,11 @@ def main() -> None:
         },
         "E6_test_inventory_and_results": {
             "surefire_totals": totals,
-            "runtime_e2e": {"test": e2e_name, "status": "PASS"},
+            "runtime_e2e": {"test": RUNTIME_E2E_TEST, "status": "PASS"},
+            "trace_failure_reconciliation": {
+                "test": TRACE_RECONCILIATION_TEST,
+                "status": "PASS",
+            },
             "gate_c_regression": {
                 "status": "PASS",
                 "bundle_sha256": gatec["sha256"],
@@ -168,15 +217,22 @@ def main() -> None:
             },
         },
         "E7_negative_test_results": {
-            case: {"test": name, "status": "PASS"}
+            case: {
+                "test": name,
+                "status": "PASS",
+                "proof_kind": "verification_harness" if case == "N13" else "runtime_or_contract_test",
+            }
             for case, name in MANDATORY_NEGATIVES.items()
         },
         "E8_non_production_e2e_result": {
             "status": "PASS",
             "label": "NON_PRODUCTION_RUNTIME_E2E",
-            "synthetic_inputs_only": True,
-            "mechanical_in_memory_state_repository": True,
-            "u04_consumer_executed": False,
+            "machine_verified": {
+                "synthetic_test_inputs": True,
+                "mechanical_in_memory_state_repository": True,
+                "post_commit_trace_gate_exercised": True,
+                "u04_consumer_not_wired_in_v8": True,
+            },
         },
         "E9_trace_provenance_summary": {
             "correlates": [
@@ -192,20 +248,39 @@ def main() -> None:
                 "S14 outbound identity",
             ],
             "trace_is_clinical_truth": False,
+            "trace_failure_behavior_machine_verified": {
+                "committed_state_not_rewritten": True,
+                "normal_s14_handoff_withheld": True,
+                "operational_reconciliation_required": True,
+            },
         },
         "E10_no_production_mutation_or_real_patient_traffic": {
-            "production_environment_used": False,
-            "real_patient_traffic_used": False,
-            "external_network_required_for_runtime_e2e": False,
-            "production_release_activated": False,
-            "production_clinical_state_adapter_used": False,
+            "machine_verified": {
+                "N12_production_environment_rejected_before_C02_or_commit": True,
+                "N13_unauthorized_U04_owner_attempt_rejected_before_owner_call_or_output": True,
+                "v8_uses_mechanical_in_memory_repository": True,
+                "gate_c_bundle_network_access_required": False,
+                "gate_c_bundle_production_state_mutation_capability": False,
+            },
+            "execution_attestations": {
+                "environment_id": args.environment_id,
+                "real_patient_traffic_used": real_patient_attested,
+                "production_mutation_used": production_mutation_attested,
+                "u04_execution_used": u04_execution_attested,
+            },
+            "evidence_limitations": [
+                "Workflow environment declarations are execution attestations, not independent proof of external infrastructure state.",
+                "V8 proves the checked repository wiring uses synthetic inputs and an in-memory mechanical state repository; it does not claim visibility into systems outside this workflow run.",
+            ],
         },
         "E11_known_exclusions_and_residual_risks": [
             "U04 implementation and consumer-side Safety Gate behavior remain unauthorized and unverified.",
+            "N13 uses a verification harness because CD-07 intentionally contains no authorized U04 consumer/runtime wiring.",
             "U14 routing is excluded.",
             "Real-patient traffic and production Clinical State mutation are excluded.",
             "Candidate releases remain NOT_PUBLISHED / NOT_ACTIVE_FOR_PRODUCTION.",
             "This evidence proves runtime wiring/guard behavior only; it does not replace Gate-C clinical evaluation evidence.",
+            "The Actions artifact is a 90-day retained copy; E1-E11 must also be copied verbatim into a persistent PR review record.",
             "Independent implementation/evidence review and explicit Merge Authorization remain required.",
         ],
     }
@@ -220,8 +295,10 @@ def main() -> None:
         "sha256": sha256(args.output),
         "java_tests": totals,
         "negative_cases": len(MANDATORY_NEGATIVES),
+        "trace_failure_reconciliation": "PASS",
         "gate_c_regression": "PASS",
         "runtime_e2e": "PASS",
+        "persistent_review_record_required": True,
     }, ensure_ascii=False, indent=2))
 
 
