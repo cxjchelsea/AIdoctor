@@ -1,0 +1,176 @@
+name: U03 CD-07 Non-Production Runtime Verification
+
+on:
+  push:
+    branches:
+      - impl/u03-cd07-runtime-nonprod
+    paths:
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u03/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/governance/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/**'
+      - 'tools/u03_gatec_eval/**'
+      - 'tools/u03_cd07_runtime_verification/**'
+      - 'docs/current/06_开发单元/**'
+      - '.github/workflows/u03-cd07-runtime-verification.yml'
+  pull_request:
+    branches:
+      - prep/u03-cd07-implementation-readiness
+    paths:
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u03/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/governance/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/**'
+      - 'tools/u03_gatec_eval/**'
+      - 'tools/u03_cd07_runtime_verification/**'
+      - 'docs/current/06_开发单元/**'
+      - '.github/workflows/u03-cd07-runtime-verification.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-non-production-runtime:
+    name: NON_PRODUCTION_RUNTIME_E2E
+    runs-on: ubuntu-latest
+    env:
+      CD07_RUNTIME_ENVIRONMENT: ci-nonprod-e2e
+      CD07_BINDING_MODE: EXPLICIT_NON_PRODUCTION_BINDING_ONLY
+      CD07_REAL_PATIENT_TRAFFIC: 'false'
+      CD07_PRODUCTION_MUTATION: 'false'
+      CD07_U04_EXECUTION: 'false'
+
+    steps:
+      - name: Governance environment guard
+        run: |
+          test "$CD07_RUNTIME_ENVIRONMENT" = "ci-nonprod-e2e"
+          test "$CD07_BINDING_MODE" = "EXPLICIT_NON_PRODUCTION_BINDING_ONLY"
+          test "$CD07_REAL_PATIENT_TRAFFIC" = "false"
+          test "$CD07_PRODUCTION_MUTATION" = "false"
+          test "$CD07_U04_EXECUTION" = "false"
+          echo "NON_PRODUCTION_RUNTIME_E2E"
+
+      - name: Checkout exact implementation SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      - name: Install Shared Contracts v1 Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+
+      - name: Compile diagnosis-service
+        run: mvn -f diagnosis-service/pom.xml -DskipTests compile
+
+      - name: Run CD-07 focused V1-V6 V8 verification
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest='U03ExplicitNonProductionGatewayTest,U03NonProductionExecutionContextTest,U03NonProductionEvidenceAcceptanceTest,U03NonProductionDecisionExecutionTest,U03NonProductionStateProposalTest,U03NonProductionCommitIntegrationTest,U03RuntimeTraceServiceTest,U03OutboundProducerTest,U03FailClosedNegativeCoverageTest,U03NonProductionRuntimeE2ETest,Foundation1GovernanceTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest'
+          test
+
+      - name: Run diagnosis-service regression suite
+        run: mvn -f diagnosis-service/pom.xml test
+
+      - name: Run Gate-C harness self-tests for V7 regression
+        working-directory: tools/u03_gatec_eval
+        run: python3 -m unittest -v
+
+      - name: Execute Gate-C semantic regression compatibility check
+        working-directory: tools/u03_gatec_eval
+        run: python3 run_evaluation.py
+
+      - name: Verify frozen Gate-C semantic counts
+        working-directory: tools/u03_gatec_eval
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path('build/u03-gatec-eval/result-bundle.json')
+          data = json.loads(p.read_text(encoding='utf-8'))
+          s = data['summary']
+          assert s['approved_golden_id_total'] == 31
+          assert s['executable_golden_total'] == 30
+          assert s['excluded_golden_ids'] == ['GC-026']
+          assert s['golden_pass'] == 30
+          assert s['golden_fail'] == 0
+          assert s['approved_critical_safety_id_total'] == 20
+          assert s['executable_critical_safety_total'] == 19
+          assert s['excluded_critical_safety_ids'] == ['SS-012']
+          assert s['critical_safety_pass'] == 19
+          assert s['critical_safety_fail'] == 0
+          assert s['failed_non_case_checks'] == []
+          assert s['gate_c_execution_blocked_by_critical_failure'] is False
+          assert data['production_state_mutation_capability'] is False
+          assert data['network_access_required'] is False
+          print('V7_GATE_C_SEMANTIC_REGRESSION=PASS')
+          PY
+
+      - name: Build durable E1-E11 runtime evidence
+        run: |
+          python3 tools/u03_cd07_runtime_verification/build_evidence.py \
+            --implementation-sha "$GITHUB_SHA" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --repository "$GITHUB_REPOSITORY" \
+            --ref "$GITHUB_REF" \
+            --event-name "$GITHUB_EVENT_NAME" \
+            --java-report-dir diagnosis-service/target/surefire-reports \
+            --gatec-bundle tools/u03_gatec_eval/build/u03-gatec-eval/result-bundle.json \
+            --output build/u03-cd07-runtime-verification/evidence.json
+
+      - name: Freeze evidence checksums and workflow provenance
+        run: |
+          mkdir -p build/u03-cd07-runtime-verification
+          {
+            echo "implementation_sha=$GITHUB_SHA"
+            echo "repository=$GITHUB_REPOSITORY"
+            echo "ref=$GITHUB_REF"
+            echo "event_name=$GITHUB_EVENT_NAME"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "environment=$CD07_RUNTIME_ENVIRONMENT"
+            echo "binding_mode=$CD07_BINDING_MODE"
+            echo "real_patient_traffic=$CD07_REAL_PATIENT_TRAFFIC"
+            echo "production_mutation=$CD07_PRODUCTION_MUTATION"
+            echo "u04_execution=$CD07_U04_EXECUTION"
+          } > build/u03-cd07-runtime-verification/workflow-provenance.txt
+          sha256sum \
+            build/u03-cd07-runtime-verification/evidence.json \
+            build/u03-cd07-runtime-verification/workflow-provenance.txt \
+            tools/u03_gatec_eval/build/u03-gatec-eval/result-bundle.json \
+            > build/u03-cd07-runtime-verification/SHA256SUMS
+          cat build/u03-cd07-runtime-verification/SHA256SUMS
+
+      - name: Upload durable CD-07 runtime verification evidence
+        id: upload-runtime-evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: u03-cd07-runtime-verification-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            build/u03-cd07-runtime-verification/evidence.json
+            build/u03-cd07-runtime-verification/workflow-provenance.txt
+            build/u03-cd07-runtime-verification/SHA256SUMS
+            diagnosis-service/target/surefire-reports/TEST-*.xml
+            tools/u03_gatec_eval/build/u03-gatec-eval/result-bundle.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 6
+          overwrite: false
+
+      - name: Report durable evidence identity
+        run: |
+          echo "verification_label=NON_PRODUCTION_RUNTIME_E2E"
+          echo "artifact_id=${{ steps.upload-runtime-evidence.outputs.artifact-id }}"
+          echo "artifact_url=${{ steps.upload-runtime-evidence.outputs.artifact-url }}"
+          echo "artifact_digest=${{ steps.upload-runtime-evidence.outputs.artifact-digest }}"
+          echo "implementation_sha=${{ github.sha }}"
+          echo "merge_authorization=NOT_GRANTED"
+          echo "production_authorization=BLOCKED"
+          echo "u04_implementation_authorization=NOT_GRANTED"
