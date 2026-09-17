@@ -167,8 +167,10 @@ public final class U03OutboundProducer {
             throw new IllegalStateException("S14 outbound K09 correlation identity mismatch");
         }
         if (!proposal.isFullReleaseEvidenceRequired()
-                || !proposal.getReleaseRefs().containsAll(governedRefs)) {
-            throw new IllegalStateException("S14 outbound K09 proposal lacks the full governed release set");
+                || proposal.getReleaseRefs().size() != governedRefs.size()
+                || !proposal.getReleaseRefs().containsAll(governedRefs)
+                || !governedRefs.containsAll(proposal.getReleaseRefs())) {
+            throw new IllegalStateException("S14 outbound K09 proposal lacks the exact governed release set");
         }
     }
 
