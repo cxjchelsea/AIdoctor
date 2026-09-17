@@ -26,7 +26,63 @@ public final class U03StateProposalFactory {
                 true,
                 governed.getCapabilityBinding().getBindingId(),
                 governed.getReleaseBinding().getRuleReleaseId(),
-                governed.getReleaseBinding().getKnowledgeReleaseId());
+                governed.getReleaseBinding().getKnowledgeReleaseId(),
+                null, null, null);
+    }
+
+    /**
+     * Authorized CD-07 non-production K09 path.
+     *
+     * <p>Reuses the existing governed U03StateProposal / StatePatch contract and
+     * binds the proposal to the exact Gate-C-frozen release set. This method only
+     * creates a proposal; it performs no Clinical State mutation and grants no
+     * StateCommitter authority.</p>
+     */
+    public U03StateProposal createNonProductionValid(
+            U03NonProductionExecutionContext context,
+            U03DecisionOutcome decision,
+            U03GovernedCandidateGateway.GovernedResult governed) {
+        if (context == null || decision == null || governed == null) {
+            throw new IllegalArgumentException("CD-07 K09 inputs are required");
+        }
+        if (!U03RiskAssessmentCandidate.VALID.equals(decision.getStatus())) {
+            throw new IllegalArgumentException("createNonProductionValid requires VALID decision status");
+        }
+        if (!decision.getEvidenceRefs().equals(governed.getCandidate().getEvidenceRefs())) {
+            throw new IllegalStateException("K09 proposal requires the accepted D09 evidence refs");
+        }
+
+        U03ResolvedNonProductionReleaseSet resolved = governed.getResolvedNonProductionReleaseSet();
+        if (resolved == null) {
+            throw new IllegalStateException("CD-07 K09 requires the resolved non-production release set");
+        }
+        U03ExplicitNonProductionReleaseRefs refs = resolved.getRefs();
+        refs.requireGateCFrozenSet();
+        if (!context.getReleaseRefs().getKnowledgeReleaseRef().equals(refs.getKnowledgeReleaseRef())
+                || !context.getReleaseRefs().getRuleReleaseRef().equals(refs.getRuleReleaseRef())
+                || !context.getReleaseRefs().getCoverageContractRef().equals(refs.getCoverageContractRef())
+                || !context.getReleaseRefs().getPolicyReleaseRef().equals(refs.getPolicyReleaseRef())
+                || !context.getReleaseRefs().getPolicyPairRef().equals(refs.getPolicyPairRef())) {
+            throw new IllegalStateException("CD-07 K09 release set does not match execution context");
+        }
+
+        return build(
+                context.getCommand(),
+                decision,
+                Arrays.asList(
+                        governed.getCapabilityBinding().getBindingId(),
+                        refs.getKnowledgeReleaseRef(),
+                        refs.getRuleReleaseRef(),
+                        refs.getCoverageContractRef(),
+                        refs.getPolicyReleaseRef(),
+                        refs.getPolicyPairRef()),
+                true,
+                governed.getCapabilityBinding().getBindingId(),
+                refs.getRuleReleaseRef(),
+                refs.getKnowledgeReleaseRef(),
+                refs.getCoverageContractRef(),
+                refs.getPolicyReleaseRef(),
+                refs.getPolicyPairRef());
     }
 
     public U03StateProposal createFailed(U03ExecutionCommand command, U03DecisionOutcome decision,
@@ -36,7 +92,7 @@ public final class U03StateProposalFactory {
             throw new IllegalArgumentException("createFailed requires FAILED decision status");
         }
         String bindingRef = required(attemptedBindingId, "attemptedBindingId");
-        return build(command, decision, Arrays.asList(bindingRef), false, bindingRef, null, null);
+        return build(command, decision, Arrays.asList(bindingRef), false, bindingRef, null, null, null, null, null);
     }
 
     public U03StateProposal createFailed(U03ExecutionCommand command, U03DecisionOutcome decision,
@@ -52,12 +108,14 @@ public final class U03StateProposalFactory {
                 false,
                 governed.getCapabilityBinding().getBindingId(),
                 governed.getReleaseBinding().getRuleReleaseId(),
-                governed.getReleaseBinding().getKnowledgeReleaseId());
+                governed.getReleaseBinding().getKnowledgeReleaseId(),
+                null, null, null);
     }
 
     private U03StateProposal build(U03ExecutionCommand command, U03DecisionOutcome decision,
             List<String> releaseRefs, boolean fullReleaseEvidenceRequired,
-            String capabilityBindingRef, String ruleReleaseRef, String knowledgeReleaseRef) {
+            String capabilityBindingRef, String ruleReleaseRef, String knowledgeReleaseRef,
+            String coverageContractRef, String policyReleaseRef, String policyPairRef) {
         String proposalId = "u03-proposal-" + command.eventId;
         String now = Instant.now().toString();
 
@@ -81,6 +139,9 @@ public final class U03StateProposalFactory {
         value.put("capability_binding_ref", capabilityBindingRef);
         value.put("rule_release_ref", ruleReleaseRef);
         value.put("knowledge_release_ref", knowledgeReleaseRef);
+        value.put("coverage_contract_ref", coverageContractRef);
+        value.put("policy_release_ref", policyReleaseRef);
+        value.put("policy_pair_ref", policyPairRef);
         value.put("evidence_refs", decision.getEvidenceRefs());
 
         StateTypes.StatePatchOperation operation = new StateTypes.StatePatchOperation();
