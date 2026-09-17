@@ -65,8 +65,8 @@ public final class U03GateCFrozenRuleEvaluator implements U03AcceptedEvidenceAwa
         if (command == null || capabilityBinding == null || releaseBinding == null || acceptedEvidenceBinding == null) {
             throw new IllegalArgumentException("Gate-C C02 inputs are required");
         }
-        if (!U03ExplicitNonProductionReleaseRefs.RULE_RELEASE_REF.equals(releaseBinding.getRuleReleaseId())
-                || !U03ExplicitNonProductionReleaseRefs.KNOWLEDGE_RELEASE_REF.equals(releaseBinding.getKnowledgeReleaseId())) {
+        if (!U03ExplicitNonProductionReleaseRefs.GATE_C_RULE_RELEASE_REF.equals(releaseBinding.getRuleReleaseId())
+                || !U03ExplicitNonProductionReleaseRefs.GATE_C_KNOWLEDGE_RELEASE_REF.equals(releaseBinding.getKnowledgeReleaseId())) {
             throw new IllegalStateException("Gate-C C02 requires the exact frozen rule and knowledge releases");
         }
 
