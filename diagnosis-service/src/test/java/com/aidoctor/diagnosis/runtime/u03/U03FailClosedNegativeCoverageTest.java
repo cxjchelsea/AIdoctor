@@ -169,7 +169,8 @@ class U03FailClosedNegativeCoverageTest {
 
         StateTypes.CommitResult result = fixture.service.commitNonProduction(context, proposal);
 
-        assertFalse("COMMITTED".equals(result.status));
+        assertEquals("FAILED", result.status);
+        assertEquals(CommitReasonCodes.CONTRACT_IDENTITY_INVALID, result.reasonCode);
         assertEquals(0, fixture.repository.commitCalls());
         assertEquals(7, fixture.repository.currentVersion("cdp-1"));
     }
