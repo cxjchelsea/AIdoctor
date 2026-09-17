@@ -1,142 +1,107 @@
 # U03 CD-08 Execution Authorization Readiness v0.1
 
-> This document evaluates whether CD-08 is ready to be presented for a separate execution authorization decision. It does not itself grant authorization.
+> 本文件判断 CD-08 是否可以进入独立 Execution Authorization Review；本文件本身不授予任何执行授权。  
+> 当前判定已根据 `U03_CD08_Execution_Prerequisite_Audit_v0.1.md` 修正。
 
-## 1. Requested authorization scope
-
-Requested future authorization identifier:
+## 1. Requested future authorization
 
 ```text
 AUTH-U03-CD08-CLINICAL-VALIDATION-EXEC-001
+= NON_PRODUCTION_POST_IMPLEMENTATION_CLINICAL_VALIDATION_ONLY
 ```
 
-Requested scope is strictly:
+未来若具备条件并被单独授权，只允许：
 
-```text
-NON_PRODUCTION_POST_IMPLEMENTATION_CLINICAL_VALIDATION_ONLY
-```
+- 将已冻结 Gate-C cases 技术映射为 runtime input，不修改医学语义；
+- 驱动真实 clinically governed CD-07 C02 / D09 path；
+- 比较 committed governed U03 outcome 与既有 frozen expected semantics；
+- 保存 state-version / release / provenance / decision / proposal / commit / trace evidence；
+- 执行 non-clinical integrity / fail-closed controls；
+- 冻结持久可审查证据。
 
-Allowed if separately authorized:
+始终禁止：发明或修改医学真值、修改 frozen expected outcome、生产发布/激活、真实患者流量、production Clinical State mutation、U04/U14 execution/routing、儿科/孕产/中国生产扩展。
 
-- build/adapt a technical validation harness that drives the real CD-07 non-production runtime path;
-- map already-approved frozen Gate-C cases into runtime input without changing medical semantics;
-- execute the frozen executable Golden and Critical Safety populations against the real CD-07 path;
-- compare committed governed U03 outcomes against already-governed expected semantics;
-- capture release/provenance/state-version/trace/commit evidence;
-- execute non-clinical integrity/fail-closed controls;
-- freeze durable CD-08 evidence for independent review.
-
-Not allowed:
-
-- invent or revise medical truth;
-- change expected clinical outcomes to make tests pass;
-- modify frozen Rule/Policy/Knowledge/EvalSet semantics in-place;
-- publish/activate candidate releases for production;
-- production Clinical State mutation;
-- real-patient traffic;
-- U04 owner execution or routing;
-- U14 routing;
-- pediatrics, pregnancy/puerperium, or China-production expansion;
-- production authorization.
-
-## 2. Authorization prerequisites
+## 2. Prerequisite table
 
 | Prerequisite | Current evidence | Verdict |
 |---|---|---|
 | Gate A | PASS | SATISFIED |
 | Gate B | PASS / GOVERNED_CONTENT_READY | SATISFIED |
 | Gate C | PASS / frozen verified evidence | SATISFIED |
-| CD-07 implementation | IMPLEMENTED / VERIFIED | SATISFIED |
-| CD-07 independent implementation/evidence review | PASS | SATISFIED |
-| CD-07 merge + PMV | standard merge / PMV PASS | SATISFIED |
-| Exact release set | frozen and resolvable in non-production path | SATISFIED |
-| Real runtime path | NON_PRODUCTION_RUNTIME_E2E PASS | SATISFIED |
-| Frozen clinical population | 30 Golden + 19 Critical Safety executable | SATISFIED |
+| CD-07 governance/runtime framework | IMPLEMENTED / VERIFIED / MERGED / PMV PASS | SATISFIED_FOR_VERIFIED_SCOPE |
+| Exact release set | frozen | SATISFIED |
+| Frozen clinical population | Golden 30 + Critical Safety 19 executable | SATISFIED |
+| Concrete clinically governed C02 execution | current E2E injects test provider behavior; concrete binding not proven | BLOCKING |
+| Concrete clinically governed D09 execution | current E2E injects test decision behavior; concrete binding not proven | BLOCKING |
 | Production dependency | not required | SATISFIED |
-| U04 dependency | not required for CD-08; remains prohibited | SATISFIED |
+| U04 dependency | not required and remains prohibited | SATISFIED |
 
-## 3. Validation source-of-truth rule
+## 3. Why current CD-07 E2E is insufficient for CD-08 authorization
 
-The validation harness may transform transport shape only. It must not reinterpret clinical semantics.
+当前 `U03NonProductionRuntimeE2ETest` 有效证明了 runtime composition、governance、evidence acceptance、proposal、commit、trace 和 outbound path，但其 C02/D09 clinical-producing behavior 来自测试侧注入。
+
+因此：
+
+```text
+NON_PRODUCTION_RUNTIME_E2E PASS
+= runtime/orchestration evidence
+!= proof that frozen clinical Rule/Knowledge/Policy content is executed by concrete C02/D09 implementations
+```
+
+这一点与既有 CD-07 verification plan 中的：
+
+```text
+runtime E2E PASS != clinical evaluation PASS
+```
+
+一致。
+
+## 4. Blocking conditions
+
+新增并保持以下阻塞：
+
+```text
+B9 concrete clinically governed C02 implementation/binding cannot yet be proven
+B10 concrete clinically governed D09 implementation/binding cannot yet be proven
+
+BF-CD08-01 = OPEN / BLOCKING
+BF-CD08-02 = OPEN / BLOCKING
+```
+
+在 B9/B10 关闭前，不能合理授权 CD-08 clinical validation execution，因为验证 harness 会被迫：
+
+```text
+(a) 使用测试 stub/provider 代替临床实现，或
+(b) 在 CD-08 阶段自行实现/发明临床逻辑
+```
+
+两者都违反冻结边界。
+
+## 5. Source-of-truth rule remains unchanged
+
+未来 CD-08 comparison authority 只能来自：
 
 ```text
 Frozen Gate-C expected semantics
-= clinical comparison authority for existing CD-08 cases
-
-Runtime output
-= observed implementation behavior
-
-Mismatch
-= validation finding
-!= permission to alter expected semantics
 ```
 
-If an expected semantic is ambiguous or technically unmappable without medical interpretation, mark the case:
+Runtime observed output 只是待验证行为。Mismatch 是 finding，不是修改 expected semantics 的许可。
+
+若 mapping 本身需要新的医学解释：
 
 ```text
 BLOCKED_BY_CLINICAL_EXPECTATION_MAPPING
-```
-
-and return it for governed Medical Owner review.
-
-## 4. Required implementation boundary for the CD-08 harness
-
-The harness must prove it is exercising the real post-CD-07 path. A test that calls only the Gate-C evaluator is insufficient.
-
-Minimum evidence per executed case should correlate:
-
-```text
-case_id
-clinical_state_version
-thread_id / run_id / event_id
-exact governed release refs
-C02 invocation/result identity
-D09 decision identity
-proposal identity
-commit result / committed version
-P05 trace correlation
-S14 outbound status where produced
-expected governed semantics
-observed committed semantics
-comparison result
-```
-
-## 5. Blocking conditions
-
-Execution authorization must not be granted if any of the following is true:
-
-```text
-B1 exact CD-07 implementation identity cannot be pinned
-B2 frozen Gate-C clinical package identity cannot be pinned
-B3 runtime harness would require production traffic/state
-B4 harness bypasses C02/D09/P01/StateCommitter to synthesize final answers
-B5 expected clinical semantics would need developer invention
-B6 exact release set cannot be bound
-B7 U04 execution/routing is required to determine U03 clinical result
-B8 evidence cannot be made durable/reviewable
-```
-
-Current assessment:
-
-```text
-B1 CLOSED
-B2 CLOSED
-B3 CLOSED
-B4 CLOSED_BY_REQUIRED_DESIGN_BOUNDARY
-B5 CLOSED_BY_AUTHORITY_RULE
-B6 CLOSED
-B7 CLOSED
-B8 CLOSED_BY_REQUIRED_EVIDENCE_PLAN
+→ governed Medical Owner review
 ```
 
 ## 6. Readiness verdict
 
 ```text
 CD-08 Execution Authorization Readiness
-= PASS / READY_FOR_INDEPENDENT_AUTHORIZATION_REVIEW
+= NOT_READY / BLOCKED_BY_REAL_CLINICAL_RUNTIME_BINDING
 
 AUTH-U03-CD08-CLINICAL-VALIDATION-EXEC-001
-= NOT_GRANTED_BY_THIS_DOCUMENT
+= NOT_GRANTED
 
 CD-08 Execution
 = NOT_STARTED
@@ -153,10 +118,14 @@ U04 Readiness Re-review
 
 ## 7. Next permitted action
 
-The next permitted action is a separate independent authorization review of exact scope:
+允许的下一步是 prerequisite remediation，而不是 CD-08 execution：
 
 ```text
-AUTH-U03-CD08-CLINICAL-VALIDATION-EXEC-001
+1. locate/prove existing concrete governed C02 implementation and runtime binding;
+2. locate/prove existing concrete governed D09 policy executor and runtime binding;
+3. if absent, return to CD-07 remediation under separate implementation authorization;
+4. bind exact frozen governed release/content set without inventing clinical semantics;
+5. produce executable evidence for the concrete path;
+6. re-review CD-08 readiness;
+7. only after PASS may AUTH-U03-CD08-CLINICAL-VALIDATION-EXEC-001 be considered.
 ```
-
-If explicitly granted, implementation/execution must occur in an isolated branch/PR and remain non-production-only. Passing CD-08 later still does not authorize U04 or production; it only permits a subsequent U03 Clinical Dependency Closure Review.
