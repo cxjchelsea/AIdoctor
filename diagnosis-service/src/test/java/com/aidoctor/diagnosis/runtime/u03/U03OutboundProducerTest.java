@@ -20,6 +20,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -101,17 +102,23 @@ class U03OutboundProducerTest {
     @Test
     void proposalReleaseSubstitutionFailsClosed() {
         Chain chain = validChain(7);
-        U03StateProposal substituted = new U03StateProposal(
-                chain.proposal.getProposalId(),
-                chain.proposal.getSourceDecisionRef(),
-                Arrays.asList(
-                        U03GovernedCandidateGateway.BINDING_ID,
-                        U03ExplicitNonProductionReleaseRefs.GATE_C_KNOWLEDGE_RELEASE_REF,
-                        U03ExplicitNonProductionReleaseRefs.GATE_C_RULE_RELEASE_REF,
-                        U03ExplicitNonProductionReleaseRefs.GATE_C_COVERAGE_CONTRACT_REF,
-                        U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_RELEASE_REF),
-                true,
-                chain.proposal.getStatePatch());
+        U03StateProposal substituted = proposalWithRefs(chain, Arrays.asList(
+                U03GovernedCandidateGateway.BINDING_ID,
+                U03ExplicitNonProductionReleaseRefs.GATE_C_KNOWLEDGE_RELEASE_REF,
+                U03ExplicitNonProductionReleaseRefs.GATE_C_RULE_RELEASE_REF,
+                U03ExplicitNonProductionReleaseRefs.GATE_C_COVERAGE_CONTRACT_REF,
+                U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_RELEASE_REF));
+
+        assertThrows(IllegalStateException.class, () -> new U03OutboundProducer().produce(
+                chain.context, chain.governed, chain.decision, substituted, chain.commitResult));
+    }
+
+    @Test
+    void extraUnauthorizedReleaseEvidenceFailsClosed() {
+        Chain chain = validChain(7);
+        List<String> refs = new ArrayList<String>(chain.proposal.getReleaseRefs());
+        refs.add("RR-U03-RISK-UNAUTHORIZED@candidate");
+        U03StateProposal substituted = proposalWithRefs(chain, refs);
 
         assertThrows(IllegalStateException.class, () -> new U03OutboundProducer().produce(
                 chain.context, chain.governed, chain.decision, substituted, chain.commitResult));
@@ -124,6 +131,15 @@ class U03OutboundProducerTest {
 
         assertThrows(IllegalStateException.class, () -> new U03OutboundProducer().produce(
                 chain.context, chain.governed, chain.decision, chain.proposal, chain.commitResult));
+    }
+
+    private static U03StateProposal proposalWithRefs(Chain chain, List<String> refs) {
+        return new U03StateProposal(
+                chain.proposal.getProposalId(),
+                chain.proposal.getSourceDecisionRef(),
+                refs,
+                true,
+                chain.proposal.getStatePatch());
     }
 
     private static Chain validChain(int currentVersion) {
