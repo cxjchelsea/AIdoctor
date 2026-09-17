@@ -22,19 +22,19 @@ FROZEN_REFS = [
 ]
 
 MANDATORY_NEGATIVES = {
-    "N1": "n1_staleClinicalStateVersionFailsBeforeC02AndProducesNoOutput",
-    "N2": "n2_missingReleaseRefFailsBeforeRuntimeAndProducesNoOutput",
-    "N3": "n3_wrongReleaseRefFailsBeforeRuntimeAndProducesNoOutput",
-    "N4": "n4_crossReleaseIncompatibleSetFailsBeforeResolutionAndProducesNoOutput",
-    "N5": "n5_dependencyFailureDoesNotInvokeD09OrCreateClinicalCommitOutput",
-    "N6": "n6_malformedC02ResultFailsBeforeD09AndProducesNoOutput",
-    "N7": "n7_unsupportedProposalContractFailsWithoutRepositoryCommit",
-    "N8": "n8_duplicateEventWithChangedFingerprintConflictsWithoutSecondCommit",
-    "N9": "n9_stateCommitterVersionConflictProducesNoMutationOrOutboundSuccess",
-    "N10": "n10_attemptedDirectMutationBypassFailsBeforeRepositoryReadOrCommit",
-    "N11": "n11_implicitLatestReleaseSelectionFailsBeforeRuntime",
-    "N12": "n12_productionEnvironmentAttemptFailsBeforeC02",
-    "N13": "n13_outboundProducerHasNoUnauthorizedU04ExecutionSurface",
+    "N1": "n1StaleClinicalStateVersionFailsBeforeC02AndCommit",
+    "N2": "n2MissingReleaseRefFailsBeforeRuntimeOutput",
+    "N3": "n3WrongReleaseRefFailsBeforeC02OrCommit",
+    "N4": "n4CrossReleaseIncompatibleSetFailsBeforeRuntimeOutput",
+    "N5": "n5DependencyFailureDoesNotInvokeD09CommitOrInventSafetyOutput",
+    "N6": "n6MalformedC02ResultFailsBeforeD09ProposalOrCommit",
+    "N7": "n7UnsupportedProposalTypeCannotCommit",
+    "N8": "n8DuplicateEventWithDifferentFingerprintConflictsWithoutSecondCommit",
+    "N9": "n9StateCommitterVersionConflictProducesNoMutationOrOutbound",
+    "N10": "n10AttemptedDirectMutationBypassIsRejectedBeforeStateRepository",
+    "N11": "n11ImplicitLatestReleaseSelectionIsRejectedBeforeRuntimeOutput",
+    "N12": "n12ProductionEnvironmentUseIsRejectedBeforeC02OrCommit",
+    "N13": "n13OutboundProducerExposesNoUnauthorizedU04OwnerExecutionOrRoutingSurface",
 }
 
 
