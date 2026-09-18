@@ -412,14 +412,14 @@ class U04EvidenceHarnessTest {
                 valid.getThreadId(), valid.getRunId(), valid.getEventId(),
                 valid.getCorrelationId(), valid.getTraceId(), valid.getEnvironmentId(),
                 valid.getBindingMode(), valid.getExecutionStatus(),
-                valid.getExecutionFailureReasonCode(), valid.getMissingFields(),
-                valid.getExecutionReasonCode(), valid.getDecisionId(),
+                valid.getExecutionFailureReasonCode(), valid.getExecutionLimitations(),
+                valid.getExecutionUncertainty(), valid.getDecisionId(),
                 valid.getDecisionStatus(), valid.getDispositionCode(),
                 valid.getDecisionReasonCode(), "binding-substituted",
                 valid.getGovernedReleaseRefs(), valid.getAcceptanceRef(),
                 valid.getAcceptedEvidenceRefs(), valid.getAcceptedSourceRefs(),
                 valid.getAcceptedProvenanceRefs(), valid.getProposalId(),
-                valid.getCommitStatus(), valid.getCommitFailureReasonCode(),
+                valid.getCommitStatus(), valid.getCommitReasonCode(),
                 valid.getCommitAuditId());
     }
 
@@ -431,14 +431,14 @@ class U04EvidenceHarnessTest {
                 valid.getThreadId(), valid.getRunId(), valid.getEventId(),
                 valid.getCorrelationId(), valid.getTraceId(), valid.getEnvironmentId(),
                 valid.getBindingMode(), valid.getExecutionStatus(),
-                valid.getExecutionFailureReasonCode(), valid.getMissingFields(),
-                valid.getExecutionReasonCode(), valid.getDecisionId(),
+                valid.getExecutionFailureReasonCode(), valid.getExecutionLimitations(),
+                valid.getExecutionUncertainty(), valid.getDecisionId(),
                 valid.getDecisionStatus(), valid.getDispositionCode(),
                 valid.getDecisionReasonCode(), valid.getCapabilityBindingId(),
                 valid.getGovernedReleaseRefs(), valid.getAcceptanceRef(),
                 valid.getAcceptedEvidenceRefs(), valid.getAcceptedSourceRefs(),
                 Collections.<String>emptyList(), valid.getProposalId(),
-                valid.getCommitStatus(), valid.getCommitFailureReasonCode(),
+                valid.getCommitStatus(), valid.getCommitReasonCode(),
                 valid.getCommitAuditId());
     }
 
@@ -450,14 +450,14 @@ class U04EvidenceHarnessTest {
                 failed.getThreadId(), failed.getRunId(), failed.getEventId(),
                 failed.getCorrelationId(), failed.getTraceId(), failed.getEnvironmentId(),
                 failed.getBindingMode(), failed.getExecutionStatus(),
-                failed.getExecutionFailureReasonCode(), failed.getMissingFields(),
-                failed.getExecutionReasonCode(), failed.getDecisionId(),
+                failed.getExecutionFailureReasonCode(), failed.getExecutionLimitations(),
+                failed.getExecutionUncertainty(), failed.getDecisionId(),
                 failed.getDecisionStatus(), failed.getDispositionCode(),
                 "OTHER_FAILURE", failed.getCapabilityBindingId(),
                 failed.getGovernedReleaseRefs(), failed.getAcceptanceRef(),
                 failed.getAcceptedEvidenceRefs(), failed.getAcceptedSourceRefs(),
                 failed.getAcceptedProvenanceRefs(), failed.getProposalId(),
-                failed.getCommitStatus(), failed.getCommitFailureReasonCode(),
+                failed.getCommitStatus(), failed.getCommitReasonCode(),
                 failed.getCommitAuditId());
     }
 
