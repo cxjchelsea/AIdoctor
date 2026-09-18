@@ -51,3 +51,10 @@ CD-08 PASS
 U03 Clinical Dependency Closure
 U04 authorization
 Production authorization
+
+Execution state after implementation branch creation:
+
+Implementation Authorization = AUTHORIZED / CONSUMING
+BF-CD08-03 = OPEN / PENDING_VERIFICATION
+BF-CD08-04 = OPEN / PENDING_VERIFICATION
+CD-08 re-execution = PENDING
