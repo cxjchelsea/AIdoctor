@@ -95,7 +95,7 @@ jobs:
       - name: Run focused U04 verification
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Dtest=U04NonProductionSafetyGateTest
+          -Dtest=U04NonProductionSafetyGateTest,U04EvidenceHarnessTest
           test
 
       - name: Run diagnosis-service regression suite
@@ -103,7 +103,7 @@ jobs:
 
       - name: Build durable U04 evidence
         run: |
-          python3 tools/u04_nonprod_verification/build_evidence.py             --implementation-sha "$U04_IMPLEMENTATION_SHA"             --run-id "$GITHUB_RUN_ID"             --run-attempt "$GITHUB_RUN_ATTEMPT"             --repository "$GITHUB_REPOSITORY"             --ref "$GITHUB_REF"             --report diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04NonProductionSafetyGateTest.xml             --output build/u04-nonprod-verification/evidence.json
+          python3 tools/u04_nonprod_verification/build_evidence.py             --implementation-sha "$U04_IMPLEMENTATION_SHA"             --run-id "$GITHUB_RUN_ID"             --run-attempt "$GITHUB_RUN_ATTEMPT"             --repository "$GITHUB_REPOSITORY"             --ref "$GITHUB_REF"             --report diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04NonProductionSafetyGateTest.xml             --harness-report diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04EvidenceHarnessTest.xml             --case-evidence diagnosis-service/target/u04-case-evidence.json             --output build/u04-nonprod-verification/evidence.json
 
       - name: Verify focused evidence gate
         run: |
@@ -116,7 +116,17 @@ jobs:
           assert t["failures"] == 0
           assert t["errors"] == 0
           assert t["skipped"] == 0
-          assert data["verification_verdict"] == "PASS_PENDING_INDEPENDENT_REVIEW"
+          h = data["evidence_harness_tests"]
+          assert h["tests"] == 1
+          assert h["failures"] == 0
+          assert h["errors"] == 0
+          assert h["skipped"] == 0
+          cases = data["structured_case_evidence"]["cases"]
+          assert len(cases) >= 12
+          assert all(x["pass"] is True for x in cases)
+          assert all(x["expected_boundary"] == x["observed_boundary"] for x in cases)
+          assert all(x["expected_result"] == x["observed_result"] for x in cases)
+          assert data["verification_verdict"] == "PASS_PENDING_INDEPENDENT_EVIDENCE_REVIEW"
           assert all(v is False for v in data["hard_boundaries"].values())
           assert data["dependency_policy"]["additional_required_safety_capability"] is False
           assert data["dependency_policy"]["optional_safety_capability"] is False
@@ -143,7 +153,9 @@ jobs:
             echo "additional_safety_capability=$U04_ADDITIONAL_SAFETY_CAPABILITY"
             echo "safety_capability_fallback=$U04_SAFETY_CAPABILITY_FALLBACK"
           } > build/u04-nonprod-verification/workflow-provenance.txt
-          sha256sum             build/u04-nonprod-verification/evidence.json             build/u04-nonprod-verification/workflow-provenance.txt             diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04NonProductionSafetyGateTest.xml             > build/u04-nonprod-verification/SHA256SUMS
+          sha256sum             build/u04-nonprod-verification/evidence.json             build/u04-nonprod-verification/workflow-provenance.txt             diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04NonProductionSafetyGateTest.xml
+            diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04EvidenceHarnessTest.xml
+            diagnosis-service/target/u04-case-evidence.json             diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04EvidenceHarnessTest.xml             diagnosis-service/target/u04-case-evidence.json             > build/u04-nonprod-verification/SHA256SUMS
           cat build/u04-nonprod-verification/SHA256SUMS
 
       - name: Upload retained U04 verification evidence
@@ -167,6 +179,6 @@ jobs:
           echo "artifact_url=${{ steps.upload-u04-evidence.outputs.artifact-url }}"
           echo "artifact_digest=${{ steps.upload-u04-evidence.outputs.artifact-digest }}"
           echo "implementation_sha=$U04_IMPLEMENTATION_SHA"
-          echo "verification=PASS_PENDING_INDEPENDENT_REVIEW"
+          echo "verification=PASS_PENDING_INDEPENDENT_EVIDENCE_REVIEW"
           echo "merge_authorization=NOT_GRANTED"
           echo "production_authorization=BLOCKED"
