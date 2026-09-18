@@ -1,8 +1,8 @@
 # U04 RDP-02 Safety Gate Policy / Owner Decision Package v0.3
 
 > 目标：给出一套可直接由 Safety/Product/Medical Owner 审阅并签署的 U04 Safety Gate policy proposal。  
-> 当前状态：`PROPOSED_FOR_OWNER_SIGNOFF / NOT_FROZEN / BLOCKING`。  
-> 本方案是基于现有冻结边界、最小权限、fail-closed、最少新增业务语义原则形成的建议，不等于已批准 Safety/Medical truth。  
+> 当前状态：`APPROVED_AS_PROPOSED / FROZEN / PASS_FOR_READINESS`。  
+> 本方案已由仓库所有者在项目治理会话中显式批准为当前 U04 V1 / NON_PRODUCTION_ONLY 的 Owner Decision。  
 > 本文件不授权 U04 实现、owner execution、routing、production 或真实患者流量。
 
 ## 1. 已冻结、不可修改的上游约束
@@ -335,36 +335,35 @@ P6 VALID NO_HIGH_RISK_SIGNAL
 
 ## 6. Owner sign-off
 
-以下内容尚未签署：
+以下内容已完成 Owner 决策记录：
 
 ```text
-Safety/Product/Medical Owner:
-____________________
+Owner authorization source:
+Explicit repository-owner approval in project governance conversation
 
 Decision package version:
-U04-SAFETY-GATE-POLICY-V0.1-CANDIDATE
+U04-SAFETY-GATE-POLICY-V0.1-FROZEN
 
 Effective scope:
 U04 V1 / NON_PRODUCTION_ONLY
 
 Decision:
-APPROVE AS PROPOSED / APPROVE WITH CHANGES / REJECT
+APPROVE AS PROPOSED
 
 Approval date:
-____________________
+2026-09-18
 ```
 
 ## 7. 当前 Verdict
 
 ```text
 U04-RDP-02
-= PROPOSED_FOR_OWNER_SIGNOFF
-= NOT_FROZEN
-= OPEN / BLOCKING
+= APPROVED_AS_PROPOSED
+= FROZEN / PASS_FOR_READINESS
 
 Developer-selected defaults
 = PROHIBITED
 
 U04 Implementation Readiness
-= NOT_READY
+= READY_FOR_REVIEW
 ```
