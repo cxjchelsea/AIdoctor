@@ -1,0 +1,186 @@
+name: U04 Non-Production Safety Gate Verification
+
+on:
+  push:
+    branches:
+      - impl/u04-nonprod-safety-gate-v1
+    paths:
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u04/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U04NonProductionSafetyGateTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U04EvidenceHarnessTest.java'
+      - 'tools/u04_nonprod_verification/**'
+      - 'docs/current/06_开发单元/U04_*'
+      - '.github/workflows/u04-nonprod-verification.yml'
+  pull_request:
+    branches:
+      - prep/u04-implementation-authorization-review
+    paths:
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u04/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U04NonProductionSafetyGateTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U04EvidenceHarnessTest.java'
+      - 'tools/u04_nonprod_verification/**'
+      - 'docs/current/06_开发单元/U04_*'
+      - '.github/workflows/u04-nonprod-verification.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-u04-nonprod:
+    name: U04_NON_PRODUCTION_SAFETY_GATE
+    runs-on: ubuntu-latest
+    env:
+      U04_ENVIRONMENT: ci-nonprod-u04
+      U04_LIVE_U05_EXECUTION: 'false'
+      U04_LIVE_U11_EXECUTION: 'false'
+      U04_LIVE_U14_EXECUTION: 'false'
+      U04_PRODUCTION_ROUTING: 'false'
+      U04_PRODUCTION_MUTATION: 'false'
+      U04_REAL_PATIENT_TRAFFIC: 'false'
+      U04_ADDITIONAL_SAFETY_CAPABILITY: 'false'
+      U04_SAFETY_CAPABILITY_FALLBACK: 'false'
+      U04_IMPLEMENTATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Governance boundary guard
+        run: |
+          test "$U04_ENVIRONMENT" = "ci-nonprod-u04"
+          test "$U04_LIVE_U05_EXECUTION" = "false"
+          test "$U04_LIVE_U11_EXECUTION" = "false"
+          test "$U04_LIVE_U14_EXECUTION" = "false"
+          test "$U04_PRODUCTION_ROUTING" = "false"
+          test "$U04_PRODUCTION_MUTATION" = "false"
+          test "$U04_REAL_PATIENT_TRAFFIC" = "false"
+          test "$U04_ADDITIONAL_SAFETY_CAPABILITY" = "false"
+          test "$U04_SAFETY_CAPABILITY_FALLBACK" = "false"
+          test -n "$U04_IMPLEMENTATION_SHA"
+
+      - name: Checkout exact implementation SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.U04_IMPLEMENTATION_SHA }}
+
+      - name: Verify checked-out identity
+        run: test "$(git rev-parse HEAD)" = "$U04_IMPLEMENTATION_SHA"
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      - name: Install Shared Contracts v1 Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+
+      - name: Compile diagnosis-service
+        run: mvn -f diagnosis-service/pom.xml -DskipTests compile
+
+      - name: Structural authorization guards
+        run: |
+          if grep -R -nE '^import .*runtime\.u(05|11|14)' diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u04; then
+            echo "live downstream owner dependency detected"
+            exit 1
+          fi
+          if grep -R -nE '@(Component|Service|Configuration|RestController|Controller|Bean|Profile)' diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u04; then
+            echo "automatic Spring/runtime activation detected"
+            exit 1
+          fi
+          if grep -R -nE 'PythonRuntimeClient|RestTemplate|WebClient|HttpClient' diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u04; then
+            echo "unauthorized external/model/tool dependency detected"
+            exit 1
+          fi
+          echo "U04_NO_LIVE_DOWNSTREAM_ROUTING=PASS"
+          echo "U04_NO_AUTOMATIC_ACTIVATION=PASS"
+          echo "U04_NO_ADDITIONAL_SAFETY_CAPABILITY=PASS"
+
+      - name: Run focused U04 verification and evidence harness
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest=U04NonProductionSafetyGateTest,U04EvidenceHarnessTest
+          test
+
+      - name: Run diagnosis-service regression suite
+        run: mvn -f diagnosis-service/pom.xml test
+
+      - name: Build durable U04 evidence
+        run: |
+          python3 tools/u04_nonprod_verification/build_evidence.py             --implementation-sha "$U04_IMPLEMENTATION_SHA"             --run-id "$GITHUB_RUN_ID"             --run-attempt "$GITHUB_RUN_ATTEMPT"             --repository "$GITHUB_REPOSITORY"             --ref "$GITHUB_REF"             --report diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04NonProductionSafetyGateTest.xml             --harness-report diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04EvidenceHarnessTest.xml             --case-evidence diagnosis-service/target/u04-case-evidence.json             --output build/u04-nonprod-verification/evidence.json
+
+      - name: Verify focused evidence gate
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("build/u04-nonprod-verification/evidence.json").read_text())
+          t = data["focused_tests"]
+          assert t["tests"] >= 16
+          assert t["failures"] == 0
+          assert t["errors"] == 0
+          assert t["skipped"] == 0
+          h = data["evidence_harness_tests"]
+          assert h["tests"] == 1
+          assert h["failures"] == 0
+          assert h["errors"] == 0
+          assert h["skipped"] == 0
+          cases = data["structured_case_evidence"]["cases"]
+          assert len(cases) >= 12
+          assert all(x["pass"] is True for x in cases)
+          assert all(x["expected_boundary"] == x["observed_boundary"] for x in cases)
+          assert all(x["expected_result"] == x["observed_result"] for x in cases)
+          assert data["verification_verdict"] == "PASS_PENDING_INDEPENDENT_EVIDENCE_REVIEW"
+          assert all(v is False for v in data["hard_boundaries"].values())
+          assert data["dependency_policy"]["additional_required_safety_capability"] is False
+          assert data["dependency_policy"]["optional_safety_capability"] is False
+          assert data["dependency_policy"]["safety_capability_fallback"] is False
+          print("U04_VERIFICATION_GATE=PASS")
+          PY
+
+      - name: Freeze workflow provenance and checksums
+        run: |
+          {
+            echo "implementation_sha=$U04_IMPLEMENTATION_SHA"
+            echo "github_event_sha=$GITHUB_SHA"
+            echo "repository=$GITHUB_REPOSITORY"
+            echo "ref=$GITHUB_REF"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "environment=$U04_ENVIRONMENT"
+            echo "live_u05_execution=$U04_LIVE_U05_EXECUTION"
+            echo "live_u11_execution=$U04_LIVE_U11_EXECUTION"
+            echo "live_u14_execution=$U04_LIVE_U14_EXECUTION"
+            echo "production_routing=$U04_PRODUCTION_ROUTING"
+            echo "production_mutation=$U04_PRODUCTION_MUTATION"
+            echo "real_patient_traffic=$U04_REAL_PATIENT_TRAFFIC"
+            echo "additional_safety_capability=$U04_ADDITIONAL_SAFETY_CAPABILITY"
+            echo "safety_capability_fallback=$U04_SAFETY_CAPABILITY_FALLBACK"
+          } > build/u04-nonprod-verification/workflow-provenance.txt
+          sha256sum             build/u04-nonprod-verification/evidence.json             build/u04-nonprod-verification/workflow-provenance.txt             diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04NonProductionSafetyGateTest.xml             diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04EvidenceHarnessTest.xml             diagnosis-service/target/u04-case-evidence.json             > build/u04-nonprod-verification/SHA256SUMS
+          cat build/u04-nonprod-verification/SHA256SUMS
+
+      - name: Upload retained U04 verification evidence
+        id: upload-u04-evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: u04-nonprod-verification-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            build/u04-nonprod-verification/evidence.json
+            build/u04-nonprod-verification/workflow-provenance.txt
+            build/u04-nonprod-verification/SHA256SUMS
+            diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04NonProductionSafetyGateTest.xml
+            diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04EvidenceHarnessTest.xml
+            diagnosis-service/target/u04-case-evidence.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 6
+          overwrite: false
+
+      - name: Report retained evidence identity
+        run: |
+          echo "artifact_id=${{ steps.upload-u04-evidence.outputs.artifact-id }}"
+          echo "artifact_url=${{ steps.upload-u04-evidence.outputs.artifact-url }}"
+          echo "artifact_digest=${{ steps.upload-u04-evidence.outputs.artifact-digest }}"
+          echo "implementation_sha=$U04_IMPLEMENTATION_SHA"
+          echo "verification=PASS_PENDING_INDEPENDENT_EVIDENCE_REVIEW"
+          echo "merge_authorization=NOT_GRANTED"
+          echo "production_authorization=BLOCKED"
