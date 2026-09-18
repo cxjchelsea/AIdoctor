@@ -34,15 +34,41 @@ PMV = PASS / TREE_EQUIVALENCE
 BF-CD08-01 = CLOSED
 BF-CD08-02 = CLOSED
 
-## 4. Required CD-08 path
+## 4. Required CD-08 execution model
 
-Frozen governed case -> exact state/run identity -> accepted typed clinical input + evidence/provenance -> CapabilityInvocationGuard -> concrete C02 -> concrete D09 -> K09 -> P01/StateCommitter -> committed U03 state -> P05/S14 -> comparison with frozen Gate-C expectation.
+Each frozen governed case must be driven through the real runtime until its frozen expected governance boundary is reached.
+
+For cases whose valid path reaches clinical rule/policy execution, the harness must use:
+accepted typed clinical input + accepted evidence/provenance
+-> CapabilityInvocationGuard
+-> U03GateCFrozenRuleEvaluator
+-> U03GateCFrozenDecisionPort
+-> K09
+-> P01 / StateCommitter
+-> P05 / S14
+-> comparison with frozen expected semantics.
+
+For P0 / early-fail cases such as stale state or release mismatch, success means the real runtime rejects at the expected earlier governed boundary with the frozen failure reason and no prohibited downstream effect. Such cases must not be forced through C02/D09.
+
+For structural Critical Safety cases such as NO_DIRECT_COMMIT or D09_NOT_U04, success means executing the corresponding real runtime structural / side-effect boundary check. These cases must not be disguised as synthetic clinical cases.
 
 The harness must not substitute precomputed C02 candidates, precomputed D09 decisions, test lambdas that return expected outcomes, free-form model answers, or modified expected clinical truth.
 
 ## 5. Acceptance requirements
 
-Future CD-08 PASS requires all 30 Golden and all 19 Critical Safety executable cases to traverse the concrete governed path; every Critical Safety case must pass; no blocking clinical-semantic mismatch; exact release/state-version/provenance binding; no U04; no production mutation; no real-patient traffic; durable evidence; independent clinical/governance review PASS.
+Future CD-08 PASS requires:
+
+- all 30 executable Golden cases reach their frozen expected governed boundary on the real runtime;
+- all 19 executable Critical Safety scenarios reach their frozen expected clinical or structural boundary;
+- every Critical Safety scenario passes;
+- every case that legitimately enters C02/D09 uses the concrete governed implementations;
+- no blocking clinical-semantic mismatch;
+- exact release / state-version / provenance binding;
+- no U04 execution/routing;
+- no production mutation;
+- no real-patient traffic;
+- durable evidence frozen;
+- independent clinical/governance review = PASS.
 
 Any clinical mapping gap must fail closed as CLINICAL_EXPECTATION_GAP and return to governed Medical Owner review.
 
