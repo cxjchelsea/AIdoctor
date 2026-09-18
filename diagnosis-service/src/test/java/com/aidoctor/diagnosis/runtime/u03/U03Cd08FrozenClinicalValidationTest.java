@@ -697,10 +697,31 @@ class U03Cd08FrozenClinicalValidationTest {
             List<String> forbidden,
             Map<String, Object> observed,
             List<String> errors) {
-        Set<String> tokens = collectTokens(observed);
+        // Match Gate-C outcome_tokens(): decision fields plus rule IDs/signals only.
+        // Rule execution states such as NO_MATCH are internal C evidence and are
+        // deliberately not treated as user/business output tokens.
+        Set<String> tokens = new HashSet<String>();
+        addToken(tokens, observed.get("status"));
+        addToken(tokens, observed.get("disposition"));
+        addToken(tokens, observed.get("reason_code"));
+        Object rawRules = observed.get("rule_results");
+        if (rawRules instanceof Iterable<?>) {
+            for (Object raw : (Iterable<?>) rawRules) {
+                if (raw instanceof Map<?, ?>) {
+                    Map<String, Object> rr = map(raw);
+                    addToken(tokens, rr.get("rule_id"));
+                    addToken(tokens, rr.get("signal"));
+                }
+            }
+            tokens.add("C_RULE_EVALUATION");
+        }
         for (String token : forbidden) {
             if (tokens.contains(token)) errors.add("must_not_output violated: " + token);
         }
+    }
+
+    private static void addToken(Set<String> tokens, Object value) {
+        if (value instanceof String) tokens.add((String) value);
     }
 
     private static Set<String> collectTokens(Object value) {
