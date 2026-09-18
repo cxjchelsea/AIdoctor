@@ -1,0 +1,233 @@
+name: U03 CD-08 Post-Implementation Clinical Validation
+
+on:
+  push:
+    branches:
+      - impl/u03-cd08-postimplementation-clinical-validation
+    paths:
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u03/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/**'
+      - 'tools/u03_gatec_eval/**'
+      - 'tools/u03_cd08_validation/**'
+      - 'docs/current/06_开发单元/**'
+      - '.github/workflows/u03-cd08-clinical-validation.yml'
+  pull_request:
+    branches:
+      - prep/u03-cd07-implementation-readiness
+    paths:
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u03/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/**'
+      - 'tools/u03_gatec_eval/**'
+      - 'tools/u03_cd08_validation/**'
+      - 'docs/current/06_开发单元/**'
+      - '.github/workflows/u03-cd08-clinical-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cd08-postimplementation-clinical-validation:
+    name: CD08_NON_PRODUCTION_CLINICAL_VALIDATION
+    runs-on: ubuntu-latest
+    env:
+      CD08_AUTHORIZATION_ID: AUTH-U03-CD08-CLINICAL-VALIDATION-EXEC-001
+      CD08_AUTHORIZATION_STATE: AUTHORIZED
+      CD08_SCOPE: NON_PRODUCTION_POST_IMPLEMENTATION_CLINICAL_VALIDATION_ONLY
+      CD08_RUNTIME_ENVIRONMENT: ci-nonprod-cd08
+      CD08_REAL_PATIENT_TRAFFIC: 'false'
+      CD08_PRODUCTION_MUTATION: 'false'
+      CD08_RELEASE_ACTIVATION: 'false'
+      CD08_U04_EXECUTION: 'false'
+      CD08_U14_EXECUTION: 'false'
+      CD08_REQUIRED_AGGREGATE_BASE: 9071ea14b310c0e300299b2569c4919be2b669db
+      CD08_IMPLEMENTATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Authorization and governance guard
+        run: |
+          test "$CD08_AUTHORIZATION_ID" = "AUTH-U03-CD08-CLINICAL-VALIDATION-EXEC-001"
+          test "$CD08_AUTHORIZATION_STATE" = "AUTHORIZED"
+          test "$CD08_SCOPE" = "NON_PRODUCTION_POST_IMPLEMENTATION_CLINICAL_VALIDATION_ONLY"
+          test "$CD08_RUNTIME_ENVIRONMENT" = "ci-nonprod-cd08"
+          test "$CD08_REAL_PATIENT_TRAFFIC" = "false"
+          test "$CD08_PRODUCTION_MUTATION" = "false"
+          test "$CD08_RELEASE_ACTIVATION" = "false"
+          test "$CD08_U04_EXECUTION" = "false"
+          test "$CD08_U14_EXECUTION" = "false"
+          test -n "$CD08_IMPLEMENTATION_SHA"
+
+      - name: Checkout exact implementation SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.CD08_IMPLEMENTATION_SHA }}
+          fetch-depth: 0
+
+      - name: Verify implementation identity and aggregate base ancestry
+        run: |
+          test "$(git rev-parse HEAD)" = "$CD08_IMPLEMENTATION_SHA"
+          git merge-base --is-ancestor "$CD08_REQUIRED_AGGREGATE_BASE" HEAD
+          echo "implementation_sha=$CD08_IMPLEMENTATION_SHA"
+          echo "required_aggregate_base=$CD08_REQUIRED_AGGREGATE_BASE"
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      - name: Install Shared Contracts v1 Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+
+      - name: Export exact frozen Gate-C validation population
+        run: |
+          python3 tools/u03_cd08_validation/export_frozen_cases.py             --output build/u03-cd08/frozen-cases.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("build/u03-cd08/frozen-cases.json")
+          data = json.loads(p.read_text(encoding="utf-8"))
+          assert data["counts"] == {"golden": 30, "safety": 19, "excluded": 2}
+          assert [x["case_id"] for x in data["excluded"]] == ["GC-026", "SS-012"]
+          print("CD08_FROZEN_POPULATION=30+19")
+          PY
+
+      - name: Run Gate-C frozen baseline regression
+        id: gatec
+        continue-on-error: true
+        working-directory: tools/u03_gatec_eval
+        run: |
+          python3 -m unittest -v
+          python3 run_evaluation.py
+
+      - name: Compile diagnosis-service
+        id: compile
+        continue-on-error: true
+        run: mvn -f diagnosis-service/pom.xml -DskipTests compile
+
+      - name: Execute authorized CD-08 runtime validation
+        id: runtime
+        continue-on-error: true
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest=U03Cd08FrozenClinicalValidationTest
+          -Du03.cd08.cases=../build/u03-cd08/frozen-cases.json
+          -Du03.cd08.report=../build/u03-cd08/java-runtime-results.json
+          test
+
+      - name: Run structural/fail-closed focused regression
+        id: structural
+        continue-on-error: true
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest='U03FailClosedNegativeCoverageTest,U03UnauthorizedU04AttemptTest,U03NonProductionRuntimeE2ETest,U03GateCFrozenClinicalExecutionTest,U03PostCommitFinalizerTest'
+          test
+
+      - name: Run diagnosis-service engineering regression
+        id: regression
+        continue-on-error: true
+        run: mvn -f diagnosis-service/pom.xml test
+
+      - name: Build durable CD-08 execution evidence
+        if: always()
+        run: |
+          python3 tools/u03_cd08_validation/build_evidence.py             --implementation-sha "$CD08_IMPLEMENTATION_SHA"             --workflow-run-id "$GITHUB_RUN_ID"             --run-attempt "$GITHUB_RUN_ATTEMPT"             --repository "$GITHUB_REPOSITORY"             --ref "$GITHUB_REF"             --event-name "$GITHUB_EVENT_NAME"             --compile-outcome "${{ steps.compile.outcome }}"             --runtime-outcome "${{ steps.runtime.outcome }}"             --structural-outcome "${{ steps.structural.outcome }}"             --regression-outcome "${{ steps.regression.outcome }}"             --frozen-cases build/u03-cd08/frozen-cases.json             --runtime-report build/u03-cd08/java-runtime-results.json             --gatec-bundle tools/u03_gatec_eval/build/u03-gatec-eval/result-bundle.json             --output build/u03-cd08/evidence.json
+
+      - name: Freeze evidence checksums and workflow provenance
+        if: always()
+        run: |
+          mkdir -p build/u03-cd08
+          {
+            echo "authorization_id=$CD08_AUTHORIZATION_ID"
+            echo "authorization_state=$CD08_AUTHORIZATION_STATE"
+            echo "scope=$CD08_SCOPE"
+            echo "implementation_sha=$CD08_IMPLEMENTATION_SHA"
+            echo "required_aggregate_base=$CD08_REQUIRED_AGGREGATE_BASE"
+            echo "repository=$GITHUB_REPOSITORY"
+            echo "ref=$GITHUB_REF"
+            echo "event_name=$GITHUB_EVENT_NAME"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "environment=$CD08_RUNTIME_ENVIRONMENT"
+            echo "real_patient_traffic=$CD08_REAL_PATIENT_TRAFFIC"
+            echo "production_mutation=$CD08_PRODUCTION_MUTATION"
+            echo "release_activation=$CD08_RELEASE_ACTIVATION"
+            echo "u04_execution=$CD08_U04_EXECUTION"
+            echo "u14_execution=$CD08_U14_EXECUTION"
+          } > build/u03-cd08/workflow-provenance.txt
+
+          files="build/u03-cd08/evidence.json build/u03-cd08/frozen-cases.json build/u03-cd08/workflow-provenance.txt"
+          if test -f build/u03-cd08/java-runtime-results.json; then
+            files="$files build/u03-cd08/java-runtime-results.json"
+          fi
+          if test -f tools/u03_gatec_eval/build/u03-gatec-eval/result-bundle.json; then
+            files="$files tools/u03_gatec_eval/build/u03-gatec-eval/result-bundle.json"
+          fi
+          sha256sum $files > build/u03-cd08/SHA256SUMS
+          cat build/u03-cd08/SHA256SUMS
+
+      - name: Upload retained CD-08 evidence
+        if: always()
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: u03-cd08-clinical-validation-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            build/u03-cd08/evidence.json
+            build/u03-cd08/frozen-cases.json
+            build/u03-cd08/java-runtime-results.json
+            build/u03-cd08/workflow-provenance.txt
+            build/u03-cd08/SHA256SUMS
+            diagnosis-service/target/surefire-reports/TEST-*.xml
+            tools/u03_gatec_eval/build/u03-gatec-eval/result-bundle.json
+          if-no-files-found: warn
+          retention-days: 90
+          compression-level: 6
+          overwrite: false
+
+      - name: Final CD-08 execution gate
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence = json.loads(Path("build/u03-cd08/evidence.json").read_text(encoding="utf-8"))
+          runtime = evidence["runtime_validation"]["payload"]
+          assert evidence["authorization"]["id"] == "AUTH-U03-CD08-CLINICAL-VALIDATION-EXEC-001"
+          assert evidence["authorization"]["state"] == "AUTHORIZED"
+          assert evidence["hard_boundaries"] == {
+              "production_mutation": False,
+              "real_patient_traffic": False,
+              "u04_execution": False,
+              "u14_execution": False,
+              "release_activation": False,
+          }
+          assert runtime is not None, "runtime report missing"
+          assert runtime["golden_count"] == 30
+          assert runtime["safety_count"] == 19
+          assert runtime["total_count"] == 49
+          assert runtime["failed_count"] == 0, runtime["failed_ids"]
+          assert evidence["step_outcomes"]["compile"] == "success"
+          assert evidence["step_outcomes"]["runtime_validation"] == "success"
+          assert evidence["step_outcomes"]["structural_regression"] == "success"
+          assert evidence["step_outcomes"]["full_regression"] == "success"
+          assert evidence["execution_verdict"] == "EXECUTION_PASS_PENDING_INDEPENDENT_CLINICAL_GOVERNANCE_REVIEW"
+          print("CD08_EXECUTION=PASS_PENDING_INDEPENDENT_REVIEW")
+          PY
+
+      - name: Report governance boundary
+        if: always()
+        run: |
+          echo "authorization_id=$CD08_AUTHORIZATION_ID"
+          echo "artifact_id=${{ steps.upload.outputs.artifact-id }}"
+          echo "artifact_digest=${{ steps.upload.outputs.artifact-digest }}"
+          echo "cd08_clinical_validation=NOT_PASSED_UNTIL_INDEPENDENT_REVIEW"
+          echo "u03_clinical_dependency_closure=NOT_COMPLETE"
+          echo "u04_implementation_authorization=NOT_GRANTED"
+          echo "production_authorization=BLOCKED"
