@@ -63,7 +63,7 @@ public final class U03NonProductionExecutionContext {
         return acceptedEvidenceBinding;
     }
 
-    private static String requireNonProductionEnvironment(String value) {
+    static String requireNonProductionEnvironment(String value) {
         if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException("environmentId is required");
         }
