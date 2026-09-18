@@ -1,213 +1,277 @@
-# U04 RDP-05 Safety Capability / Dependency Owner Decision Package v0.2
+# U04 RDP-05 Safety Capability / Dependency Owner Decision Package v0.3
 
-> 目标：把当前 V1 U04 所需 Safety Capability / dependency 语义整理成可直接签署的 Owner Decision Package。  
-> 当前状态：`OWNER_DECISION_REQUIRED / OPEN / BLOCKING`。  
-> 本文件不授权任何新 Capability 调用、fallback、production wiring 或真实患者流量。
+> 目标：给出一套最小依赖、最小权限的 U04 V1 dependency policy proposal，供 Safety/Product/Medical Owner 直接审阅签署。  
+> 当前状态：`PROPOSED_FOR_OWNER_SIGNOFF / NOT_FROZEN / BLOCKING`。  
+> 本文件不授权新增 Capability 调用、fallback、production wiring 或真实患者流量。
 
 ## 1. 已冻结约束
 
-已冻结：
-
 ```text
-如果某 Safety Capability 被正式定义为 required：
-其 unavailable / failed 状态不得被解释成 ALLOW
-```
+required Safety Capability unavailable / failed
+→ 不得解释成 ALLOW
 
-另外：
-
-```text
 undefined dependency absence != safe
 capability failure != clinical negative
 fallback exists != fallback authorized
 ```
 
-## 2. 当前必须先回答的总问题
+## 2. D2-01 当前 V1 dependency strategy
 
-### D2-01 当前 U04 V1 是否存在 U03 之外的 required Safety Capability？
+**建议选择 A：当前 U04 V1 不新增 U03 之外的 required Safety Capability。**
 
-Owner 必须选择：
-
-- [ ] A. 否。当前 U04 V1 的 Safety Gate 只消费已验证的 U03 handoff + 当前 Safety Policy/Scope；不新增外部/独立 Safety Capability。
-- [ ] B. 是。存在以下 required capabilities：________
-- [ ] C. 部分 required、部分 optional，见下表。
-- [ ] D. 其他：________
-
-如果选择 A：
+建议冻结：
 
 ```text
-RDP-05 可冻结为：
 NO_ADDITIONAL_REQUIRED_SAFETY_CAPABILITY_FOR_CURRENT_U04_V1_SLICE
 ```
 
-但仍需确认未来新增 dependency 必须重新 governance。
-
-## 3. Dependency inventory
-
-如 D2-01 不是 A，Owner 必须完整填写：
-
-| Dependency / Capability | Exact ID | Version / Release | REQUIRED / OPTIONAL / PROHIBITED | Scope | Failure consequence | Fallback |
-|---|---|---|---|---|---|---|
-| ______ | ______ | ______ | ______ | ______ | ______ | ______ |
-| ______ | ______ | ______ | ______ | ______ | ______ | ______ |
-
-禁止使用：
+当前 U04 V1 的 Gate decision 只消费：
 
 ```text
-latest
-current
-auto
-best available
-any compatible
+1. 已验证的 U03 typed handoff
+2. 当前已冻结/已批准的 U04 Safety Gate Policy
+3. 当前适用 Scope / authorization context
+4. G2 / StateCommitter 等已有治理基础设施
 ```
 
-作为 governed version identity。
-
-## 4. REQUIRED dependency 语义
-
-对每个 REQUIRED dependency，必须冻结：
-
-### D2-02 unavailable
-
-- [ ] Gate = `UNAVAILABLE`
-- [ ] Gate = `BLOCKED`
-- [ ] 由 dependency 类型决定：________
-- [ ] 其他：________
-
-### D2-03 timeout
-
-- [ ] 等价于 unavailable
-- [ ] 等价于 dependency failure
-- [ ] 可 retry 后再判定，retry policy 由单独 Runtime Policy 冻结
-- [ ] 其他：________
-
-### D2-04 execution failure
-
-- [ ] Gate = `UNAVAILABLE`
-- [ ] Gate = `BLOCKED`
-- [ ] 进入批准 fallback 后重新求值
-- [ ] 其他：________
-
-注意：任何路径都不得因为 dependency failure 自动形成 `ALLOW`。
-
-## 5. OPTIONAL dependency 语义
-
-如存在 OPTIONAL dependency，必须冻结：
+不新增：
 
 ```text
-缺失时是否影响 Gate：
-YES / NO / CONDITIONALLY
-
-影响条件：
-________________________________
-
-若不影响 Gate，其结果是否只用于解释/附加约束：
-________________________________
+外部急诊 API
+额外 LLM safety judge
+第二套 risk model
+自由 Agent safety tool
+未治理规则服务
+自动互联网检索
+隐藏 fallback
 ```
 
-Optional 不得通过实现层临时升级为 Required，也不得反向。
+作为当前 U04 Gate 的 required dependency。
+
+理由：
+
+- U03 已经完成当前版本 Risk Assessment；
+- U04 的职责是解释“当前普通临床是否获准继续”，不是重新做第二次医学风险评估；
+- 新增 required Safety Capability 会引入新的 clinical/safety truth source 和新的 availability semantics；
+- 当前没有对应 capability package / release / eval / authorization；
+- 最小实现可以避免 U03 与 U04 形成重复风险判断 Owner。
+
+## 3. 当前 dependency inventory 建议
+
+| Dependency | Classification | Version identity | Role | Failure consequence |
+|---|---|---|---|---|
+| Governed U03 handoff | REQUIRED INPUT | exact U03 current-version refs | U04 primary business input | admission failure / no Gate commit |
+| U04 Safety Gate Policy | REQUIRED GOVERNED POLICY | exact approved policy ref | unique Gate decision | unavailable policy -> no Gate commit / fail closed |
+| Scope / authorization context | REQUIRED GOVERNANCE INPUT | exact current governed context | determine applicability/permission | unavailable/not established -> UNAVAILABLE |
+| G2 / StateCommitter | REQUIRED INFRASTRUCTURE FOR MUTATION | existing governed implementation/version | commit canonical Gate state | commit failure != Gate result; fail closed |
+| Trace/Audit | REQUIRED GOVERNANCE INFRASTRUCTURE where commit/execution requires it | exact runtime build | durable evidence | failure handled by runtime/governance policy, never ALLOW by default |
+| Any new external/model/tool Safety Capability | PROHIBITED UNTIL SEPARATELY GOVERNED | none | none | invocation rejected |
+
+注意：
+
+```text
+REQUIRED INPUT / POLICY / GOVERNANCE INFRASTRUCTURE
+!= 新增 clinical Safety Capability
+```
+
+## 4. D2-02 / D2-03 / D2-04
+
+由于建议 D2-01=A：
+
+```text
+当前 U04 V1
+不存在额外 required Safety Capability
+```
+
+因此：
+
+```text
+D2-02 additional capability unavailable
+= NOT_APPLICABLE_IN_CURRENT_SLICE
+
+D2-03 additional capability timeout
+= NOT_APPLICABLE_IN_CURRENT_SLICE
+
+D2-04 additional capability execution failure
+= NOT_APPLICABLE_IN_CURRENT_SLICE
+```
+
+但已有必需治理输入/基础设施仍然 fail closed：
+
+```text
+U03 handoff invalid/stale
+→ no Gate commit
+
+Safety Gate Policy unavailable
+→ no Gate commit / fail closed
+
+Scope unavailable/not established
+→ Gate = UNAVAILABLE（若 RDP-02 proposal 获批）
+
+StateCommitter failure
+→ commit failure
+→ 不得伪装为 Gate result
+```
+
+## 5. OPTIONAL dependency
+
+**建议当前 V1：NONE。**
+
+```text
+OPTIONAL_SAFETY_CAPABILITY_SET = EMPTY
+```
+
+这样可以避免“可有可无”的隐藏能力逐渐改变 Gate 语义。
+
+未来新增 optional dependency 必须单独说明：
+
+- 它是否改变 Gate；
+- 是否只提供解释/证据；
+- unavailable 时是否影响业务权限；
+- 是否需要独立 eval。
 
 ## 6. PROHIBITED dependency
 
-PROHIBITED dependency：
-
-- 不得由 U04 调用；
-- 不得影响 Gate；
-- 不得作为 hidden fallback；
-- 不得通过 Model/Agent 间接调用绕过治理。
-
-Owner 可列出当前明确禁止的 capability：
+建议当前 V1 明确禁止以下未经治理的 Gate dependency：
 
 ```text
-________________________________
+- free-form LLM safety judge
+- autonomous Agent-selected safety tool
+- unversioned external API
+- mutable latest/current rule service
+- hidden fallback model/tool
+- frontend-computed safety permission
+- any capability without exact governed ID/version/scope/eval
 ```
+
+这些 capability 即使代码可调用，也不得成为 U04 Safety Gate 输入。
 
 ## 7. Fallback policy
 
-Owner 必须选择：
+**建议选择 A：当前 U04 V1 不允许 Safety Capability fallback。**
 
-- [ ] A. 当前 U04 V1 不允许 Safety Capability fallback。
-- [ ] B. 允许，但仅限以下明确批准 fallback：________
-- [ ] C. 其他：________
-
-若允许 fallback，必须冻结：
+冻结建议：
 
 ```text
-primary capability id/version:
-fallback capability id/version:
-trigger:
-authorization:
-expected gate semantics:
-evidence requirements:
-max attempts / timeout owner:
+U04_V1_SAFETY_CAPABILITY_FALLBACK
+= NONE
 ```
 
-未经签署的 fallback = NOT_AUTHORIZED。
+原因：
 
-## 8. Authorization and least privilege
+- 当前不存在额外 required Safety Capability；
+- 因此没有必要引入“primary failed -> another model/tool decides safety”的新路径；
+- 这可以避免 fallback 重新创造另一套未治理 Safety truth。
 
-每个 required/optional dependency 必须明确：
+未来若新增 fallback，必须重新做：
 
 ```text
-allowed input fields
-forbidden input fields
-PHI minimum necessary boundary
-network/external call permission
-timeout owner
-retry owner
-audit/trace requirements
+capability governance
++ exact version binding
++ safety policy review
++ eval
++ implementation authorization
 ```
 
-这些内容可在后续 technical contract 细化，但业务级授权范围必须先冻结。
+## 8. Least-privilege 建议
 
-## 9. Verification cases
-
-Owner 签署后至少需要：
+当前 U04 V1 建议只允许读取：
 
 ```text
-U04-DEP-001 required dependency available
-U04-DEP-002 required dependency unavailable
-U04-DEP-003 required dependency timeout
-U04-DEP-004 required dependency failed
-U04-DEP-005 optional dependency unavailable
-U04-DEP-006 prohibited dependency invocation attempt
-U04-DEP-007 unapproved fallback attempt
-U04-DEP-008 wrong dependency version
+- U03 typed status/disposition/failure
+- Clinical State Version identity
+- exact governed release refs
+- required provenance refs
+- policy/scope identity
+- execution correlation refs
 ```
 
-如果 D2-01=A（当前无额外 required Safety Capability），则必须替换为：
+默认禁止：
 
 ```text
-U04-DEP-001 no-additional-dependency baseline
-U04-DEP-002 unauthorized dependency introduction attempt
-U04-DEP-003 hidden fallback attempt
-U04-DEP-004 future dependency without governance attempt
+- 自由读取完整患者历史
+- 自由网络访问
+- 自由工具发现
+- 任意知识库查询
+- 任意 LLM 推理作为 Gate truth
+- 未声明 PHI
 ```
 
-## 10. Owner sign-off
+如实现确实需要新增字段，应回到 contract review，而不是扩大通用 Context。
+
+## 9. 建议 verification cases
+
+若 Owner 批准“无额外 Safety Capability”策略：
+
+| Case | Expected |
+|---|---|
+| U04-DEP-001 no-additional-dependency baseline | Gate 仅依赖 governed U03 + policy/scope |
+| U04-DEP-002 unauthorized dependency introduction | rejected / fail closed |
+| U04-DEP-003 hidden fallback attempt | rejected |
+| U04-DEP-004 future dependency without governance | rejected |
+| U04-DEP-005 mutable/latest dependency ref | rejected |
+| U04-DEP-006 free-form LLM safety judge attempt | cannot own Gate |
+| U04-DEP-007 frontend safety override attempt | rejected |
+| U04-DEP-008 undeclared network tool attempt | rejected |
+
+## 10. Future expansion rule
+
+任何未来新增 Safety Capability：
+
+```text
+CODE EXISTS
+!= U04 DEPENDENCY AUTHORIZED
+```
+
+必须重新建立：
+
+```text
+capability ID
+exact version
+REQUIRED/OPTIONAL/PROHIBITED
+scope
+failure semantics
+fallback semantics
+verification cases
+owner approval
+implementation authorization
+```
+
+否则不得进入 U04 Gate。
+
+## 11. Owner sign-off
+
+以下内容尚未签署：
 
 ```text
 Safety/Product/Medical Owner:
 ____________________
 
 Dependency policy version:
-____________________
+U04-SAFETY-DEPENDENCY-V0.1-CANDIDATE
 
 Effective scope:
 U04 V1 / NON_PRODUCTION_ONLY
+
+Decision:
+APPROVE AS PROPOSED / APPROVE WITH CHANGES / REJECT
 
 Approval date:
 ____________________
 ```
 
-## 11. 当前 Verdict
+## 12. 当前 Verdict
 
 ```text
 U04-RDP-05
-= OWNER_DECISION_REQUIRED
+= PROPOSED_FOR_OWNER_SIGNOFF
+= NOT_FROZEN
 = OPEN / BLOCKING
 
-Undefined dependency policy
-= NOT_IMPLEMENTABLE
+Proposed current-slice strategy:
+NO_ADDITIONAL_REQUIRED_SAFETY_CAPABILITY_FOR_CURRENT_U04_V1_SLICE
+NO_OPTIONAL_SAFETY_CAPABILITY
+NO_SAFETY_CAPABILITY_FALLBACK
 
 U04 Implementation Readiness
 = NOT_READY
