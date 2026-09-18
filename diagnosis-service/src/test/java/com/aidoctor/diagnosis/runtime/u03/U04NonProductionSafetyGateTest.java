@@ -218,6 +218,214 @@ class U04NonProductionSafetyGateTest {
         assertEquals(0, fixture.repository.commitCalls());
     }
 
+
+    @Test
+    void executionAndDecisionStatusConflictFailsClosedBeforeGateDecision() {
+        Fixture fixture = new Fixture(8);
+        U03OutboundHandoff conflicting = new U03OutboundHandoff(
+                "consult-1",
+                "cdp-1",
+                7,
+                Integer.valueOf(8),
+                "thread-1",
+                "run-1",
+                "event-1",
+                "corr-1",
+                "trace-1",
+                ENV,
+                U03NonProductionExecutionContext.BINDING_MODE,
+                U03RiskAssessmentCandidate.FAILED,
+                "INSUFFICIENT_INFORMATION",
+                Collections.singletonList("RISK_ASSESSMENT_FAILED"),
+                "RISK_ASSESSMENT_UNAVAILABLE",
+                "u03-decision-1",
+                U03RiskAssessmentCandidate.VALID,
+                "NO_HIGH_RISK_SIGNAL",
+                "U03_RULE_DECISION",
+                U03GovernedCandidateGateway.BINDING_ID,
+                governedRefs(),
+                "acceptance-1",
+                Collections.singletonList("evidence-1"),
+                Collections.singletonList("source-1"),
+                Collections.singletonList("provenance-1"),
+                "u03-proposal-1",
+                "COMMITTED",
+                null,
+                "audit-u03-1");
+
+        U04ExecutionResult result = fixture.application.execute(
+                conflicting,
+                8,
+                U04ScopeContext.current(true, true),
+                ENV);
+
+        assertEquals(U04ExecutionResult.ADMISSION_FAILED, result.getStatus());
+        assertEquals(U04AdmissionService.MALFORMED_U03_HANDOFF, result.getAdmission().getReasonCode());
+        assertNull(result.getDecision());
+        assertEquals(0, fixture.repository.commitCalls());
+    }
+
+    @Test
+    void failedReasonMismatchFailsClosedBeforeGateDecision() {
+        Fixture fixture = new Fixture(7);
+        U03OutboundHandoff conflicting = new U03OutboundHandoff(
+                "consult-1",
+                "cdp-1",
+                7,
+                null,
+                "thread-1",
+                "run-1",
+                "event-1",
+                "corr-1",
+                "trace-1",
+                ENV,
+                U03NonProductionExecutionContext.BINDING_MODE,
+                U03RiskAssessmentCandidate.FAILED,
+                "INSUFFICIENT_INFORMATION",
+                Collections.singletonList("RISK_ASSESSMENT_FAILED"),
+                "RISK_ASSESSMENT_UNAVAILABLE",
+                "u03-decision-1",
+                U03RiskAssessmentCandidate.FAILED,
+                null,
+                "OTHER_FAILURE",
+                U03GovernedCandidateGateway.BINDING_ID,
+                governedRefs(),
+                "acceptance-1",
+                Collections.singletonList("evidence-1"),
+                Collections.singletonList("source-1"),
+                Collections.singletonList("provenance-1"),
+                null,
+                null,
+                null,
+                null);
+
+        U04ExecutionResult result = fixture.application.execute(
+                conflicting,
+                7,
+                U04ScopeContext.current(true, true),
+                ENV);
+
+        assertEquals(U04ExecutionResult.ADMISSION_FAILED, result.getStatus());
+        assertEquals(U04AdmissionService.MALFORMED_U03_HANDOFF, result.getAdmission().getReasonCode());
+        assertNull(result.getDecision());
+        assertEquals(0, fixture.repository.commitCalls());
+    }
+
+    @Test
+    void capabilityBindingMismatchFailsClosedBeforeGateDecision() {
+        Fixture fixture = new Fixture(8);
+        U03OutboundHandoff conflicting = new U03OutboundHandoff(
+                "consult-1",
+                "cdp-1",
+                7,
+                Integer.valueOf(8),
+                "thread-1",
+                "run-1",
+                "event-1",
+                "corr-1",
+                "trace-1",
+                ENV,
+                U03NonProductionExecutionContext.BINDING_MODE,
+                U03RiskAssessmentCandidate.VALID,
+                null,
+                Collections.<String>emptyList(),
+                "DETERMINISTIC_FROZEN_RULE_EXECUTION",
+                "u03-decision-1",
+                U03RiskAssessmentCandidate.VALID,
+                "NO_HIGH_RISK_SIGNAL",
+                "U03_RULE_DECISION",
+                "binding-substituted",
+                governedRefs(),
+                "acceptance-1",
+                Collections.singletonList("evidence-1"),
+                Collections.singletonList("source-1"),
+                Collections.singletonList("provenance-1"),
+                "u03-proposal-1",
+                "COMMITTED",
+                null,
+                "audit-u03-1");
+
+        U04ExecutionResult result = fixture.application.execute(
+                conflicting,
+                8,
+                U04ScopeContext.current(true, true),
+                ENV);
+
+        assertEquals(U04ExecutionResult.ADMISSION_FAILED, result.getStatus());
+        assertEquals(U04AdmissionService.UNTRUSTED_U03_RELEASE_SET, result.getAdmission().getReasonCode());
+        assertNull(result.getDecision());
+        assertEquals(0, fixture.repository.commitCalls());
+    }
+
+    @Test
+    void missingProvenanceFailsClosedBeforeGateDecision() {
+        Fixture fixture = new Fixture(8);
+        U03OutboundHandoff missingProvenance = new U03OutboundHandoff(
+                "consult-1",
+                "cdp-1",
+                7,
+                Integer.valueOf(8),
+                "thread-1",
+                "run-1",
+                "event-1",
+                "corr-1",
+                "trace-1",
+                ENV,
+                U03NonProductionExecutionContext.BINDING_MODE,
+                U03RiskAssessmentCandidate.VALID,
+                null,
+                Collections.<String>emptyList(),
+                "DETERMINISTIC_FROZEN_RULE_EXECUTION",
+                "u03-decision-1",
+                U03RiskAssessmentCandidate.VALID,
+                "NO_HIGH_RISK_SIGNAL",
+                "U03_RULE_DECISION",
+                U03GovernedCandidateGateway.BINDING_ID,
+                governedRefs(),
+                "acceptance-1",
+                Collections.singletonList("evidence-1"),
+                Collections.singletonList("source-1"),
+                Collections.<String>emptyList(),
+                "u03-proposal-1",
+                "COMMITTED",
+                null,
+                "audit-u03-1");
+
+        U04ExecutionResult result = fixture.application.execute(
+                missingProvenance,
+                8,
+                U04ScopeContext.current(true, true),
+                ENV);
+
+        assertEquals(U04ExecutionResult.ADMISSION_FAILED, result.getStatus());
+        assertEquals(U04AdmissionService.MALFORMED_U03_HANDOFF, result.getAdmission().getReasonCode());
+        assertNull(result.getDecision());
+        assertEquals(0, fixture.repository.commitCalls());
+    }
+
+    @Test
+    void gateOverrideAttemptFailsBeforeStateCommitter() {
+        Fixture fixture = new Fixture(8);
+        U04AdmissionResult admission = new U04AdmissionService().admit(
+                validHandoff("HIGH_RISK"),
+                8,
+                U04ScopeContext.current(true, true),
+                ENV);
+        U04AdmittedInput input = admission.getAdmittedInput();
+        U04SafetyGateDecision decision = new U04SafetyGatePolicy().decide(input);
+        U04StateProposal proposal = new U04StateProposalFactory().create(input, decision);
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> value =
+                (java.util.Map<String, Object>) proposal.getStatePatch().operations.get(0).value;
+        value.put("safety_gate", U04SafetyGateDecision.ALLOW);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> fixture.commitService.commitNonProduction(input, decision, proposal));
+        assertEquals(0, fixture.repository.readCalls());
+        assertEquals(0, fixture.repository.commitCalls());
+    }
+
     @Test
     void mutablePolicyAliasIsRejected() {
         assertThrows(
