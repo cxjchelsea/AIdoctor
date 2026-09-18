@@ -1,132 +1,117 @@
-# U04 Non-Production Implementation Verification Result v0.1
+# U04 Non-Production Implementation Verification Result v0.2
 
 > Authorization:
 > AUTH-U04-RUNTIME-IMPL-001
 > = AUTHORIZED / NON_PRODUCTION_ONLY / FROZEN_RDP01_TO_RDP06_ONLY / NO_LIVE_DOWNSTREAM_ROUTING
 >
-> This record freezes implementation and verification evidence. It does not grant independent-review, merge, production, live routing, or real-patient authorization.
+> This record describes the BF-U04-IR-02 evidence remediation. It does not grant independent-review, merge, production, live-routing, or real-patient authorization.
 
-## 1. Implemented vertical slice
+## 1. Existing implementation state
 
 ```text
-U03OutboundHandoff
-→ U04AdmissionService
-→ U04SafetyGatePolicy
-→ U04StateProposalFactory
-→ U04CommitService / StateCommitter
-→ U04RoutingEligibility
+BF-U04-IR-01
+= CLOSED
+
+U04 Runtime / Safety Behavior
+= VERIFIED
+
+Frozen RDP-02 / RDP-05 semantics
+= UNCHANGED
 ```
 
-No U05/U11/U14 owner is invoked.
-
-## 2. Frozen policy implemented
+## 2. Independent review finding
 
 ```text
-VALID + NO_HIGH_RISK_SIGNAL
-→ ALLOW
-
-VALID + CAUTION
-→ RESTRICTED
-
-VALID + HIGH_RISK
-→ BLOCKED
-
-U03 FAILED
-→ UNAVAILABLE
-
-scope unavailable/not established
-→ UNAVAILABLE
+BF-U04-IR-02
+= DURABLE_EVIDENCE_PACKAGE_INCOMPLETE_AGAINST_FROZEN_RDP06
 ```
 
-Known HIGH_RISK is not erased by technical/dependency failure.
+The prior evidence bundle proved suite-level execution but did not preserve all frozen RDP-06 per-case evidence fields.
 
-## 3. Frozen dependency policy implemented
+## 3. Remediation
+
+A dedicated runtime evidence harness now emits observed per-case facts from real U04 execution objects.
+
+Per structured case, the retained evidence includes:
 
 ```text
-NO_ADDITIONAL_REQUIRED_SAFETY_CAPABILITY_FOR_CURRENT_U04_V1_SLICE
-
-OPTIONAL_SAFETY_CAPABILITY_SET
-= EMPTY
-
-U04_V1_SAFETY_CAPABILITY_FALLBACK
-= NONE
+case_id
+scenario
+source_clinical_state_version
+current_clinical_state_version
+input_identity
+u03_execution_status
+u03_decision_status
+u03_disposition
+policy_ref
+correlation_id
+trace_id
+expected_boundary
+observed_boundary
+expected_result
+observed_result
+observed_gate
+typed_failure_reason
+proposal_id
+commit_status
+committed_version
+audit_id
+routing_eligibility
+pass
 ```
 
-## 4. Initial exact-SHA verification
+The evidence builder validates expected-vs-observed parity and rejects malformed/incomplete case records.
+
+## 4. Structured governed scenarios
+
+The evidence harness covers, at minimum:
 
 ```text
-implementation_sha
-= 89698a27ee9377d54a3d665fefa35832243081c9
-
-workflow_run
-= 35316231831
-
-artifact_id
-= 10535316098
-
-artifact_digest
-= sha256:dd1e4e5fea6cf13cf089809da7a30313d8f1f5e1ad9738e5ecbb9dc73c6ee4a7
+U04-EV-001 VALID + NO_HIGH_RISK_SIGNAL -> ALLOW
+U04-EV-002 VALID + CAUTION -> RESTRICTED
+U04-EV-003 VALID + HIGH_RISK -> BLOCKED
+U04-EV-004 U03 FAILED -> UNAVAILABLE
+U04-EV-005 scope unavailable -> UNAVAILABLE
+U04-EV-006 stale U03 handoff -> typed admission failure
+U04-EV-007 wrong governed release set -> typed admission failure
+U04-EV-008 execution/decision conflict -> typed admission failure
+U04-EV-009 capability binding substitution -> typed admission failure
+U04-EV-010 missing provenance -> typed admission failure
+U04-EV-011 FAILED reason mismatch -> typed admission failure
+U04-EV-012 HIGH_RISK + unavailable scope -> BLOCKED
 ```
 
-Focused suite:
+The last case explicitly verifies that known HIGH_RISK is not erased by scope unavailability.
+
+## 5. Artifact integrity requirements
+
+The retained artifact must include and checksum:
+
+- consolidated `evidence.json`;
+- workflow provenance;
+- `SHA256SUMS`;
+- focused U04 JUnit XML;
+- evidence-harness JUnit XML;
+- raw structured `u04-case-evidence.json`.
+
+## 6. Current status
 
 ```text
-U04NonProductionSafetyGateTest
-= 11 tests
-= 0 failures
-= 0 errors
-= 0 skipped
-```
+BF-U04-IR-02 remediation implementation
+= COMPLETE
 
-Full diagnosis-service regression:
+Final exact-head workflow
+= PENDING
 
-```text
-280 tests
-0 failures
-0 errors
-1 skipped
-```
+Independent evidence-only review
+= PENDING
 
-The skipped regression case is the pre-existing authorization-gated U03 CD-08 harness and is unrelated to U04.
-
-## 5. Structural authorization guards
-
-The verification workflow passed guards proving:
-
-```text
-live U05 execution = false
-live U11 execution = false
-live U14 execution = false
-production routing = false
-production mutation = false
-real-patient traffic = false
-additional Safety Capability = false
-Safety Capability fallback = false
-automatic Spring/runtime activation in U04 package = absent
-external/model/tool runtime dependency in U04 package = absent
-```
-
-## 6. Verification state
-
-```text
-U04 Implementation
-= IMPLEMENTED_FOR_AUTHORIZED_NONPRODUCTION_SLICE
-
-Initial verification
-= PASS
-
-Final exact-head verification
-= REQUIRED_AFTER_THIS_EVIDENCE_RECORD
-
-Independent Implementation / Evidence Review
-= NOT_YET_PERFORMED
+PR #102 merge authorization eligibility
+= NOT_YET_ESTABLISHED
 
 Merge Authorization
 = NOT_GRANTED
 
-U04 Live Routing Activation
-= NOT_AUTHORIZED
-
-Clinical Runtime Production
-= NOT_ENABLED
+Production Authorization
+= BLOCKED
 ```
