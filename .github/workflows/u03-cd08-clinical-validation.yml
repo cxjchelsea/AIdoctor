@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - impl/u03-cd08-postimplementation-clinical-validation
+      - impl/u03-cd08-bf0304-typed-guard-failure-parity
     paths:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u03/**'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/**'

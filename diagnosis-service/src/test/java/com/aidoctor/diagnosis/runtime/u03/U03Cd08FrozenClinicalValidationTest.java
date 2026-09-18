@@ -133,26 +133,20 @@ class U03Cd08FrozenClinicalValidationTest {
         try {
             String stateVersion = string(fixture.get("clinical_state_version"));
             if ("STALE".equals(stateVersion)) {
-                observed.put("boundary", "EXECUTION_CONTEXT_VERSION_GUARD");
-                try {
-                    staleContext(caseId);
-                    errors.add("stale Clinical State Version was accepted");
-                } catch (RuntimeException expectedRejection) {
-                    observed.put("runtime_exception_type", expectedRejection.getClass().getSimpleName());
-                    observed.put("runtime_exception_message", expectedRejection.getMessage());
-                    observed.put("reason_code", "RUNTIME_VERSION_GUARD_REJECTION");
-                }
+                U03NonProductionAdmissionResult admission = new U03NonProductionAdmissionService().admit(
+                        command(caseId, 7),
+                        U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
+                        evidence(caseId, 6),
+                        "ci-nonprod-cd08");
+                recordAdmission(admission, observed);
                 compareDecisionExpectation(expected, observed, errors);
             } else if (!hasFrozenReleaseTuple(fixture)) {
-                observed.put("boundary", "EXACT_RELEASE_GUARD");
-                try {
-                    context(caseId, 7, 7, releaseRefsFromFixture(fixture), "ci-nonprod-cd08");
-                    errors.add("non-frozen release tuple was accepted");
-                } catch (RuntimeException expectedRejection) {
-                    observed.put("runtime_exception_type", expectedRejection.getClass().getSimpleName());
-                    observed.put("runtime_exception_message", expectedRejection.getMessage());
-                    observed.put("reason_code", "RUNTIME_RELEASE_GUARD_REJECTION");
-                }
+                U03NonProductionAdmissionResult admission = new U03NonProductionAdmissionService().admit(
+                        command(caseId, 7),
+                        releaseRefsFromFixture(fixture),
+                        evidence(caseId, 7),
+                        "ci-nonprod-cd08");
+                recordAdmission(admission, observed);
                 compareDecisionExpectation(expected, observed, errors);
             } else {
                 ClinicalExecution execution = executeClinical(caseId, fixture, Boolean.TRUE.equals(spec.get("replay")));
@@ -206,29 +200,29 @@ class U03Cd08FrozenClinicalValidationTest {
                         U03GateCClinicalInput.builder().pregnancyOrPuerperium(state).build(),
                         "FAILED", null, "OVERALL_POLICY_SCOPE_NOT_ESTABLISHED", observed, errors);
             } else if ("STALE".equals(scenario)) {
-                observed.put("boundary", "EXECUTION_CONTEXT_VERSION_GUARD");
-                try {
-                    staleContext(caseId);
-                    errors.add("stale Clinical State Version was accepted");
-                } catch (RuntimeException expectedRejection) {
-                    observed.put("rejected", Boolean.TRUE);
-                    observed.put("runtime_exception_message", expectedRejection.getMessage());
-                    // Safety requires fail-closed. Exact frozen reason parity is separately exposed by GC-024.
+                U03NonProductionAdmissionResult admission = new U03NonProductionAdmissionService().admit(
+                        command(caseId, 7),
+                        U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
+                        evidence(caseId, 6),
+                        "ci-nonprod-cd08");
+                recordAdmission(admission, observed);
+                if (!admission.isFailed()
+                        || !U03NonProductionAdmissionService.STALE_INPUT.equals(admission.getReasonCode())) {
+                    errors.add("stale admission did not produce typed STALE_INPUT failure");
                 }
             } else if ("RELEASE_MISMATCH".equals(scenario)) {
-                observed.put("boundary", "EXACT_RELEASE_GUARD");
-                try {
-                    U03ExplicitNonProductionReleaseRefs wrong = new U03ExplicitNonProductionReleaseRefs(
-                            U03ExplicitNonProductionReleaseRefs.GATE_C_KNOWLEDGE_RELEASE_REF,
-                            "RR-U03-RISK-001@0.2.0-candidate",
-                            U03ExplicitNonProductionReleaseRefs.GATE_C_COVERAGE_CONTRACT_REF,
-                            U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_RELEASE_REF,
-                            U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_PAIR_REF);
-                    context(caseId, 7, 7, wrong, "ci-nonprod-cd08");
-                    errors.add("release mismatch was accepted");
-                } catch (RuntimeException expectedRejection) {
-                    observed.put("rejected", Boolean.TRUE);
-                    observed.put("runtime_exception_message", expectedRejection.getMessage());
+                U03ExplicitNonProductionReleaseRefs wrong = new U03ExplicitNonProductionReleaseRefs(
+                        U03ExplicitNonProductionReleaseRefs.GATE_C_KNOWLEDGE_RELEASE_REF,
+                        "RR-U03-RISK-001@0.2.0-candidate",
+                        U03ExplicitNonProductionReleaseRefs.GATE_C_COVERAGE_CONTRACT_REF,
+                        U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_RELEASE_REF,
+                        U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_PAIR_REF);
+                U03NonProductionAdmissionResult admission = new U03NonProductionAdmissionService().admit(
+                        command(caseId, 7), wrong, evidence(caseId, 7), "ci-nonprod-cd08");
+                recordAdmission(admission, observed);
+                if (!admission.isFailed()
+                        || !U03NonProductionAdmissionService.RELEASE_MISMATCH.equals(admission.getReasonCode())) {
+                    errors.add("release mismatch admission did not produce typed RELEASE_MISMATCH failure");
                 }
             } else if ("NO_HIGH_NOT_SAFE".equals(scenario)) {
                 ClinicalExecution execution = executeClinical(caseId, baseFixtureInput(), false);
@@ -546,6 +540,44 @@ class U03Cd08FrozenClinicalValidationTest {
                 .measurement("systolic_bp_mmHg", U03GateCClinicalInput.Measurement.present(120))
                 .measurement("usual_systolic_bp_mmHg", U03GateCClinicalInput.Measurement.present(120))
                 .measurement("heart_rate_bpm", U03GateCClinicalInput.Measurement.present(80));
+    }
+
+    private static void recordAdmission(
+            U03NonProductionAdmissionResult admission,
+            Map<String, Object> observed) {
+        observed.put("boundary", admission.getBoundary());
+        observed.put("status", admission.getStatus());
+        observed.put("disposition",
+                admission.getDispositionCode() == null ? "NONE" : admission.getDispositionCode());
+        observed.put("reason_code", admission.getReasonCode());
+        observed.put("admission_accepted", Boolean.valueOf(admission.isAccepted()));
+        observed.put("c02_entered", Boolean.FALSE);
+        observed.put("d09_entered", Boolean.FALSE);
+        observed.put("commit_status", null);
+        observed.put("outbound_execution_status", null);
+    }
+
+    private static U03ExecutionCommand command(String caseId, int version) {
+        String token = safe(caseId);
+        return new U03ExecutionCommand(
+                "consult-" + token,
+                "thread-" + token,
+                "run-" + token,
+                "event-" + token,
+                "cdp-" + token,
+                version,
+                "corr-" + token,
+                "trace-" + token);
+    }
+
+    private static U03AcceptedEvidenceBinding evidence(String caseId, int version) {
+        String token = safe(caseId);
+        return new U03AcceptedEvidenceBinding(
+                "acceptance-" + token,
+                version,
+                ACCEPTED_EVIDENCE_REFS,
+                Collections.singletonList("frozen-source-" + token),
+                Collections.singletonList("frozen-provenance-" + token));
     }
 
     private static U03NonProductionExecutionContext staleContext(String caseId) {
