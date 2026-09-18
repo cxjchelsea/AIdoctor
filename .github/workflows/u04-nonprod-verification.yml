@@ -112,7 +112,7 @@ jobs:
           from pathlib import Path
           data = json.loads(Path("build/u04-nonprod-verification/evidence.json").read_text())
           t = data["focused_tests"]
-          assert t["tests"] >= 11
+          assert t["tests"] >= 16
           assert t["failures"] == 0
           assert t["errors"] == 0
           assert t["skipped"] == 0
