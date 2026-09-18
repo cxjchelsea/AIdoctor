@@ -7,6 +7,7 @@ on:
     paths:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u04/**'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U04NonProductionSafetyGateTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U04EvidenceHarnessTest.java'
       - 'tools/u04_nonprod_verification/**'
       - 'docs/current/06_开发单元/U04_*'
       - '.github/workflows/u04-nonprod-verification.yml'
@@ -16,6 +17,7 @@ on:
     paths:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u04/**'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U04NonProductionSafetyGateTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U04EvidenceHarnessTest.java'
       - 'tools/u04_nonprod_verification/**'
       - 'docs/current/06_开发单元/U04_*'
       - '.github/workflows/u04-nonprod-verification.yml'
@@ -92,7 +94,7 @@ jobs:
           echo "U04_NO_AUTOMATIC_ACTIVATION=PASS"
           echo "U04_NO_ADDITIONAL_SAFETY_CAPABILITY=PASS"
 
-      - name: Run focused U04 verification
+      - name: Run focused U04 verification and evidence harness
         run: >-
           mvn -f diagnosis-service/pom.xml
           -Dtest=U04NonProductionSafetyGateTest,U04EvidenceHarnessTest
@@ -153,9 +155,7 @@ jobs:
             echo "additional_safety_capability=$U04_ADDITIONAL_SAFETY_CAPABILITY"
             echo "safety_capability_fallback=$U04_SAFETY_CAPABILITY_FALLBACK"
           } > build/u04-nonprod-verification/workflow-provenance.txt
-          sha256sum             build/u04-nonprod-verification/evidence.json             build/u04-nonprod-verification/workflow-provenance.txt             diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04NonProductionSafetyGateTest.xml
-            diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04EvidenceHarnessTest.xml
-            diagnosis-service/target/u04-case-evidence.json             diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04EvidenceHarnessTest.xml             diagnosis-service/target/u04-case-evidence.json             > build/u04-nonprod-verification/SHA256SUMS
+          sha256sum             build/u04-nonprod-verification/evidence.json             build/u04-nonprod-verification/workflow-provenance.txt             diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04NonProductionSafetyGateTest.xml             diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04EvidenceHarnessTest.xml             diagnosis-service/target/u04-case-evidence.json             > build/u04-nonprod-verification/SHA256SUMS
           cat build/u04-nonprod-verification/SHA256SUMS
 
       - name: Upload retained U04 verification evidence
@@ -168,6 +168,8 @@ jobs:
             build/u04-nonprod-verification/workflow-provenance.txt
             build/u04-nonprod-verification/SHA256SUMS
             diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04NonProductionSafetyGateTest.xml
+            diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u03.U04EvidenceHarnessTest.xml
+            diagnosis-service/target/u04-case-evidence.json
           if-no-files-found: error
           retention-days: 90
           compression-level: 6
