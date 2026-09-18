@@ -35,7 +35,8 @@ public final class U04AdmissionService {
         } catch (RuntimeException exception) {
             return U04AdmissionResult.failed(UNTRUSTED_U04_POLICY_REF);
         }
-        if (!expectedGovernedRefs().equals(handoff.getGovernedReleaseRefs())) {
+        if (!U03GovernedCandidateGateway.BINDING_ID.equals(handoff.getCapabilityBindingId())
+                || !expectedGovernedRefs().equals(handoff.getGovernedReleaseRefs())) {
             return U04AdmissionResult.failed(UNTRUSTED_U03_RELEASE_SET);
         }
         if (blank(handoff.getConsultationId())
@@ -55,8 +56,13 @@ public final class U04AdmissionService {
             return U04AdmissionResult.failed(MALFORMED_U03_HANDOFF);
         }
 
+        if (!handoff.getExecutionStatus().equals(handoff.getDecisionStatus())) {
+            return U04AdmissionResult.failed(MALFORMED_U03_HANDOFF);
+        }
+
         if (U03RiskAssessmentCandidate.VALID.equals(handoff.getDecisionStatus())) {
-            if (!validDisposition(handoff.getDispositionCode())
+            if (handoff.getExecutionFailureReasonCode() != null
+                    || !validDisposition(handoff.getDispositionCode())
                     || handoff.getCommittedClinicalStateVersion() == null
                     || handoff.getCommittedClinicalStateVersion().intValue()
                             <= handoff.getSourceClinicalStateVersion()
@@ -70,7 +76,9 @@ public final class U04AdmissionService {
                 return U04AdmissionResult.failed(STALE_U03_HANDOFF);
             }
         } else if (U03RiskAssessmentCandidate.FAILED.equals(handoff.getDecisionStatus())) {
-            if (handoff.getDispositionCode() != null
+            if (blank(handoff.getExecutionFailureReasonCode())
+                    || !handoff.getExecutionFailureReasonCode().equals(handoff.getDecisionReasonCode())
+                    || handoff.getDispositionCode() != null
                     || handoff.getCommittedClinicalStateVersion() != null
                     || handoff.getProposalId() != null
                     || handoff.getCommitStatus() != null
