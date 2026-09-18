@@ -7,37 +7,41 @@ AUTH-U04-RUNTIME-IMPL-001
 Implementation branch
 = impl/u04-nonprod-safety-gate-v1
 
-Initial verified implementation SHA
-= 89698a27ee9377d54a3d665fefa35832243081c9
-
-Initial workflow run
-= 35316231831
-
-Initial retained artifact
-= 10535316098
-
-Initial artifact digest
-= sha256:dd1e4e5fea6cf13cf089809da7a30313d8f1f5e1ad9738e5ecbb9dc73c6ee4a7
-
-Focused U04 tests
-= 11 / 11 PASS
-
-Full diagnosis-service regression
-= 280 tests / 0 failures / 0 errors / 1 authorized skip
-
 Implementation
-= CODE_COMPLETE_FOR_AUTHORIZED_SLICE
+= IMPLEMENTED_FOR_AUTHORIZED_NONPRODUCTION_SLICE
 
-Verification
-= INITIAL_PASS / FINAL_EXACT_HEAD_RERUN_REQUIRED_AFTER_EVIDENCE_RECORD
+Runtime / Safety Behavior Verification
+= PASS
+
+BF-U04-IR-01
+= CLOSED
+
+BF-U04-IR-02
+= DURABLE_EVIDENCE_PACKAGE_INCOMPLETE_AGAINST_FROZEN_RDP06
+= REMEDIATION_IMPLEMENTED / FINAL_EXACT_HEAD_VERIFICATION_PENDING
+
+Previous exact-head evidence
+= SUPERSEDED_FOR_MERGE_AUTHORIZATION_PURPOSES
+
+Formal Independent Evidence Review
+= PENDING_AFTER_FINAL_EXACT_HEAD_EVIDENCE
+
+Merge Authorization
+= NOT_GRANTED
 
 Live U05/U11/U14 execution
 = NOT_AUTHORIZED
 
-Production
+Clinical Runtime Production
+= NOT_ENABLED
+
+Production Authorization
 = BLOCKED
+
+Real-patient traffic
+= NOT_AUTHORIZED
 ```
 
-The skipped full-regression test is the existing authorization-gated U03 CD-08 harness. It is unrelated to the U04 focused suite, which had zero skips.
+The previous run/artifact remain valid historical implementation evidence, but are not authoritative for merge authorization after BF-U04-IR-02 remediation.
 
-This status does not grant independent-review or merge authorization.
+The authoritative final exact-head SHA/run/artifact/digest must be taken from the latest successful U04 verification workflow and PR #102 review record after this remediation.
