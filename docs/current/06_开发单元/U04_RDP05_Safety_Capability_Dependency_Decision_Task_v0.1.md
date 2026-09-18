@@ -1,8 +1,8 @@
 # U04 RDP-05 Safety Capability / Dependency Owner Decision Package v0.3
 
 > 目标：给出一套最小依赖、最小权限的 U04 V1 dependency policy proposal，供 Safety/Product/Medical Owner 直接审阅签署。  
-> 当前状态：`PROPOSED_FOR_OWNER_SIGNOFF / NOT_FROZEN / BLOCKING`。  
-> 本文件不授权新增 Capability 调用、fallback、production wiring 或真实患者流量。
+> 当前状态：`APPROVED_AS_PROPOSED / FROZEN / PASS_FOR_READINESS`。  
+> 本文件冻结当前 U04 V1 / NON_PRODUCTION_ONLY dependency policy；不授权 future dependency、fallback、production wiring 或真实患者流量。
 
 ## 1. 已冻结约束
 
@@ -241,32 +241,31 @@ implementation authorization
 
 ## 11. Owner sign-off
 
-以下内容尚未签署：
+以下内容已完成 Owner 决策记录：
 
 ```text
-Safety/Product/Medical Owner:
-____________________
+Owner authorization source:
+Explicit repository-owner approval in project governance conversation
 
 Dependency policy version:
-U04-SAFETY-DEPENDENCY-V0.1-CANDIDATE
+U04-SAFETY-DEPENDENCY-V0.1-FROZEN
 
 Effective scope:
 U04 V1 / NON_PRODUCTION_ONLY
 
 Decision:
-APPROVE AS PROPOSED / APPROVE WITH CHANGES / REJECT
+APPROVE AS PROPOSED
 
 Approval date:
-____________________
+2026-09-18
 ```
 
 ## 12. 当前 Verdict
 
 ```text
 U04-RDP-05
-= PROPOSED_FOR_OWNER_SIGNOFF
-= NOT_FROZEN
-= OPEN / BLOCKING
+= APPROVED_AS_PROPOSED
+= FROZEN / PASS_FOR_READINESS
 
 Proposed current-slice strategy:
 NO_ADDITIONAL_REQUIRED_SAFETY_CAPABILITY_FOR_CURRENT_U04_V1_SLICE
@@ -274,5 +273,5 @@ NO_OPTIONAL_SAFETY_CAPABILITY
 NO_SAFETY_CAPABILITY_FALLBACK
 
 U04 Implementation Readiness
-= NOT_READY
+= READY_FOR_REVIEW
 ```
