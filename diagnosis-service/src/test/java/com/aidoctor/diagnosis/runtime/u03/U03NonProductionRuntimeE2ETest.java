@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,8 +33,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * V8 controlled NON_PRODUCTION_RUNTIME_E2E for the authorized CD-07 chain.
  *
- * <p>All inputs are synthetic. The repository is an in-memory mechanical fake and
- * no production adapter, patient traffic, U04 consumer, or external network is used.</p>
+ * <p>The clinical values remain synthetic, but C02 and D09 are the real concrete
+ * Gate-C-frozen non-production implementations. The repository is an in-memory
+ * mechanical fake and no production adapter, patient traffic, U04 consumer, or
+ * external network is used.</p>
  */
 class U03NonProductionRuntimeE2ETest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-17T00:00:00Z"), ZoneOffset.UTC);
@@ -54,58 +57,29 @@ class U03NonProductionRuntimeE2ETest {
             }
         };
 
-        U03AcceptedEvidenceAwareCandidateProvider c02 =
-                (command, capabilityBinding, releaseBinding, acceptedEvidence) ->
-                        U03RiskAssessmentCandidate.valid(
-                                command.clinicalStateVersion,
-                                acceptedEvidence.getEvidenceRefs(),
-                                0.8d,
-                                "SYNTHETIC_UNCERTAINTY",
-                                Collections.singletonList("SYNTHETIC_LIMITATION"),
-                                acceptedEvidence.getSourceRefs(),
-                                acceptedEvidence.getProvenanceRefs(),
-                                capabilityBinding.getBindingId(),
-                                capabilityBinding.getCapabilityVersion(),
-                                releaseBinding.getRuleReleaseId(),
-                                releaseBinding.getKnowledgeReleaseId());
+        U03GateCClinicalInputPort clinicalInputPort = (command, acceptedEvidence) ->
+                U03GateCClinicalInput.builder()
+                        .suspectedSepsis("TRUE")
+                        .dyspnoeaContext("FALSE")
+                        .measurement("respiratory_rate_bpm", U03GateCClinicalInput.Measurement.present(21))
+                        .measurement("systolic_bp_mmHg", U03GateCClinicalInput.Measurement.present(120))
+                        .measurement("usual_systolic_bp_mmHg", U03GateCClinicalInput.Measurement.present(120))
+                        .measurement("heart_rate_bpm", U03GateCClinicalInput.Measurement.present(80))
+                        .build();
 
+        U03AcceptedEvidenceAwareCandidateProvider c02 = new U03GateCFrozenRuleEvaluator(clinicalInputPort);
         U03GovernedCandidateGateway gateway = new U03GovernedCandidateGateway(
                 guard, new U03ReleaseRegistry(), c02, true);
         U03GovernedCandidateGateway.GovernedResult governed = gateway.assess(context);
         assertFalse(governed.getReleaseBinding().isActive());
+        assertNotNull(governed.getCandidate().getGateCEvaluation());
+        assertEquals(15, governed.getCandidate().getGateCEvaluation().getRuleResults().size());
 
-        U03NonProductionDecisionPort d09 = new U03NonProductionDecisionPort() {
-            @Override
-            public U03DecisionOutcome decide(
-                    U03NonProductionExecutionContext executionContext,
-                    U03RiskAssessmentCandidate acceptedCandidate,
-                    U03ResolvedNonProductionReleaseSet resolvedReleaseSet) {
-                assertEquals(
-                        U03ExplicitNonProductionReleaseRefs.GATE_C_COVERAGE_CONTRACT_REF,
-                        resolvedReleaseSet.getRefs().getCoverageContractRef());
-                assertEquals(
-                        U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_RELEASE_REF,
-                        resolvedReleaseSet.getRefs().getPolicyReleaseRef());
-                assertEquals(
-                        U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_PAIR_REF,
-                        resolvedReleaseSet.getRefs().getPolicyPairRef());
-                return new U03DecisionOutcome(
-                        "decision-e2e-1",
-                        U03RiskAssessmentCandidate.VALID,
-                        "CAUTION",
-                        "SYNTHETIC_FROZEN_D09_DECISION",
-                        acceptedCandidate.getEvidenceRefs());
-            }
-
-            @Override
-            public U03DecisionOutcome decide(
-                    U03ExecutionCommand command,
-                    U03RiskAssessmentCandidate candidate,
-                    U03ReleaseBinding releaseBinding) {
-                throw new AssertionError("historical D09 path must not run in CD-07 E2E");
-            }
-        };
+        U03NonProductionDecisionPort d09 = new U03GateCFrozenDecisionPort();
         U03DecisionOutcome decision = new U03DecisionService(d09).decide(context, governed);
+        assertEquals(U03RiskAssessmentCandidate.VALID, decision.getStatus());
+        assertEquals("CAUTION", decision.getOutcomeCode());
+        assertEquals("MODERATE_HIGH_RULE_SIGNAL_PRESENT", decision.getReasonCode());
 
         U03StateProposal proposal = new U03StateProposalFactory()
                 .createNonProductionValid(context, decision, governed);
@@ -178,7 +152,18 @@ class U03NonProductionRuntimeE2ETest {
         U03AcceptedEvidenceBinding evidence = new U03AcceptedEvidenceBinding(
                 "acceptance-e2e-1",
                 7,
-                Collections.singletonList("synthetic-evidence-e2e-1"),
+                Arrays.asList(
+                        "EV-RF-RESP-001",
+                        "EV-MNM-NEURO-001",
+                        "EV-MNM-NEURO-002",
+                        "EV-MNM-CARD-001",
+                        "EV-RF-ALLERGY-001",
+                        "EV-RF-APPEAR-001",
+                        "EV-RF-NEURO-001",
+                        "EV-VS-SEPSIS-001",
+                        "EV-VS-SEPSIS-002",
+                        "EV-VS-SEPSIS-003",
+                        "EV-RF-SEPSIS-001"),
                 Collections.singletonList("synthetic-source-e2e-1"),
                 Collections.singletonList("synthetic-provenance-e2e-1"));
         return new U03NonProductionExecutionContext(

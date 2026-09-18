@@ -11,6 +11,15 @@ import java.util.Set;
 public final class U03DecisionService {
     private static final Set<String> VALID_OUTCOMES = new HashSet<String>(Arrays.asList(
             "NO_HIGH_RISK_SIGNAL", "CAUTION", "HIGH_RISK"));
+    private static final Set<String> GOVERNED_FAILURE_REASONS = new HashSet<String>(Arrays.asList(
+            "RELEASE_MISMATCH",
+            "STALE_INPUT",
+            "INVALID_INPUT",
+            "DEPENDENCY_FAILURE",
+            "OVERALL_POLICY_SCOPE_MISMATCH",
+            "OVERALL_POLICY_SCOPE_NOT_ESTABLISHED",
+            "INSUFFICIENT_INFORMATION",
+            "UNRESOLVABLE_CONFLICT"));
 
     private final U03DecisionPort validDecisionPort;
     private final U03EvidenceAcceptanceService evidenceAcceptanceService;
@@ -67,7 +76,7 @@ public final class U03DecisionService {
                 context,
                 accepted,
                 resolved);
-        U03DecisionOutcome validated = validateValidDecision(accepted, decision);
+        U03DecisionOutcome validated = validateGovernedDecision(accepted, decision);
         if (!accepted.getEvidenceRefs().equals(validated.getEvidenceRefs())) {
             throw new IllegalStateException("D09 decision did not preserve accepted C02 evidence refs");
         }
@@ -83,6 +92,25 @@ public final class U03DecisionService {
                 null,
                 candidate.getFailureReasonCode(),
                 candidate.getEvidenceRefs());
+    }
+
+    private static U03DecisionOutcome validateGovernedDecision(
+            U03RiskAssessmentCandidate candidate,
+            U03DecisionOutcome decision) {
+        if (decision == null) throw new IllegalStateException("D09 returned null decision");
+        if (U03RiskAssessmentCandidate.VALID.equals(decision.getStatus())) {
+            return validateValidDecision(candidate, decision);
+        }
+        if (!U03RiskAssessmentCandidate.FAILED.equals(decision.getStatus())) {
+            throw new IllegalStateException("D09 returned unsupported status: " + decision.getStatus());
+        }
+        if (decision.getOutcomeCode() != null) {
+            throw new IllegalStateException("D09 FAILED outcome must not carry a normal disposition");
+        }
+        if (!GOVERNED_FAILURE_REASONS.contains(decision.getReasonCode())) {
+            throw new IllegalStateException("D09 returned unsupported failure reason: " + decision.getReasonCode());
+        }
+        return decision;
     }
 
     private static U03DecisionOutcome validateValidDecision(
