@@ -400,12 +400,13 @@ class U03Cd08FrozenClinicalValidationTest {
                         Integer.valueOf(commitFixture.repository.commitCalls()));
             }
         } else {
-            U03OutboundHandoff failure = new U03OutboundProducer().produce(
-                    execution.context, execution.governed, execution.decision, null, null);
+            // Frozen D09 FAILED is itself the terminal expected governance boundary.
+            // Do not invent a downstream S14 handoff for a case whose governed
+            // decision explicitly failed closed.
             execution.observed.put("boundary", "D09_FAILED_NO_COMMIT");
-            execution.observed.put("outbound_execution_status", failure.getExecutionStatus());
-            execution.observed.put("outbound_disposition", failure.getDispositionCode());
             execution.observed.put("commit_status", null);
+            execution.observed.put("outbound_execution_status", null);
+            execution.observed.put("outbound_disposition", null);
         }
         return execution;
     }
