@@ -1,177 +1,131 @@
 # U03 Clinical Content Governance Status
 
-> 角色：U03 clinical content / gate 状态治理索引。  
-> 本文件只声明文档成熟度与权威边界，不包含临床规则、阈值或医学决策。  
-> 当前状态已同步至 Gate C PASS 与 PR #89 完成合并后的治理事实；不因此授权 CD-07、U04、runtime 或 production。
+> Current U03 clinical-content and gate status index.
+> Authoritative closure record: `U03_Clinical_Dependency_Closure_Review_v0.1.md`.
+> This index does not authorize U04, production, release activation, or real-patient traffic.
 
-## 1. 总体原则
-
-`docs/current` 中的结构/治理资料可作为当前项目参考，但 Draft / Review Material 不会因此自动升级为生产 Clinical Truth。
+## 1. Current governed content set
 
 ```text
-STRUCTURAL / GOVERNANCE AUTHORITY
-!=
-CLINICAL CONTENT APPROVAL
-!=
-RUNTIME AUTHORIZATION
-!=
-PRODUCTION AUTHORIZATION
+A/B source-locked semantics
+= FROZEN / Gate A PASS
+
+E
+= KR-U03-SOURCE-001@0.1.0-candidate
+= CANDIDATE_FROZEN / REVIEWED / RESOLVABLE / NOT_PUBLISHED
+
+C
+= RR-U03-RISK-001@0.2.1-candidate
+= CANDIDATE_FROZEN / CD-03 APPROVED_FOR_GATE_B
+
+Coverage
+= U03_D09_COVERAGE_V0_2_1_CANDIDATE
+= CANDIDATE_FROZEN
+
+D
+= PR-U03-D09-001@0.2.1-candidate
+= CANDIDATE_FROZEN / CD-05 APPROVED_FOR_GATE_B
+
+Policy Pair
+= PF-U03-C-POLICY-001
 ```
 
-## 2. 当前 Governed Content Set
+## 2. Clinical dependency stages
 
 ```text
-A/B source-locked semantics = FROZEN / Gate A PASS
-
-E = KR-U03-SOURCE-001@0.1.0-candidate
-  / CANDIDATE_FROZEN / RESOLVABLE / REVIEWED / NOT_PUBLISHED
-
-C = RR-U03-RISK-001@0.2.1-candidate
-  / CANDIDATE_FROZEN / CD-03_APPROVED_FOR_GATE_B
-
-Coverage = U03_D09_COVERAGE_V0_2_1_CANDIDATE
-  / CANDIDATE_FROZEN / RESOLVABLE
-
-D = PR-U03-D09-001@0.2.1-candidate
-  / CANDIDATE_FROZEN / CD-05_APPROVED_FOR_GATE_B
-
-C/D/E Cross-Consistency v0.2.1 = PASS
-BF-CDE-01 = CLOSED
+CD-01 = CLOSED_FOR_CURRENT_SLICE
+CD-02 = CLOSED_FOR_CURRENT_SLICE
+CD-03 = CLOSED_FOR_CURRENT_GATE_B_SET
+CD-04 = CLOSED_FOR_CURRENT_GATE_B_SET
+CD-05 = CLOSED_FOR_CURRENT_GATE_B_SET
+CD-06 = CLOSED_FOR_CURRENT_GATE_C_PACKAGE
+CD-07 = COMPLETE / VERIFIED / MERGED / PMV_PASS
+CD-07R = COMPLETE / VERIFIED / MERGED / PMV_PASS
+CD-08 = PASS / COMPLETE_ON_STACKED_AGGREGATE
 ```
 
-Current binding chain:
-
-```text
-KR-U03-SOURCE-001@0.1.0-candidate
-→ RR-U03-RISK-001@0.2.1-candidate
-→ U03_D09_COVERAGE_V0_2_1_CANDIDATE
-→ PR-U03-D09-001@0.2.1-candidate
-```
-
-历史 `0.2.0` C/D/Coverage candidates 继续冻结并保持 immutable，不属于当前 Gate B set。
-
-## 3. 当前 Gate 状态
+## 3. Gates
 
 ```text
 Gate A = PASS
 Gate B = PASS / GOVERNED_CONTENT_READY
 Gate C = PASS
+```
 
-CD-03 = APPROVED_FOR_GATE_B
-CD-04 = INITIAL_RELEASE_GOVERNANCE_READY
-CD-05 = APPROVED_FOR_GATE_B
-CD-06 = COMPLETE_FOR_CURRENT_GATE_C_PACKAGE
+Gate-C frozen evidence:
 
-F Clinical Eval Content = APPROVED_FOR_EVALUATION
-Governed Evaluation Re-Execution = COMPLETED / PASS
-Governed Evaluation Evidence = FROZEN / VERIFIED
+```text
+run = 35077669669
+artifact = 10439131250
+Golden = 30/30 PASS
+Critical Safety = 19/19 PASS
+failed_non_case_checks = []
+```
 
+CD-08 final validation:
+
+```text
+run = 35311952424
+artifact = 10533449206
+Golden = 30/30 PASS
+Critical Safety = 19/19 PASS
+Total = 49/49 PASS
+```
+
+## 4. Closure state
+
+```text
+BF-CDE-01 = CLOSED
 BF-CD06-01 = CLOSED
 BF-CD06-02 = CLOSED
 BF-CD06-EXEC-01 = CLOSED
 BF-GATEC-EVIDENCE-01 = CLOSED
+BF-CD08-01 = CLOSED
+BF-CD08-02 = CLOSED
+BF-CD08-03 = CLOSED
+BF-CD08-04 = CLOSED
+
+Open blocking U03 clinical-dependency findings = 0
+
+U03 Clinical Dependency Closure Review = PASS
+U03 Clinical Dependency = CLOSED / STACKED_AGGREGATE_SCOPE
 ```
 
-Gate C 冻结证据：
+Reviewed aggregate:
 
-```text
-run_id = 35077669669
-executed_sha = 66a10209b9e98d49d49eae1f472d15110bddc4df
-artifact_id = 10439131250
-artifact_digest = sha256:c0649153d40610e685bc80940c25b75a2616698e439e913d6da5d0ebaf56e4f3
-Golden executable = 30 / 30 PASS
-Safety executable = 19 / 19 PASS
-excluded = GC-026, SS-012 / UNPRODUCIBLE_UNDER_SHARED_SCOPE
-failed_golden = []
-failed_critical_safety = []
-failed_non_case_checks = []
-```
+`99566a5bfe9bee437316299d65101b1bc8a3e398`
 
-Gate C PASS 只说明当前 frozen evaluation package 已完成治理评估并通过。
+## 5. Important non-production boundary
 
-它不表示：
-
-```text
-current candidates = PUBLISHED
-current candidates = ACTIVE_FOR_RUNTIME
-current candidates = ACTIVE_FOR_PRODUCTION
-CD-07 Implementation Authorization
-U04 Implementation Authorization
-Runtime Active
-Production Authorized
-```
-
-## 4. Post-Gate-C 当前边界
-
-```text
-CD-07 Implementation Readiness = NOT_READY
-CD-07 Implementation Authorization = NOT_GRANTED
-Runtime Implementation Authorization = NOT_GRANTED
-
-U04 Implementation Readiness = NOT_READY
-U04 blocker = BLOCKED_BY_U03_RUNTIME_CLINICAL_DEPENDENCY
-U04 Implementation Authorization = NOT_GRANTED
-
-PR #89 = MERGED
-PR #89 Merge Commit = a185efcdc7c84107563a562b516f0d015bd10fd8
-PR #89 Merge Method = STANDARD_MERGE_COMMIT
-PR #89 PMV = PASS_WITH_POST_MERGE_DOC_SYNC_REQUIRED
-
-Clinical Runtime Production = NOT_ENABLED
-Production Authorization = BLOCKED
-```
-
-当前 governed set 继续保持：
+The current governed set remains:
 
 ```text
 candidate / frozen / evaluated
 != published
-!= active for runtime
 != active for production
 ```
 
-PR #89 完成合并只表示 evaluation-only Gate C harness 与其治理/证据记录进入当前基线；不改变任何 runtime / production 授权边界。
-
-## 5. 当前剩余 runtime clinical dependency
-
-Gate C 已闭环，PR #89 已完成合并，但 runtime clinical dependency 仍缺：
+U03 clinical dependency closure does **not** mean:
 
 ```text
-Runtime Implementation Authorization
-C02 runtime wiring
-D09 runtime wiring
-production Clinical State commit authorization/path
-candidate publication / activation
-real patient traffic / production data plane
-U04 / U14 routing
-external clinical API / business wiring
-U03 runtime E2E
-pediatrics / pregnancy-puerperium / China production localization
+U04 Implementation Authorization = GRANTED
+Clinical Runtime Production = ENABLED
+Production Authorization = GRANTED
+Real-patient traffic = AUTHORIZED
+Pediatric production pathway = AUTHORIZED
+Pregnancy/puerperium expansion = AUTHORIZED
+China production localization = COMPLETE
 ```
 
-因此 U03 clinical dependency 不能被描述为 runtime complete。
+## 6. Stacked topology
 
-## 6. 当前允许的下一步
+PR #97 has been merged and PMV-verified into the current stacked aggregate branch.
 
-必须分开开单：
+Parent PRs #96 / #95 / #93 remain open/draft. Their future merge/integration is separate merge governance and must not be conflated with clinical-content closure.
+
+## 7. Next permitted clinical-governance step
 
 ```text
-A. CD-07 Implementation Readiness / Authorization
-B. U03→U04 input contract + U04 readiness
-C. release publication / activation governance（未来如需）
+U04 Readiness Re-review = ALLOWED
+U04 Implementation Authorization = NOT_GRANTED
 ```
-
-任何一项都不能从 Gate C PASS 或 PR #89 MERGED 自动继承授权。
-
-## 7. 当前禁止事项
-
-- 不把 current frozen candidates 当作 PUBLISHED / ACTIVE_FOR_RUNTIME / ACTIVE_FOR_PRODUCTION；
-- 不把 Gate C PASS 或 PR #89 MERGED 解释为 CD-07 Implementation Authorization；
-- 不把 Gate C PASS 或 PR #89 MERGED 解释为 U04 Implementation Authorization；
-- 不开始未经授权的 C02/D09 runtime；
-- 不打开真实患者流量或 production Clinical State mutation；
-- 不打开中国生产本地化；
-- 不打开儿科或孕产 source pack；
-- 不把 NICE/NHS 直接视为中国最终生产规则；
-- 不宣称 Clinical Runtime Production Enabled；
-- 不宣称 Production Authorization。
