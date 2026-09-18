@@ -706,14 +706,16 @@ class U03Cd08FrozenClinicalValidationTest {
         addToken(tokens, observed.get("reason_code"));
         Object rawRules = observed.get("rule_results");
         if (rawRules instanceof Iterable<?>) {
+            boolean sawRule = false;
             for (Object raw : (Iterable<?>) rawRules) {
                 if (raw instanceof Map<?, ?>) {
+                    sawRule = true;
                     Map<String, Object> rr = map(raw);
                     addToken(tokens, rr.get("rule_id"));
                     addToken(tokens, rr.get("signal"));
                 }
             }
-            tokens.add("C_RULE_EVALUATION");
+            if (sawRule) tokens.add("C_RULE_EVALUATION");
         }
         for (String token : forbidden) {
             if (tokens.contains(token)) errors.add("must_not_output violated: " + token);
