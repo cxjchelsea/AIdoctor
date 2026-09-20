@@ -65,6 +65,9 @@ PR #101
 PR #100
 = MERGED / PMV_PASS
 
+PR #99
+= MERGED / PMV_PASS
+
 PR #100 merge commit
 = 9fc1083c8c51edc226af7b4af722d8d06cfdc3e9
 
@@ -72,10 +75,7 @@ U04 STACKED_AGGREGATE_COMPLETE
 = PASS
 
 U04 current non-production implementation slice
-= INTEGRATED_TO_PR99_BRANCH
-
-PR #99 Merge Authorization
-= NOT_GRANTED
+= INTEGRATED_TO_U03_CLOSURE_BRANCH
 
 U04 Live Routing Activation
 = NOT_AUTHORIZED
