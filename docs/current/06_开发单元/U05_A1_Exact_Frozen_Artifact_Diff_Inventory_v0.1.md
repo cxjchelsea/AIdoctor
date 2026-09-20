@@ -631,7 +631,8 @@ Owner = F3
 Host = U06 F3_CURRENT_VERSION_REVALIDATION
 Trigger = POST_F3_SAFETY_BARRIER_CURRENT_GATE_READY
 
-F3CurrentVersionRevalidationDecision:
+F3CurrentVersionRevalidationDecision
+(reuses unified DeterministicDecision contract; not D11 / not a new D01-D10 policy family):
 - F3_REVALIDATION_ID
 - source canonical F3 refs
 - target Clinical State Version
