@@ -3,7 +3,7 @@
 > Scope: U05 / D03 Clinical Readiness deterministic policy, owner boundary, decision semantics, precedence and fail-closed behavior.
 > Status: REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW_WITH_OWNER_DECISIONS_PENDING
 > Review basis: main@6e68fd9fb7cd19e87aadae30f3bb53a2264d1920
-> Dependency baseline: U05-RDP-05 prior FROZEN / PASS_FOR_READINESS at fd0e88e21aaab2a2ab67ffd1449dce8e946d7ed5; A1 affected scope is now AMENDED / INDEPENDENT_REVIEW_PENDING under AUTH-U05-A1-FROZEN-AMEND-001
+> Dependency baseline: U05-RDP-05 prior FROZEN / PASS_FOR_READINESS at fd0e88e21aaab2a2ab67ffd1449dce8e946d7ed5; A1 affected scope is now REFROZEN / V1 under AUTH-U05-A1-FROZEN-AMEND-001
 > 本文件只处理 BF-U05-RG-02；不授予 U05 implementation、owner execution、routing、production 或 real-patient authorization。
 
 ---
@@ -677,7 +677,7 @@ RDP-06：必须验证 precedence、conflict、replay/idempotency、RESTRICTED pr
     = BLOCKED_BY_OD_U05_READY_01_AND_A1_AMENDED_ARTIFACT_REVIEW_REFREEZE
 
     U05-RDP-02
-    = A1 AMENDED / INDEPENDENT_REVIEW_PENDING
+    = A1 REFROZEN / V1
 
     U05-RDP-02
     != FROZEN
@@ -707,7 +707,7 @@ This document does not authorize:
 
 > Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
 > Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
-> Status: **A1 AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **A1 REFROZEN / V1**
 
 ### 19.1 A1 bootstrap is pre-D03 routing/admission, not D03 status
 
@@ -814,7 +814,7 @@ A1 bootstrap runtime outcome
 
 ```text
 U05-RDP-02 A1 affected scope
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 BF-U05-RG-02
 = NOT_CLOSED
@@ -823,7 +823,7 @@ OD-U05-READY-01
 = SEPARATE / NOT_APPROVED
 
 Re-freeze
-= NOT_YET_GRANTED
+= GRANTED / COMPLETE
 
 U05 Implementation Authorization
 = NOT_GRANTED
