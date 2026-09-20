@@ -1,7 +1,7 @@
 # U04 Non-Production Implementation Verification Status
 
-> Current authoritative U04 non-production implementation/evidence status for the PR #100 aggregate.
-> Historical remediation-stage records remain preserved separately and must not be interpreted as the current gate state.
+> Current authoritative U04 non-production implementation/evidence status for the PR #99 aggregate.
+> Historical readiness/remediation-stage records remain preserved separately and must not be interpreted as the current gate state.
 
 ```text
 AUTH-U04-RUNTIME-IMPL-001
@@ -62,13 +62,19 @@ PR #102
 PR #101
 = MERGED / PMV_PASS
 
+PR #100
+= MERGED / PMV_PASS
+
+PR #100 merge commit
+= 9fc1083c8c51edc226af7b4af722d8d06cfdc3e9
+
 U04 STACKED_AGGREGATE_COMPLETE
 = PASS
 
 U04 current non-production implementation slice
-= COMPLETE_ON_PR100_BRANCH
+= INTEGRATED_TO_PR99_BRANCH
 
-Merge Authorization
+PR #99 Merge Authorization
 = NOT_GRANTED
 
 U04 Live Routing Activation
@@ -88,10 +94,15 @@ Production Authorization
 
 Real-patient traffic
 = NOT_AUTHORIZED
+
+Main Integration
+= NOT_COMPLETE
 ```
 
-The exact-head verification/evidence identity above is authoritative for the implemented U04 slice.
+The exact-head verification/evidence identity above remains authoritative for the implemented U04 slice.
 
-Historical records that captured BF-U04-IR-02 before final exact-head re-verification and independent evidence review remain valid as chronology only. They are superseded for current gate-state interpretation by this file together with the accepted PR #102 Merge Authorization Review / PMV and PR #101 PMV records.
+PR #100 PMV established tree-equivalent integration of the reviewed U04 aggregate into `prep/u04-readiness-rereview`, which is the head branch of PR #99. This status therefore tracks the aggregate at the PR #99 integration layer.
 
-No statement in this status file authorizes live routing, production activation, real-patient traffic, or merge.
+Historical readiness and remediation records remain valid as chronology only. They are superseded for current gate-state interpretation by this file together with the accepted implementation/evidence reviews and PR #102 / PR #101 / PR #100 PMV records.
+
+No statement in this status file authorizes live routing, production activation, real-patient traffic, PR #99 merge, or main integration.
