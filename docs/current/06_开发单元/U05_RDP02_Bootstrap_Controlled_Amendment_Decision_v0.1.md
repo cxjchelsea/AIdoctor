@@ -1,4 +1,4 @@
-# U05 RDP-02 Bootstrap Controlled Amendment Decision v0.2
+# U05 RDP-02 Bootstrap Controlled Amendment Decision v0.1 (Revised)
 
 > Scope: 解决 U05/D03 首轮 Clinical Readiness bootstrap underdetermination 的受控设计修订决策包。
 >
