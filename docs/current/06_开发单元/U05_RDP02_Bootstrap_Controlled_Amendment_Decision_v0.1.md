@@ -527,25 +527,40 @@ Applies to:
     B1
     B2
 
+One current U04 Gate creates one governed routing authorization:
+
+    routing_authorization_id
+    = business event identity
+      + current u04_gate_ref
+      + clinical_state_version
+      + bootstrap_architecture_binding_ref
+
 Sequence:
 
     current U04 Gate @ Vn
-    -> PRE_READINESS_B1/B2_*_ELIGIBLE @ Vn
+    -> one routing authorization @ Vn
+    -> first eligible consequence =
+       PRE_READINESS_B1/B2_*_ELIGIBLE
     -> Scheduler executes selected VS-A assessment
     -> deterministic decision/readiness-input @ Vn
     -> no Clinical State Version advance
-    -> routing projection re-evaluates against the same current Gate @ Vn
-       + current bootstrap completion/decision ref @ Vn
-    -> U05_ELIGIBLE @ Vn
+    -> same routing authorization remains valid only if Gate/version/restricted context remain current
+    -> Scheduler may continue to U05 under the same authorization
+       after verifying current bootstrap completion/decision ref @ Vn
+
+There is NOT a second independent U04 routing side effect for U05.
+
+Instead:
+
+    U04 authorization
+    -> sequenced Scheduler consequences:
+       pre-readiness
+       -> U05
 
 The same U04 Gate may remain current because VS-A does not mutate Clinical State.
 
-But:
-
-    same Gate
-    != same routing effect identity
-
-Eligibility projection and Unit execution must have distinct effect/idempotency identities.
+Unit execution and bootstrap decision artifacts still use their own effect/idempotency identities,
+but they are descendants of the same routing_authorization_id.
 
 ## 3.2.7 VS-B eligibility transition
 
@@ -557,11 +572,13 @@ Applies to:
 Initial sequence:
 
     current U04 Gate @ Vn
-    -> PRE_READINESS_A1/A2_*_ELIGIBLE @ Vn
+    -> routing authorization RA-n
+    -> first eligible consequence =
+       PRE_READINESS_A1/A2_*_ELIGIBLE @ Vn
     -> Scheduler executes selected F3 assessment
     -> canonical F3 commit
     -> Clinical State Version advances
-    -> every eligibility projected from Gate @ Vn becomes STALE/NON_ROUTABLE
+    -> RA-n and every eligibility under Gate @ Vn become STALE/NON_ROUTABLE
 
 Then:
 
@@ -569,8 +586,9 @@ Then:
     -> current Risk/Safety re-established
     -> current U04 Gate @ Vk
     -> canonical F3 effect is current-version revalidated/reference-bound @ Vk
+    -> new routing authorization RA-k is projected from the new current Gate
 
-Routing projection at Vk must check:
+RA-k must check:
 
     active BootstrapArchitectureBindingRef
     + current F3 bootstrap_effect_ref/revalidation_ref
@@ -578,15 +596,23 @@ Routing projection at Vk must check:
 
 If satisfied/current:
 
-    -> U05_ELIGIBLE @ Vk
+    first eligible consequence under RA-k
+    = U05_ELIGIBLE @ Vk
 
-It MUST NOT expose another:
+RA-k MUST NOT expose:
 
     PRE_READINESS_A1/A2_*_ELIGIBLE
 
 merely because a new U04 Gate exists.
 
 A new pre-readiness A1/A2 eligibility may be exposed only if a true F3 invalidation dependency requires a new canonical F3 effect.
+
+Therefore:
+
+    one U04 Gate/result
+    -> one routing authorization for that version/path identity
+
+and the post-commit Gate necessarily produces a new authorization because the prior one is stale.
 
 This is the routing-level counterpart of the VS-B no-cycle rule.
 
@@ -616,33 +642,47 @@ Scheduler must reload authoritative state and re-project eligibility.
 
 ## 3.2.9 Idempotency / replay
 
-A routing eligibility identity must bind at least:
+A routing authorization identity must bind at least:
 
     business event identity
     + current u04_gate_ref
     + clinical_state_version
     + bootstrap_architecture_binding_ref
-    + eligibility_type
-    + bootstrap_effect_ref/revalidation_ref when applicable
+    + restricted_context_ref when applicable
 
-Replay of the same projection:
+The authorization contains/derives the currently eligible consequence:
 
-    may attach/return the authoritative eligibility record
+    PRE_READINESS_*_ELIGIBLE
+    or
+    U05_ELIGIBLE
+
+based on the bound bootstrap completion/effect state.
+
+Replay of the same U04 projection:
+
+    may attach/return the authoritative routing_authorization_id
+    must not create a second routing authorization
     must not duplicate downstream Unit execution
 
-The actual pre-readiness execution uses a separate effect identity.
+Each actual Unit execution still uses a separate effect identity,
+linked to the routing_authorization_id.
 
-Therefore current U04-RDP-04 invariant remains conceptually preserved:
+Therefore the frozen U04-RDP-04 idempotency invariant is preserved in the proposed amendment:
 
     one committed U04 result
-    -> at most one routing effect for the same business event / selected path identity
+    -> at most one routing authorization for the same business event / selected path identity
 
-while allowing deterministic transition:
+VS-A:
 
-    PRE_READINESS_ELIGIBILITY
-    -> U05_ELIGIBILITY
+    the same authorization sequences:
+    PRE_READINESS consequence
+    -> U05 consequence
+    without a second U04 routing side effect
 
-after the selected bootstrap requirement is satisfied.
+VS-B:
+
+    state-version advance invalidates the old authorization;
+    a new current U04 Gate creates a new authorization for the new version.
 
 ## 3.2.10 Exact candidate impact summary
 
