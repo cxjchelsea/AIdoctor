@@ -138,7 +138,7 @@ U04 STACKED_AGGREGATE_COMPLETE
 = PASS
 
 U04 current non-production implementation slice
-= INTEGRATED_TO_CD08_VALIDATION_BRANCH
+= INTEGRATED_TO_CD07_READINESS_BRANCH
 ```
 
 ## 7. Current boundaries
@@ -192,17 +192,20 @@ PR #98
 PR #96
 = MERGED / PMV_PASS
 
-U03 closure + U04 aggregate
-= INTEGRATED_TO_CD08_VALIDATION_BRANCH
-
 PR #95
+= MERGED / PMV_PASS
+
+U03 closure + U04 aggregate
+= INTEGRATED_TO_CD07_READINESS_BRANCH
+
+PR #90
 = OPEN / DRAFT
 ```
 
 ## 9. Next step
 
 ```text
-PR #95 Merge Authorization Review
+PR #90 Merge Authorization Review
 ```
 
-That review may determine whether the current combined U03-closure + U04 non-production aggregate at the CD-08 validation layer is eligible for explicit repository-owner merge authorization. It does not itself authorize merge, production, live routing, or real-patient traffic.
+That review may determine whether the current combined U03-closure + U04 non-production aggregate at the CD-07 readiness layer is eligible for explicit repository-owner merge authorization. It does not itself authorize merge, production, live routing, or real-patient traffic.
