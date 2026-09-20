@@ -127,7 +127,7 @@ U04 STACKED_AGGREGATE_COMPLETE
 = PASS
 
 U04 current non-production implementation slice
-= INTEGRATED_TO_U03_CLINICAL_DEPENDENCY_COMPLETION_BRANCH
+= INTEGRATED_TO_MAIN
 ```
 
 This later U04 progress does not retroactively change the original U03 closure decision or its reviewed head.
@@ -172,9 +172,9 @@ PR #98 = MERGED / PMV_PASS
 PR #96 = MERGED / PMV_PASS
 PR #95 = MERGED / PMV_PASS
 PR #90 = MERGED / PMV_PASS
-U03 closure + U04 aggregate = INTEGRATED_TO_U03_CLINICAL_DEPENDENCY_COMPLETION_BRANCH
-PR #88 = OPEN / DRAFT
-Main Integration = NOT_COMPLETE
+PR #88 = MERGED / PMV_PASS
+U03 closure + U04 aggregate = INTEGRATED_TO_MAIN
+Main Integration = COMPLETE
 ```
 
 Parent/higher-level integration remains a separate merge-governance track and must not be conflated with U03 clinical-content closure.
@@ -182,7 +182,7 @@ Parent/higher-level integration remains a separate merge-governance track and mu
 ## 8. Next repository-governance step
 
 ```text
-PR #88 Merge Authorization Review
+Post-main downstream governance = SEPARATE_AUTHORIZATION_REQUIRED
 ```
 
-That review may determine merge-authorization eligibility for the current combined U03-closure + U04 non-production aggregate at the U03 clinical-dependency-completion layer. It does not authorize merge, production, live routing, or real-patient traffic.
+Repository main integration for the current U03-closure + U04 non-production aggregate is complete. Any downstream implementation, release activation, production, live routing, or real-patient use remains separately governed and requires its own authorization.
