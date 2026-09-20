@@ -72,7 +72,7 @@ Replay must not duplicate routing authorization or downstream execution.
 
 ## 6. Verdict
 
-U04-RDP-04 A1 affected scope = AMENDED / INDEPENDENT_REVIEW_PENDING
+U04-RDP-04 A1 affected scope = REFROZEN / V1
 Unaffected routing semantics = prior FROZEN baseline retained
 U04 implementation authorization = NOT_GRANTED
 
@@ -171,10 +171,10 @@ Existing U11 / U14 ownership remains unchanged.
 
 ```text
 U04-RDP-04 A1 amendment
-= APPLIED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 Re-freeze
-= NOT_YET_GRANTED
+= GRANTED / COMPLETE
 
 Runtime implementation
 = NOT_AUTHORIZED
