@@ -1744,7 +1744,7 @@ Production Authorization
 
 ```text
 SOP Phase 8 — Contract & Data Design
-= A1 AMENDED / INDEPENDENT_REVIEW_PENDING
+= A1 REFROZEN / V1
 Unaffected V1 contract semantics remain the baseline
 ```
 
@@ -1755,7 +1755,7 @@ Unaffected V1 contract semantics remain the baseline
 
 > Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
 > Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
-> Status: **A1 AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **A1 REFROZEN / V1**
 
 本节不新增 K11，不改变既有：
 
@@ -2018,10 +2018,10 @@ STALE_BEFORE_PUBLISH
 
 ```text
 Phase 8 A1 affected scope
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 Re-freeze
-= NOT_YET_GRANTED
+= GRANTED / COMPLETE
 
 Implementation / Merge / Production Authorization
 = NOT IMPLIED
