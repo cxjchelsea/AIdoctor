@@ -65,7 +65,7 @@ independent re-review
 | A1-DIFF-03 | Phase 5 / 业务闭环设计_V1.md | main@6e68fd9 | RESEQUENCE + CLARIFY | initial business loop becomes Safety→A1 F3→Safety barrier→Readiness | REQUIRED |
 | A1-DIFF-04 | Phase 6 / 可验证开发单元拆分_V1.md | main@6e68fd9 | MODE_SPLIT + RESEQUENCE | U06 gains PRE_READINESS mode; U04/U05 S_out/S_in change | REQUIRED |
 | A1-DIFF-05 | Phase 7 / 按开发单元的Capability设计.md | main@6e68fd9 | CLARIFY + ADD | C03 remains first consumed by U06 but gains pre-readiness usage timing | REQUIRED |
-| A1-DIFF-06 | Phase 8 / Contract与数据语义设计.md | main@6e68fd9 | ADD + CLARIFY | A1 eligibility, F3 effect identity, proposal, barrier/revalidation contracts | REQUIRED |
+| A1-DIFF-06 | Phase 8 / Contract与数据语义设计.md | main@6e68fd9 | ADD + CLARIFY | A1 eligibility, F3 effect identity/proposal, F3-owned revalidation decision | REQUIRED |
 | A1-DIFF-07 | Phase 9 / Runtime与技术架构设计_V1.md | main@6e68fd9 | RESEQUENCE + ADD | Scheduler gains A1 pre-readiness path + Safety barrier | REQUIRED |
 | A1-DIFF-08 | U05_RDP05_Readiness_Input_Dependency_Applicability_Contract_v0.1.md | fd0e88e | REPLACE + NARROW | POST_SAFETY_INITIAL F3 applicability changes under A1 | REQUIRED |
 | A1-DIFF-09 | U05_RDP02_D03_Policy_Owner_Decision_Contract_v0.1.md | PR127@2d9c2f3 | REPLACE + CLARIFY | bootstrap sentinel no longer executable initial A1 path; pre-D03 admission changes | REQUIRED |
@@ -314,8 +314,9 @@ F2 facts
 → A1 pre-readiness F3 assessment
 → canonical F3 commit
 → POST_F3_SAFETY_REVALIDATION_BARRIER
-→ current Risk
-→ current G4 Safety Gate
+→ Risk decision valid for U04 evaluation basis
+→ current committed G4 Safety Gate
+→ F3 current-version revalidation
 → Clinical Readiness Resolver
 ```
 
@@ -413,6 +414,7 @@ Proposed：
 ```text
 U06 MODE-1 = PRE_READINESS_GAP_ASSESSMENT
 U06 MODE-2 = QUESTION_SELECTION_DELIVERY
+U06 MODE-3 = F3_CURRENT_VERSION_REVALIDATION
 ```
 
 MODE-1 admission：
@@ -458,11 +460,15 @@ ADD A1 internal continuation：
 ```text
 F3 commit
 → Clinical State changed
-→ U03 current-version Risk
-→ U04 current-version Gate
-→ F3 current-version revalidation
+→ U03 when Risk dependency requires reevaluation
+→ Risk decision valid for U04 evaluation basis
+→ U04 current committed Gate
+→ U06 F3_CURRENT_VERSION_REVALIDATION
+→ current F3 readiness input
 → U05
 ```
+
+Dependency validity, not literal version-number equality, determines whether Risk/Safety must re-run.
 
 Re-review：
 
@@ -521,11 +527,23 @@ U06 QUESTION_SELECTION_DELIVERY
 → delivery
 ```
 
-ADD：
+ADD V1 candidate lifetime rule：
 
 ```text
-pre-readiness C03 output cannot be silently reused by later Question mode
-when Clinical State Version / binding / policy context changed.
+pre-readiness C03 question candidates
+= support/trace-only
+= never reused by QUESTION_SELECTION_DELIVERY
+
+Question mode always performs fresh governed candidate evaluation/C03 invocation.
+```
+
+ADD revalidation mode：
+
+```text
+U06 F3_CURRENT_VERSION_REVALIDATION
+→ deterministic F3 Owner decision
+→ no C03 by default
+→ no Clinical State mutation
 ```
 
 Not changed：
@@ -606,12 +624,33 @@ Preserve：
 Capability Result != StateChangeProposal
 ```
 
-## Proposed ADD — current-version F3 revalidation/ref binding
+## Proposed ADD — F3 current-version revalidation decision
+
+```text
+Owner = F3
+Host = U06 F3_CURRENT_VERSION_REVALIDATION
+Trigger = POST_F3_SAFETY_BARRIER_CURRENT_GATE_READY
+
+F3CurrentVersionRevalidationDecision:
+- F3_REVALIDATION_ID
+- source canonical F3 refs
+- target Clinical State Version
+- current U04 Gate ref
+- before/current dependency fingerprints
+- semantic_binding_compatibility_ref
+- historical CapabilityBindingRef / Rule/Knowledge refs
+- outcome = REVALIDATED_CURRENT / REASSESSMENT_REQUIRED / FAILED
+- reason/policy/trace refs
+```
+
+No state mutation occurs for reference binding alone.
+
+## Proposed ADD — current-version F3 readiness input
 
 ```text
 current_version_revalidation_ref
 source_state_ref
-source_decision_ref
+source_decision_ref = revalidation decision ref
 bound_current_clinical_state_version
 bound_current_u04_gate_ref
 validity
@@ -680,9 +719,11 @@ Facts
 → G2/P01 F3 commit
 → reload authoritative Clinical State
 → POST_F3_SAFETY_REVALIDATION_BARRIER
-→ U03 current Risk
-→ U04 current Gate
-→ F3 current-version revalidation/ref binding
+→ U03 only when declared Risk dependencies require reevaluation
+→ U04 current Gate from valid Risk/Safety evaluation basis
+→ U06 F3_CURRENT_VERSION_REVALIDATION
+→ deterministic revalidation decision
+→ current F3 readiness input
 → new route projection
 → U05
 → D03
@@ -691,11 +732,15 @@ Facts
 ADD barrier exit conditions：
 
 ```text
-current Risk
-current U04 Gate
-current F3 readiness input
+Risk decision valid for U04 evaluation basis
+current committed U04 Gate
+no post-Gate declared dependency invalidation
+F3 revalidation = REVALIDATED_CURRENT
+current F3 readiness input for D03 target version
 current routing authorization
 ```
+
+Do not require literal Risk/Gate/F3 version equality when only downstream derived commits advanced the version.
 
 ADD no-cycle：
 
@@ -853,10 +898,13 @@ REPLACE executable initial-path interpretation：
 When BootstrapArchitectureBindingRef = A1
 and bootstrap F3 is required/not current:
 
-D03 admission = NOT_REACHED / NOT_ADMITTED
+U04 routing / U05 inbound admission
+→ U05 ordinary readiness evaluation is not eligible
+→ D03 is not invoked
+→ no D03 decision_id
+→ no D03 decision_status
 
-because U04 routing must first expose
-PRE_READINESS_A1_F3_C03_ELIGIBLE.
+because the governed path remains in A1 pre-readiness / Safety-barrier / F3-revalidation processing.
 ```
 
 After A1 completion：
@@ -936,8 +984,8 @@ CROSS-04
 Phase 7 C03 first consumer remains U06.
 
 CROSS-05
-Phase 8 canonical effect/idempotency contract
-matches Phase 9 replay/no-cycle behavior.
+Phase 8 canonical effect/revalidation/idempotency contracts
+match Phase 9 replay/no-cycle behavior.
 
 CROSS-06
 F3 commit advancing Clinical State Version
@@ -948,7 +996,10 @@ RDP-05 current-version input semantics
 must match Phase 8 revalidation contract.
 
 CROSS-08
-RDP-02 cannot execute D03 before A1 bootstrap admission is complete.
+A1 bootstrap incomplete
+→ U05/D03 not invoked
+→ no D03 object/status;
+RDP-02 must not invent admission-status vocabulary.
 
 CROSS-09
 A1 selection != OD-U05-READY-01 approval.
@@ -993,6 +1044,46 @@ Current status：
 ```text
 A1 Exact Frozen-Artifact Diff Inventory
 = PROPOSED / READY_FOR_INDEPENDENT_DESIGN_REVIEW
+
+Frozen artifacts modified
+= 0
+
+Amendment authorization
+= NOT_GRANTED
+```
+
+
+---
+
+# 14. Independent-review remediation mapping
+
+```text
+BF-U05-A1-IR-01
+→ A1-DIFF-03 / 04 / 07 refined:
+dependency-validity barrier;
+no recursive U03 rerun due U04 commit version advancement alone.
+
+BF-U05-A1-IR-02
+→ A1-DIFF-04 / 06 / 07 refined:
+F3-owned U06 F3_CURRENT_VERSION_REVALIDATION mode,
+deterministic decision contract,
+binding compatibility,
+idempotency/failure rules.
+
+BF-U05-A1-IR-03
+→ A1-DIFF-09 refined:
+A1 bootstrap incomplete means no U05/D03 invocation and no D03 object/status.
+
+RQ-U05-A1-IR-04
+→ A1-DIFF-05 refined:
+pre-readiness C03 question candidates are support/trace-only and never reused.
+```
+
+Current status：
+
+```text
+A1 Exact Frozen-Artifact Diff Inventory
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_REVIEW
 
 Frozen artifacts modified
 = 0
