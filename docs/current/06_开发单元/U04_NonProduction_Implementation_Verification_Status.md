@@ -68,9 +68,6 @@ U04 STACKED_AGGREGATE_COMPLETE
 U04 current non-production implementation slice
 = COMPLETE_ON_PR100_BRANCH
 
-PR #100 Merge Authorization Review
-= REVISE_REQUIRED / STATUS_SYNC_REMEDIATION_IN_PROGRESS
-
 Merge Authorization
 = NOT_GRANTED
 
