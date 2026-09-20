@@ -138,7 +138,7 @@ U04 STACKED_AGGREGATE_COMPLETE
 = PASS
 
 U04 current non-production implementation slice
-= INTEGRATED_TO_U03_CLOSURE_BRANCH
+= INTEGRATED_TO_BF0304_GOVERNANCE_BRANCH
 ```
 
 ## 7. Current boundaries
