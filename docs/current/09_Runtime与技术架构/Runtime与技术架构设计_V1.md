@@ -1025,6 +1025,7 @@ Facts
 → U03
 → U04 current Gate
 → routing projection
+→ PRE_READINESS_A1_F3_C03_ELIGIBLE
 → U06 PRE_READINESS_GAP_ASSESSMENT
 → validate C03 CapabilityBindingRef
 → C03
@@ -1039,6 +1040,7 @@ Facts
 → deterministic F3 revalidation decision
 → current F3 readiness input
 → routing projection
+→ U05_ELIGIBLE
 → U05
 → D03
 ```
