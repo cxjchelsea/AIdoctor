@@ -855,18 +855,22 @@ U03/U04
 → D09/F4 Risk commit
 → D02/G4 Safety Gate commit
 
+Non-A1 baseline / A1 bootstrap completed path:
+
 U05
 → D03 Readiness
 → commit
 
-U06
+U06 QUESTION_SELECTION_DELIVERY
 → validate C03 binding / question policy
-→ C03 question/gap
+→ fresh C03 question/gap evaluation
 → D04 stopping
 → Question SELECTED commit
 → durable delivery
 → DELIVERED_TO_USER + WAITING_USER commit
 → checkpoint with binding refs
+
+A1 bootstrap pre-readiness / revalidation path is defined in Section 17 and supersedes the direct U04→U05 assumption while bootstrap F3 is not current.
 
 U07
 → Business Resume validation
@@ -983,7 +987,7 @@ Trace 过去不足以重放新的治理上下文
 - [x] Rollback 不改写历史运行；
 - [x] Trace 可定位能力/知识/规则/Prompt/Model 版本；
 - [x] 未新增 K11；
-- [x] 未改变 Phase 1–8 已冻结业务语义。
+- [x] 未受 A1 影响的 Phase 1–8 frozen baseline 语义保持不变；A1 影响范围已按 AUTH-U05-A1-FROZEN-AMEND-001 受控修订并等待独立 re-review。
 
 最终状态：
 
