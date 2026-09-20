@@ -120,7 +120,8 @@ Legend:
 | Phase 6 U06 S_in / Action | YES | NO_EXPECTED | NO_EXPECTED | NO_EXPECTED |
 | Phase 7 C03 FIRST_CONSUMER_UNIT | NO_EXPECTED: still U06 | NO | NO | NO |
 | Phase 7 C03 capability usage semantics | YES: assessment before question delivery | NO | NO | NO |
-| Phase 8 readiness input / K09 contracts | YES | YES | YES | YES |
+| Phase 7 U02/C01 dependency semantics | NO | NO | YES: mode-aware dependency amendment | NO |
+| Phase 8 readiness input / decision / K09 contracts | YES | YES | YES: deterministic decision/readiness-input ref; no pre-D03 K09 state mutation | YES |
 | Phase 9 Unit Scheduler / transition graph | YES | YES | CONDITIONAL | YES |
 | Phase 9 dependency resolution / commit sequence | YES | YES | YES | YES |
 | U05-RDP-05 applicability/source/version contract | YES | YES | YES | YES |
@@ -662,56 +663,123 @@ B1 不允许输出：
 
 这些仍属于各自 Owner / D03。
 
-### State / commit boundary
+### Decision / persistence boundary
 
-Positive signal 必须成为 governed current-version derived assertion/readiness input。
+B1 adopts a version-safe non-state decision-ref pattern before D03.
 
 Required sequence:
 
-    deterministic F2 sufficiency decision
-    -> K09 StateChangeProposal
-    -> G2/P01 commit
-    -> new current Clinical State Version
-    -> reload authoritative state
-    -> U05 consumes committed F2_SUFFICIENCY
+    current committed Clinical State Version = Vn
+    + current committed U04 Safety Gate @ Vn
+    -> U02 SUFFICIENCY_ASSESSMENT_ONLY
+    -> deterministic F2 Sufficiency Decision @ Vn
+    -> durable governed decision/readiness-input record
+    -> U05 consumes F2_SUFFICIENCY readiness input @ Vn
+    -> D03
+
+The F2 Sufficiency Decision must conform to the Phase-8 Deterministic Decision semantics:
+
+    decision_id
+    decision_type = F2_MINIMUM_ANALYSIS_SUFFICIENCY
+    consultation_id
+    input_clinical_state_version = Vn
+    decision
+    reason_codes[]
+    basis_refs[]
+    policy_id / policy_version
+    rule_release_refs[]
+    knowledge_release_refs[] when applicable
+    input_refs[]
+    created_at
+    validity / staleness
+
+The normalized RDP-05 readiness input must bind:
+
+    source_domain = F2_SUFFICIENCY
+    source_owner = F2
+    business_signal = MINIMUM_ANALYSIS_CONDITION_SATISFIED
+    clinical_state_version = Vn
+    source_decision_ref = F2 Sufficiency Decision ref
+    source_state_ref = authoritative Clinical State / facts-framing ref @ Vn
+    evidence_refs[]
+    policy_or_rule_refs[]
+    validity = CURRENT
+
+Critical invariant:
+
+    Deterministic Decision != StateChangeProposal
+
+Therefore B1 pre-D03 sufficiency evaluation:
+
+    DOES NOT create K09 StateChangeProposal
+    DOES NOT call P01/G2 to mutate Clinical State
+    DOES NOT advance Clinical State Version
+    DOES NOT stale the current U04 Safety Gate merely by being evaluated
+
+Durability means:
+
+    decision/readiness-input artifact is persisted/auditable/replayable
+
+It does not mean:
+
+    new Clinical State truth
+    new Clinical State Version
 
 不得：
 
     keep only transient controller boolean
-    pass uncommitted signal directly into D03
+    pass an unbound/unaudited decision directly into D03
+    project F2_SUFFICIENCY into Clinical State before D03
 
 ### Current-version validity and invalidation
 
 B1 不使用“跨 U03/U04 版本兼容继承”作为默认机制。
 
-相反：
+Instead:
 
-    every ordinary initial/re-entry path reaching U05 after U04
-    must have a current-version F2_SUFFICIENCY assessment
+    current committed U04 Safety Gate @ Vn
+    + F2 Sufficiency Decision @ Vn
+    + F2_SUFFICIENCY readiness input @ Vn
+    -> may coexist without changing Clinical State Version
+    -> U05 may evaluate D03 against the same current version Vn
 
-After F2_SUFFICIENCY commit:
+This removes the prior loop:
 
-    pure downstream U05 decision may consume it
+    U04 @ Vn
+    -> sufficiency state commit
+    -> Vn+1
+    -> U04 stale
+    -> re-run U04
+    -> sufficiency commit again
 
-Any later change to:
+because there is no pre-D03 sufficiency state commit.
+
+Any later Clinical State Version change to Vn+1 makes the prior decision/input non-current unless explicitly revalidated under a frozen rule.
+
+At minimum, changes to:
 
     F1 framing
     F2 patient facts
     correction affecting facts/framing
+    any upstream state on which the sufficiency policy basis depends
 
-must invalidate:
+must mark the prior F2 Sufficiency Decision / readiness input:
 
-    F2_SUFFICIENCY
+    STALE
 
-and require the normal chain:
+and require:
 
-    U02 FACT_FORMATION
-    -> U03
-    -> U04
-    -> U02 SUFFICIENCY_ASSESSMENT_ONLY
+    normal upstream reevaluation as applicable
+    -> current U03
+    -> current U04
+    -> U02 SUFFICIENCY_ASSESSMENT_ONLY @ new current version
     -> U05
 
-U03/U04 commits happen before the sufficiency assessment, so B1 no longer depends on preserving an earlier U02 signal across those commits.
+No content-equality shortcut is allowed:
+
+    old decision @ Vn
+    + new Clinical State Version Vn+1
+    != CURRENT automatically
 
 ### Replay / idempotency
 
@@ -723,23 +791,28 @@ B1 assessment identity must bind at least:
     F2SufficiencyPolicyRef
     RuleReleaseRef
     assessment trigger/event identity
-    effect idempotency key
+    decision/readiness-input idempotency key
 
 Same replay:
 
-    must not create duplicate F2_SUFFICIENCY assertions
-    must not produce multiple commits for the same source version/policy
-    must attach/return the authoritative prior effect
+    must not create duplicate authoritative F2 Sufficiency Decision records
+    must not create duplicate F2_SUFFICIENCY readiness-input records
+    must attach/return the authoritative prior decision/input
 
-If authoritative Clinical State Version changes before commit:
+If authoritative Clinical State Version changes before decision publication:
 
-    stale conflict
-    -> no commit
-    -> scheduler must reload/re-evaluate
+    result is stale-before-publish
+    -> do not mark CURRENT
+    -> scheduler reloads/re-evaluates at the new authoritative version
+
+Because no Clinical State mutation occurs:
+
+    duplicate decision replay
+    != duplicate clinical effect
 
 ### Failure owner / route
 
-Policy binding missing, deterministic policy failure, commit failure, or stale conflict:
+Policy binding missing, deterministic policy failure, durable-decision persistence failure, or stale-before-publish conflict:
 
     != insufficient
     != no gap
@@ -759,6 +832,8 @@ No failure may fabricate:
 
     MINIMUM_ANALYSIS_CONDITION_SATISFIED
 
+No failure may mutate Clinical State merely to record the failure.
+
 ### Main amendment consequences
 
 B1 必改：
@@ -777,18 +852,26 @@ B1 必改：
     - initial path becomes U04 -> U02(sufficiency-only) -> U05
 
     Phase 7
+    - CONTROLLED AMENDMENT REQUIRED
+    - U02 dependency semantics become mode-aware:
+      FACT_FORMATION -> C01
+      SUFFICIENCY_ASSESSMENT_ONLY -> no Clinical AI Capability
+    - current unit-level row "U02 | C01" may remain only if explicitly documented as aggregate capability dependency;
+      otherwise the matrix/semantic chain must be amended to represent per-mode dependency
     - no C03 change expected
     - no C01 invocation in sufficiency-only mode
-    - capability matrix may require clarification that U02 has a deterministic non-Capability consequence
 
     Phase 8
     - add F2_SUFFICIENCY readiness input schema
-    - add deterministic sufficiency decision/proposal contract
-    - add K09/P01 field/source permission and idempotency contract
+    - add F2_MINIMUM_ANALYSIS_SUFFICIENCY deterministic decision contract
+    - explicitly preserve Deterministic Decision != StateChangeProposal
+    - no pre-D03 K09/P01 Clinical State mutation for B1
+    - add durable decision/readiness-input provenance, validity and idempotency contract
 
     Phase 9
     - Scheduler edge U04 -> U02(SUFFICIENCY_ASSESSMENT_ONLY) -> U05
     - distinguish U02 FACT_FORMATION from U02 SUFFICIENCY_ASSESSMENT_ONLY
+    - U02 sufficiency-only publishes a durable decision/input artifact, not Clinical State mutation
     - add replay/stale/reload behavior
 
     RDP-05
@@ -838,10 +921,12 @@ For Owner-selection comparison, B1 now has:
     trigger = F2_SUFFICIENCY_ASSESSMENT_REQUIRED
     Capability = NONE in V1
     policy = deterministic governed policy
-    state = committed governed derived assertion
-    idempotency = source-version + policy + trigger/effect identity
+    state mutation = NONE before D03
+    durable artifact = deterministic decision + normalized readiness-input ref
+    idempotency = source-version + U04 Gate ref + policy + trigger/decision identity
     failure owner = typed failure / U14 eligibility
     revalidation = recompute after current U04, not cross-version inheritance
+    version safety = current U04 Gate and F2_SUFFICIENCY remain bound to the same Clinical State Version
 
 
 ---
@@ -974,9 +1059,9 @@ B2 不允许复用 F3 的语义名称来规避 source-domain amendment。
 | Produces canonical F3 Gap | yes | yes | no | no |
 | New readiness source domain | no | no | yes: F2_SUFFICIENCY while F2_CLARIFICATION stays narrow | yes |
 | Phase 5 amendment | yes | yes | yes | yes |
-| Phase 9 amendment | yes | yes | yes/revalidation | yes |
+| Phase 9 amendment | yes | yes | yes: mode-aware scheduler + durable decision/input publication | yes |
 | Duplicate sufficiency-owner concern | low if canonical F3 only | low if canonical F3 only | must resolve F2 vs F3 boundary | must resolve new owner vs F3 boundary |
-| Current-version complexity | canonical commit before D03 | canonical commit before D03 | recompute after current U04, then commit before D03 | committed/decision binding before D03 |
+| Current-version complexity | canonical commit before D03 | canonical commit before D03 | evaluate after current U04 without Clinical State mutation; same-version Gate + decision/input | committed/decision binding before D03 |
 | New deterministic clinical rule pack | not necessarily; C03 governed capability | yes | yes for positive sufficiency semantics | yes |
 | Direct U05 Gap ownership | prohibited | prohibited | prohibited | prohibited |
 
@@ -1207,6 +1292,23 @@ Reason：
     BF-U05-BOOTSTRAP-TR-02
     = REMEDIATED / TARGETED_REVIEW_PENDING
 
+    BF-U05-BOOTSTRAP-TR-03
+    = REMEDIATED / THIRD_TARGETED_REVIEW_PENDING
+
+Reason：
+
+    B1 now uses a durable deterministic decision/readiness-input ref without pre-D03 Clinical State mutation,
+    so F2_SUFFICIENCY and the current U04 Safety Gate remain bound to the same Clinical State Version.
+
+    RQ-U05-BOOTSTRAP-TR-04
+    = REMEDIATED / THIRD_TARGETED_REVIEW_PENDING
+
+Reason：
+
+    Phase 7 impact is now explicit: U02 dependency semantics must become mode-aware under B1.
+    FACT_FORMATION requires C01; SUFFICIENCY_ASSESSMENT_ONLY invokes no Clinical AI Capability.
+    Whether the matrix row is represented as aggregate or split per mode must be frozen in the detailed amendment.
+
 Reason：
 
     B1 now defines production/revalidation as U02 SUFFICIENCY_ASSESSMENT_ONLY after current U04,
@@ -1225,7 +1327,7 @@ Reason：
     = OPEN
 
     Controlled Amendment Decision Package
-    = REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_REVIEW
+    = REVISED / READY_FOR_THIRD_TARGETED_INDEPENDENT_REVIEW
 
     Controlled Amendment Decision Package
     != OWNER_SELECTION_READY yet
@@ -1241,7 +1343,7 @@ Reason：
 
     BF-U05-RDP02-IR-02
     = REMEDIATED_WITH_REVISED_CONTROLLED_AMENDMENT_PACKAGE
-    = SECOND_TARGETED_REVIEW_PENDING
+    = THIRD_TARGETED_REVIEW_PENDING
 
     BF-U05-RG-02
     = NOT_CLOSED
