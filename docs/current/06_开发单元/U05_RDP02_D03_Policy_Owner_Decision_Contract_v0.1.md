@@ -145,7 +145,9 @@ design/readiness sentinel POLICY_EXPECTATION_GAP：
     LOW_RISK_READY
     FALLBACK_READY
 
-技术失败和规则缺口必须走 decision_status，而不是伪造第七个 Clinical Readiness。
+技术失败/输入冲突必须走 runtime decision_status，而不是伪造第七个 Clinical Readiness。
+
+规则缺口必须走 design/readiness sentinel，不得伪装成 runtime decision_status。
 
 ---
 
@@ -568,7 +570,7 @@ RDP-02 本身不决定后续 U08/U10/U11 是否允许具体动作；它只确保
 
 ---
 
-## 14. Suggested reason-code families
+## 14. Suggested reason / sentinel code families
 
 业务 DECIDED：
 
@@ -579,7 +581,7 @@ RDP-02 本身不决定后续 U08/U10/U11 是否允许具体动作；它只确保
     D03_MINIMUM_ANALYSIS_CONDITIONS_SATISFIED  [PROPOSED / OWNER_APPROVAL_REQUIRED]
     D03_NO_RELIABLE_DIRECTION
 
-非业务 decision：
+非业务 runtime decision：
 
     D03_STALE_READINESS_INPUT
     D03_REQUIRED_INPUT_FAILED
@@ -587,13 +589,16 @@ RDP-02 本身不决定后续 U08/U10/U11 是否允许具体动作；它只确保
     D03_INPUT_IDENTITY_MISMATCH
     D03_INPUT_VERSION_MISMATCH
     D03_MUTUALLY_EXCLUSIVE_INPUT_CONFLICT
+
+design/readiness sentinel：
+
     D03_INITIAL_READINESS_BOOTSTRAP_UNDERDETERMINED
 
-reason code 是治理/技术标识，不是临床诊断。
+sentinel code 不是 runtime D03 reason code，也不是临床诊断。
 
 ---
 
-## 15. Executable expectation matrix
+## 15. Policy expectation matrix
 
 | Case | Current inputs | Expected D03 status/result |
 |---|---|---|
@@ -608,7 +613,13 @@ reason code 是治理/技术标识，不是临床诊断。
 | D03-POL-009 | mutually exclusive same-owner signals | INPUT_CONFLICT / no readiness |
 | D03-POL-010 | RESTRICTED allowed + valid readiness inputs | same business result as policy, restricted context preserved |
 
-RDP-06 必须把这些场景纳入 durable verification。
+RDP-06 必须区分：
+
+    FROZEN_EXECUTABLE_EXPECTATION
+    PROPOSED_OWNER_EXPECTATION
+    DESIGN_SENTINEL_CASE
+
+只有已经 Owner-approved + frozen 的 expectation 才能作为实现验收的正式 expected business result。
 
 ---
 
@@ -622,7 +633,7 @@ RDP-03：只能对 decision_status = DECIDED 的 D03 result 创建 readiness Sta
 
 RDP-04：只能从 committed/current Clinical Readiness 暴露 downstream eligibility。
 
-RDP-06：必须验证 precedence、conflict、policy expectation gap、replay/idempotency、RESTRICTED preservation。
+RDP-06：必须验证 precedence、conflict、replay/idempotency、RESTRICTED preservation，并把 policy expectation gap 作为 design/readiness blocker evidence，而不是正常 runtime case。
 
 ---
 
