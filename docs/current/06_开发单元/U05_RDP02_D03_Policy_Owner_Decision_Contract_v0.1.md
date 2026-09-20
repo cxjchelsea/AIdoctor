@@ -1,7 +1,7 @@
 # U05 RDP-02 D03 Policy / Owner Decision Contract v0.1
 
 > Scope: U05 / D03 Clinical Readiness deterministic policy, owner boundary, decision semantics, precedence and fail-closed behavior.
-> Status: PROPOSED / READY_FOR_INDEPENDENT_REVIEW_WITH_POLICY_GAP
+> Status: REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW_WITH_OWNER_DECISIONS_PENDING
 > Review basis: main@6e68fd9fb7cd19e87aadae30f3bb53a2264d1920
 > Dependency: U05-RDP-05 = FROZEN / PASS_FOR_READINESS at fd0e88e21aaab2a2ab67ffd1449dce8e946d7ed5
 > 本文件只处理 BF-U05-RG-02；不授予 U05 implementation、owner execution、routing、production 或 real-patient authorization。
@@ -84,12 +84,25 @@ D03 使用 Phase 8 generic Deterministic Decision Contract，并增加 U05 所�
     created_at
     validity / staleness
 
-decision_status 冻结为：
+runtime decision_status proposal 仅允许：
 
     DECIDED
     INPUT_FAILURE
     INPUT_CONFLICT
-    POLICY_EXPECTATION_GAP
+
+POLICY_EXPECTATION_GAP 不属于可授权实现的正常 runtime decision_status。
+
+它只作为：
+
+    design/readiness verification sentinel
+
+用于表示“存在合法 admitted profile，但当前 frozen D03 policy 尚无唯一结果”。
+
+只要该 sentinel 仍可被合法输入触发：
+
+    D03 executable policy = INCOMPLETE
+    U05 Implementation Readiness = NOT_READY
+    Implementation Authorization = PROHIBITED
 
 只有：
 
@@ -97,12 +110,19 @@ decision_status 冻结为：
 
 才允许 clinical_readiness 为正式六值之一。
 
-其他 status：
+INPUT_FAILURE / INPUT_CONFLICT：
 
     clinical_readiness = absent
     no K09 readiness proposal
     no Clinical Readiness commit
     no ordinary downstream route
+
+design/readiness sentinel POLICY_EXPECTATION_GAP：
+
+    not a normal runtime decision object
+    no production/runtime authorization
+    no readiness commit
+    no ordinary route
 
 ---
 
@@ -129,32 +149,58 @@ decision_status 冻结为：
 
 ---
 
-## 5. Admission before policy evaluation
+## 5. Pre-D03 admission boundary and post-admission input validation
 
-D03 evaluation 前必须满足：
+U05-RDP-01 owns pre-D03 consumer admission.
 
-    U04 consumer admission = accepted
-    committed/current Safety Gate = ALLOW or permitted RESTRICTED
+Required sequence:
+
+    U04 committed/current outbound boundary
+    -> U05-RDP-01 consumer admission
+    -> admitted U05 input envelope
+    -> D03
+
+Pre-D03 rejection includes at least:
+
+    malformed or missing U04 handoff identity
+    stale/mismatched U04 Clinical State Version
+    uncommitted Safety Gate claim
+    Safety Gate = BLOCKED / UNAVAILABLE
+    RESTRICTED context not authorized/preserved
+    replay/idempotency admission conflict
+
+These cases produce:
+
+    typed RDP-01 admission failure
+    no D03 decision_id
+    no D03 decision_status
+    no readiness decision
+
+Only an admitted envelope may reach D03.
+
+After admission, D03 validates readiness inputs:
+
     current Clinical State Version = exact match
     RDP-05 applicability profile = valid
     all PRESENT inputs = current and identity-compatible
-    no required input = FAILED / UNAVAILABLE / STALE
+    no required readiness input = FAILED / UNAVAILABLE / STALE
 
-否则：
+Post-admission readiness-input failure may produce:
 
     decision_status = INPUT_FAILURE
-    no readiness decision
+    clinical_readiness = absent
 
-建议 reason family：
+Suggested D03 reason family:
 
     D03_STALE_READINESS_INPUT
     D03_REQUIRED_INPUT_FAILED
     D03_REQUIRED_INPUT_UNAVAILABLE
     D03_INPUT_IDENTITY_MISMATCH
     D03_INPUT_VERSION_MISMATCH
-    D03_SAFETY_GATE_NOT_ELIGIBLE
 
-最终 reason code 命名可在 RDP-03/RDP-06 一致化，但业务区别不得合并。
+D03_SAFETY_GATE_NOT_ELIGIBLE is removed from the D03 reason family unless a future frozen RDP-01 contract explicitly admits such a state into D03.
+
+Final reason-code naming may be aligned in RDP-03/RDP-06, but these business/governance distinctions must remain separate.
 
 ---
 
@@ -263,7 +309,7 @@ D03 不重新计算 question value。
 
 先处理 P0/P1 technical/governance conditions：
 
-    P0 admission/input failure
+    P0 post-admission readiness-input failure
     -> INPUT_FAILURE
 
     P1 mutually exclusive input conflict
@@ -322,9 +368,13 @@ RDP-05 已冻结：
     no higher-priority signal
     -> automatically READY
 
-### 9.1 Legally supportable READY rule after F3 is active
+### 9.1 Proposed V1 READY policy after F3 is active
 
-当前冻结语义能够支持的最小正向组合是：
+以下规则是 RDP-02 的 Owner-policy proposal，不是已被上游 frozen semantics 自动证明的事实。
+
+PROPOSED D03 READY POLICY:
+
+
 
     F1 = PRESENT / FRAMED_IN_SCOPE
     + F3 = PRESENT / NO_ACTIVE_ONLINE_BLOCKING_GAP
@@ -346,9 +396,15 @@ RDP-05 已冻结：
     + F3 owner has positively established no current high-value online blocking Gap
     + no higher-priority blocker exists
 
-因此 D03 可形成：
+如果且仅当 OD-U05-READY-01 被 Owner 明确 APPROVE，D03 才可按该组合形成：
 
     READY_FOR_CLINICAL_ANALYSIS
+
+在 Owner 批准前：
+
+    D03-POL-005
+    = PROPOSED EXPECTATION
+    != FROZEN EXECUTABLE EXPECTATION
 
 它不表示：
 
@@ -377,24 +433,34 @@ RDP-05 已冻结：
     NO_RELIABLE_DIRECTION
     NEEDS_OFFLINE_EVIDENCE
 
-因此必须：
+因此在设计/验证阶段必须记录：
 
-    decision_status = POLICY_EXPECTATION_GAP
-    clinical_readiness = absent
-    no commit
+    design_sentinel = POLICY_EXPECTATION_GAP
+    reason = D03_INITIAL_READINESS_BOOTSTRAP_UNDERDETERMINED
+
+并保持：
+
+    no runtime D03 authorization
+    no Clinical Readiness commit
     no ordinary route
 
-reason：
-
-    D03_INITIAL_READINESS_BOOTSTRAP_UNDERDETERMINED
-
-这不是患者业务结果，也不是 Capability failure。
+该 sentinel 不是患者业务结果，不是 Capability failure，也不是一个可用于“带缺口上线”的正常 runtime decision_status。
 
 ---
 
-## 10. Initial bootstrap Owner Decision Gap
+## 10. Initial bootstrap controlled amendment gap
 
 该 gap 的根因不是 D03 precedence，而是首轮 positive sufficiency evidence 没有合法 producer。
+
+Independent Design Review 已确认：
+
+    bootstrap gap
+    = CROSS-PHASE DESIGN INCONSISTENCY / AMENDMENT REQUIRED
+    != ordinary unresolved Owner parameter
+
+本问题由独立文件管理：
+
+    U05_RDP02_Bootstrap_Controlled_Amendment_Decision_v0.1.md
 
 当前冻结设计同时要求：
 
@@ -409,17 +475,24 @@ reason：
     -> D03 cannot prove CAN_ASK_MORE or READY
     -> ordinary U06 F3 path has no lawful D03 trigger
 
-RDP-02 不擅自修改 Phase 6/7。
+RDP-02 不擅自修改 Phase 4/6/7 或 frozen RDP-05。
 
-需要后续 Owner 决策在以下方向中冻结一种合法方案：
+Controlled Amendment package 当前列出候选 family：
 
-    OPTION A
-    define a lawful pre-D03 F3 information-sufficiency assessment boundary
-    while keeping U05 from invoking C03 directly
+    Candidate A
+    pre-D03 F3 sufficiency assessment
 
-    OPTION B
-    define an explicitly governed non-F3 positive minimum-analysis-condition input
-    with a named business owner and source contract
+    Candidate B
+    explicit non-F3 positive minimum-analysis input
+
+但：
+
+    Owner selection
+    != amendment authorization
+    != re-freeze
+    != implementation authorization
+
+任何选择都必须先明确受影响 frozen artifacts，并完成 amendment + independent re-review + re-freeze。
 
 禁止方案：
 
@@ -429,7 +502,7 @@ RDP-02 不擅自修改 Phase 6/7。
     null/no-gap -> READY
     model/LLM decides READY
 
-在 Owner 决策冻结前：
+在 Controlled Amendment Owner Decision、受影响上游 amendment、independent re-review 与 re-freeze 完成前：
 
     BF-U05-RG-02 cannot close
 
@@ -503,7 +576,7 @@ RDP-02 本身不决定后续 U08/U10/U11 是否允许具体动作；它只确保
     D03_BLOCKING_OFFLINE_EVIDENCE_REQUIRED
     D03_CLARIFICATION_REQUIRED
     D03_HIGH_VALUE_ONLINE_GAP_AVAILABLE
-    D03_MINIMUM_ANALYSIS_CONDITIONS_SATISFIED
+    D03_MINIMUM_ANALYSIS_CONDITIONS_SATISFIED  [PROPOSED / OWNER_APPROVAL_REQUIRED]
     D03_NO_RELIABLE_DIRECTION
 
 非业务 decision：
@@ -528,9 +601,9 @@ reason code 是治理/技术标识，不是临床诊断。
 | D03-POL-002 | qualified blocking offline signal | DECIDED / NEEDS_OFFLINE_EVIDENCE |
 | D03-POL-003 | lawful F1/F2 NEEDS_CLARIFICATION | DECIDED / NEEDS_CLARIFICATION |
 | D03-POL-004 | current F3 CAN_ASK_MORE, no higher blocker | DECIDED / CAN_ASK_MORE |
-| D03-POL-005 | F1 FRAMED_IN_SCOPE + current F3 NO_ACTIVE_ONLINE_BLOCKING_GAP + no higher blocker | DECIDED / READY_FOR_CLINICAL_ANALYSIS |
+| D03-POL-005 | F1 FRAMED_IN_SCOPE + current F3 NO_ACTIVE_ONLINE_BLOCKING_GAP + no higher blocker | PROPOSED: DECIDED / READY_FOR_CLINICAL_ANALYSIS; requires OD-U05-READY-01 APPROVE |
 | D03-POL-006 | F5 NO_RELIABLE_DIRECTION + current F3 NO_ACTIVE_ONLINE_BLOCKING_GAP + no higher path | DECIDED / NO_RELIABLE_DIRECTION |
-| D03-POL-007 | initial F1 FRAMED_IN_SCOPE + F3/F5/F6 NOT_YET_APPLICABLE | POLICY_EXPECTATION_GAP / no readiness |
+| D03-POL-007 | initial F1 FRAMED_IN_SCOPE + F3/F5/F6 NOT_YET_APPLICABLE | DESIGN SENTINEL: POLICY_EXPECTATION_GAP / no runtime D03 authorization / no readiness |
 | D03-POL-008 | stale required F3 | INPUT_FAILURE / no readiness |
 | D03-POL-009 | mutually exclusive same-owner signals | INPUT_CONFLICT / no readiness |
 | D03-POL-010 | RESTRICTED allowed + valid readiness inputs | same business result as policy, restricted context preserved |
@@ -555,37 +628,52 @@ RDP-06：必须验证 precedence、conflict、policy expectation gap、replay/id
 
 ## 17. BF-U05-RG-02 disposition
 
-已解决：
+已解决或整改完成：
 
     D03 owner boundary
-    deterministic decision envelope
-    formal readiness vocabulary
-    input failure / conflict separation
+    formal six-value readiness vocabulary
+    post-admission input failure / input conflict separation
+    pre-D03 admission ownership returned to RDP-01
     Phase-5 precedence
     qualified offline precedence
     clarification / online-gap mapping
-    post-F3 positive READY rule
     NO_RELIABLE_DIRECTION guard
     RESTRICTED preservation
-    fail-closed POLICY_EXPECTATION_GAP semantics
+    POLICY_EXPECTATION_GAP reclassified as design/readiness sentinel
 
-尚未解决：
+需要 Owner / controlled amendment 决策：
 
-    initial readiness bootstrap positive evidence producer
+    OD-U05-READY-01
+    = approve / revise / reject proposed post-F3 READY positive condition
+
+    U05_BOOTSTRAP_CROSS_PHASE_DESIGN_GAP
+    = Controlled Amendment Decision pending
 
 因此当前状态：
 
+    BF-U05-RDP02-IR-01
+    = REMEDIATED_AS_OWNER_DECISION_PENDING
+
+    BF-U05-RDP02-IR-02
+    = REMEDIATED_WITH_CONTROLLED_AMENDMENT_PACKAGE / OWNER_DECISION_PENDING
+
+    BF-U05-RDP02-IR-03
+    = REMEDIATED / RE_REVIEW_PENDING
+
+    RQ-U05-RDP02-IR-04
+    = REMEDIATED / RE_REVIEW_PENDING
+
     BF-U05-RG-02
-    = PARTIALLY_DESIGN_RESOLVED
-    = BLOCKED_BY_INITIAL_READINESS_BOOTSTRAP_OWNER_DECISION
+    = NOT_CLOSED
+    = BLOCKED_BY_READY_POLICY_OWNER_DECISION_AND_BOOTSTRAP_CONTROLLED_AMENDMENT
 
     U05-RDP-02
-    = PROPOSED / READY_FOR_INDEPENDENT_REVIEW_WITH_POLICY_GAP
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW_WITH_OWNER_DECISIONS_PENDING
 
     U05-RDP-02
     != FROZEN
 
-只有 bootstrap Owner Decision 被明确冻结并通过独立 review 后，BF-U05-RG-02 才能 CLOSED。
+BF-U05-RG-02 只有在 READY policy Owner Decision 与 bootstrap Controlled Amendment 全部完成、相关 frozen artifacts 重新 review/freeze、RDP-02 targeted re-review PASS 后才能 CLOSED。
 
 ---
 
