@@ -1,5 +1,14 @@
 # U04 Non-Production Implementation Verification Result v0.2
 
+> Historical remediation-stage record.
+>
+> This file preserves the state captured while BF-U04-IR-02 remediation had been implemented but before the final exact-head workflow and independent evidence-only review completed.
+>
+> **It is not the current authoritative U04 gate/status record.** Current status is maintained in:
+> `U04_NonProduction_Implementation_Verification_Status.md`
+>
+> Later accepted evidence closed BF-U04-IR-02 and established final exact-head verification / independent review PASS. The historical PENDING values in Section 6 below are intentionally preserved as chronology and must not be read as the present state.
+
 > Authorization:
 > AUTH-U04-RUNTIME-IMPL-001
 > = AUTHORIZED / NON_PRODUCTION_ONLY / FROZEN_RDP01_TO_RDP06_ONLY / NO_LIVE_DOWNSTREAM_ROUTING
@@ -94,7 +103,7 @@ The retained artifact must include and checksum:
 - evidence-harness JUnit XML;
 - raw structured `u04-case-evidence.json`.
 
-## 6. Current status
+## 6. Historical status at this remediation stage
 
 ```text
 BF-U04-IR-02 remediation implementation
@@ -115,3 +124,35 @@ Merge Authorization
 Production Authorization
 = BLOCKED
 ```
+
+## 7. Superseding current-state reference
+
+Subsequent accepted governance evidence established:
+
+```text
+final implementation head
+= 5d2e90fc088e159d4c809f8c36574cd0e2ed43fa
+
+workflow
+= 35318979611
+
+artifact
+= 10536207023
+
+BF-U04-IR-02
+= CLOSED
+
+Independent U04 Evidence-only Review
+= PASS
+
+Independent U04 Implementation / Evidence Review
+= PASS
+
+PR #102
+= MERGED / PMV_PASS
+
+PR #101
+= MERGED / PMV_PASS
+```
+
+These later facts are not backdated into the historical Section 6 state; they are referenced here only to prevent stale-status interpretation.
