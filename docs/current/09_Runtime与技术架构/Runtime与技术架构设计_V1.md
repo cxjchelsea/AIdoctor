@@ -1,6 +1,6 @@
 # AIdoctor Phase 9 — Runtime 与技术架构设计 V1
 
-> 状态：FROZEN / V1（已同步 Phase 7 / Phase 8 最新治理语义）  
+> 状态：A1 AMENDED / INDEPENDENT_REVIEW_PENDING（未受 A1 影响的 Runtime V1 语义继续保持 frozen baseline）  
 > 适用基线：`main` 当前真实代码 + Phase 1～8 当前权威设计  
 > 目标：在不改变既有业务语义、状态 Owner、Unit、C/P/D 与 K01–K10 契约边界的前提下，定义 V1 临床 Runtime 的执行、调度、等待、恢复、提交、失败、并发、版本绑定、知识/规则装载、回滚、外部副作用一致性与 Brownfield 迁移架构。  
 > 非目标：本文件不构成 Implementation Authorization；不冻结具体 Runtime 框架、消息队列、数据库、微服务拆分或部署厂商；不进入 Phase 10。
@@ -988,8 +988,222 @@ Trace 过去不足以重放新的治理上下文
 最终状态：
 
 ```text
-Phase 9 = FROZEN / V1
-Synchronized with current Phase 7 / Phase 8 authority
+Phase 9 A1 affected scope = AMENDED / INDEPENDENT_REVIEW_PENDING
+Unaffected Runtime V1 semantics = FROZEN BASELINE
 Implementation Authorization = NOT IMPLIED
 Merge Authorization = NOT IMPLIED
+```
+
+
+---
+
+# 17. A1 Controlled Amendment — Scheduler / Safety Barrier Runtime
+
+> Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
+> Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
+> Status: **A1 AMENDED / INDEPENDENT_REVIEW_PENDING**
+
+## 17.1 A1 ordinary runtime chain
+
+A1 replaces the initial ordinary：
+
+```text
+Facts
+→ U03
+→ U04
+→ U05
+```
+
+with：
+
+```text
+Facts
+→ U03
+→ U04 current Gate
+→ routing projection
+→ U06 PRE_READINESS_GAP_ASSESSMENT
+→ validate C03 CapabilityBindingRef
+→ C03
+→ U06/F3 Owner interpretation
+→ K09 StateChangeProposal
+→ G2/P01 canonical F3 commit
+→ reload authoritative Clinical State
+→ POST_F3_SAFETY_REVALIDATION_BARRIER
+→ U03 only when declared Risk dependencies require reevaluation
+→ U04 current Gate from valid Risk/Safety evaluation basis
+→ U06 F3_CURRENT_VERSION_REVALIDATION
+→ deterministic F3 revalidation decision
+→ current F3 readiness input
+→ routing projection
+→ U05
+→ D03
+```
+
+Scheduler 仍只从 committed authoritative state 路由。
+
+## 17.2 A1 routing authorization
+
+Current U04 Gate 只产生一个：
+
+```text
+routing_authorization_id
+```
+
+绑定：
+
+```text
+business_event_identity
+u04_gate_ref
+clinical_state_version
+BootstrapArchitectureBindingRef = A1
+restricted_context_ref when applicable
+```
+
+pre-readiness F3 commit 推进 Clinical State Version 后：
+
+```text
+old Gate / old routing_authorization_id
+= STALE / NON_ROUTABLE
+```
+
+Barrier 后新 Gate 产生新的 authorization。
+
+若相同 F3_CANONICAL_EFFECT_ID 已 current-version revalidated：
+
+```text
+new authorization
+→ U05 eligibility
+```
+
+不得再次触发同一 pre-readiness F3 effect。
+
+## 17.3 Safety barrier dependency-validity semantics
+
+Barrier 不是要求：
+
+```text
+Risk Decision version
+= Safety Gate commit version
+= final current Clinical State Version
+```
+
+Barrier 要求：
+
+```text
+Risk Decision 对 U04 evaluation basis 有效
++ U04 Gate 是当前 committed Gate
++ Gate 声明的 Risk/Safety dependencies 未被后续变化破坏
++ F3 current-version revalidation = REVALIDATED_CURRENT
++ current F3 readiness input 已形成
++ current routing authorization permits U05
+```
+
+```text
+version advancement alone
+!= dependency invalidation
+```
+
+U04 自身 downstream derived commit 不得仅因推进 version 就强迫 U03 无限重跑。
+
+## 17.4 F3 revalidation runtime consequence
+
+Trigger：
+
+```text
+POST_F3_SAFETY_BARRIER_CURRENT_GATE_READY
+```
+
+Scheduler invokes：
+
+```text
+U06 F3_CURRENT_VERSION_REVALIDATION
+```
+
+该 mode：
+
+```text
+Owner = F3
+C03 = NOT_INVOKED by default
+Clinical State mutation = NONE
+Question side effect = NONE
+```
+
+Outcome：
+
+```text
+REVALIDATED_CURRENT
+→ current F3 readiness input
+→ may continue U05
+
+REASSESSMENT_REQUIRED
+→ no U05/D03
+→ Scheduler starts fresh U06 PRE_READINESS_GAP_ASSESSMENT with current bindings
+
+FAILED
+→ no U05/D03
+→ governed retry/reload or U14 eligibility
+```
+
+Runtime 不得自己判断旧 F3 是否仍有业务效力。
+
+## 17.5 No-cycle
+
+```text
+same F3_CANONICAL_EFFECT_ID
++ only downstream Risk/Safety/routing/checkpoint changes
+→ no second canonical F3 commit
+```
+
+只有真实 F3 dependency change 才允许重新 assessment。
+
+## 17.6 Crash/replay checkpoint
+
+A1 durable checkpoint 至少保留：
+
+```text
+canonical event identity
+routing_authorization_id
+F3_CANONICAL_EFFECT_ID
+F3 commit result
+barrier stage
+Risk decision ref / evaluation basis refs
+current U04 Gate ref
+F3_REVALIDATION_ID / revalidation result ref
+CapabilityBindingRef
+KnowledgeReleaseRef
+RuleReleaseRef
+trace/audit refs
+```
+
+Crash recovery：
+
+```text
+reload authoritative Clinical State
+→ reconcile effect identity / binding context
+→ attach prior committed effect when already applied
+→ never duplicate canonical F3 effect
+```
+
+## 17.7 Question candidate lifetime
+
+MODE-1 pre-readiness 的 C03 question candidates：
+
+```text
+support/trace-only
+never reused by QUESTION_SELECTION_DELIVERY
+```
+
+后续 CAN_ASK_MORE 必须触发 MODE-2 的 fresh governed C03 invocation。
+
+## 17.8 Current amendment status
+
+```text
+Phase 9 A1 affected scope
+= AMENDED / INDEPENDENT_REVIEW_PENDING
+
+Re-freeze
+= NOT_YET_GRANTED
+
+Runtime Implementation Authorization
+= NOT_GRANTED
 ```
