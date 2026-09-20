@@ -135,7 +135,7 @@ Real-patient traffic
 = NOT_AUTHORIZED
 
 Main Integration
-= NOT_COMPLETE
+= COMPLETE
 ```
 
 The exact-head verification/evidence identity above remains authoritative for the implemented U04 slice.
