@@ -1,8 +1,8 @@
 # U03 Clinical Dependency Readiness
 
-> Current status index for U03 clinical dependency completion.
-> Authoritative closure record: `U03_Clinical_Dependency_Closure_Review_v0.1.md`.
-> This file does not authorize U04, production, release activation, or real-patient traffic.
+> Current status index for U03 clinical dependency completion and its downstream integration state.
+> Authoritative historical closure record: `U03_Clinical_Dependency_Closure_Review_v0.1.md`.
+> This file reports current status but does not itself grant any new U04, merge, production, release-activation, or real-patient authorization.
 
 ## 1. Current governed clinical package
 
@@ -46,7 +46,7 @@ Golden = 30 / 30 PASS
 Critical Safety = 19 / 19 PASS
 ```
 
-## 3. Runtime implementation state
+## 3. U03 runtime implementation state
 
 ```text
 AUTH-U03-CD07-RUNTIME-IMPL-001
@@ -88,7 +88,7 @@ PR #97 standard merge = 99566a5bfe9bee437316299d65101b1bc8a3e398
 PR #97 PMV = PASS / TREE_EQUIVALENCE
 ```
 
-## 5. Current closure state
+## 5. U03 closure state
 
 ```text
 Open blocking U03 clinical-dependency findings = 0
@@ -99,39 +99,104 @@ U03 Clinical Dependency Closure Review
 U03 Clinical Dependency
 = CLOSED / STACKED_AGGREGATE_SCOPE
 
-Reviewed aggregate
+Historical reviewed aggregate
 = 99566a5bfe9bee437316299d65101b1bc8a3e398
 ```
 
-Parent PRs #96 / #95 / #93 remain open/draft. Their merge into higher-level branches or main is separate merge governance and does not change the clinical closure verdict on the reviewed aggregate.
+The historical U03 closure decision remains authoritative for that closure event. Later U04 work does not retroactively alter the original closure review.
 
-## 6. Downstream boundary
+## 6. Current downstream U04 state
+
+The separately governed U04 non-production path has now completed its current authorized slice:
 
 ```text
-U04 Readiness Re-review = ALLOWED
-U04 Implementation Authorization = NOT_GRANTED
+U04-RDP-01..06
+= FROZEN / PASS_FOR_READINESS
 
-Clinical Runtime Production = NOT_ENABLED
-Production Authorization = BLOCKED
-Real-patient traffic = NOT_AUTHORIZED
+AUTH-U04-RUNTIME-IMPL-001
+= AUTHORIZED / CONSUMED
 
-Candidate releases
-= NOT_PUBLISHED / NOT_ACTIVE_FOR_PRODUCTION
+U04 implementation
+= IMPLEMENTED_FOR_AUTHORIZED_NONPRODUCTION_SLICE
+
+Independent U04 Implementation / Evidence Review
+= PASS
+
+PR #102
+= MERGED / PMV_PASS
+
+PR #101
+= MERGED / PMV_PASS
+
+PR #100
+= MERGED / PMV_PASS
+
+PR #99
+= MERGED / PMV_PASS
+
+U04 STACKED_AGGREGATE_COMPLETE
+= PASS
+
+U04 current non-production implementation slice
+= INTEGRATED_TO_U03_CLOSURE_BRANCH
 ```
 
-Still separately governed and not implied by U03 closure:
+## 7. Current boundaries
 
-- U04/U14 execution or routing;
+```text
+Candidate releases
+= NOT_PUBLISHED / NOT_ACTIVE_FOR_PRODUCTION
+
+U04 Live Routing Activation
+= NOT_AUTHORIZED
+
+U03->U04 production routing
+= NOT_AUTHORIZED
+
+U04->U05/U11/U14 live routing
+= NOT_AUTHORIZED
+
+Clinical Runtime Production
+= NOT_ENABLED
+
+Production Authorization
+= BLOCKED
+
+Real-patient traffic
+= NOT_AUTHORIZED
+
+Main Integration
+= NOT_COMPLETE
+```
+
+Still separately governed:
+
 - production Clinical State mutation;
 - release publication/activation;
 - real-patient traffic;
 - external production API/business wiring;
-- pediatric, pregnancy/puerperium, or China production expansion.
+- U05/U11/U14 live routing;
+- pediatric production pathway;
+- pregnancy/puerperium production expansion;
+- China production localization.
 
-## 7. Next step
+## 8. Current integration layer
 
 ```text
-U04 Readiness Re-review
+PR #99
+= MERGED / PMV_PASS
+
+U04 aggregate
+= INTEGRATED_TO_U03_CLOSURE_BRANCH
+
+PR #98
+= OPEN / DRAFT
 ```
 
-Readiness re-review may determine whether U04 is ready to enter its own authorization process. It does not itself grant U04 implementation authorization.
+## 9. Next step
+
+```text
+PR #98 targeted Merge Authorization Re-Review
+```
+
+That review may determine whether the current combined U03-closure + U04 non-production aggregate is eligible for explicit repository-owner merge authorization. It does not itself authorize merge, production, live routing, or real-patient traffic.
