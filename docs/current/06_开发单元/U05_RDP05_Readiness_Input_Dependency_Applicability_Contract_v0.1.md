@@ -114,15 +114,33 @@ RDP-05 不冻结 Java 类名、数据库表名或 REST schema。
 
 ### ABSENT_BY_DESIGN
 
-当前 evaluation context 合法地不要求该 input 存在。
+该 source domain 已经在当前 Consultation 路径中合法适用/激活，但当前 evaluation context 按冻结流程不要求它产出一个 readiness input artifact。
 
-例如：首次 Safety 后尚未进入 DDx，则 F5 input 可以 ABSENT_BY_DESIGN。
+它表示“已适用但本次按设计无需产出”，不能用于表示“这个业务域还没进入合法阶段”。
 
 ### NOT_YET_APPLICABLE
 
-该业务域将在后续合法阶段才成为当前 readiness 求值的输入来源。
+该 source domain / stage 在当前 Consultation 路径中尚未被合法激活，因此当前还不是本次 readiness 求值应要求的输入来源。
 
-例如：尚未执行 U10/F6 assessment 时，F6 可以 NOT_YET_APPLICABLE。
+例如：
+
+    首次 post-safety U05 求值、尚未进入 U06/C03/F3 路径
+    → F3 = NOT_YET_APPLICABLE
+
+    尚未进入 DDx
+    → F5 = NOT_YET_APPLICABLE
+
+    尚未进入 U10/F6 assessment
+    → F6 = NOT_YET_APPLICABLE
+
+两者必须互斥：
+
+    domain not legally activated yet
+    → NOT_YET_APPLICABLE
+
+    domain already applicable/activated
+    + this evaluation context lawfully requires no input artifact
+    → ABSENT_BY_DESIGN
 
 ### STALE
 
@@ -218,10 +236,10 @@ U05 不依赖固定 step number，但 RDP-05 冻结四种最小 evaluation conte
 
 | Evaluation context | F1/F2 | F3 | F5 | F6 |
 |---|---|---|---|---|
-| POST_SAFETY_INITIAL | PRESENT expected | ABSENT_BY_DESIGN or PRESENT if already available | NOT_YET_APPLICABLE | NOT_YET_APPLICABLE |
-| POST_USER_FACT_UPDATE | PRESENT expected | ABSENT_BY_DESIGN or PRESENT if current-version F3 input exists | NOT_YET_APPLICABLE or STALE until recalculated | NOT_YET_APPLICABLE or STALE |
+| POST_SAFETY_INITIAL | PRESENT expected | NOT_YET_APPLICABLE | NOT_YET_APPLICABLE | NOT_YET_APPLICABLE |
+| POST_USER_FACT_UPDATE | PRESENT expected | NOT_YET_APPLICABLE if F3 has never been lawfully activated; STALE if a prior-version F3 input existed and current-version reevaluation is pending; PRESENT only if current-version F3 input exists | NOT_YET_APPLICABLE or STALE until recalculated | NOT_YET_APPLICABLE or STALE |
 | POST_DDX_REEVALUATION | PRESENT/current | PRESENT expected after F3/U09 re-evaluation | PRESENT expected | NOT_YET_APPLICABLE or PRESENT |
-| POST_OFFLINE_ASSESSMENT | PRESENT/current | PRESENT or ABSENT_BY_DESIGN | PRESENT/current if applicable | PRESENT expected |
+| POST_OFFLINE_ASSESSMENT | PRESENT/current | PRESENT if current-version F3 input is required/available; ABSENT_BY_DESIGN only if F3 has already been lawfully activated but this context requires no F3 input artifact | PRESENT/current if applicable | PRESENT expected |
 
 矩阵中的 expected 表示：若该 source 在该 context 按 frozen flow 应当已有结果，但实际为 FAILED/UNAVAILABLE/STALE，则 U05 不得把缺失解释成 business negative。
 
@@ -234,7 +252,7 @@ U05 不依赖固定 step number，但 RDP-05 冻结四种最小 evaluation conte
 首轮 U05 不把 F3 input 设为强制前置条件。
 
     POST_SAFETY_INITIAL
-    → F3 may be ABSENT_BY_DESIGN
+    → F3 = NOT_YET_APPLICABLE
 
 因此不存在：
 
@@ -245,7 +263,7 @@ U05 也不得为了填补 F3 缺席而直接调用 C03。
 
 ### 7.2 Why this does not manufacture readiness
 
-F3 = ABSENT_BY_DESIGN 只表示当前 evaluation context 没有一个已形成、可参与 D03 的 F3 input。
+F3 = NOT_YET_APPLICABLE 只表示当前 Consultation 路径尚未合法激活 F3/C03 作为 readiness input producer。
 
 它不能推出：
 
@@ -260,14 +278,38 @@ F3 = ABSENT_BY_DESIGN 只表示当前 evaluation context 没有一个已形成�
 
 ### 7.3 How U06 remains legal
 
-U06 可由两类合法来源进入：
+必须区分两类合法澄清/提问路径，RDP-05 不得把它们合并成“所有问题都必须先经过 U05”。
 
-1. F1/F2 的 NEEDS_CLARIFICATION；
-2. 已存在 F3 readiness input 且 D03 = CAN_ASK_MORE。
+A. BL-01 entry clarification
 
-对于 1：不要求先存在 F3 Gap。
+    U01/F1 detects lawful entry clarification need
+    → U06
+    → minimum necessary clarification question
 
-对于 2：F3 input 必须已经由 F3 Owner 的合法路径形成，U05 只消费，不生成。
+该路径发生在普通 post-safety U05 evaluation 之前时，继续保留 Phase 6 已冻结的 U01→U06 边界；不强制先经过 U05，也不要求先存在 F3 Gap。
+
+B. Post-safety U05 readiness path
+
+    U05 evaluation is already lawfully triggered
+    + current F1/F2 clarification input exists
+    → D03 may resolve NEEDS_CLARIFICATION
+    → U06
+
+或：
+
+    current F3 readiness input exists
+    + D03 = CAN_ASK_MORE
+    → U06
+
+对于 CAN_ASK_MORE：F3 input 必须已经由 F3 Owner 的合法路径形成，U05 只消费，不生成。
+
+因此：
+
+    U01/F1 entry clarification
+    != mandatory U05 route
+
+    U05 NEEDS_CLARIFICATION
+    = valid only when U05 evaluation itself is already legitimately in progress
 
 RDP-05 不改变 Phase 7 中 C03 的 Capability 边界，也不把 C03 的 FIRST_CONSUMER_UNIT 改成 U05。
 
@@ -284,6 +326,18 @@ F3 input 可在后续合法路径形成或更新，例如：
 ---
 
 ## 8. Version and identity binding
+
+新事实形成后的 F3 失效语义必须显式保留：
+
+    previous F3 input exists at Clinical State Version N
+    + user/new fact creates Clinical State Version N+1
+    + current-version F3 reevaluation has not completed
+    → previous F3 input = STALE
+    → D03 ordinary resolution prohibited
+
+只有当 F3 从未在当前 Consultation 路径中被合法激活时，才可以是 NOT_YET_APPLICABLE。
+
+已经存在过的 prior-version F3 input 不得在新版本中无痕降成 ABSENT_BY_DESIGN / NOT_YET_APPLICABLE。
 
 参与同一次 D03 求值的 PRESENT input 必须满足：
 
@@ -368,11 +422,12 @@ U05 只接受业务 input 或其 applicability metadata。
 
 ## 12. Contract examples
 
-### Example A — initial clarification
+### Example A — post-safety clarification
 
     Safety Gate = ALLOW
-    F1 = PRESENT / NEEDS_CLARIFICATION
-    F3 = ABSENT_BY_DESIGN
+    U05 evaluation = lawfully triggered
+    F1/F2 = PRESENT / NEEDS_CLARIFICATION
+    F3 = NOT_YET_APPLICABLE
     F5 = NOT_YET_APPLICABLE
     F6 = NOT_YET_APPLICABLE
 
@@ -385,7 +440,7 @@ RDP-05 conclusion:
 
     Safety Gate = ALLOW
     F1 = PRESENT / FRAMED_IN_SCOPE
-    F3 = ABSENT_BY_DESIGN
+    F3 = NOT_YET_APPLICABLE
     F5 = NOT_YET_APPLICABLE
     F6 = NOT_YET_APPLICABLE
 
@@ -419,6 +474,17 @@ RDP-05 conclusion:
     no readiness commit
     typed stale-input failure
 
+### Example E — BL-01 direct entry clarification
+
+    U01/F1 = lawful entry clarification required
+    ordinary post-safety U05 evaluation = not yet entered
+
+RDP-05 conclusion:
+
+    existing U01 -> U06 clarification boundary remains valid
+    U05 is not inserted merely to relay the clarification
+    F3 is not required
+
 ---
 
 ## 13. Relationship to other U05 RDPs
@@ -445,20 +511,32 @@ Design conclusion:
 
     initial F3 hard dependency = REJECTED
     U05 direct C03 invocation = PROHIBITED
-    initial F3 ABSENT_BY_DESIGN = ALLOWED
-    absent F3 -> READY inference = PROHIBITED
-    F1/F2 clarification can route U06 without F3 Gap
+    initial pre-U06/C03 F3 = NOT_YET_APPLICABLE
+    ABSENT_BY_DESIGN and NOT_YET_APPLICABLE = MUTUALLY_EXCLUSIVE
+    prior-version F3 after new fact = STALE until reevaluated
+    absent/not-yet-applicable F3 -> READY inference = PROHIBITED
+    BL-01 U01/F1 entry clarification -> U06 remains valid without mandatory U05
+    post-safety U05 NEEDS_CLARIFICATION may consume lawful F1/F2 clarification input
     later F3 input is consumed only when already produced by its lawful owner path
 
 Therefore the design issue identified by BF-U05-RG-05 has a concrete resolution.
 
-Current status before independent review:
+Current status after independent-review remediation, before targeted re-review:
+
+    BF-U05-RDP05-IR-01
+    = REMEDIATED / RE_REVIEW_PENDING
+
+    BF-U05-RDP05-IR-02
+    = REMEDIATED / RE_REVIEW_PENDING
+
+    RQ-U05-RDP05-IR-03
+    = REMEDIATED / RE_REVIEW_PENDING
 
     BF-U05-RG-05
-    = DESIGN_RESOLVED / REVIEW_PENDING
+    = DESIGN_RESOLVED / TARGETED_REVIEW_PENDING
 
     U05-RDP-05
-    = PROPOSED / READY_FOR_INDEPENDENT_REVIEW
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
 
 Only after independent review may it become:
 
