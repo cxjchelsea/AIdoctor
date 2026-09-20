@@ -18,6 +18,14 @@
 
 历史文档中的“已完成”“当前架构”等描述不得覆盖当前代码与 `docs/current/` 的冻结结论。
 
+### 1.1 Phase-0 Frozen Baseline 与 Current Progress Overlay
+
+`00_现状与治理/Current_State_Baseline_V1.md` 是冻结在其原始 HEAD 上的 **Phase-0 历史基线**：它继续作为初始仓库考古、资产处置与当时架构判断的权威记录，但不负责描述后续 Foundation/U01-U04 的实施、验证与合并进度。
+
+`00_现状与治理/Foundation_U01-U04_Current_Status_Index_v0.1.md` 是 **CURRENT IMPLEMENTATION-PROGRESS OVERLAY**：只负责解释 Foundation→U04 的当前实施、验证与 main 集成状态，不覆盖 Baseline V1 在其原始范围内的架构、产品与资产处置语义。
+
+实时 `main` HEAD 始终以 Git 为准；状态索引中的固定 SHA 只能作为建立/审查该索引时的 evidence baseline，不作为永久 current-head 声明。
+
 ## 2. 当前 SOP 文档链
 
 ```text
@@ -38,7 +46,7 @@
 
 当前进度：
 
-- Foundation→U04 当前统一状态索引：见 `00_现状与治理/Foundation_U01-U04_Current_Status_Index_v0.1.md`；用于解释当前工程/验证/main 集成状态，并覆盖历史实施记录中的阶段性 `NOT_MERGED` 语义；
+- Foundation→U04 当前统一状态索引：见 `00_现状与治理/Foundation_U01-U04_Current_Status_Index_v0.1.md`；定位为 CURRENT IMPLEMENTATION-PROGRESS OVERLAY，用于解释 Foundation→U04 当前工程/验证/main 集成状态；对同一实施进度问题，它优先于更早历史记录中的阶段性 `NOT_MERGED` / `NOT_GRANTED`，但不覆盖 Phase-0 Baseline 的原始架构、产品与资产处置语义；
 
 - Current State Baseline：V1 已冻结，见 `00_现状与治理/Current_State_Baseline_V1.md`；
 - 重构决策：V1 已冻结为迁移原则与建议路径，见 `00_现状与治理/重构决策_V1.md`；
