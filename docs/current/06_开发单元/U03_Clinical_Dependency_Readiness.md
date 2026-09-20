@@ -166,7 +166,7 @@ Real-patient traffic
 = NOT_AUTHORIZED
 
 Main Integration
-= NOT_COMPLETE
+= COMPLETE
 ```
 
 Still separately governed:
