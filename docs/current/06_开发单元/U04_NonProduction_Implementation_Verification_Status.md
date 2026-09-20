@@ -1,6 +1,6 @@
 # U04 Non-Production Implementation Verification Status
 
-> Current authoritative U04 non-production implementation/evidence status at the PR #88 / U03 clinical-dependency-completion branch layer.
+> Current authoritative U04 non-production implementation/evidence status after repository integration into main.
 > Historical readiness/remediation-stage records remain preserved separately and must not be interpreted as the current gate state.
 
 ```text
@@ -80,6 +80,9 @@ PR #95
 PR #90
 = MERGED / PMV_PASS
 
+PR #88
+= MERGED / PMV_PASS
+
 PR #100 merge commit
 = 9fc1083c8c51edc226af7b4af722d8d06cfdc3e9
 
@@ -98,14 +101,20 @@ PR #95 merge commit
 PR #90 merge commit
 = ec8beee04ea5f5de36ece526b45f3ee15b564cc1
 
+PR #88 main merge commit
+= ff43ed44034a62bc1751734dad1bd10cef8740f8
+
 U04 STACKED_AGGREGATE_COMPLETE
 = PASS
 
 U04 current non-production implementation slice
-= INTEGRATED_TO_U03_CLINICAL_DEPENDENCY_COMPLETION_BRANCH
+= INTEGRATED_TO_MAIN
 
-PR #88 Merge Authorization
-= NOT_GRANTED
+AUTH-PR88-U03-U04-MAIN-INTEGRATION-MERGE-001
+= AUTHORIZED / CONSUMED
+
+Repository Main Integration
+= COMPLETE
 
 U04 Live Routing Activation
 = NOT_AUTHORIZED
@@ -126,13 +135,13 @@ Real-patient traffic
 = NOT_AUTHORIZED
 
 Main Integration
-= NOT_COMPLETE
+= COMPLETE
 ```
 
 The exact-head verification/evidence identity above remains authoritative for the implemented U04 slice.
 
-PR #100 PMV established tree-equivalent integration into `prep/u04-readiness-rereview`. PR #99 PMV then established tree-equivalent integration of that reviewed aggregate into `prep/u03-clinical-dependency-closure-review`, which is the head branch of PR #98. PR #98 PMV then established tree-equivalent integration into `prep/u03-cd08-bf0304-remediation-governance`, and PR #96 PMV established tree-equivalent integration into `impl/u03-cd08-postimplementation-clinical-validation`, and PR #95 PMV established tree-equivalent integration into `prep/u03-cd07-implementation-readiness`, and PR #90 PMV established tree-equivalent integration into `prep/u03-clinical-dependency-completion`, the head branch of PR #88. This file therefore tracks the current aggregate at the PR #88 / U03-clinical-dependency-completion integration layer.
+PR #100 PMV established tree-equivalent integration into `prep/u04-readiness-rereview`. PR #99 PMV then established tree-equivalent integration of that reviewed aggregate into `prep/u03-clinical-dependency-closure-review`, which is the head branch of PR #98. PR #98 PMV then established tree-equivalent integration into `prep/u03-cd08-bf0304-remediation-governance`, and PR #96 PMV established tree-equivalent integration into `impl/u03-cd08-postimplementation-clinical-validation`, and PR #95 PMV established tree-equivalent integration into `prep/u03-cd07-implementation-readiness`, and PR #90 PMV established tree-equivalent integration into `prep/u03-clinical-dependency-completion`, and PR #88 final main PMV established tree-equivalent repository integration into `main`. This file therefore tracks the current aggregate after main integration.
 
-Historical readiness and remediation records remain valid as chronology only. They are superseded for current gate-state interpretation by this file together with the accepted implementation/evidence reviews and PR #102 / PR #101 / PR #100 / PR #99 / PR #98 / PR #96 / PR #95 / PR #90 PMV records.
+Historical readiness and remediation records remain valid as chronology only. They are superseded for current gate-state interpretation by this file together with the accepted implementation/evidence reviews and PR #102 / PR #101 / PR #100 / PR #99 / PR #98 / PR #96 / PR #95 / PR #90 / PR #88 PMV records.
 
-No statement in this status file authorizes PR #88 merge, main integration, live routing, production activation, or real-patient traffic.
+Repository main integration is complete. No statement in this status file authorizes live routing, production activation, release activation, external production wiring, or real-patient traffic.
