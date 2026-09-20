@@ -236,7 +236,11 @@ U05 不依赖固定 step number，但 RDP-05 冻结四种最小 evaluation conte
 
 | Evaluation context | F1/F2 | F3 | F5 | F6 |
 |---|---|---|---|---|
-| POST_SAFETY_INITIAL | PRESENT expected | NOT_YET_APPLICABLE | NOT_YET_APPLICABLE | NOT_YET_APPLICABLE |
+| POST_SAFETY_INITIAL (non-A1 baseline) | PRESENT expected | NOT_YET_APPLICABLE | NOT_YET_APPLICABLE | NOT_YET_APPLICABLE |
+| A1_POST_SAFETY_BOOTSTRAP_REQUIRED | PRESENT/current | NOT_YET_APPLICABLE for U05 admission; U05 ordinary evaluation not eligible; route to A1 pre-readiness | NOT_YET_APPLICABLE | NOT_YET_APPLICABLE |
+| A1_PRE_READINESS_IN_PROGRESS | PRESENT/current | NOT_YET_APPLICABLE / producer pending; U05 admission prohibited | NOT_YET_APPLICABLE | NOT_YET_APPLICABLE |
+| A1_F3_COMMITTED_BARRIER_PENDING | PRESENT/current | canonical F3 source exists but readiness input is STALE / NOT_CURRENT_FOR_D03 until revalidation | NOT_YET_APPLICABLE or STALE | NOT_YET_APPLICABLE or STALE |
+| A1_POST_BARRIER_CURRENT | PRESENT/current | PRESENT / CURRENT after F3 owner current-version revalidation | NOT_YET_APPLICABLE or PRESENT as otherwise governed | NOT_YET_APPLICABLE or PRESENT as otherwise governed |
 | POST_USER_FACT_UPDATE | PRESENT expected | NOT_YET_APPLICABLE if F3 has never been lawfully activated; STALE if a prior-version F3 input existed and current-version reevaluation is pending; PRESENT only if current-version F3 input exists | NOT_YET_APPLICABLE or STALE until recalculated | NOT_YET_APPLICABLE or STALE |
 | POST_DDX_REEVALUATION | PRESENT/current | PRESENT expected after F3/U09 re-evaluation | PRESENT expected | NOT_YET_APPLICABLE or PRESENT |
 | POST_OFFLINE_ASSESSMENT | PRESENT/current | PRESENT if current-version F3 input is required/available; ABSENT_BY_DESIGN only if F3 has already been lawfully activated but this context requires no F3 input artifact | PRESENT/current if applicable | PRESENT expected |
@@ -247,19 +251,44 @@ U05 不依赖固定 step number，但 RDP-05 冻结四种最小 evaluation conte
 
 ## 7. Resolution of the initial F3 sequencing problem
 
-### 7.1 Decision
+### 7.1 Decision — A1 controlled amendment
 
-首轮 U05 不把 F3 input 设为强制前置条件。
+原 `POST_SAFETY_INITIAL → F3 = NOT_YET_APPLICABLE` 仍保留为 non-A1 baseline。
 
-    POST_SAFETY_INITIAL
-    → F3 = NOT_YET_APPLICABLE
+当：
 
-因此不存在：
+    BootstrapArchitectureBindingRef = A1
 
-    U05 must wait for U06/C03
-    before U05 can run
+且 bootstrap F3 尚未 current 时：
 
-U05 也不得为了填补 F3 缺席而直接调用 C03。
+    ordinary U05 readiness evaluation
+    = NOT ELIGIBLE
+
+    D03
+    = NOT INVOKED
+
+    no D03 decision_id
+    no D03 decision_status
+
+Routing instead exposes:
+
+    PRE_READINESS_A1_F3_C03_ELIGIBLE
+    → U06 PRE_READINESS_GAP_ASSESSMENT
+    → canonical F3
+    → Safety barrier
+    → F3 current-version revalidation
+    → only then ordinary U05 admission may proceed.
+
+因此，A1 下“U05 不等待 U06/C03”不再成立为普遍规则。
+
+精确限定为：
+
+    Outside an explicitly governed A1 bootstrap path,
+    U05 does not invent a dependency on U06/C03.
+
+    Under A1,
+    U05 still does NOT call C03 directly;
+    the pre-readiness dependency is satisfied through U04 routing + U06/F3 Owner path.
 
 ### 7.2 Why this does not manufacture readiness
 
@@ -507,11 +536,13 @@ RDP-06 must test all absence/stale/failure/version-mismatch cases.
 
 ## 14. BF-U05-RG-05 disposition
 
-Design conclusion:
+Design conclusion after A1 controlled amendment:
 
-    initial F3 hard dependency = REJECTED
+    non-A1 initial F3 hard dependency = REJECTED baseline retained
+    A1 bootstrap F3 before ordinary U05 = REQUIRED
     U05 direct C03 invocation = PROHIBITED
-    initial pre-U06/C03 F3 = NOT_YET_APPLICABLE
+    A1 C03 invocation occurs only through U06/F3 Owner path
+    A1 pre-barrier/current-version-unvalidated F3 = NOT_CURRENT_FOR_D03
     ABSENT_BY_DESIGN and NOT_YET_APPLICABLE = MUTUALLY_EXCLUSIVE
     prior-version F3 after new fact = STALE until reevaluated
     absent/not-yet-applicable F3 -> READY inference = PROHIBITED
@@ -538,10 +569,20 @@ Current status after independent-review remediation, before targeted re-review:
     U05-RDP-05
     = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
 
-Only after independent review may it become:
+Historical prior-baseline closure was:
 
     BF-U05-RG-05 = CLOSED
     U05-RDP-05 = FROZEN / PASS_FOR_READINESS
+
+After A1 controlled amendment:
+
+    BF-U05-RG-05
+    = PRIOR_BASELINE_CLOSED / A1_AMENDMENT_REVIEW_PENDING
+
+    U05-RDP-05 A1 affected scope
+    = AMENDED / INDEPENDENT_REVIEW_PENDING
+
+Re-freeze requires the A1 amended contract to pass independent review.
 
 ---
 
@@ -558,3 +599,113 @@ This document does not authorize:
     production Clinical Runtime
     release activation
     real-patient traffic
+
+---
+
+## 16. A1 Controlled Amendment — F3 Applicability / Version Binding
+
+> Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
+> Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
+> Status: **A1 AMENDED / INDEPENDENT_REVIEW_PENDING**
+
+### 16.1 A1 F3 producer path
+
+A1 F3 readiness input may only originate from：
+
+```text
+U06 PRE_READINESS_GAP_ASSESSMENT
+→ C03
+→ F3 Owner interpretation
+→ canonical F3 commit
+→ U06 F3_CURRENT_VERSION_REVALIDATION
+→ normalized readiness input
+```
+
+U05 itself still does not call C03 or manufacture F3 semantics.
+
+### 16.2 A1 current-version revalidation
+
+If canonical F3 source state was created at an older Clinical State Version, D03 may consume it only after an explicit F3-owned current-version revalidation.
+
+Revalidation must prove：
+
+```text
+F3 dependency fingerprint unchanged
++ historical semantic binding remains compatible
++ current U04 Gate is valid/routable
+```
+
+Result：
+
+```text
+REVALIDATED_CURRENT
+→ F3 readiness input applicability_status = PRESENT
+→ validity = CURRENT
+
+REASSESSMENT_REQUIRED
+→ no current F3 input
+→ no U05/D03
+→ fresh A1 pre-readiness assessment
+
+FAILED
+→ no current F3 input
+→ no U05/D03
+→ governed failure handling
+```
+
+### 16.3 Frozen envelope vocabulary retained
+
+A1 F3 input uses：
+
+```text
+source_domain = F3
+input_kind = ONLINE_INFORMATION_GAP
+```
+
+and the frozen business signals：
+
+```text
+CAN_ASK_MORE
+NEEDS_OFFLINE_EVIDENCE
+NO_ACTIVE_ONLINE_BLOCKING_GAP
+```
+
+```text
+NO_ACTIVE_ONLINE_BLOCKING_GAP
+!= READY_FOR_CLINICAL_ANALYSIS
+```
+
+### 16.4 Same-current-version rule
+
+All PRESENT inputs entering D03 must still bind：
+
+```text
+same consultation_id
+same cdp_id
+same current Clinical State Version
+validity = CURRENT
+```
+
+Canonical F3 historical source state may be older only when the current input envelope carries explicit：
+
+```text
+current_version_revalidation_ref
+source_state_ref
+source_decision_ref
+current U04 Gate ref
+```
+
+No content-equality shortcut.
+
+### 16.5 Current amendment status
+
+```text
+U05-RDP-05 A1 affected scope
+= AMENDED / INDEPENDENT_REVIEW_PENDING
+
+Prior RDP-05 freeze
+= retained only for unaffected/non-A1 baseline semantics
+
+Implementation Authorization
+= NOT_GRANTED
+```
