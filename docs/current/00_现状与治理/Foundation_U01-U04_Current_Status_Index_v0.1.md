@@ -2,7 +2,9 @@
 
 > 状态：CURRENT STATUS INDEX / DOCS-ONLY
 >
-> 适用仓库基线：`main@b693dd17aee60508a02e0e8514a1485e715456c5`
+> Status Evidence Baseline：`main@b693dd17aee60508a02e0e8514a1485e715456c5`
+>
+> 该 SHA 是本索引建立时独立审查的证据基线，不是永久固定的实时 `main` 指针；实时 `main` HEAD 必须以 Git 为准。
 >
 > 用途：统一解释 Foundation-0、Foundation-1、U01、U02、U03、U04 的当前工程状态、验证状态与 main 集成状态。
 >
@@ -23,6 +25,22 @@
     > historical implementation records
 
 因此，历史实施记录中的 `PR = OPEN / NOT_MERGED`、`Merge Authorization = NOT_GRANTED` 等，只描述文件创建时的历史阶段。一旦后续 PR 已完成显式授权、standard merge 和 PMV，则当前状态以 Git / PMV / current status index 为准。
+
+### 1.1 Phase-0 Baseline 与 Current Status Index 的权威分层
+
+`Current_State_Baseline_V1.md` 与本索引承担不同时间层级、不同范围的职责：
+
+    Current_State_Baseline_V1.md
+    = FROZEN PHASE-0 HISTORICAL BASELINE
+    = authoritative for initial archaeology / asset-disposition decisions at its frozen HEAD
+    = not authoritative for later implementation / verification / merge progress
+
+    Foundation_U01-U04_Current_Status_Index_v0.1.md
+    = CURRENT IMPLEMENTATION-PROGRESS OVERLAY
+    = authoritative only for Foundation→U04 implementation / verification / main-integration status
+    = does not supersede frozen architecture / product / asset-disposition semantics outside that scope
+
+因此，`Current_State_Baseline_V1.md` 中的 `Implementation = NOT_STARTED`、`Clinical Runtime Migration = NOT_STARTED` 等，只能解释为其冻结 HEAD 上的 Phase-0 基线结论；它们不得覆盖后续已验证、已授权、已 merge/PMV 的实施进度。反过来，本索引也不得用后续实施进度重写 Phase-0 的资产处置与架构语义。
 
 同时必须保持：
 
@@ -303,13 +321,16 @@ main 集成：
 
 ---
 
-## 9. 当前 main 集成事实
+## 9. main 集成事实与证据基线
 
-当前仓库主干：
+本索引建立时的状态证据基线：
 
-    main = b693dd17aee60508a02e0e8514a1485e715456c5
+    Status Evidence Baseline
+    = main@b693dd17aee60508a02e0e8514a1485e715456c5
 
-以下关键节点均已证明为当前 `main` 的祖先：
+该 SHA 只表示本索引建立与独立审查时采用的仓库状态。PR #124 若后续合并，实时 `main` HEAD 必然继续前移；因此实时 `main` 必须从 Git 读取，不由本文硬编码。
+
+以下关键节点均已证明为上述 evidence baseline 的祖先，并因此已经进入该时点的 `main`：
 
 - Foundation-0 verified head / PR #77 merge
 - Foundation-1 verified head / PR #81 merge
