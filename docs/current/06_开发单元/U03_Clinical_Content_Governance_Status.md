@@ -1,8 +1,8 @@
 # U03 Clinical Content Governance Status
 
 > Current U03 clinical-content and gate status index.
-> Authoritative closure record: `U03_Clinical_Dependency_Closure_Review_v0.1.md`.
-> This index does not authorize U04, production, release activation, or real-patient traffic.
+> Authoritative historical closure record: `U03_Clinical_Dependency_Closure_Review_v0.1.md`.
+> This index reports the current downstream governed state but does not itself grant any new implementation, merge, production, release-activation, or real-patient authorization.
 
 ## 1. Current governed content set
 
@@ -72,7 +72,7 @@ Critical Safety = 19/19 PASS
 Total = 49/49 PASS
 ```
 
-## 4. Closure state
+## 4. U03 closure state
 
 ```text
 BF-CDE-01 = CLOSED
@@ -91,13 +91,50 @@ U03 Clinical Dependency Closure Review = PASS
 U03 Clinical Dependency = CLOSED / STACKED_AGGREGATE_SCOPE
 ```
 
-Reviewed aggregate:
+Historical U03 closure reviewed aggregate:
 
 `99566a5bfe9bee437316299d65101b1bc8a3e398`
 
-## 5. Important non-production boundary
+The historical closure decision remains valid and is not rewritten by later downstream U04 work.
 
-The current governed set remains:
+## 5. Current downstream U04 non-production state
+
+The separately governed U04 path has subsequently advanced beyond readiness review:
+
+```text
+U04-RDP-01..06
+= FROZEN / PASS_FOR_READINESS
+
+AUTH-U04-RUNTIME-IMPL-001
+= AUTHORIZED / CONSUMED
+
+U04 non-production implementation
+= IMPLEMENTED / VERIFIED / INDEPENDENTLY_REVIEWED
+
+PR #102
+= MERGED / PMV_PASS
+
+PR #101
+= MERGED / PMV_PASS
+
+PR #100
+= MERGED / PMV_PASS
+
+PR #99
+= MERGED / PMV_PASS
+
+U04 STACKED_AGGREGATE_COMPLETE
+= PASS
+
+U04 current non-production implementation slice
+= INTEGRATED_TO_U03_CLOSURE_BRANCH
+```
+
+This later U04 progress does not retroactively change the original U03 closure decision or its reviewed head.
+
+## 6. Important non-production boundary
+
+The governed U03 release set remains:
 
 ```text
 candidate / frozen / evaluated
@@ -105,27 +142,43 @@ candidate / frozen / evaluated
 != active for production
 ```
 
-U03 clinical dependency closure does **not** mean:
+And the integrated U04 slice remains:
 
 ```text
-U04 Implementation Authorization = GRANTED
-Clinical Runtime Production = ENABLED
-Production Authorization = GRANTED
-Real-patient traffic = AUTHORIZED
-Pediatric production pathway = AUTHORIZED
-Pregnancy/puerperium expansion = AUTHORIZED
-China production localization = COMPLETE
+non-production implementation
+!= live routing
+!= production Clinical Runtime
+!= real-patient authorization
 ```
 
-## 6. Stacked topology
-
-PR #97 has been merged and PMV-verified into the current stacked aggregate branch.
-
-Parent PRs #96 / #95 / #93 remain open/draft. Their future merge/integration is separate merge governance and must not be conflated with clinical-content closure.
-
-## 7. Next permitted clinical-governance step
+Current hard boundaries:
 
 ```text
-U04 Readiness Re-review = ALLOWED
-U04 Implementation Authorization = NOT_GRANTED
+U04 Live Routing Activation = NOT_AUTHORIZED
+Clinical Runtime Production = NOT_ENABLED
+Production Authorization = BLOCKED
+Real-patient traffic = NOT_AUTHORIZED
+Main Integration = NOT_COMPLETE
 ```
+
+Pediatric production pathway, pregnancy/puerperium expansion, China production localization, and release publication/activation remain separately governed.
+
+## 7. Current stacked topology
+
+```text
+PR #97 = MERGED / PMV_PASS
+PR #99 = MERGED / PMV_PASS
+U04 aggregate = INTEGRATED_TO_U03_CLOSURE_BRANCH
+PR #98 = OPEN / DRAFT
+Main Integration = NOT_COMPLETE
+```
+
+Parent/higher-level integration remains a separate merge-governance track and must not be conflated with U03 clinical-content closure.
+
+## 8. Next repository-governance step
+
+```text
+PR #98 targeted Merge Authorization Re-Review
+```
+
+That re-review may determine merge-authorization eligibility for the current combined U03-closure + U04 non-production aggregate. It does not authorize production, live routing, or real-patient traffic.
