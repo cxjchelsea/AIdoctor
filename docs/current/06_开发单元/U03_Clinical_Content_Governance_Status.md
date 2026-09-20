@@ -127,7 +127,7 @@ U04 STACKED_AGGREGATE_COMPLETE
 = PASS
 
 U04 current non-production implementation slice
-= INTEGRATED_TO_CD07_READINESS_BRANCH
+= INTEGRATED_TO_U03_CLINICAL_DEPENDENCY_COMPLETION_BRANCH
 ```
 
 This later U04 progress does not retroactively change the original U03 closure decision or its reviewed head.
@@ -171,8 +171,9 @@ PR #99 = MERGED / PMV_PASS
 PR #98 = MERGED / PMV_PASS
 PR #96 = MERGED / PMV_PASS
 PR #95 = MERGED / PMV_PASS
-U03 closure + U04 aggregate = INTEGRATED_TO_CD07_READINESS_BRANCH
-PR #90 = OPEN / DRAFT
+PR #90 = MERGED / PMV_PASS
+U03 closure + U04 aggregate = INTEGRATED_TO_U03_CLINICAL_DEPENDENCY_COMPLETION_BRANCH
+PR #88 = OPEN / DRAFT
 Main Integration = NOT_COMPLETE
 ```
 
@@ -181,7 +182,7 @@ Parent/higher-level integration remains a separate merge-governance track and mu
 ## 8. Next repository-governance step
 
 ```text
-PR #90 Merge Authorization Review
+PR #88 Merge Authorization Review
 ```
 
-That review may determine merge-authorization eligibility for the current combined U03-closure + U04 non-production aggregate at the CD-07 readiness layer. It does not authorize merge, production, live routing, or real-patient traffic.
+That review may determine merge-authorization eligibility for the current combined U03-closure + U04 non-production aggregate at the U03 clinical-dependency-completion layer. It does not authorize merge, production, live routing, or real-patient traffic.
