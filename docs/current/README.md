@@ -38,6 +38,8 @@
 
 当前进度：
 
+- Foundation→U04 当前统一状态索引：见 `00_现状与治理/Foundation_U01-U04_Current_Status_Index_v0.1.md`；用于解释当前工程/验证/main 集成状态，并覆盖历史实施记录中的阶段性 `NOT_MERGED` 语义；
+
 - Current State Baseline：V1 已冻结，见 `00_现状与治理/Current_State_Baseline_V1.md`；
 - 重构决策：V1 已冻结为迁移原则与建议路径，见 `00_现状与治理/重构决策_V1.md`；
 - 需求与系统边界：V1 已冻结；
