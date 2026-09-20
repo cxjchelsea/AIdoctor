@@ -1,6 +1,6 @@
 # AIdoctor Phase 9 — Runtime 与技术架构设计 V1
 
-> 状态：A1 AMENDED / INDEPENDENT_REVIEW_PENDING（未受 A1 影响的 Runtime V1 语义继续保持 frozen baseline）  
+> 状态：A1 REFROZEN / V1（未受 A1 影响的 Runtime V1 语义继续保持 frozen baseline）  
 > 适用基线：`main` 当前真实代码 + Phase 1～8 当前权威设计  
 > 目标：在不改变既有业务语义、状态 Owner、Unit、C/P/D 与 K01–K10 契约边界的前提下，定义 V1 临床 Runtime 的执行、调度、等待、恢复、提交、失败、并发、版本绑定、知识/规则装载、回滚、外部副作用一致性与 Brownfield 迁移架构。  
 > 非目标：本文件不构成 Implementation Authorization；不冻结具体 Runtime 框架、消息队列、数据库、微服务拆分或部署厂商；不进入 Phase 10。
@@ -992,7 +992,7 @@ Trace 过去不足以重放新的治理上下文
 最终状态：
 
 ```text
-Phase 9 A1 affected scope = AMENDED / INDEPENDENT_REVIEW_PENDING
+Phase 9 A1 affected scope = REFROZEN / V1
 Unaffected Runtime V1 semantics = FROZEN BASELINE
 Implementation Authorization = NOT IMPLIED
 Merge Authorization = NOT IMPLIED
@@ -1005,7 +1005,7 @@ Merge Authorization = NOT IMPLIED
 
 > Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
 > Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
-> Status: **A1 AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **A1 REFROZEN / V1**
 
 ## 17.1 A1 ordinary runtime chain
 
@@ -1206,10 +1206,10 @@ never reused by QUESTION_SELECTION_DELIVERY
 
 ```text
 Phase 9 A1 affected scope
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 Re-freeze
-= NOT_YET_GRANTED
+= GRANTED / COMPLETE
 
 Runtime Implementation Authorization
 = NOT_GRANTED
