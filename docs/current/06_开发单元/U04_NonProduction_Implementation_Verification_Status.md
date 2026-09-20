@@ -1,6 +1,6 @@
 # U04 Non-Production Implementation Verification Status
 
-> Current authoritative U04 non-production implementation/evidence status at the PR #98 / U03 clinical-dependency-closure branch layer.
+> Current authoritative U04 non-production implementation/evidence status at the PR #96 / BF0304 remediation-governance branch layer.
 > Historical readiness/remediation-stage records remain preserved separately and must not be interpreted as the current gate state.
 
 ```text
@@ -68,19 +68,25 @@ PR #100
 PR #99
 = MERGED / PMV_PASS
 
+PR #98
+= MERGED / PMV_PASS
+
 PR #100 merge commit
 = 9fc1083c8c51edc226af7b4af722d8d06cfdc3e9
 
 PR #99 merge commit
 = a75742962d1f1ba00d15b3b0fc7aa56451257dda
 
+PR #98 merge commit
+= fec37885f318edaeeac3605fbeb890a1a99f93e9
+
 U04 STACKED_AGGREGATE_COMPLETE
 = PASS
 
 U04 current non-production implementation slice
-= INTEGRATED_TO_U03_CLOSURE_BRANCH
+= INTEGRATED_TO_BF0304_GOVERNANCE_BRANCH
 
-PR #98 Merge Authorization
+PR #96 Merge Authorization
 = NOT_GRANTED
 
 U04 Live Routing Activation
@@ -107,8 +113,8 @@ Main Integration
 
 The exact-head verification/evidence identity above remains authoritative for the implemented U04 slice.
 
-PR #100 PMV established tree-equivalent integration into `prep/u04-readiness-rereview`. PR #99 PMV then established tree-equivalent integration of that reviewed aggregate into `prep/u03-clinical-dependency-closure-review`, which is the head branch of PR #98. This file therefore tracks the current aggregate at the PR #98 / U03-closure-branch integration layer.
+PR #100 PMV established tree-equivalent integration into `prep/u04-readiness-rereview`. PR #99 PMV then established tree-equivalent integration of that reviewed aggregate into `prep/u03-clinical-dependency-closure-review`, which is the head branch of PR #98. PR #98 PMV then established tree-equivalent integration into `prep/u03-cd08-bf0304-remediation-governance`, the head branch of PR #96. This file therefore tracks the current aggregate at the PR #96 / BF0304-governance integration layer.
 
-Historical readiness and remediation records remain valid as chronology only. They are superseded for current gate-state interpretation by this file together with the accepted implementation/evidence reviews and PR #102 / PR #101 / PR #100 / PR #99 PMV records.
+Historical readiness and remediation records remain valid as chronology only. They are superseded for current gate-state interpretation by this file together with the accepted implementation/evidence reviews and PR #102 / PR #101 / PR #100 / PR #99 / PR #98 PMV records.
 
-No statement in this status file authorizes PR #98 merge, main integration, live routing, production activation, or real-patient traffic.
+No statement in this status file authorizes PR #96 merge, main integration, live routing, production activation, or real-patient traffic.
