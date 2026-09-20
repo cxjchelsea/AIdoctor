@@ -158,7 +158,7 @@ U04 Live Routing Activation = NOT_AUTHORIZED
 Clinical Runtime Production = NOT_ENABLED
 Production Authorization = BLOCKED
 Real-patient traffic = NOT_AUTHORIZED
-Main Integration = NOT_COMPLETE
+Main Integration = COMPLETE
 ```
 
 Pediatric production pathway, pregnancy/puerperium expansion, China production localization, and release publication/activation remain separately governed.
