@@ -1034,7 +1034,8 @@ Facts
 → G2/P01 canonical F3 commit
 → reload authoritative Clinical State
 → POST_F3_SAFETY_REVALIDATION_BARRIER
-→ U03 only when declared Risk dependencies require reevaluation
+→ A1 V1 canonical F3 commit sets RISK_REEVALUATION_REQUIRED
+→ U03 post-F3 Risk reevaluation
 → U04 current Gate from valid Risk/Safety evaluation basis
 → U06 F3_CURRENT_VERSION_REVALIDATION
 → deterministic F3 revalidation decision
