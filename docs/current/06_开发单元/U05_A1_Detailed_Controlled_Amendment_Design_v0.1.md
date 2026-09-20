@@ -788,11 +788,20 @@ Historical effect remains auditable historical truth for its original basis.
 
 ## 8.6 Deterministic revalidation decision contract
 
-Introduce proposed decision type：
+Introduce proposed F3 Owner decision type：
 
 ```text
 F3CurrentVersionRevalidationDecision
 ```
+
+It reuses the Phase-8 unified `DeterministicDecision` structure but：
+
+```text
+!= new D11
+!= new system-level D01-D10 policy family
+```
+
+It is a scoped F3 Owner revalidation decision used only for current-version readiness-input projection.
 
 Minimum fields：
 
@@ -849,7 +858,7 @@ May emit one normalized F3 readiness input：
 readiness_input_id
 source_domain = F3
 source_owner = F3
-input_kind = GAP_READINESS
+input_kind = ONLINE_INFORMATION_GAP
 applicability_status = PRESENT
 business_signal
 consultation_id
