@@ -1563,7 +1563,7 @@ U01–U15 依赖矩阵
 
 ```text
 SOP Phase 7 — Capability Design
-= A1 AMENDED / INDEPENDENT_REVIEW_PENDING
+= A1 REFROZEN / V1
 Unaffected capability semantics = FROZEN V1 BASELINE
 ```
 
@@ -1605,7 +1605,7 @@ Phase 7 Design
 
 > Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
 > Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
-> Status: **A1 AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **A1 REFROZEN / V1**
 
 ## 20.1 C03 first consumer remains U06
 
@@ -1746,10 +1746,10 @@ REASSESSMENT_REQUIRED
 
 ```text
 Phase 7 A1 affected scope
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 Re-freeze
-= NOT_YET_GRANTED
+= GRANTED / COMPLETE
 
 Capability activation / production use
 = NOT_AUTHORIZED
