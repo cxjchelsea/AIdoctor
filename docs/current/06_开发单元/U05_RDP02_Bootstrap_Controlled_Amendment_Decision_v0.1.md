@@ -2,7 +2,7 @@
 
 > Scope: 解决 U05/D03 首轮 Clinical Readiness bootstrap underdetermination 的受控设计修订决策包。
 >
-> Status: REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW / OWNER_SELECTION_NOT_YET_AUTHORIZED
+> Status: REVISED / READY_FOR_FOURTH_TARGETED_INDEPENDENT_REVIEW / OWNER_SELECTION_NOT_YET_AUTHORIZED
 >
 > Basis:
 >
@@ -1519,91 +1519,72 @@ Owner selection 只表示：
 
 ---
 
-# 11. Review-finding remediation status
+# 11. Review-finding status
+
+Independent / targeted review history current truth:
 
     BF-U05-BOOTSTRAP-IR-01
-    = REMEDIATED / TARGETED_REVIEW_PENDING
-
-Reason：
-
-    Phase 4/5/6/7/8/9 + RDP-05/RDP-02 impact matrix added.
+    = CLOSED
 
     BF-U05-BOOTSTRAP-IR-02
-    = REMEDIATED / TARGETED_REVIEW_PENDING
-
-Reason：
-
-    A1/A2/B1/B2 each define semantic owner, execution host, Scheduler position, trigger, contracts, commit/capability/idempotency/failure boundary.
+    = CLOSED
 
     BF-U05-BOOTSTRAP-IR-03
-    = REMEDIATED / TARGETED_REVIEW_PENDING
-
-Reason：
-
-    Candidate B split into B1 existing F2 Owner/U02 extension with explicit F2_SUFFICIENCY source_domain and B2 new-source-domain/new-owner.
+    = CLOSED
 
     BF-U05-BOOTSTRAP-IR-04
-    = REMEDIATED / TARGETED_REVIEW_PENDING
-
-Reason：
-
-    initial Candidate A requires one canonical F3 lifecycle; standalone sufficiency side-channel prohibited.
+    = CLOSED
 
     RQ-U05-BOOTSTRAP-IR-05
-    = REMEDIATED / TARGETED_REVIEW_PENDING
+    = CLOSED
 
     BF-U05-BOOTSTRAP-TR-01
-    = REMEDIATED / TARGETED_REVIEW_PENDING
-
-Reason：
-
-    B1 no longer reuses F2_CLARIFICATION or claims no source-domain change.
-    It explicitly adds F2_SUFFICIENCY and keeps F2_CLARIFICATION narrow.
+    = CLOSED
 
     BF-U05-BOOTSTRAP-TR-02
-    = REMEDIATED / TARGETED_REVIEW_PENDING
+    = CLOSED
 
     BF-U05-BOOTSTRAP-TR-03
-    = REMEDIATED / THIRD_TARGETED_REVIEW_PENDING
-
-Reason：
-
-    B1 now uses a durable deterministic decision/readiness-input ref without pre-D03 Clinical State mutation,
-    so F2_SUFFICIENCY and the current U04 Safety Gate remain bound to the same Clinical State Version.
+    = CLOSED
 
     RQ-U05-BOOTSTRAP-TR-04
-    = REMEDIATED / THIRD_TARGETED_REVIEW_PENDING
+    = CLOSED
 
-Reason：
-
-    Phase 7 impact is now explicit: U02 dependency semantics must become mode-aware under B1.
-    FACT_FORMATION requires C01; SUFFICIENCY_ASSESSMENT_ONLY invokes no Clinical AI Capability.
-    Whether the matrix row is represented as aggregate or split per mode must be frozen in the detailed amendment.
-
-Reason：
-
-    B1 now defines production/revalidation as U02 SUFFICIENCY_ASSESSMENT_ONLY after current U04,
-    with explicit trigger, deterministic policy/no-Capability boundary, K09/P01 commit,
-    version/invalidation rules, replay/idempotency identity and typed failure/U14 boundary.
-
-Reason：
-
-    OD-U05-BOOTSTRAP-* and OD-U05-READY-01 are explicitly separate and independently authorized.
-
----
+Current open review item:
 
     BF-U05-BOOTSTRAP-TR-05
     = REMEDIATED / FOURTH_TARGETED_REVIEW_PENDING
 
-Reason：
+TR-05 remediation summary:
 
-    A1/A2 now explicitly use VS-B with mandatory POST_F3_SAFETY_REVALIDATION_BARRIER,
-    current U04 Gate restoration, current-version F3 readiness-input revalidation/ref-binding,
-    and F3_CANONICAL_EFFECT_ID termination/idempotency rules.
+    Unified Pre-Readiness Version-Safety Contract
+    = added
 
-    B2 now explicitly selects VS-A and removes the ambiguous pre-D03 Clinical State mutation branch.
+    VS-A
+    = SAME_VERSION_NON_STATE_DECISION
+    = B1 / B2
 
-    Cross-candidate invariant now requires every U04->U05 pre-readiness effect to be VS-A or VS-B.
+    VS-B
+    = STATE_MUTATION_WITH_POST_COMMIT_SAFETY_BARRIER
+    = A1 / A2
+
+    A1/A2:
+    canonical F3 commit
+    -> prior U04 Gate non-routable
+    -> POST_F3_SAFETY_REVALIDATION_BARRIER
+    -> current U04 Gate restoration
+    -> current-version F3 readiness-input revalidation/ref-binding
+    -> U05
+
+    F3_CANONICAL_EFFECT_ID
+    + true dependency-based invalidation
+    = termination / no version-only recommit rule
+
+    B2:
+    ambiguous pre-D03 Clinical State mutation branch removed
+    -> deterministic same-version decision/readiness-input ref only
+
+No review item in this section grants Owner selection or upstream amendment authorization.
 
 ---
 
