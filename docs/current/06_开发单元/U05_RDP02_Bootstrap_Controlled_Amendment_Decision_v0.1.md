@@ -566,7 +566,7 @@ B1 在 U04 已产生 committed/current ALLOW 或 permitted RESTRICTED 后增加�
 
     U04
     -> U02 SUFFICIENCY_ASSESSMENT_ONLY
-    -> commit current F2_SUFFICIENCY assertion
+    -> publish durable current-version F2 Sufficiency Decision / readiness-input ref
     -> U05 D03
 
 因此不再尝试：
@@ -578,10 +578,10 @@ B1 在 U04 已产生 committed/current ALLOW 或 permitted RESTRICTED 后增加�
 
     post-U04 current state
     -> U02 sufficiency-only assessment
-    -> current-version governed assertion
+    -> current-version governed decision/readiness-input ref
     -> U05
 
-这同时解决 initial bootstrap 和 U03/U04 后的 current-version revalidation hosting 问题。
+这同时解决 current-version revalidation hosting 问题，并避免通过额外 Clinical State commit 使当前 U04 Gate 立即 stale。
 
 ### Trigger
 
