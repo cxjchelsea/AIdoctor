@@ -580,9 +580,9 @@ After A1 controlled amendment:
     = PRIOR_BASELINE_CLOSED / A1_AMENDMENT_REVIEW_PENDING
 
     U05-RDP-05 A1 affected scope
-    = AMENDED / INDEPENDENT_REVIEW_PENDING
+    = REFROZEN / V1
 
-Re-freeze requires the A1 amended contract to pass independent review.
+A1 amended contract has passed independent review and is now re-frozen at the governed exact head.
 
 ---
 
@@ -606,7 +606,7 @@ This document does not authorize:
 
 > Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
 > Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
-> Status: **A1 AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **A1 REFROZEN / V1**
 
 ### 16.1 A1 F3 producer path
 
@@ -701,7 +701,7 @@ No content-equality shortcut.
 
 ```text
 U05-RDP-05 A1 affected scope
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 Prior RDP-05 freeze
 = retained only for unaffected/non-A1 baseline semantics
