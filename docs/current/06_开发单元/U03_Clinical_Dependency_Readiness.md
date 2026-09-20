@@ -138,7 +138,7 @@ U04 STACKED_AGGREGATE_COMPLETE
 = PASS
 
 U04 current non-production implementation slice
-= INTEGRATED_TO_U03_CLINICAL_DEPENDENCY_COMPLETION_BRANCH
+= INTEGRATED_TO_MAIN
 ```
 
 ## 7. Current boundaries
@@ -198,17 +198,20 @@ PR #95
 PR #90
 = MERGED / PMV_PASS
 
-U03 closure + U04 aggregate
-= INTEGRATED_TO_U03_CLINICAL_DEPENDENCY_COMPLETION_BRANCH
-
 PR #88
-= OPEN / DRAFT
+= MERGED / PMV_PASS
+
+U03 closure + U04 aggregate
+= INTEGRATED_TO_MAIN
+
+Main Integration
+= COMPLETE
 ```
 
 ## 9. Next step
 
 ```text
-PR #88 Merge Authorization Review
+Post-main downstream governance = SEPARATE_AUTHORIZATION_REQUIRED
 ```
 
-That review may determine whether the current combined U03-closure + U04 non-production aggregate at the U03 clinical-dependency-completion layer is eligible for explicit repository-owner merge authorization. It does not itself authorize merge, production, live routing, or real-patient traffic.
+Repository main integration for the current combined U03-closure + U04 non-production aggregate is complete. Any downstream implementation, release activation, production, live routing, or real-patient use remains separately governed and requires its own authorization.
