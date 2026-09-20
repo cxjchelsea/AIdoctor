@@ -1744,5 +1744,285 @@ Production Authorization
 
 ```text
 SOP Phase 8 — Contract & Data Design
-= V1 synchronized with completed Phase 7 governance design
+= A1 AMENDED / INDEPENDENT_REVIEW_PENDING
+Unaffected V1 contract semantics remain the baseline
+```
+
+
+---
+
+# 25. A1 Controlled Amendment — Eligibility / F3 / Barrier Contracts
+
+> Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
+> Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
+> Status: **A1 AMENDED / INDEPENDENT_REVIEW_PENDING**
+
+本节不新增 K11，不改变既有：
+
+```text
+Capability Result
+!= Deterministic Decision
+!= StateChangeProposal
+!= Committed State
+```
+
+## 25.1 A1 pre-readiness eligibility
+
+新增受控契约：
+
+```text
+A1PreReadinessEligibility
+```
+
+最小字段：
+
+```text
+eligibility_id
+eligibility_type = PRE_READINESS_A1_F3_C03_ELIGIBLE
+routing_authorization_id
+consultation_id
+cdp_id
+clinical_state_version
+u04_gate_ref
+gate_value
+bootstrap_architecture_binding_ref = A1
+restricted_context_ref?
+routing_policy_id / routing_policy_version
+validity
+created_at
+trace_refs[]
+```
+
+该对象：
+
+```text
+!= Clinical State
+!= Clinical Readiness
+!= Unit invocation
+```
+
+## 25.2 F3 canonical effect identity
+
+新增：
+
+```text
+F3_CANONICAL_EFFECT_ID
+```
+
+最小 derivation：
+
+```text
+consultation_id
++ fact/framing basis identity
++ source Clinical State Version
++ C03 CapabilityBindingRef
++ F3 assessment policy/version
++ assessment trigger/event identity
+```
+
+## 25.3 A1 F3 StateChangeProposal requirements
+
+A1 canonical F3 proposal 在统一 StateChangeProposal 基础上必须附带：
+
+```text
+source_clinical_state_version
+F3_CANONICAL_EFFECT_ID
+source C03 result ref
+C03 CapabilityBindingRef
+RuleReleaseRef / KnowledgeReleaseRef as applicable
+F3 policy/version
+effect idempotency key
+expected current version
+trace/audit refs
+```
+
+依旧保持：
+
+```text
+C03 Capability Result
+!= StateChangeProposal
+```
+
+## 25.4 POST_F3_SAFETY_REVALIDATION_BARRIER metadata
+
+Runtime/checkpoint 可记录：
+
+```text
+barrier_id
+consultation_id
+F3_CANONICAL_EFFECT_ID
+F3 commit result ref
+authoritative state ref/version after F3 commit
+risk dependency status
+risk decision ref
+u04_gate_ref
+F3 revalidation status/ref
+routing_authorization_ref
+barrier_stage
+failure_ref?
+trace_refs[]
+```
+
+该 barrier：
+
+```text
+= Runtime execution/checkpoint metadata
+!= Clinical Truth
+```
+
+## 25.5 Risk/Safety dependency binding
+
+A1 不要求 Risk Decision 与最终 Safety Gate commit 共享一个 literal final version number。
+
+优先复用既有 Phase 8 语义：
+
+```text
+input_clinical_state_version
+derived_from_clinical_state_version
+decision_ref
+basis_refs
+validity / staleness
+```
+
+表达：
+
+```text
+Risk Decision 对 U04 evaluation basis 有效
+U04 Gate 是当前 committed Gate
+其声明依赖未被后续变化破坏
+```
+
+若实现阶段确实需要新增物理字段，例如：
+
+```text
+risk_basis_state_version
+gate_commit_state_version
+```
+
+必须作为 Phase 8 单独 schema diff 再接受 review，不得从本节自动推导为已冻结物理字段。
+
+## 25.6 F3CurrentVersionRevalidationDecision
+
+新增 F3 Owner scoped deterministic decision：
+
+```text
+F3CurrentVersionRevalidationDecision
+```
+
+复用统一 DeterministicDecision contract：
+
+```text
+!= D11
+!= new D01-D10 system-level policy family
+```
+
+最小字段：
+
+```text
+revalidation_decision_id
+consultation_id
+cdp_id
+F3_CANONICAL_EFFECT_ID
+source_f3_state_ref
+source_f3_decision_ref
+source_clinical_state_version
+target_clinical_state_version
+current_u04_gate_ref
+dependency_fingerprint_before
+dependency_fingerprint_current
+semantic_binding_compatibility_ref
+outcome
+reason_codes[]
+policy_id = F3_CURRENT_VERSION_REVALIDATION
+policy_version
+rule_release_refs[]
+knowledge_release_refs[]
+historical_capability_binding_ref
+created_at
+validity
+trace_refs[]
+```
+
+Allowed outcomes：
+
+```text
+REVALIDATED_CURRENT
+REASSESSMENT_REQUIRED
+FAILED
+```
+
+这些 outcome：
+
+```text
+!= Clinical Readiness
+!= D03 decision_status
+!= canonical F3 lifecycle state
+```
+
+## 25.7 F3 current-version readiness input
+
+当 outcome = REVALIDATED_CURRENT 时，可形成：
+
+```text
+readiness_input_id
+source_domain = F3
+source_owner = F3
+input_kind = ONLINE_INFORMATION_GAP
+applicability_status = PRESENT
+business_signal
+consultation_id
+cdp_id
+clinical_state_version = target authoritative version
+source_decision_ref = F3CurrentVersionRevalidationDecision ref
+source_state_ref = canonical F3 state ref
+current_version_revalidation_ref
+u04_gate_ref = current Gate
+evidence_refs[]
+policy_or_rule_refs[]
+produced_at
+validity = CURRENT
+```
+
+该 projection：
+
+```text
+DOES NOT duplicate canonical F3 state
+DOES NOT create StateChangeProposal
+DOES NOT advance Clinical State Version
+```
+
+## 25.8 Revalidation idempotency
+
+```text
+F3_REVALIDATION_ID
+=
+consultation_id
++ F3_CANONICAL_EFFECT_ID
++ target Clinical State Version
++ current U04 Gate ref
++ revalidation policy version
++ semantic binding compatibility ref
+```
+
+同一 replay 返回/附着 authoritative prior decision/input，不重复业务 effect。
+
+若 target version / Gate 在发布前变化：
+
+```text
+STALE_BEFORE_PUBLISH
+→ do not publish CURRENT readiness input
+→ reload authoritative state
+```
+
+## 25.9 Current amendment status
+
+```text
+Phase 8 A1 affected scope
+= AMENDED / INDEPENDENT_REVIEW_PENDING
+
+Re-freeze
+= NOT_YET_GRANTED
+
+Implementation / Merge / Production Authorization
+= NOT IMPLIED
 ```
