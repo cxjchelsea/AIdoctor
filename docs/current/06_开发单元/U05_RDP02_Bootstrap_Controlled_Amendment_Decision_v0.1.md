@@ -2,7 +2,7 @@
 
 > Scope: 解决 U05/D03 首轮 Clinical Readiness bootstrap underdetermination 的受控设计修订决策包。
 >
-> Status: REVISED / READY_FOR_FOURTH_TARGETED_INDEPENDENT_REVIEW / OWNER_SELECTION_NOT_YET_AUTHORIZED
+> Status: REVISED / READY_FOR_FIFTH_TARGETED_INDEPENDENT_REVIEW / OWNER_SELECTION_NOT_YET_AUTHORIZED
 >
 > Basis:
 >
@@ -115,6 +115,7 @@ Legend:
 |---|---|---|---|---|
 | Phase 4 F3 owner / Gap lifecycle | YES | YES | CONDITIONAL | CONDITIONAL |
 | Phase 4 Readiness input-source semantics | timing change | timing change | semantic expansion | YES, source/owner expansion |
+| U04-RDP-04 Downstream Routing Boundary | YES: A1 pre-readiness eligibility | YES: A2 pre-readiness eligibility | YES: B1 pre-readiness eligibility | YES: B2 pre-readiness eligibility |
 | Phase 5 Safety→Readiness→F3 business loop | YES | YES | YES | YES |
 | Phase 6 U05 S_in / Trigger | YES | YES | YES | YES |
 | Phase 6 U06 S_in / Action | YES | NO_EXPECTED | NO_EXPECTED | NO_EXPECTED |
@@ -122,7 +123,7 @@ Legend:
 | Phase 7 C03 capability usage semantics | YES: assessment before question delivery | NO | NO | NO |
 | Phase 7 U02/C01 dependency semantics | NO | NO | YES: mode-aware dependency amendment | NO |
 | Phase 8 readiness input / decision / K09 contracts | YES | YES | YES: deterministic decision/readiness-input ref; no pre-D03 K09 state mutation | YES |
-| Phase 9 Unit Scheduler / transition graph | YES | YES | CONDITIONAL | YES |
+| Phase 9 Unit Scheduler / transition graph | YES | YES | YES | YES |
 | Phase 9 dependency resolution / commit sequence | YES | YES | YES | YES |
 | U05-RDP-05 applicability/source/version contract | YES | YES | YES | YES |
 | U05-RDP-02 D03 policy | YES | YES | YES | YES |
@@ -328,6 +329,369 @@ Forbidden:
     current Gate + stale readiness input
     -> D03
 
+# 3.2 U04-RDP-04 Candidate-Specific Pre-Readiness Eligibility Amendment Impact
+
+本节只描述：
+
+    frozen U04-RDP-04 Downstream Routing Boundary
+
+在 bootstrap candidate 被 Owner 选择后的受控 amendment 影响。
+
+它不修改：
+
+    U04 Safety business ownership
+    Safety Gate vocabulary
+    U04 clinical risk/safety judgment semantics
+
+它只修改：
+
+    committed/current Safety Gate
+    -> downstream eligibility projection
+
+## 3.2.1 Frozen boundary being amended
+
+Current frozen U04-RDP-04:
+
+    ALLOW
+    -> may make U05 ordinary-path eligibility available
+
+    RESTRICTED
+    -> only governed restricted downstream path
+
+    BLOCKED
+    -> no ordinary U05 continuation; U11 eligibility may be exposed
+
+    UNAVAILABLE
+    -> no ordinary U05 continuation; U14 eligibility may be exposed
+
+Bootstrap candidates require the immediate ordinary path to become:
+
+    current Safety Gate
+    -> candidate-specific pre-readiness eligibility when bootstrap effect is still required
+    -> candidate pre-readiness effect
+    -> eventual U05 eligibility only after bootstrap requirement is satisfied/current
+
+Therefore:
+
+    U04-RDP-04
+    = CONTROLLED AMENDMENT REQUIRED
+    for A1 / A2 / B1 / B2
+
+## 3.2.2 Ownership invariant
+
+U04 still answers only:
+
+    ALLOW
+    RESTRICTED
+    BLOCKED
+    UNAVAILABLE
+
+U04 does NOT:
+
+    execute U06
+    execute U02
+    execute a new pre-readiness Unit
+    invoke C03
+    evaluate F2/F3 sufficiency
+    choose A1/A2/B1/B2 at runtime
+    decide final Clinical Readiness
+
+The routing projection consumes:
+
+    current committed U04 Gate
+    + active BootstrapArchitectureBindingRef
+    + current bootstrap-effect status/ref when applicable
+
+and exposes typed eligibility.
+
+Therefore:
+
+    Gate decision
+    != downstream execution
+
+    Eligibility projection
+    != Unit invocation
+
+Scheduler remains the execution coordinator.
+
+## 3.2.3 Active candidate binding
+
+Only one bootstrap architecture may be active for a governed Consultation/runtime scope:
+
+    BootstrapArchitectureBindingRef
+    = A1 / A2 / B1 / B2
+
+Candidate selection is configuration/governance binding, not a U04 decision.
+
+A single U04 result must NOT simultaneously expose:
+
+    A1 eligibility
+    + A2 eligibility
+    + B1 eligibility
+    + B2 eligibility
+
+for the same governed path.
+
+The current active binding determines which candidate-specific eligibility type is legal.
+
+## 3.2.4 Candidate-specific eligibility types
+
+If bootstrap effect is required and not yet valid/current:
+
+    A1:
+    PRE_READINESS_A1_F3_C03_ELIGIBLE
+
+    A2:
+    PRE_READINESS_A2_F3_DETERMINISTIC_ELIGIBLE
+
+    B1:
+    PRE_READINESS_B1_F2_SUFFICIENCY_ELIGIBLE
+
+    B2:
+    PRE_READINESS_B2_MINIMUM_SUFFICIENCY_ELIGIBLE
+
+These are routing eligibility projections, not Clinical State and not Clinical Readiness.
+
+They must bind at least:
+
+    consultation_id
+    cdp_id
+    clinical_state_version
+    u04_gate_ref
+    gate_value
+    bootstrap_architecture_binding_ref
+    restricted_context_ref when applicable
+    bootstrap_requirement_status
+    bootstrap_effect_ref when applicable
+    eligibility_type
+    validity
+    created_at / trace refs
+    routing projection policy/version
+
+## 3.2.5 Gate-to-pre-readiness projection
+
+### ALLOW
+
+For a current committed ALLOW Gate:
+
+    if active candidate bootstrap effect is required
+    and no valid/current completion/effect ref exists
+    -> expose exactly one candidate-specific PRE_READINESS_*_ELIGIBLE
+
+    if active candidate bootstrap requirement is already valid/current
+    -> may expose U05_ELIGIBLE
+
+No candidate Unit is executed directly by U04.
+
+### RESTRICTED
+
+For RESTRICTED:
+
+    candidate-specific pre-readiness eligibility
+    or eventual U05 eligibility
+
+may be exposed only when:
+
+    the frozen/governed U04 restricted policy
+    explicitly permits that downstream action under the restricted context
+
+and the projection must carry:
+
+    restricted_context_ref
+
+If the selected candidate's pre-readiness assessment is not permitted under the restricted context:
+
+    no ordinary bootstrap continuation
+    no ordinary U05 continuation
+
+The package does not invent a fallback route.
+
+### BLOCKED
+
+    PRE_READINESS_*_ELIGIBLE = PROHIBITED
+    U05_ELIGIBLE = PROHIBITED
+
+Existing governed high-risk escalation / U11 eligibility remains the only applicable downstream family according to frozen business-loop rules.
+
+### UNAVAILABLE
+
+    PRE_READINESS_*_ELIGIBLE = PROHIBITED
+    U05_ELIGIBLE = PROHIBITED
+
+Failure-handling / U14 eligibility remains applicable according to frozen failure rules.
+
+## 3.2.6 VS-A eligibility transition
+
+Applies to:
+
+    B1
+    B2
+
+Sequence:
+
+    current U04 Gate @ Vn
+    -> PRE_READINESS_B1/B2_*_ELIGIBLE @ Vn
+    -> Scheduler executes selected VS-A assessment
+    -> deterministic decision/readiness-input @ Vn
+    -> no Clinical State Version advance
+    -> routing projection re-evaluates against the same current Gate @ Vn
+       + current bootstrap completion/decision ref @ Vn
+    -> U05_ELIGIBLE @ Vn
+
+The same U04 Gate may remain current because VS-A does not mutate Clinical State.
+
+But:
+
+    same Gate
+    != same routing effect identity
+
+Eligibility projection and Unit execution must have distinct effect/idempotency identities.
+
+## 3.2.7 VS-B eligibility transition
+
+Applies to:
+
+    A1
+    A2
+
+Initial sequence:
+
+    current U04 Gate @ Vn
+    -> PRE_READINESS_A1/A2_*_ELIGIBLE @ Vn
+    -> Scheduler executes selected F3 assessment
+    -> canonical F3 commit
+    -> Clinical State Version advances
+    -> every eligibility projected from Gate @ Vn becomes STALE/NON_ROUTABLE
+
+Then:
+
+    POST_F3_SAFETY_REVALIDATION_BARRIER
+    -> current Risk/Safety re-established
+    -> current U04 Gate @ Vk
+    -> canonical F3 effect is current-version revalidated/reference-bound @ Vk
+
+Routing projection at Vk must check:
+
+    active BootstrapArchitectureBindingRef
+    + current F3 bootstrap_effect_ref/revalidation_ref
+    + F3_CANONICAL_EFFECT_ID already satisfied for the same fact/framing basis
+
+If satisfied/current:
+
+    -> U05_ELIGIBLE @ Vk
+
+It MUST NOT expose another:
+
+    PRE_READINESS_A1/A2_*_ELIGIBLE
+
+merely because a new U04 Gate exists.
+
+A new pre-readiness A1/A2 eligibility may be exposed only if a true F3 invalidation dependency requires a new canonical F3 effect.
+
+This is the routing-level counterpart of the VS-B no-cycle rule.
+
+## 3.2.8 Eligibility invalidation
+
+Any eligibility is invalid when:
+
+    its u04_gate_ref is no longer current
+    or
+    clinical_state_version changed
+    or
+    active BootstrapArchitectureBindingRef changed
+    or
+    restricted_context_ref became incompatible
+    or
+    required bootstrap effect/input became STALE/FAILED/UNAVAILABLE
+    or
+    routing projection policy/version is no longer valid for the bound consultation
+
+Stale eligibility:
+
+    must not invoke downstream Unit
+    must not enter U05
+    must not be silently rebound
+
+Scheduler must reload authoritative state and re-project eligibility.
+
+## 3.2.9 Idempotency / replay
+
+A routing eligibility identity must bind at least:
+
+    business event identity
+    + current u04_gate_ref
+    + clinical_state_version
+    + bootstrap_architecture_binding_ref
+    + eligibility_type
+    + bootstrap_effect_ref/revalidation_ref when applicable
+
+Replay of the same projection:
+
+    may attach/return the authoritative eligibility record
+    must not duplicate downstream Unit execution
+
+The actual pre-readiness execution uses a separate effect identity.
+
+Therefore current U04-RDP-04 invariant remains conceptually preserved:
+
+    one committed U04 result
+    -> at most one routing effect for the same business event / selected path identity
+
+while allowing deterministic transition:
+
+    PRE_READINESS_ELIGIBILITY
+    -> U05_ELIGIBILITY
+
+after the selected bootstrap requirement is satisfied.
+
+## 3.2.10 Exact candidate impact summary
+
+    A1:
+    U04-RDP-04 must expose PRE_READINESS_A1_F3_C03_ELIGIBLE
+    before initial U05.
+    After canonical F3 commit, old eligibility expires.
+    New current Gate + current F3 completion ref -> U05_ELIGIBLE.
+
+    A2:
+    U04-RDP-04 must expose PRE_READINESS_A2_F3_DETERMINISTIC_ELIGIBLE.
+    Same VS-B expiry/barrier/U05 transition as A1.
+
+    B1:
+    U04-RDP-04 must expose PRE_READINESS_B1_F2_SUFFICIENCY_ELIGIBLE.
+    VS-A decision does not advance Clinical State Version.
+    Same current Gate + current F2_SUFFICIENCY ref -> U05_ELIGIBLE.
+
+    B2:
+    U04-RDP-04 must expose PRE_READINESS_B2_MINIMUM_SUFFICIENCY_ELIGIBLE.
+    VS-A decision does not advance Clinical State Version.
+    Same current Gate + current B2 decision/input ref -> U05_ELIGIBLE.
+
+## 3.2.11 Frozen-artifact amendment boundary
+
+If any candidate is selected, the detailed amendment must include:
+
+    docs/current/06_开发单元/U04_RDP04_Downstream_Routing_Boundary_v0.1.md
+
+and explicitly amend only the downstream eligibility contract required by the selected candidate.
+
+Unless independently justified later:
+
+    U04 Safety Gate owner
+    U04 Safety decision vocabulary
+    U11/U14 ownership split
+
+must remain unchanged.
+
+The amended U04-RDP-04 must undergo:
+
+    exact diff review
+    independent re-review
+    re-freeze at exact head
+
+before any bootstrap runtime implementation authorization.
+
+---
+
 # 4. Candidate A — F3 remains the positive sufficiency producer
 
 Candidate A 的共同目标：
@@ -496,6 +860,12 @@ Capability/runtime failure：
 
 A1 必改：
 
+    U04-RDP-04
+    - ALLOW / permitted RESTRICTED may expose PRE_READINESS_A1_F3_C03_ELIGIBLE
+    - U04 never directly executes U06/C03
+    - after F3 commit, old Gate/eligibility expires
+    - post-barrier current Gate + current F3 completion ref may expose U05_ELIGIBLE
+
     Phase 5
     - BL-04 trigger/order: F3 assessment can precede first Readiness
 
@@ -647,6 +1017,12 @@ Termination：
 ### Main amendment consequences
 
 A2 必改：
+
+    U04-RDP-04
+    - ALLOW / permitted RESTRICTED may expose PRE_READINESS_A2_F3_DETERMINISTIC_ELIGIBLE
+    - U04 never directly executes the pre-F3 Unit
+    - after F3 commit, old Gate/eligibility expires
+    - post-barrier current Gate + current F3 completion ref may expose U05_ELIGIBLE
 
     Phase 4
     - F3 activation timing
@@ -1069,6 +1445,12 @@ No failure may mutate Clinical State merely to record the failure.
 
 B1 必改：
 
+    U04-RDP-04
+    - ALLOW / permitted RESTRICTED may expose PRE_READINESS_B1_F2_SUFFICIENCY_ELIGIBLE
+    - U04 never directly executes U02 sufficiency-only mode
+    - VS-A preserves the current Gate/version
+    - current Gate + current F2_SUFFICIENCY decision/input may expose U05_ELIGIBLE
+
     Phase 4
     - F2 business semantics expanded
     - add explicit F2_SUFFICIENCY readiness source
@@ -1288,6 +1670,12 @@ Same replay：
 
 B2 必改：
 
+    U04-RDP-04
+    - ALLOW / permitted RESTRICTED may expose PRE_READINESS_B2_MINIMUM_SUFFICIENCY_ELIGIBLE
+    - U04 never directly executes U05-PRE-SUFFICIENCY
+    - VS-A preserves the current Gate/version
+    - current Gate + current B2 decision/input may expose U05_ELIGIBLE
+
     Phase 4
     - readiness input-source / Owner model
 
@@ -1323,6 +1711,7 @@ B2 不允许复用 F3 的语义名称来规避 source-domain amendment。
 | Clinical sufficiency semantic owner | F3 | F3 | F2 extension | new owner |
 | Execution host | U06 | new pre-F3 Unit | U02 | new pre-sufficiency Unit |
 | Initial Scheduler change | U04→U06(pre)→U05 | U04→new Unit→U05 | U04→U02(sufficiency-only)→U05 | U04→new Unit→U05 |
+| U04 pre-readiness eligibility | A1 typed eligibility; post-F3 new Gate required | A2 typed eligibility; post-F3 new Gate required | B1 typed eligibility; same-version transition | B2 typed eligibility; same-version transition |
 | Uses C03 | yes | no | no | no by default |
 | Produces canonical F3 Gap | yes | yes | no | no |
 | New readiness source domain | no | no | yes: F2_SUFFICIENCY while F2_CLARIFICATION stays narrow | yes |
@@ -1459,6 +1848,7 @@ Owner selection 只表示：
     semantic owner
     execution host Unit
     Scheduler predecessor/successor
+    U04-RDP-04 candidate-specific eligibility type / projection
     trigger
     admission criteria
     input contract
@@ -1523,66 +1913,53 @@ Owner selection 只表示：
 
 Independent / targeted review history current truth:
 
-    BF-U05-BOOTSTRAP-IR-01
-    = CLOSED
+    BF-U05-BOOTSTRAP-IR-01 = CLOSED
+    BF-U05-BOOTSTRAP-IR-02 = CLOSED
+    BF-U05-BOOTSTRAP-IR-03 = CLOSED
+    BF-U05-BOOTSTRAP-IR-04 = CLOSED
+    RQ-U05-BOOTSTRAP-IR-05 = CLOSED
 
-    BF-U05-BOOTSTRAP-IR-02
-    = CLOSED
-
-    BF-U05-BOOTSTRAP-IR-03
-    = CLOSED
-
-    BF-U05-BOOTSTRAP-IR-04
-    = CLOSED
-
-    RQ-U05-BOOTSTRAP-IR-05
-    = CLOSED
-
-    BF-U05-BOOTSTRAP-TR-01
-    = CLOSED
-
-    BF-U05-BOOTSTRAP-TR-02
-    = CLOSED
-
-    BF-U05-BOOTSTRAP-TR-03
-    = CLOSED
-
-    RQ-U05-BOOTSTRAP-TR-04
-    = CLOSED
+    BF-U05-BOOTSTRAP-TR-01 = CLOSED
+    BF-U05-BOOTSTRAP-TR-02 = CLOSED
+    BF-U05-BOOTSTRAP-TR-03 = CLOSED
+    RQ-U05-BOOTSTRAP-TR-04 = CLOSED
+    BF-U05-BOOTSTRAP-TR-05 = CLOSED
 
 Current open review item:
 
-    BF-U05-BOOTSTRAP-TR-05
-    = REMEDIATED / FOURTH_TARGETED_REVIEW_PENDING
+    BF-U05-BOOTSTRAP-TR-06
+    = REMEDIATED / FIFTH_TARGETED_REVIEW_PENDING
 
-TR-05 remediation summary:
+TR-06 remediation summary:
 
-    Unified Pre-Readiness Version-Safety Contract
-    = added
+    U04-RDP-04 Downstream Routing Boundary
+    = added to exact frozen-artifact impact inventory for A1/A2/B1/B2
+
+    Routing projection now distinguishes:
+    current Gate
+    + active BootstrapArchitectureBindingRef
+    + current bootstrap effect/completion ref
+    -> candidate-specific PRE_READINESS_ELIGIBILITY
+       or U05_ELIGIBLE
+
+    ALLOW
+    -> selected candidate pre-readiness eligibility when bootstrap effect required
+
+    RESTRICTED
+    -> only candidate-specific eligibility explicitly permitted by governed restricted policy
+
+    BLOCKED / UNAVAILABLE
+    -> no ordinary/pre-readiness eligibility
 
     VS-A
-    = SAME_VERSION_NON_STATE_DECISION
-    = B1 / B2
+    -> same current Gate may transition from pre-readiness eligibility to U05 eligibility
 
     VS-B
-    = STATE_MUTATION_WITH_POST_COMMIT_SAFETY_BARRIER
-    = A1 / A2
+    -> pre-F3 Gate/eligibility expires after canonical F3 commit;
+       post-barrier current Gate + current F3 completion ref may expose U05 eligibility
+       without retriggering the same canonical F3 effect
 
-    A1/A2:
-    canonical F3 commit
-    -> prior U04 Gate non-routable
-    -> POST_F3_SAFETY_REVALIDATION_BARRIER
-    -> current U04 Gate restoration
-    -> current-version F3 readiness-input revalidation/ref-binding
-    -> U05
-
-    F3_CANONICAL_EFFECT_ID
-    + true dependency-based invalidation
-    = termination / no version-only recommit rule
-
-    B2:
-    ambiguous pre-D03 Clinical State mutation branch removed
-    -> deterministic same-version decision/readiness-input ref only
+    U04 remains Gate owner only and never directly executes downstream Unit/Capability.
 
 No review item in this section grants Owner selection or upstream amendment authorization.
 
@@ -1594,7 +1971,7 @@ No review item in this section grants Owner selection or upstream amendment auth
     = OPEN
 
     Controlled Amendment Decision Package
-    = REVISED / READY_FOR_FOURTH_TARGETED_INDEPENDENT_REVIEW
+    = REVISED / READY_FOR_FIFTH_TARGETED_INDEPENDENT_REVIEW
 
     Controlled Amendment Decision Package
     != OWNER_SELECTION_READY yet
@@ -1610,7 +1987,7 @@ No review item in this section grants Owner selection or upstream amendment auth
 
     BF-U05-RDP02-IR-02
     = REMEDIATED_WITH_REVISED_CONTROLLED_AMENDMENT_PACKAGE
-    = FOURTH_TARGETED_REVIEW_PENDING
+    = FIFTH_TARGETED_REVIEW_PENDING
 
     BF-U05-RG-02
     = NOT_CLOSED
@@ -1622,6 +1999,7 @@ No review item in this section grants Owner selection or upstream amendment auth
 This document does not authorize:
 
     selection of A1/A2/B1/B2 before targeted review PASS
+    modification of frozen U04-RDP-04 Downstream Routing Boundary
     modification of frozen Phase 4/5/6/7/8/9 semantics
     modification of frozen U05-RDP-05
     pre-D03 F3 execution
