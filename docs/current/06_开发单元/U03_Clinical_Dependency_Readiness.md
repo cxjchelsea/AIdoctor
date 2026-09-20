@@ -186,17 +186,20 @@ Still separately governed:
 PR #99
 = MERGED / PMV_PASS
 
-U04 aggregate
-= INTEGRATED_TO_U03_CLOSURE_BRANCH
-
 PR #98
+= MERGED / PMV_PASS
+
+U03 closure + U04 aggregate
+= INTEGRATED_TO_BF0304_GOVERNANCE_BRANCH
+
+PR #96
 = OPEN / DRAFT
 ```
 
 ## 9. Next step
 
 ```text
-PR #98 targeted Merge Authorization Re-Review
+PR #96 Merge Authorization Review
 ```
 
-That review may determine whether the current combined U03-closure + U04 non-production aggregate is eligible for explicit repository-owner merge authorization. It does not itself authorize merge, production, live routing, or real-patient traffic.
+That review may determine whether the current combined U03-closure + U04 non-production aggregate at the BF0304 governance layer is eligible for explicit repository-owner merge authorization. It does not itself authorize merge, production, live routing, or real-patient traffic.
