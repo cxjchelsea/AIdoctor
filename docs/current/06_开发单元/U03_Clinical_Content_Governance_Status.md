@@ -168,8 +168,9 @@ Pediatric production pathway, pregnancy/puerperium expansion, China production l
 ```text
 PR #97 = MERGED / PMV_PASS
 PR #99 = MERGED / PMV_PASS
-U04 aggregate = INTEGRATED_TO_U03_CLOSURE_BRANCH
-PR #98 = OPEN / DRAFT
+PR #98 = MERGED / PMV_PASS
+U03 closure + U04 aggregate = INTEGRATED_TO_BF0304_GOVERNANCE_BRANCH
+PR #96 = OPEN / DRAFT
 Main Integration = NOT_COMPLETE
 ```
 
@@ -178,7 +179,7 @@ Parent/higher-level integration remains a separate merge-governance track and mu
 ## 8. Next repository-governance step
 
 ```text
-PR #98 targeted Merge Authorization Re-Review
+PR #96 Merge Authorization Review
 ```
 
-That re-review may determine merge-authorization eligibility for the current combined U03-closure + U04 non-production aggregate. It does not authorize production, live routing, or real-patient traffic.
+That review may determine merge-authorization eligibility for the current combined U03-closure + U04 non-production aggregate at the BF0304 governance layer. It does not authorize merge, production, live routing, or real-patient traffic.
