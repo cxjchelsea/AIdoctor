@@ -111,7 +111,7 @@ Legend:
     CONDITIONAL = 取决于所选 subvariant / exact implementation contract
     NO_EXPECTED = 当前 candidate 不预期修改，但详细设计仍需确认无隐含影响
 
-| Frozen artifact / boundary | A1 U06+C03 pre-readiness F3 | A2 Dedicated non-C03 F3 Unit | B1 Existing F2/U02 semantic extension | B2 New positive-sufficiency Owner/Unit |
+| Frozen artifact / boundary | A1 U06+C03 pre-readiness F3 | A2 Dedicated non-C03 F3 Unit | B1 F2/U02 + F2_SUFFICIENCY | B2 New positive-sufficiency Owner/Unit |
 |---|---|---|---|---|
 | Phase 4 F3 owner / Gap lifecycle | YES | YES | CONDITIONAL | CONDITIONAL |
 | Phase 4 Readiness input-source semantics | timing change | timing change | semantic expansion | YES, source/owner expansion |
@@ -462,150 +462,387 @@ Candidate B 不再视为单一 amendment scope。
 
 必须区分：
 
-    B1 = existing-source semantic extension
+    B1 = F2/U02 semantic extension + explicit F2_SUFFICIENCY source_domain
     B2 = genuinely new readiness source / owner
 
 两者均不构成批准。
 
 ---
 
-## 5.1 Candidate B1 — extend existing F2/U02 source semantics
+## 5.1 Candidate B1 — F2/U02 semantic extension with explicit F2_SUFFICIENCY source
 
-这是 B1 的唯一具体可审查 V1 变体；不允许用匿名 "existing source" 代替。
+B1 不再声称“无需 source_domain amendment”。
+
+Frozen RDP-05 当前只允许：
+
+    F1
+    F2_CLARIFICATION
+    F3
+    F5
+    F6
+
+且：
+
+    F2_CLARIFICATION
+    = only NEEDS_CLARIFICATION
+    != general F2 readiness source
+
+因此 B1 明确采用：
+
+    new readiness source_domain candidate
+    = F2_SUFFICIENCY
+
+同时保持：
+
+    F2_CLARIFICATION
+    = unchanged / narrow clarification-only semantics
+
+这意味着 B1 是：
+
+    existing F2 business owner extension
+    + explicit new F2-derived readiness source_domain
+    + existing U02 execution Unit extension
+
+而不是：
+
+    reuse F2_CLARIFICATION for positive sufficiency
 
 ### Semantic owner
 
-Existing：
+Existing:
 
     F2 = governed patient-fact formation
 
-Proposed extension：
+Proposed controlled extension:
 
-    F2 additionally produces a governed positive
-    MINIMUM_ANALYSIS_CONDITION_SATISFIED signal
+    F2 also owns a distinct positive assertion:
 
-注意：
+    MINIMUM_ANALYSIS_CONDITION_SATISFIED
 
-    F2 fact ownership
-    != automatically approved sufficiency ownership
+but only through:
 
-此扩权本身就是 amendment 对象。
+    source_domain = F2_SUFFICIENCY
+
+强制保持：
+
+    F2_SUFFICIENCY
+    != F2_CLARIFICATION
+
+    F2_SUFFICIENCY
+    != F3 gap/no-gap decision
+
+    F2_SUFFICIENCY
+    != final Clinical Readiness
+
+最终 Clinical Readiness 仍只由 G2/U05 D03 产生。
 
 ### Execution host
 
     U02
 
+但 B1 增加一个明确的 U02 execution mode:
+
+    SUFFICIENCY_ASSESSMENT_ONLY
+
+该 mode：
+
+    does not parse new patient text
+    does not call C01
+    does not create/update patient facts
+    does not modify framing
+    only evaluates the governed F2_SUFFICIENCY policy
+    against already committed current facts/framing
+
 ### Scheduler position
 
-U02 本身位置不变：
+普通事实主链仍先执行：
 
-    U02
+    U02 FACT_FORMATION
     -> U03
     -> U04
-    -> U05
 
-但 positive signal 需要在 U05 使用时保持 current-version validity。
+B1 在 U04 已产生 committed/current ALLOW 或 permitted RESTRICTED 后增加：
 
-### Current-version binding problem
+    U04
+    -> U02 SUFFICIENCY_ASSESSMENT_ONLY
+    -> commit current F2_SUFFICIENCY assertion
+    -> U05 D03
 
-由于 U03/U04 后续可能产生新的 Clinical State Version：
+因此不再尝试：
 
     U02-produced signal @ Vn
-    -> U03/U04 commits
-    -> U05 current version = Vn+k
+    -> blindly reuse at U05 Vn+k
 
-因此 B1 不能简单把旧 U02 signal 当 current。
+而是：
 
-必须在详细 amendment 中定义：
+    post-U04 current state
+    -> U02 sufficiency-only assessment
+    -> current-version governed assertion
+    -> U05
 
-    deterministic current-version revalidation / compatibility binding
+这同时解决 initial bootstrap 和 U03/U04 后的 current-version revalidation hosting 问题。
 
-且必须回答：
+### Trigger
 
-    who owns revalidation
-    what downstream state changes invalidate the signal
-    whether Risk/Safety-only commits can preserve it
-    whether any fact/framing change invalidates it immediately
+    F2_SUFFICIENCY_ASSESSMENT_REQUIRED
 
-在该规则冻结前：
+触发前置：
 
-    old U02 signal -> U05
-    = PROHIBITED
+    current U04 committed Safety Gate = ALLOW
+    or permitted RESTRICTED
 
-### Input / output
+    + current committed F1 framing
+    + current committed patient facts
+    + no current-version valid F2_SUFFICIENCY assertion
+    + approved F2 sufficiency RuleRelease / PolicyRef
 
-U02 input：
+以下情况不得触发 ordinary B1 assessment：
 
-    current F1 framing
-    current parsed/committed patient facts
-    explicit sufficiency policy/rule refs
+    Safety Gate = BLOCKED
+    Safety Gate = UNAVAILABLE
+    stale/malformed U04 handoff
+    missing required policy binding
 
-U02 output extension：
+### Policy / Capability usage
 
-    MINIMUM_ANALYSIS_CONDITION_SATISFIED
-    or no positive sufficiency signal
+B1 V1 proposal:
 
-不得输出：
+    AI Capability = NONE
+
+    C01 = NOT_CALLED in SUFFICIENCY_ASSESSMENT_ONLY
+
+    F2 sufficiency assessment
+    = deterministic governed policy
+
+必须绑定：
+
+    F2SufficiencyPolicyRef
+    RuleReleaseRef
+    applicable KnowledgeReleaseRef only if the frozen policy explicitly requires it
+
+禁止：
+
+    LLM decides sufficiency
+    C01 model output -> direct sufficiency
+    completeness percentage
+    legacy required/important/optional checklist as truth
+
+### Input contract
+
+    consultation_id
+    cdp_id
+    current Clinical State Version
+    current F1 framing ref
+    current committed patient-fact refs
+    committed U04 Safety Gate ref
+    restricted_context_ref when applicable
+    F2SufficiencyPolicyRef
+    RuleReleaseRef
+    required governance/version refs
+
+### Output contract
+
+Exactly one of:
+
+    A. F2_SUFFICIENCY readiness input:
+       business_signal = MINIMUM_ANALYSIS_CONDITION_SATISFIED
+
+    B. no positive sufficiency assertion
+       = no F2_SUFFICIENCY readiness input
+       = NOT automatically insufficient / CAN_ASK_MORE / READY / NO_RELIABLE_DIRECTION
+
+    C. typed technical/governance failure
+
+B1 不允许输出：
 
     READY_FOR_CLINICAL_ANALYSIS
+    CAN_ASK_MORE
+    NO_RELIABLE_DIRECTION
+    NEEDS_OFFLINE_EVIDENCE
 
-Final Readiness 仍由 D03 唯一产生。
+这些仍属于各自 Owner / D03。
 
-### State commit
+### State / commit boundary
 
-若该 signal 成为 governed readiness input：
+Positive signal 必须成为 governed current-version derived assertion/readiness input。
 
-    must be formally represented and version/provenance bound
-    state/derived assertion commit semantics must be frozen in Phase 8/RDP-05
+Required sequence:
 
-### Failure owner
+    deterministic F2 sufficiency decision
+    -> K09 StateChangeProposal
+    -> G2/P01 commit
+    -> new current Clinical State Version
+    -> reload authoritative state
+    -> U05 consumes committed F2_SUFFICIENCY
 
-signal producer/revalidation failure：
+不得：
+
+    keep only transient controller boolean
+    pass uncommitted signal directly into D03
+
+### Current-version validity and invalidation
+
+B1 不使用“跨 U03/U04 版本兼容继承”作为默认机制。
+
+相反：
+
+    every ordinary initial/re-entry path reaching U05 after U04
+    must have a current-version F2_SUFFICIENCY assessment
+
+After F2_SUFFICIENCY commit:
+
+    pure downstream U05 decision may consume it
+
+Any later change to:
+
+    F1 framing
+    F2 patient facts
+    correction affecting facts/framing
+
+must invalidate:
+
+    F2_SUFFICIENCY
+
+and require the normal chain:
+
+    U02 FACT_FORMATION
+    -> U03
+    -> U04
+    -> U02 SUFFICIENCY_ASSESSMENT_ONLY
+    -> U05
+
+U03/U04 commits happen before the sufficiency assessment, so B1 no longer depends on preserving an earlier U02 signal across those commits.
+
+### Replay / idempotency
+
+B1 assessment identity must bind at least:
+
+    consultation_id
+    source/current Clinical State Version
+    U04 Safety Gate decision/commit ref
+    F2SufficiencyPolicyRef
+    RuleReleaseRef
+    assessment trigger/event identity
+    effect idempotency key
+
+Same replay:
+
+    must not create duplicate F2_SUFFICIENCY assertions
+    must not produce multiple commits for the same source version/policy
+    must attach/return the authoritative prior effect
+
+If authoritative Clinical State Version changes before commit:
+
+    stale conflict
+    -> no commit
+    -> scheduler must reload/re-evaluate
+
+### Failure owner / route
+
+Policy binding missing, deterministic policy failure, commit failure, or stale conflict:
 
     != insufficient
     != no gap
     != READY
 
-must remain typed failure / U14-eligible where applicable.
+must produce typed failure semantics.
+
+Where recoverable/retriable:
+
+    follow governed retry/reload policy
+
+Where business/runtime failure routing is required:
+
+    -> U14 eligibility
+
+No failure may fabricate:
+
+    MINIMUM_ANALYSIS_CONDITION_SATISFIED
 
 ### Main amendment consequences
 
 B1 必改：
 
     Phase 4
-    - F2 business semantics / Readiness input semantics
+    - F2 business semantics expanded
+    - add explicit F2_SUFFICIENCY readiness source
+    - preserve F2_CLARIFICATION as clarification-only
 
     Phase 5
-    - minimum-analysis positive evidence path
+    - add post-Safety positive sufficiency assessment before first Readiness
 
     Phase 6
-    - U05 S_in
+    - U02 gains SUFFICIENCY_ASSESSMENT_ONLY entry/mode
+    - U05 S_in accepts F2_SUFFICIENCY
+    - initial path becomes U04 -> U02(sufficiency-only) -> U05
+
+    Phase 7
+    - no C03 change expected
+    - no C01 invocation in sufficiency-only mode
+    - capability matrix may require clarification that U02 has a deterministic non-Capability consequence
 
     Phase 8
-    - positive signal contract / revalidation contract
+    - add F2_SUFFICIENCY readiness input schema
+    - add deterministic sufficiency decision/proposal contract
+    - add K09/P01 field/source permission and idempotency contract
 
     Phase 9
-    - dependency resolution/revalidation before D03
+    - Scheduler edge U04 -> U02(SUFFICIENCY_ASSESSMENT_ONLY) -> U05
+    - distinguish U02 FACT_FORMATION from U02 SUFFICIENCY_ASSESSMENT_ONLY
+    - add replay/stale/reload behavior
 
     RDP-05
-    - F2 source/signal vocabulary and version semantics
+    - source_domain adds F2_SUFFICIENCY
+    - business_signal adds MINIMUM_ANALYSIS_CONDITION_SATISFIED
+    - applicability/version/invalidation matrix updated
+    - F2_CLARIFICATION remains narrow and unchanged
 
-B1 不必新增 source_domain 名称，但：
+    RDP-02
+    - D03 policy may consume F2_SUFFICIENCY only after Owner-approved READY policy is separately frozen
 
-    owner-semantic expansion
-    = material frozen-contract change
+### Principal governance boundary
 
-### Principal governance risk
+B1 must prove in detailed amendment:
 
-    F2 sufficiency semantics
-    may duplicate/conflict with F3 information-gap sufficiency semantics
+    F2_SUFFICIENCY
+    = positive minimum-condition assertion over governed facts/framing
 
-必须在详细 amendment 中证明：
+    F3
+    = what information is missing, whether online-obtainable,
+      and whether it has decision value
 
-    F2 positive minimum-condition
-    != F3 gap/no-gap decision
+Therefore:
 
-否则 B1 不得进入 re-freeze。
+    F2_SUFFICIENCY
+    must not claim "no important gap exists"
+
+and:
+
+    F3
+    must not be bypassed after DDx when new Gap reevaluation is required
+
+If this separation cannot be maintained:
+
+    B1 must be rejected
+    rather than creating two competing sufficiency owners.
+
+### B1 decision-package completeness
+
+For Owner-selection comparison, B1 now has:
+
+    semantic owner = F2 extension
+    source_domain = F2_SUFFICIENCY
+    execution host = U02
+    execution mode = SUFFICIENCY_ASSESSMENT_ONLY
+    Scheduler = U04 -> U02(sufficiency-only) -> U05
+    trigger = F2_SUFFICIENCY_ASSESSMENT_REQUIRED
+    Capability = NONE in V1
+    policy = deterministic governed policy
+    state = committed governed derived assertion
+    idempotency = source-version + policy + trigger/effect identity
+    failure owner = typed failure / U14 eligibility
+    revalidation = recompute after current U04, not cross-version inheritance
+
 
 ---
 
@@ -728,18 +965,18 @@ B2 不允许复用 F3 的语义名称来规避 source-domain amendment。
 
 本表只呈现结构差异，不构成推荐、排序或批准。
 
-| Dimension | A1 U06+C03 canonical F3 | A2 Dedicated non-C03 F3 Unit | B1 F2/U02 semantic extension | B2 New sufficiency Owner/Unit |
+| Dimension | A1 U06+C03 canonical F3 | A2 Dedicated non-C03 F3 Unit | B1 F2/U02 + F2_SUFFICIENCY | B2 New sufficiency Owner/Unit |
 |---|---|---|---|---|
 | Clinical sufficiency semantic owner | F3 | F3 | F2 extension | new owner |
 | Execution host | U06 | new pre-F3 Unit | U02 | new pre-sufficiency Unit |
-| Initial Scheduler change | U04→U06(pre)→U05 | U04→new Unit→U05 | main Unit order mostly unchanged; adds revalidation dependency | U04→new Unit→U05 |
+| Initial Scheduler change | U04→U06(pre)→U05 | U04→new Unit→U05 | U04→U02(sufficiency-only)→U05 | U04→new Unit→U05 |
 | Uses C03 | yes | no | no | no by default |
 | Produces canonical F3 Gap | yes | yes | no | no |
-| New readiness source domain | no | no | no, but expands F2 semantics | yes |
+| New readiness source domain | no | no | yes: F2_SUFFICIENCY while F2_CLARIFICATION stays narrow | yes |
 | Phase 5 amendment | yes | yes | yes | yes |
 | Phase 9 amendment | yes | yes | yes/revalidation | yes |
 | Duplicate sufficiency-owner concern | low if canonical F3 only | low if canonical F3 only | must resolve F2 vs F3 boundary | must resolve new owner vs F3 boundary |
-| Current-version complexity | canonical commit before D03 | canonical commit before D03 | high due U02→U03/U04 version progression | committed/decision binding before D03 |
+| Current-version complexity | canonical commit before D03 | canonical commit before D03 | recompute after current U04, then commit before D03 | committed/decision binding before D03 |
 | New deterministic clinical rule pack | not necessarily; C03 governed capability | yes | yes for positive sufficiency semantics | yes |
 | Direct U05 Gap ownership | prohibited | prohibited | prohibited | prohibited |
 
@@ -947,7 +1184,7 @@ Reason：
 
 Reason：
 
-    Candidate B split into B1 existing-source semantic extension and B2 new-source-domain/owner.
+    Candidate B split into B1 existing F2 Owner/U02 extension with explicit F2_SUFFICIENCY source_domain and B2 new-source-domain/new-owner.
 
     BF-U05-BOOTSTRAP-IR-04
     = REMEDIATED / TARGETED_REVIEW_PENDING
@@ -958,6 +1195,23 @@ Reason：
 
     RQ-U05-BOOTSTRAP-IR-05
     = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    BF-U05-BOOTSTRAP-TR-01
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+Reason：
+
+    B1 no longer reuses F2_CLARIFICATION or claims no source-domain change.
+    It explicitly adds F2_SUFFICIENCY and keeps F2_CLARIFICATION narrow.
+
+    BF-U05-BOOTSTRAP-TR-02
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+Reason：
+
+    B1 now defines production/revalidation as U02 SUFFICIENCY_ASSESSMENT_ONLY after current U04,
+    with explicit trigger, deterministic policy/no-Capability boundary, K09/P01 commit,
+    version/invalidation rules, replay/idempotency identity and typed failure/U14 boundary.
 
 Reason：
 
@@ -971,7 +1225,7 @@ Reason：
     = OPEN
 
     Controlled Amendment Decision Package
-    = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
+    = REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_REVIEW
 
     Controlled Amendment Decision Package
     != OWNER_SELECTION_READY yet
@@ -987,7 +1241,7 @@ Reason：
 
     BF-U05-RDP02-IR-02
     = REMEDIATED_WITH_REVISED_CONTROLLED_AMENDMENT_PACKAGE
-    = TARGETED_REVIEW_PENDING
+    = SECOND_TARGETED_REVIEW_PENDING
 
     BF-U05-RG-02
     = NOT_CLOSED
