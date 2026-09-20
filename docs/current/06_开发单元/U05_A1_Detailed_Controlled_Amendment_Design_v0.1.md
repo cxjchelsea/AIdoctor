@@ -289,16 +289,36 @@ Thread AWAITING_USER
 
 Question candidate material is not an authoritative Question business effect in PRE_READINESS mode.
 
+V1 freezes a strict non-reuse rule：
+
+```text
+PRE_READINESS C03 question candidates
+= support-only ephemeral artifacts
+= trace/evidence refs only
+!= Pending Question
+!= reusable Question Candidate Set
+```
+
+After U06/F3 Owner interpretation has produced the canonical F3 effect：
+
+```text
+pre-readiness question candidate payload
+→ MUST NOT be reused by QUESTION_SELECTION_DELIVERY
+```
+
+even when the later Question mode happens to run on the same Clinical State Version.
+
 If later D03 returns CAN_ASK_MORE：
 
 ```text
 U05
 → U06 QUESTION_SELECTION_DELIVERY
+→ fresh C03 invocation / fresh governed candidate evaluation
 ```
 
-and MODE-2 must independently validate current Gap/current version/current question policy before selection/delivery.
+MODE-2 must independently validate current Gap/current version/current CapabilityBindingRef/current question policy before selection/delivery.
 
-No automatic reuse of a stale pre-readiness question candidate is allowed.
+This rule trades extra Capability invocation for deterministic lifecycle semantics and removes cross-mode candidate ownership ambiguity.
 
 ---
 
@@ -439,15 +459,31 @@ Blind stale proposal retry is prohibited.
 
 ## 7.1 Purpose
 
-After F3 commit, U05 is blocked until：
+After F3 commit, U05 is blocked until all dependencies required for a routable current Safety decision and a current-compatible F3 readiness input are valid.
+
+Barrier completion does NOT require：
 
 ```text
-current Risk
-+ current U04 Gate
-+ current-version compatible F3 readiness input
+Risk Decision version
+= final Safety Gate commit version
+= final authoritative Clinical State Version
 ```
 
-coexist for the same authoritative current Clinical State Version.
+Instead it requires dependency-validity semantics：
+
+```text
+A. the Risk Decision consumed by U04 is valid for the exact state/dependency basis U04 evaluated;
+
+B. the U04 Safety Gate is the current committed Gate for the authoritative post-U04 state;
+
+C. no change after the U04 decision has modified a declared Risk/Safety dependency in a way that invalidates that Gate;
+
+D. the F3 readiness input has been current-version revalidated/reference-bound for the authoritative state that D03 will consume;
+
+E. a current routing authorization permits U05.
+```
+
+Version advancement caused only by committing downstream derived Risk/Safety decisions does not by itself invalidate their declared upstream basis.
 
 ---
 
@@ -462,52 +498,96 @@ and Clinical State Version advanced
 
 Barrier state is Runtime execution control, not Clinical Truth.
 
+The barrier records dependency refs, not a second copy of Risk/Safety/F3 truth.
+
 ---
 
-## 7.3 Risk re-establishment
+## 7.3 Risk dependency re-establishment
 
-Because Risk Assessment is version-bound：
+After canonical F3 commit：
 
 ```text
-F3 commit
-→ Clinical State Version changed
-→ Risk Assessment for new version required
+reload authoritative Clinical State
+→ determine whether the previously valid Risk Decision is invalidated by the F3 state effect
 ```
 
-Scheduler must route：
+For A1 V1, canonical F3 Gap mutation is conservatively treated as：
 
 ```text
-U03 @ current version
+RISK_REEVALUATION_REQUIRED
 ```
 
-under existing U03 semantics.
+unless a later independently reviewed dependency rule narrows this behavior.
 
-U03 produces：
+Therefore the barrier normally schedules：
 
 ```text
-Risk Assessment VALID / FAILED
+U03
+→ Risk Decision for the post-F3 clinical-state basis
 ```
 
-for the current version.
-
-If FAILED：
+The resulting Risk Decision must bind：
 
 ```text
-U04 first forms governed Safety consequence
+risk_basis_state_version
+declared risk dependency refs
+RuleReleaseRef / KnowledgeReleaseRef / CapabilityBindingRef
+decision_ref
+validity
+```
+
+Important：
+
+```text
+a later U04 Gate commit may advance Clinical State Version
+without automatically making this Risk Decision stale
+```
+
+when the U04 commit changes only downstream Safety-derived state and does not change any declared Risk dependency.
+
+Risk invalidation is dependency-driven, not version-number-only.
+
+If U03 FAILED：
+
+```text
+U04 first forms the governed Safety consequence
 → ordinary A1/U05 continuation prohibited
 → U14 according to existing failure boundary
 ```
 
 ---
 
-## 7.4 Safety re-establishment
+## 7.4 Safety Gate re-establishment
 
-After current Risk input is available：
+U04 consumes a Risk Decision that is valid for its evaluation basis and forms a governed Safety Gate.
+
+The committed Gate must bind at least：
 
 ```text
-U04
-→ current Safety Gate
+u04_gate_ref
+risk_decision_ref
+risk_basis_state_version
+safety evaluation basis refs
+capability/policy/scope/authorization refs
+gate_commit_state_version
+validity
 ```
+
+The Gate is CURRENT when：
+
+```text
+it is the latest authoritative committed U04 Gate
+and none of its declared dependencies has changed since its decision basis was validated
+```
+
+It is NOT required that：
+
+```text
+risk_basis_state_version
+= gate_commit_state_version
+```
+
+merely because the Safety Gate itself is a downstream governed state commit.
 
 For：
 
@@ -525,41 +605,52 @@ ALLOW
 permitted RESTRICTED
 ```
 
-the routing projection may evaluate whether the already-applied A1 F3 bootstrap effect is current-version usable.
+the Scheduler proceeds to F3 current-version revalidation.
 
 ---
 
-## 7.5 No-cycle rule
+## 7.5 No-cycle / dependency invalidation rule
 
-The barrier must not retrigger canonical F3 merely because：
-
-```text
-Vn
-→ F3 commit
-→ Vn+1
-→ U03 risk commit/revalidation
-→ Vk
-→ U04 gate commit/revalidation
-→ Vm
-```
-
-changed versions.
-
-Frozen rule：
+The barrier must not create：
 
 ```text
-Risk/Safety-only version advancement
-!= F3 invalidation
+U03
+→ U04 commit
+→ version advanced
+→ U03 again solely because U04 committed
 ```
 
-A new F3 canonical effect is allowed only when a true F3 invalidation dependency changed：
+Frozen A1 amendment rule：
+
+```text
+version advancement alone
+!= dependency invalidation
+```
+
+Risk must be re-run only when a declared Risk dependency changed.
+
+Safety Gate must be re-run only when a declared Safety dependency changed or no current committed Gate exists.
+
+F3 canonical assessment must be re-run only when a true F3 invalidation dependency changed：
 
 ```text
 F1 framing changed
 F2 patient facts changed/corrected
 explicit F3 evidence dependency changed
+F3 governing semantic binding is no longer compatible for current use
 prior F3 assessment failed/invalidated under governed rule
 ```
+
+Changes limited to：
+
+```text
+Risk derived decision
+Safety Gate derived decision
+routing authorization
+Runtime barrier/checkpoint state
+```
+
+do not by themselves invalidate F3.
 
 Same：
 
@@ -571,38 +662,188 @@ must never be committed twice.
 
 ---
 
-# 8. Current-version F3 readiness-input binding
+# 8. F3 current-version revalidation decision and readiness-input binding
 
-## 8.1 Problem
-
-Canonical F3 may be committed at：
+## 8.1 Semantic owner
 
 ```text
-Vn+1
+Owner = F3
 ```
 
-while after barrier the authoritative current version may be：
-
-```text
-Vk
-```
-
-RDP-05 requires all D03 inputs to be current-version compatible.
+Runtime/Scheduler may trigger and host execution control, but cannot decide whether an older canonical F3 semantic result is still clinically/business valid for the current state.
 
 ---
 
-## 8.2 Revalidation/reference binding
+## 8.2 Execution host and mode
 
-A current F3 readiness input may be projected only when：
+U06 gains a third explicit F3-owned mode：
 
 ```text
-canonical F3 source state still valid
-F3 invalidation dependencies unchanged
-current Risk/Safety barrier complete
-current U04 Gate routable
+MODE-1 PRE_READINESS_GAP_ASSESSMENT
+MODE-2 QUESTION_SELECTION_DELIVERY
+MODE-3 F3_CURRENT_VERSION_REVALIDATION
 ```
 
-Envelope must carry：
+MODE-3 is a governed deterministic F3 Owner consequence.
+
+By default：
+
+```text
+MODE-3 DOES NOT invoke C03
+MODE-3 DOES NOT mutate canonical F3 Clinical State
+MODE-3 DOES NOT select/deliver Question
+MODE-3 DOES NOT enter WAITING_USER
+```
+
+---
+
+## 8.3 Trigger
+
+```text
+POST_F3_SAFETY_BARRIER_CURRENT_GATE_READY
+```
+
+Trigger requires：
+
+```text
+current authoritative Clinical State
+current committed U04 Gate = ALLOW / permitted RESTRICTED
+canonical F3 source state/effect exists
+F3_CANONICAL_EFFECT_ID known
+barrier has no unresolved Risk/Safety dependency invalidation
+```
+
+---
+
+## 8.4 Deterministic revalidation input
+
+MODE-3 consumes：
+
+```text
+consultation_id
+cdp_id
+target authoritative Clinical State Version
+current U04 Gate ref
+canonical F3 state ref
+F3_CANONICAL_EFFECT_ID
+original F3 assessment decision ref
+original C03 CapabilityBindingRef
+original RuleReleaseRef / KnowledgeReleaseRef / F3 policy refs
+F3 dependency fingerprint from canonical assessment
+current F1 framing ref
+current F2 fact basis refs
+current explicit F3 evidence dependency refs
+current active governance compatibility refs
+```
+
+The dependency fingerprint excludes downstream-only：
+
+```text
+Risk decision commit
+Safety Gate commit
+routing authorization
+Runtime checkpoint/barrier state
+```
+
+unless one of those records proves that an actual upstream F3 dependency changed.
+
+---
+
+## 8.5 Semantic binding / release rule
+
+Historical F3 provenance is never rewritten.
+
+For current-version reuse, MODE-3 must prove both：
+
+```text
+A. F3 dependency basis is unchanged;
+B. the historical semantic binding remains legally interpretable for current reuse
+   under an approved compatibility rule.
+```
+
+If an original Capability/Rule/Knowledge binding is：
+
+```text
+WITHDRAWN
+EXPIRED
+incompatible
+or cannot be proven compatible for current reuse
+```
+
+MODE-3 must NOT silently switch to a new binding and declare the old F3 effect current.
+
+Instead：
+
+```text
+F3_REASSESSMENT_REQUIRED
+→ no current F3 readiness input
+→ Scheduler returns to A1 PRE_READINESS_GAP_ASSESSMENT
+→ new active bindings are resolved explicitly
+→ a new F3_CANONICAL_EFFECT_ID is produced because governing semantic binding changed
+```
+
+Historical effect remains auditable historical truth for its original basis.
+
+---
+
+## 8.6 Deterministic revalidation decision contract
+
+Introduce proposed decision type：
+
+```text
+F3CurrentVersionRevalidationDecision
+```
+
+Minimum fields：
+
+```text
+revalidation_decision_id
+consultation_id
+cdp_id
+F3_CANONICAL_EFFECT_ID
+source_f3_state_ref
+source_f3_decision_ref
+source_clinical_state_version
+target_clinical_state_version
+current_u04_gate_ref
+dependency_fingerprint_before
+dependency_fingerprint_current
+semantic_binding_compatibility_ref
+outcome
+reason_codes[]
+policy_id = F3_CURRENT_VERSION_REVALIDATION
+policy_version
+rule_release_refs[]
+knowledge_release_refs[]
+historical_capability_binding_ref
+created_at
+validity
+trace_refs[]
+```
+
+Allowed outcome vocabulary：
+
+```text
+REVALIDATED_CURRENT
+REASSESSMENT_REQUIRED
+FAILED
+```
+
+These outcomes are internal F3 revalidation outcomes：
+
+```text
+!= Clinical Readiness
+!= D03 decision_status
+!= new canonical F3 lifecycle state
+```
+
+---
+
+## 8.7 Output semantics
+
+### REVALIDATED_CURRENT
+
+May emit one normalized F3 readiness input：
 
 ```text
 readiness_input_id
@@ -613,11 +854,11 @@ applicability_status = PRESENT
 business_signal
 consultation_id
 cdp_id
-clinical_state_version = Vk
-source_decision_ref = F3 assessment/revalidation ref
+clinical_state_version = target current version
+source_decision_ref = F3CurrentVersionRevalidationDecision ref
 source_state_ref = canonical F3 state ref
 current_version_revalidation_ref
-u04_gate_ref = current Gate @ Vk
+u04_gate_ref = current Gate
 evidence_refs[]
 policy_or_rule_refs[]
 produced_at
@@ -628,11 +869,71 @@ This projection：
 
 ```text
 DOES NOT duplicate canonical F3 state
-DOES NOT rewrite historical F3 provenance
-DOES NOT create new Clinical State mutation
+DOES NOT rewrite historical provenance
+DOES NOT create K09 StateChangeProposal
+DOES NOT advance Clinical State Version
 ```
 
-unless a true F3 invalidation dependency changed.
+### REASSESSMENT_REQUIRED
+
+```text
+no current F3 readiness input
+no D03
+→ return to governed A1 PRE_READINESS_GAP_ASSESSMENT
+```
+
+A fresh C03 invocation uses current approved bindings.
+
+### FAILED
+
+```text
+no current F3 readiness input
+no D03
+→ typed failure
+→ retry/reload when explicitly safe
+→ otherwise U14 eligibility
+```
+
+Failure must not be converted to：
+
+```text
+NO_ACTIVE_ONLINE_BLOCKING_GAP
+CAN_ASK_MORE
+READY_FOR_CLINICAL_ANALYSIS
+```
+
+---
+
+## 8.8 Idempotency
+
+Revalidation identity：
+
+```text
+F3_REVALIDATION_ID
+=
+consultation_id
++ F3_CANONICAL_EFFECT_ID
++ target Clinical State Version
++ current U04 Gate ref
++ revalidation policy version
++ semantic binding compatibility ref
+```
+
+Same replay：
+
+```text
+returns/attaches authoritative prior revalidation decision/input
+→ no duplicate revalidation decision effect
+→ no Clinical State mutation
+```
+
+If target Clinical State Version or Gate changes before publication：
+
+```text
+result = STALE_BEFORE_PUBLISH
+→ do not publish CURRENT readiness input
+→ reload authoritative state
+```
 
 ---
 
@@ -844,8 +1145,9 @@ F2 facts
 → G4 current Safety Gate
 → A1 pre-readiness F3 assessment
 → canonical F3 commit
-→ Risk/Safety revalidation barrier
-→ current Safety Gate
+→ Risk/Safety dependency revalidation barrier
+→ current committed Safety Gate
+→ F3 current-version revalidation
 → Clinical Readiness Resolver
 ```
 
@@ -895,6 +1197,7 @@ requires current Gate
 
 U06:
 add PRE_READINESS_GAP_ASSESSMENT mode
+add F3_CURRENT_VERSION_REVALIDATION mode
 while preserving QUESTION_SELECTION_DELIVERY mode
 ```
 
@@ -914,6 +1217,26 @@ canonical F3 intended effect
 → commit result
 → Safety revalidation barrier
 ```
+
+F3_CURRENT_VERSION_REVALIDATION mode S_in：
+
+```text
+current U04 Gate
+canonical F3 effect/state
+target current Clinical State Version
+dependency fingerprint
+semantic binding compatibility refs
+```
+
+F3_CURRENT_VERSION_REVALIDATION mode S_out：
+
+```text
+REVALIDATED_CURRENT
+or REASSESSMENT_REQUIRED
+or FAILED
+```
+
+MODE-3 performs no Clinical State mutation.
 
 Forbidden PRE_READINESS S_out：
 
@@ -965,13 +1288,16 @@ C03 capability itself does not become a Readiness Resolver.
 
 CapabilityBindingRef must be validated separately for each invocation/effect context.
 
-If pre-readiness C03 call succeeded but later Question mode runs on a newer Clinical State Version：
+Pre-readiness question candidates have V1 lifetime：
 
 ```text
-old candidate output cannot be silently reused
+support-only / trace-only
+never reusable by QUESTION_SELECTION_DELIVERY
 ```
 
-without explicit current-version validation.
+Therefore later Question mode always performs fresh governed candidate evaluation through its own current C03 invocation, even if Clinical State Version did not change.
+
+F3_CURRENT_VERSION_REVALIDATION does not call C03 unless it returns REASSESSMENT_REQUIRED and Scheduler explicitly starts a new PRE_READINESS assessment.
 
 ---
 
@@ -1036,14 +1362,43 @@ as execution state/checkpoint metadata.
 
 It must not be Clinical Truth.
 
-## 14.5 Current-version F3 readiness-input revalidation record
+## 14.5 F3 current-version revalidation decision
+
+Add proposed：
+
+```text
+F3CurrentVersionRevalidationDecision
+F3_REVALIDATION_ID
+dependency_fingerprint_before/current
+semantic_binding_compatibility_ref
+historical CapabilityBindingRef / release refs
+target Clinical State Version
+current U04 Gate ref
+outcome = REVALIDATED_CURRENT / REASSESSMENT_REQUIRED / FAILED
+```
+
+Owner：
+
+```text
+F3
+```
+
+Execution host：
+
+```text
+U06 F3_CURRENT_VERSION_REVALIDATION
+```
+
+This decision is deterministic and creates no Clinical State mutation when only reference-binding is performed.
+
+## 14.6 Current-version F3 readiness-input record
 
 Add/clarify：
 
 ```text
 current_version_revalidation_ref
 source_state_ref
-source_decision_ref
+source_decision_ref = F3CurrentVersionRevalidationDecision ref
 bound current Clinical State Version
 bound current U04 Gate ref
 validity
@@ -1082,9 +1437,11 @@ Facts
 → F3 K09/G2/P01 commit
 → reload authoritative Clinical State
 → POST_F3_SAFETY_REVALIDATION_BARRIER
-→ U03 current Risk
-→ U04 current Gate
-→ F3 current-version revalidation/ref-binding
+→ U03 Risk when declared Risk dependencies require reevaluation
+→ U04 current Gate from a valid Risk/Safety evaluation basis
+→ U06 F3_CURRENT_VERSION_REVALIDATION
+→ deterministic F3 revalidation decision
+→ current-version F3 readiness input
 → route projection
 → U05
 ```
@@ -1212,18 +1569,26 @@ F1 FRAMED_IN_SCOPE
 → POLICY_EXPECTATION_GAP
 ```
 
-Under selected A1 architecture, this profile is no longer the executable initial D03 path.
+Under selected A1 architecture, this profile is no longer an executable initial D03 invocation path.
 
 Amend to：
 
 ```text
-when A1 is active and F3 bootstrap has not completed:
-D03 ordinary execution = NOT_ADMITTED
-because U04 routing sends the consultation to A1 pre-readiness first.
+when A1 is active and bootstrap F3 has not completed/current-version revalidated:
 
-after A1 completes and current-version F3 input exists:
-D03 evaluates ordinary precedence using current F3 signal.
+U04 routing / U05 inbound admission
+→ U05 ordinary readiness evaluation is not eligible
+→ D03 is not invoked
+→ no D03 decision_id exists
+→ no D03 decision_status exists
+→ route remains in A1 pre-readiness / Safety-barrier / F3-revalidation path.
+
+after A1 completes and a current-version compatible F3 input exists:
+U05 admission may succeed
+→ D03 evaluates ordinary precedence using current F3 signal.
 ```
+
+The exact inbound-admission enforcement belongs to U05-RDP-01 when that contract is frozen; RDP-02 only preserves the rule that pre-D03 non-entry does not create a D03 runtime status.
 
 D03 runtime statuses remain：
 
@@ -1366,6 +1731,13 @@ A1-E13 same F3_CANONICAL_EFFECT_ID replay is idempotent
 A1-E14 after D03 CAN_ASK_MORE, ordinary U06 Question mode still works
 A1-E15 Question mode alone may SELECT/DELIVER and enter WAITING_USER
 A1-E16 OD-U05-READY-01 not approved => no executable READY expectation from D03-POL-005
+A1-E17 U04 Gate commit version advance alone does not force U03 rerun
+A1-E18 declared Risk dependency change does force U03 rerun
+A1-E19 F3 revalidation unchanged dependencies -> REVALIDATED_CURRENT with no state mutation
+A1-E20 F3 dependency/binding incompatibility -> REASSESSMENT_REQUIRED, no D03
+A1-E21 F3 revalidation failure -> no readiness input / governed failure route
+A1-E22 pre-readiness C03 question candidates are never reused by Question mode
+A1-E23 A1 bootstrap incomplete -> no D03 object/status exists
 ```
 
 ---
@@ -1401,14 +1773,60 @@ Current status：
 
 ```text
 A1 Detailed Controlled Amendment Design
-= PROPOSED / READY_FOR_INDEPENDENT_DESIGN_REVIEW
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_REVIEW
 
 Exact Frozen-Artifact Diff Inventory
-= REQUIRED PAIRED ARTIFACT
+= REVISED PAIRED ARTIFACT
 
 Frozen amendment authorization
 = NOT_GRANTED
 
 Implementation authorization
 = NOT_GRANTED
+```
+
+
+---
+
+# 23. Independent-review remediation status
+
+```text
+BF-U05-A1-IR-01
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+BF-U05-A1-IR-02
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+BF-U05-A1-IR-03
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+RQ-U05-A1-IR-04
+= REMEDIATED / TARGETED_REVIEW_PENDING
+```
+
+Remediation summary：
+
+```text
+IR-01:
+Barrier now uses dependency-validity semantics.
+Risk is valid for U04's evaluation basis;
+U04's own downstream commit does not recursively stale Risk by version number alone.
+
+IR-02:
+F3 current-version revalidation now has:
+Owner = F3
+Host = U06 F3_CURRENT_VERSION_REVALIDATION
+explicit trigger/input/decision/outcome/idempotency/failure/binding compatibility contract.
+
+IR-03:
+A1 bootstrap incomplete now means:
+U05/D03 not invoked,
+no D03 decision_id,
+no D03 decision_status.
+No NOT_ADMITTED/NOT_REACHED D03 vocabulary.
+
+IR-04:
+V1 freezes non-reuse:
+pre-readiness C03 question candidates are support/trace-only
+and are never reused by QUESTION_SELECTION_DELIVERY.
 ```
