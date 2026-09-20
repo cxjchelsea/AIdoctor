@@ -145,6 +145,189 @@ Legend:
 
 ---
 
+# 3.1 Unified Pre-Readiness Version-Safety Contract
+
+本节统一约束所有发生在：
+
+    current committed U04 Safety Gate
+    -> first U05 D03
+
+之间的 pre-readiness effect。
+
+Frozen U04-RDP-04 requires:
+
+    routable Safety Gate
+    = current committed U04 Gate
+    bound to current Clinical State Version
+
+因此任何 pre-readiness candidate 必须且只能采用以下两类版本模式之一。
+
+## VS-A — SAME_VERSION_NON_STATE_DECISION
+
+适用于：
+
+    positive readiness evidence
+    that does not need to become canonical Clinical State before D03
+
+规则：
+
+    current U04 Gate @ Vn
+    -> deterministic governed decision/readiness-input @ Vn
+    -> NO K09 StateChangeProposal
+    -> NO Clinical State Version advance
+    -> U05/D03 @ Vn
+
+必须绑定：
+
+    consultation_id
+    current Clinical State Version = Vn
+    current U04 Gate ref @ Vn
+    exact policy/rule/release refs
+    source decision ref
+    input/evidence refs
+    validity/staleness
+    replay/idempotency identity
+
+任何后续 Clinical State Version 变化：
+
+    Vn -> Vn+1
+
+都会使旧 decision/readiness input：
+
+    STALE
+
+除非存在显式 frozen current-version revalidation/reference-binding rule。
+
+当前 candidate mapping：
+
+    B1 = VS-A
+    B2 = VS-A
+
+## VS-B — STATE_MUTATION_WITH_POST_COMMIT_SAFETY_BARRIER
+
+适用于：
+
+    canonical business state
+    that must be committed before D03
+
+Current mapping:
+
+    A1 = canonical F3 Gap -> VS-B
+    A2 = canonical F3 Gap -> VS-B
+
+Required sequence:
+
+    current U04 Gate @ Vn
+    -> pre-readiness F3 assessment using current facts/framing @ Vn
+    -> canonical F3 K09/G2/P01 commit
+    -> Clinical State Version advances to Vn+1
+    -> prior U04 Gate @ Vn becomes NON_ROUTABLE for U05
+    -> enter POST_F3_SAFETY_REVALIDATION_BARRIER
+    -> re-establish required current risk/safety dependencies
+    -> obtain current committed U04 Safety Gate @ Vk
+    -> current-version revalidate/reference-bind canonical F3 readiness input to Vk
+    -> U05/D03 only when Gate + all required readiness inputs are current at Vk
+
+The original U04 Gate @ Vn authorizes only:
+
+    the pre-readiness F3 assessment effect
+
+It does NOT authorize:
+
+    U05 routing after the F3 state commit
+
+## VS-B termination invariant
+
+POST_F3_SAFETY_REVALIDATION_BARRIER must not create an infinite loop.
+
+The barrier freezes these rules:
+
+    F3_CANONICAL_EFFECT_ID
+    = consultation
+      + fact/framing basis identity
+      + F3 assessment policy/capability binding
+      + source assessment version/event identity
+
+Once the canonical F3 effect for the same fact/framing basis has been applied:
+
+    later U03/U04 risk/safety-only commits
+    MUST NOT retrigger another canonical F3 commit
+    merely because Clinical State Version advanced.
+
+During the barrier:
+
+    U03/U04 may recompute/revalidate risk/safety derived state as required;
+
+    they must not manufacture new F1/F2 facts/framing;
+
+    the already-committed F3 Gap remains canonical unless one of its true invalidation dependencies changed.
+
+A second F3 canonical assessment is allowed only when:
+
+    F1 framing changed
+    or
+    F2 patient facts changed/corrected
+    or
+    an explicitly frozen F3 evidence dependency changed
+    or
+    the prior F3 assessment itself became invalid/failed under a governed rule.
+
+Version advancement caused only by:
+
+    F3 commit
+    U03 risk re-evaluation/revalidation
+    U04 Safety Gate re-evaluation/revalidation
+
+is NOT by itself an F3 invalidation reason.
+
+## VS-B current-version F3 binding
+
+RDP-05 already requires all D03 inputs to be current-version compatible and allows explicit current-version revalidation/reference binding for older source decisions/state.
+
+Therefore after Safety barrier completion:
+
+    canonical F3 state may have been committed at Vn+1
+    current authoritative state may be Vk
+
+D03 may consume F3 only through a current-version readiness-input envelope that binds:
+
+    clinical_state_version = Vk
+    source_state_ref = canonical F3 state ref
+    source_decision_ref = F3 assessment/revalidation ref
+    current-version revalidation_ref
+    current U04 Gate ref @ Vk
+    validity = CURRENT
+
+This revalidation:
+
+    DOES NOT duplicate canonical F3 Gap state
+    DOES NOT silently rewrite historical F3 provenance
+    DOES NOT create another F3 Clinical State mutation unless a true F3 invalidation dependency changed.
+
+## Cross-candidate invariant
+
+For every candidate:
+
+    pre-readiness effect after U04
+    -> either VS-A
+       or VS-B
+
+No third ambiguous persistence mode is allowed.
+
+Forbidden:
+
+    state mutation after U04
+    -> reuse old U04 Gate silently
+
+    old-version readiness input
+    -> D03 because "content seems unchanged"
+
+    version advancement alone
+    -> retrigger same canonical F3 effect
+
+    current Gate + stale readiness input
+    -> D03
+
 # 4. Candidate A — F3 remains the positive sufficiency producer
 
 Candidate A 的共同目标：
@@ -197,9 +380,13 @@ Current:
 
 Proposed A1:
 
-    U04 ALLOW / permitted RESTRICTED
+    U04 ALLOW / permitted RESTRICTED @ Vn
     -> U06 PRE_READINESS_GAP_ASSESSMENT
-    -> canonical F3 Gap commit
+    -> canonical F3 Gap commit -> Vn+1
+    -> POST_F3_SAFETY_REVALIDATION_BARRIER
+    -> current Risk/Safety re-established
+    -> current U04 Gate @ Vk
+    -> current-version F3 readiness-input revalidation/ref-binding @ Vk
     -> U05 D03
     -> if CAN_ASK_MORE
        -> U06 QUESTION_SELECTION_DELIVERY
@@ -261,7 +448,15 @@ Canonical F3 mutation：
     -> K09 StateChangeProposal
     -> G2/P01 commit
     -> new Clinical State Version
-    -> U05 consumes only committed/current F3 state
+    -> prior U04 Gate becomes non-routable for U05
+    -> mandatory POST_F3_SAFETY_REVALIDATION_BARRIER
+    -> re-establish current U04 Gate
+    -> current-version revalidate/reference-bind F3 readiness input
+    -> U05 consumes only current Gate + current-compatible F3 input
+
+A1 version mode：
+
+    VS-B = STATE_MUTATION_WITH_POST_COMMIT_SAFETY_BARRIER
 
 ### Replay / idempotency
 
@@ -279,6 +474,14 @@ Same replay：
     must not create duplicate Gap records
     must not duplicate Question candidates
     must attach/return authoritative existing effect
+
+Termination/idempotency：
+
+    same F3_CANONICAL_EFFECT_ID
+    + only downstream Risk/Safety version advancement
+    -> no second canonical F3 commit
+
+Only true F3 invalidation dependencies may create a new canonical F3 effect.
 
 ### Failure owner
 
@@ -308,8 +511,10 @@ A1 必改：
     - canonical F3 proposal/commit contract before D03
 
     Phase 9
-    - Scheduler edge U04 -> U06(pre) -> U05
+    - Scheduler edge U04 -> U06(pre) -> POST_F3_SAFETY_REVALIDATION_BARRIER -> U05
     - U06(pre) != U06(question delivery)
+    - barrier must re-establish current U04 Gate before U05
+    - same canonical F3 effect must not repeat on Risk/Safety-only version advancement
 
     RDP-05
     - POST_SAFETY_INITIAL F3 no longer always NOT_YET_APPLICABLE after pre-assessment trigger
@@ -353,6 +558,8 @@ A1 only allows：
 
     U04
     -> U05-PRE-F3-ASSESSMENT
+    -> canonical F3 commit
+    -> POST_F3_SAFETY_REVALIDATION_BARRIER
     -> U05
 
 ### Scheduler position
@@ -397,7 +604,18 @@ A1 only allows：
 ### State commit
 
     required
-    K09 -> G2/P01 -> current version
+
+    K09 -> G2/P01
+    -> Clinical State Version advances
+    -> prior U04 Gate becomes non-routable for U05
+    -> mandatory POST_F3_SAFETY_REVALIDATION_BARRIER
+    -> current U04 Gate re-established
+    -> current-version F3 readiness-input revalidation/ref-binding
+    -> U05
+
+A2 version mode：
+
+    VS-B = STATE_MUTATION_WITH_POST_COMMIT_SAFETY_BARRIER
 
 ### Replay / idempotency
 
@@ -405,8 +623,19 @@ A1 only allows：
 
     exact input state version
     deterministic policy version
+    F3_CANONICAL_EFFECT_ID
     effect idempotency identity
     no duplicate Gap truth
+
+Termination：
+
+    downstream U03/U04 Risk/Safety-only commits
+    != F3 invalidation
+
+    same fact/framing basis
+    + same canonical F3 effect already applied
+    -> barrier may revalidate/rebind F3 input
+    -> MUST NOT create another F3 canonical commit
 
 ### Failure owner
 
@@ -432,7 +661,9 @@ A2 必改：
     - F3 deterministic policy / K09 contract
 
     Phase 9
-    - new Scheduler node/edge
+    - Scheduler edge U04 -> pre-F3 Unit -> canonical F3 commit -> POST_F3_SAFETY_REVALIDATION_BARRIER -> U05
+    - barrier re-establishes current U04 Gate and current-compatible F3 input
+    - termination/idempotency prevents version-only F3 recommit
 
     RDP-05
     - applicability matrix
@@ -992,17 +1223,43 @@ For Owner-selection comparison, B1 now has:
 
     READY_FOR_CLINICAL_ANALYSIS
 
-### State commit
+### Decision / persistence boundary
 
-如果 output 成为 governed derived state：
+B2 decision-package level now selects the version-safe pattern：
 
-    K09/G2/P01 contract required
+    VS-A = SAME_VERSION_NON_STATE_DECISION
 
-如果仅是 deterministic decision input ref：
+Required sequence：
 
-    exact durable decision/provenance contract still required
+    current U04 Gate @ Vn
+    -> U05-PRE-SUFFICIENCY
+    -> deterministic Minimum Analysis Sufficiency Decision @ Vn
+    -> durable governed readiness-input ref @ Vn
+    -> U05 D03 @ Vn
 
-详细 amendment 必须二选一并冻结，不得模糊。
+Before D03：
+
+    NO K09 StateChangeProposal
+    NO G2/P01 Clinical State mutation
+    NO Clinical State Version advancement
+
+The decision/input must bind：
+
+    consultation_id
+    input_clinical_state_version = Vn
+    current U04 Gate ref @ Vn
+    sufficiency policy/rule refs
+    exact input/evidence refs
+    source_decision_ref
+    validity/staleness
+    replay/idempotency identity
+
+Any later Clinical State Version change：
+
+    -> prior B2 decision/input = STALE
+    -> recompute/revalidate under a frozen rule before reuse
+
+B2 no longer keeps an ambiguous pre-D03 state-commit branch.
 
 ### Replay / idempotency
 
@@ -1010,9 +1267,16 @@ For Owner-selection comparison, B1 now has:
 
     consultation
     current state version
+    current U04 Gate ref
     sufficiency policy version
     input refs
-    effect/decision idempotency identity
+    decision idempotency identity
+
+Same replay：
+
+    returns/attaches authoritative prior decision/input
+    -> no duplicate readiness-input artifact
+    -> no duplicate Clinical State effect because no state mutation occurs
 
 ### Failure owner
 
@@ -1034,10 +1298,14 @@ B2 必改：
     - new execution Unit and U05 S_in
 
     Phase 8
-    - new input/decision/state contract
+    - new deterministic decision/readiness-input contract
+    - explicitly preserve Deterministic Decision != StateChangeProposal
+    - no pre-D03 Clinical State mutation in B2
 
     Phase 9
-    - Scheduler node/edge/dependency
+    - Scheduler edge U04 -> U05-PRE-SUFFICIENCY -> U05
+    - same-version U04 Gate + B2 decision/input
+    - stale/recompute behavior after any later state-version advance
 
     RDP-05
     - source_domain / applicability / version contract
@@ -1061,7 +1329,7 @@ B2 不允许复用 F3 的语义名称来规避 source-domain amendment。
 | Phase 5 amendment | yes | yes | yes | yes |
 | Phase 9 amendment | yes | yes | yes: mode-aware scheduler + durable decision/input publication | yes |
 | Duplicate sufficiency-owner concern | low if canonical F3 only | low if canonical F3 only | must resolve F2 vs F3 boundary | must resolve new owner vs F3 boundary |
-| Current-version complexity | canonical commit before D03 | canonical commit before D03 | evaluate after current U04 without Clinical State mutation; same-version Gate + decision/input | committed/decision binding before D03 |
+| Current-version complexity | canonical F3 commit + mandatory Safety barrier/revalidation | canonical F3 commit + mandatory Safety barrier/revalidation | same-version Gate + non-state decision/input | same-version Gate + non-state decision/input |
 | New deterministic clinical rule pack | not necessarily; C03 governed capability | yes | yes for positive sufficiency semantics | yes |
 | Direct U05 Gap ownership | prohibited | prohibited | prohibited | prohibited |
 
@@ -1199,8 +1467,11 @@ Owner selection 只表示：
     K09/G2/P01 requirement
     Capability invocation and binding
     RuleRelease / KnowledgeRelease requirements
+    pre-readiness version mode = VS-A / VS-B
     Clinical State Version binding
+    Safety Gate current-version barrier/revalidation when VS-B
     invalidation propagation
+    termination/no-cycle proof when VS-B
     replay/idempotency identity
     failure owner / U14 eligibility
     trace/audit refs
@@ -1321,13 +1592,28 @@ Reason：
 
 ---
 
+    BF-U05-BOOTSTRAP-TR-05
+    = REMEDIATED / FOURTH_TARGETED_REVIEW_PENDING
+
+Reason：
+
+    A1/A2 now explicitly use VS-B with mandatory POST_F3_SAFETY_REVALIDATION_BARRIER,
+    current U04 Gate restoration, current-version F3 readiness-input revalidation/ref-binding,
+    and F3_CANONICAL_EFFECT_ID termination/idempotency rules.
+
+    B2 now explicitly selects VS-A and removes the ambiguous pre-D03 Clinical State mutation branch.
+
+    Cross-candidate invariant now requires every U04->U05 pre-readiness effect to be VS-A or VS-B.
+
+---
+
 # 12. Current disposition
 
     U05_BOOTSTRAP_CROSS_PHASE_DESIGN_GAP
     = OPEN
 
     Controlled Amendment Decision Package
-    = REVISED / READY_FOR_THIRD_TARGETED_INDEPENDENT_REVIEW
+    = REVISED / READY_FOR_FOURTH_TARGETED_INDEPENDENT_REVIEW
 
     Controlled Amendment Decision Package
     != OWNER_SELECTION_READY yet
@@ -1343,7 +1629,7 @@ Reason：
 
     BF-U05-RDP02-IR-02
     = REMEDIATED_WITH_REVISED_CONTROLLED_AMENDMENT_PACKAGE
-    = THIRD_TARGETED_REVIEW_PENDING
+    = FOURTH_TARGETED_REVIEW_PENDING
 
     BF-U05-RG-02
     = NOT_CLOSED
