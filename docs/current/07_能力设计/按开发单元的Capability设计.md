@@ -1563,7 +1563,8 @@ U01–U15 依赖矩阵
 
 ```text
 SOP Phase 7 — Capability Design
-= FROZEN / V1 semantic baseline
+= A1 REFROZEN / V1
+Unaffected capability semantics = FROZEN V1 BASELINE
 ```
 
 ---
@@ -1595,4 +1596,161 @@ Capability exists
 
 Phase 7 Design
 != Implementation Status
+```
+
+
+---
+
+# 20. A1 Controlled Amendment — U06/C03 Usage Timing
+
+> Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
+> Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
+> Status: **A1 REFROZEN / V1**
+
+## 20.1 C03 first consumer remains U06
+
+A1 明确保留：
+
+```text
+C03 FIRST_CONSUMER_UNIT = U06
+```
+
+A1 不允许：
+
+```text
+U05 → C03
+U04 → C03
+Scheduler → C03 bypassing U06 Owner
+```
+
+## 20.2 U06 mode-aware C03 usage
+
+### PRE_READINESS_GAP_ASSESSMENT
+
+```text
+U06 MODE-1
+→ validate current C03 CapabilityBindingRef
+→ C03 Gap Detection / Decision Impact
+→ U06/F3 Owner interpretation
+→ canonical F3 intended effect
+```
+
+该 mode 不允许 Question delivery side effect。
+
+C03 可能产生 question candidate material，但 V1 冻结：
+
+```text
+pre-readiness question candidates
+= support/trace-only ephemeral artifacts
+= never reusable by QUESTION_SELECTION_DELIVERY
+```
+
+### QUESTION_SELECTION_DELIVERY
+
+```text
+U06 MODE-2
+→ validate current CapabilityBindingRef / question policy
+→ fresh C03 invocation / fresh candidate evaluation
+→ D04 stopping
+→ Question SELECTED
+→ delivery
+```
+
+即使 MODE-1 与 MODE-2 恰好处于同一 Clinical State Version，也不复用 MODE-1 candidate。
+
+### F3_CURRENT_VERSION_REVALIDATION
+
+```text
+U06 MODE-3
+→ deterministic F3 Owner revalidation decision
+```
+
+默认：
+
+```text
+C03 = NOT_INVOKED
+```
+
+若结果：
+
+```text
+REASSESSMENT_REQUIRED
+```
+
+则 Scheduler 必须显式回到 MODE-1，并重新解析当前批准的 C03 binding；不得在 MODE-3 中静默换 binding 后继续复用旧 F3。
+
+## 20.3 F3 revalidation decision is not a new system-level D-policy
+
+A1 引入：
+
+```text
+F3CurrentVersionRevalidationDecision
+```
+
+它复用 Phase 8 的统一 DeterministicDecision contract，但：
+
+```text
+!= D11
+!= new D01-D10 policy family
+!= Clinical Readiness
+```
+
+它只是 F3 Owner 为 current-version readiness-input projection 做出的 scoped deterministic decision。
+
+## 20.4 Capability/Owner boundary
+
+始终保持：
+
+```text
+C03 output
+!= canonical F3 truth
+!= Clinical Readiness
+
+C03 output
+→ U06/F3 Owner interpretation
+→ governed state effect / decision
+```
+
+## 20.5 Binding and release compatibility
+
+MODE-3 必须检查历史：
+
+```text
+CapabilityBindingRef
+RuleReleaseRef
+KnowledgeReleaseRef
+F3 policy/version
+```
+
+是否仍可根据明确 compatibility rule 合法解释。
+
+若历史 binding：
+
+```text
+WITHDRAWN
+EXPIRED
+INCOMPATIBLE
+or compatibility cannot be proven
+```
+
+则：
+
+```text
+REASSESSMENT_REQUIRED
+→ fresh MODE-1 / fresh current binding
+```
+
+不得静默把旧 F3 effect 改绑到新语义版本。
+
+## 20.6 Current amendment status
+
+```text
+Phase 7 A1 affected scope
+= REFROZEN / V1
+
+Re-freeze
+= GRANTED / COMPLETE
+
+Capability activation / production use
+= NOT_AUTHORIZED
 ```

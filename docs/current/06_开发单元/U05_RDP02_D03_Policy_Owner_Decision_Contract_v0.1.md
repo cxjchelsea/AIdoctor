@@ -3,7 +3,7 @@
 > Scope: U05 / D03 Clinical Readiness deterministic policy, owner boundary, decision semantics, precedence and fail-closed behavior.
 > Status: REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW_WITH_OWNER_DECISIONS_PENDING
 > Review basis: main@6e68fd9fb7cd19e87aadae30f3bb53a2264d1920
-> Dependency: U05-RDP-05 = FROZEN / PASS_FOR_READINESS at fd0e88e21aaab2a2ab67ffd1449dce8e946d7ed5
+> Dependency baseline: U05-RDP-05 prior FROZEN / PASS_FOR_READINESS at fd0e88e21aaab2a2ab67ffd1449dce8e946d7ed5; A1 affected scope is now REFROZEN / V1 under AUTH-U05-A1-FROZEN-AMEND-001
 > 本文件只处理 BF-U05-RG-02；不授予 U05 implementation、owner execution、routing、production 或 real-patient authorization。
 
 ---
@@ -415,9 +415,13 @@ PROPOSED D03 READY POLICY:
     patient is safe
     no future Gap can emerge after DDx
 
-### 9.2 Initial bootstrap gap remains unresolved
+### 9.2 Initial bootstrap gap — A1 controlled resolution
 
-当前首轮合法 profile 可能是：
+Owner 已选择：
+
+    OD-U05-BOOTSTRAP-01 = A1
+
+因此以下 profile：
 
     Safety Gate = ALLOW / permitted RESTRICTED
     F1 = PRESENT / FRAMED_IN_SCOPE
@@ -425,28 +429,20 @@ PROPOSED D03 READY POLICY:
     F5 = NOT_YET_APPLICABLE
     F6 = NOT_YET_APPLICABLE
 
-现有冻结规则无法证明：
+在 A1 下**不再是一个 admitted D03 profile**。
 
-    CAN_ASK_MORE
-    or READY_FOR_CLINICAL_ANALYSIS
+当 bootstrap F3 尚未完成/current-version revalidated：
 
-也不能合法推出：
+    U04 routing / U05 inbound admission
+    → U05 ordinary readiness evaluation is not eligible
+    → D03 is not invoked
+    → no D03 decision_id
+    → no D03 decision_status
+    → route remains in A1 pre-readiness / Safety barrier / F3 revalidation path.
 
-    NO_RELIABLE_DIRECTION
-    NEEDS_OFFLINE_EVIDENCE
+只有 A1 产生 current-compatible F3 readiness input 后，U05 才可进入正常 D03 precedence。
 
-因此在设计/验证阶段必须记录：
-
-    design_sentinel = POLICY_EXPECTATION_GAP
-    reason = D03_INITIAL_READINESS_BOOTSTRAP_UNDERDETERMINED
-
-并保持：
-
-    no runtime D03 authorization
-    no Clinical Readiness commit
-    no ordinary route
-
-该 sentinel 不是患者业务结果，不是 Capability failure，也不是一个可用于“带缺口上线”的正常 runtime decision_status。
+POLICY_EXPECTATION_GAP 仍保留为一般 design/readiness sentinel，用于其他合法 admitted configuration 中尚无唯一 policy coverage 的情况；它不再承担 A1 initial bootstrap 的正常运行路径。
 
 ---
 
@@ -608,7 +604,7 @@ sentinel code 不是 runtime D03 reason code，也不是临床诊断。
 | D03-POL-004 | current F3 CAN_ASK_MORE, no higher blocker | DECIDED / CAN_ASK_MORE |
 | D03-POL-005 | F1 FRAMED_IN_SCOPE + current F3 NO_ACTIVE_ONLINE_BLOCKING_GAP + no higher blocker | PROPOSED: DECIDED / READY_FOR_CLINICAL_ANALYSIS; requires OD-U05-READY-01 APPROVE |
 | D03-POL-006 | F5 NO_RELIABLE_DIRECTION + current F3 NO_ACTIVE_ONLINE_BLOCKING_GAP + no higher path | DECIDED / NO_RELIABLE_DIRECTION |
-| D03-POL-007 | initial F1 FRAMED_IN_SCOPE + F3/F5/F6 NOT_YET_APPLICABLE | DESIGN SENTINEL: POLICY_EXPECTATION_GAP / no runtime D03 authorization / no readiness |
+| D03-POL-007 | A1 bootstrap incomplete: F1 FRAMED_IN_SCOPE + F3 not yet current | PRE-D03 NON-ENTRY: U05/D03 not invoked; no D03 object/status; route remains A1 pre-readiness/barrier/revalidation |
 | D03-POL-008 | stale required F3 | INPUT_FAILURE / no readiness |
 | D03-POL-009 | mutually exclusive same-owner signals | INPUT_CONFLICT / no readiness |
 | D03-POL-010 | RESTRICTED allowed + valid readiness inputs | same business result as policy, restricted context preserved |
@@ -658,7 +654,9 @@ RDP-06：必须验证 precedence、conflict、replay/idempotency、RESTRICTED pr
     = approve / revise / reject proposed post-F3 READY positive condition
 
     U05_BOOTSTRAP_CROSS_PHASE_DESIGN_GAP
-    = Controlled Amendment Decision pending
+    = A1 selected
+    = controlled amendment applied to frozen design artifacts
+    = independent amendment review pending
 
 因此当前状态：
 
@@ -666,7 +664,7 @@ RDP-06：必须验证 precedence、conflict、replay/idempotency、RESTRICTED pr
     = REMEDIATED_AS_OWNER_DECISION_PENDING
 
     BF-U05-RDP02-IR-02
-    = REMEDIATED_WITH_CONTROLLED_AMENDMENT_PACKAGE / OWNER_DECISION_PENDING
+    = A1_SELECTED / CONTROLLED_AMENDMENT_APPLIED / INDEPENDENT_REVIEW_PENDING
 
     BF-U05-RDP02-IR-03
     = REMEDIATED / RE_REVIEW_PENDING
@@ -676,10 +674,10 @@ RDP-06：必须验证 precedence、conflict、replay/idempotency、RESTRICTED pr
 
     BF-U05-RG-02
     = NOT_CLOSED
-    = BLOCKED_BY_READY_POLICY_OWNER_DECISION_AND_BOOTSTRAP_CONTROLLED_AMENDMENT
+    = BLOCKED_BY_OD_U05_READY_01_AND_A1_AMENDED_ARTIFACT_REVIEW_REFREEZE
 
     U05-RDP-02
-    = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW_WITH_OWNER_DECISIONS_PENDING
+    = A1 REFROZEN / V1
 
     U05-RDP-02
     != FROZEN
@@ -702,3 +700,131 @@ This document does not authorize:
     production Clinical Runtime
     release activation
     real-patient traffic
+
+---
+
+## 19. A1 Controlled Amendment — Pre-D03 Bootstrap Admission
+
+> Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
+> Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
+> Status: **A1 REFROZEN / V1**
+
+### 19.1 A1 bootstrap is pre-D03 routing/admission, not D03 status
+
+When A1 bootstrap F3 is incomplete or not current：
+
+```text
+PRE_READINESS_A1_F3_C03_ELIGIBLE
+or POST_F3_SAFETY_REVALIDATION_BARRIER
+or F3_CURRENT_VERSION_REVALIDATION
+```
+
+remains active.
+
+Therefore：
+
+```text
+U05 ordinary readiness evaluation
+= not eligible
+
+D03
+= not invoked
+
+D03 decision object
+= absent
+
+D03 decision_status
+= absent
+```
+
+禁止新增：
+
+```text
+NOT_ADMITTED
+NOT_REACHED
+```
+
+作为 D03 runtime vocabulary。
+
+D03 runtime status 仍仅允许：
+
+```text
+DECIDED
+INPUT_FAILURE
+INPUT_CONFLICT
+```
+
+### 19.2 After A1 completion
+
+只有：
+
+```text
+current U04 Gate
++ current F3 readiness input
++ other applicable/current RDP-05 inputs
+```
+
+通过 U05 inbound admission 后，D03 才正常执行。
+
+### 19.3 D03-POL-005 remains unapproved
+
+A1 bootstrap 只解决“谁合法产生 current F3 input”的架构问题。
+
+它不批准：
+
+```text
+OD-U05-READY-01
+```
+
+因此：
+
+```text
+D03-POL-005
+F1 FRAMED_IN_SCOPE
++ current F3 NO_ACTIVE_ONLINE_BLOCKING_GAP
++ no higher blocker
+→ READY_FOR_CLINICAL_ANALYSIS
+```
+
+仍是：
+
+```text
+PROPOSED OWNER EXPECTATION
+!= FROZEN EXECUTABLE EXPECTATION
+```
+
+### 19.4 POLICY_EXPECTATION_GAP boundary
+
+```text
+POLICY_EXPECTATION_GAP
+```
+
+继续仅作为 design/readiness verification sentinel。
+
+它不是：
+
+```text
+patient business result
+Capability failure
+D03 runtime status
+A1 bootstrap runtime outcome
+```
+
+### 19.5 Current amendment status
+
+```text
+U05-RDP-02 A1 affected scope
+= REFROZEN / V1
+
+BF-U05-RG-02
+= NOT_CLOSED
+
+OD-U05-READY-01
+= SEPARATE / NOT_APPROVED
+
+Re-freeze
+= GRANTED / COMPLETE
+
+U05 Implementation Authorization
+= NOT_GRANTED
+```
