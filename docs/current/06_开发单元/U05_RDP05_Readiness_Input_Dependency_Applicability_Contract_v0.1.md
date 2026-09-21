@@ -937,3 +937,100 @@ U05-RDP-05 post-analysis consumption scope
 BF-U05-RG02-CL-02
 = REMEDIATED / REFROZEN / CLOSURE_REEVALUATION_PENDING
 ```
+
+
+---
+
+## 19. Clinical Continuation Routing Applicability Extension
+
+> Authorization: `AUTH-U05-CCR-FROZEN-AMEND-001`  
+> Reviewed design source: PR #157 exact head `4c3c7eb7e9aa9b6f9506871f7d28e033b4a6482e`  
+> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+
+### 19.1 POST_USER_FACT_UPDATE classification
+
+对：
+
+```text
+POST_USER_FACT_UPDATE
+```
+
+必须区分：
+
+```text
+NOT_YET_APPLICABLE
+STALE_BY_UPSTREAM_MUTATION
+PRESENT / CURRENT
+FAILED
+UNAVAILABLE
+```
+
+STALE_BY_UPSTREAM_MUTATION 需要绑定：
+
+```text
+current fact/correction mutation ref
+invalidation ref
+prior activation ref when applicable
+```
+
+### 19.2 F3 continuation
+
+若 prior canonical F3 存在但 current input 需要 materialization：
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+```
+
+若 F3 从未合法激活，则按现有 A1 bootstrap / applicability 规则，不得伪造 prior F3。
+
+### 19.3 F5 continuation
+
+```text
+F5 = NOT_YET_APPLICABLE
++ current F3 no-gap
+→ TO_U05_CLINICAL_READINESS
+```
+
+```text
+F5 = STALE_BY_UPSTREAM_MUTATION
++ prior F5 activation ref
++ current F3 no-gap
++ no higher Clinical Readiness path
+→ TO_U08_REASSESSMENT
+```
+
+```text
+F5 FAILED / UNAVAILABLE
+→ normal reassessment shortcut prohibited
+```
+
+### 19.4 D03 failure boundary qualification
+
+Section 10 的：
+
+```text
+required source STALE
+→ D03 ordinary business resolution prohibited
+```
+
+继续成立，但需区分：
+
+```text
+mutation-stale expected recomputation
+→ pre-D03 continuation routing
+
+unexpected/invalid stale with no lawful recomputation provenance
+→ failure/admission handling
+```
+
+不得把两者合并。
+
+### 19.5 Current status
+
+```text
+U05-RDP-05 POST_USER_FACT_UPDATE continuation scope
+= AMENDED / INDEPENDENT_REVIEW_PENDING
+
+BF-U05-RG02-CL-03
+= REMEDIATED_BY_DESIGN / REVIEW_PENDING
+```
