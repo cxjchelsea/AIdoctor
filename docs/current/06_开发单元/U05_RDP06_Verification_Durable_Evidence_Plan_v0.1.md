@@ -2696,10 +2696,10 @@ Remediation:
 Current:
 
     BF-U05-AGR-AMEND-IR-01
-    = REMEDIATED / TARGETED_COMPATIBILITY_REVIEW_PENDING
+    = CLOSED
 
     Aggregate Compatibility Amendment
-    = REVISED / READY_FOR_TARGETED_COMPATIBILITY_REVIEW
+    = PASS / REFROZEN / V1
 
 
 ---
