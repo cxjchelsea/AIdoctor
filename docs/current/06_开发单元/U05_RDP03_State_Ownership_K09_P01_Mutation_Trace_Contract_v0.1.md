@@ -5,7 +5,7 @@
 > D03 basis: U05-RDP-02 current REFROZEN / V1.
 > Input basis: U05-RDP-05 current REFROZEN / V1.
 > Exact frozen semantic baseline before U05 readiness-package additions: 3bd85f908a1cb09355f6ea1c5ce737638d1c0fdc.
-> Status: PROPOSED / READY_FOR_INDEPENDENT_DESIGN_REVIEW.
+> Status: REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW.
 > Target blocker: BF-U05-RG-03.
 > 本文件不授权 U05 runtime/code implementation、post-D03 downstream execution、merge、production、release activation 或 real-patient traffic。
 
@@ -142,13 +142,13 @@ U05 没有独立 AI Capability。
 
 ---
 
-# 4. Authoritative Clinical Readiness record
+# 4. Authoritative Clinical Readiness state vs commit evidence
 
-定义 governed object：
+必须拆分两个对象，避免把 commit 后才产生的信息预写进 StatePatch。
 
-    ClinicalReadinessRecord
+## 4.1 ClinicalReadinessStateValue
 
-它是 Clinical State 中 clinical_readiness 的 authoritative structured value。
+这是 /patient_state/clinical_readiness 中可由 K09 Proposal 预先构造的 authoritative structured value。
 
 最小字段：
 
@@ -159,8 +159,6 @@ U05 没有独立 AI Capability。
     cdp_id
 
     derived_from_clinical_state_version
-    committed_in_clinical_state_version
-
     evaluation_context
 
     source_admission_id
@@ -175,6 +173,7 @@ U05 没有独立 AI Capability。
     source_route_authorization_type
     source_route_authorization_ref
     source_restricted_context_ref?
+    source_restricted_permission_ref?
 
     policy_id = D03
     policy_version
@@ -182,45 +181,88 @@ U05 没有独立 AI Capability。
     rule_release_refs[]
     knowledge_release_refs[]
 
-    record_validity
+    readiness_dependency_refs[]
+
+    state_validity
+    invalidation_effect_ref?
     invalidation_reason_refs[]
 
     effect_id
     proposal_ref
-    commit_result_ref
-    audit_ref
 
     created_at
 
-readiness_record_id 标识本次 authoritative readiness record。
-
-它不等于：
+readiness_record_id 不等于：
 
     D03 decision_id
     proposal_id
     effect_id
     Clinical State Version
 
-record_validity 是治理 metadata，不是第七个 Clinical Readiness business value。
+state_validity 是治理 metadata，不是第七个 Clinical Readiness business value。
 
-允许：
+当前 authoritative state value 只允许：
 
     CURRENT
     STALE
-    SUPERSEDED
 
 含义：
 
     CURRENT
-    = 当前 authoritative state 仍可合法使用该 readiness record
+    = stored lifecycle is current-at-last-governed-write;
+      actual routability still requires dependency-currentness proof
 
     STALE
-    = 其依赖发生合法变化，不能继续用于当前 route
+    = a governed readiness invalidation effect has been committed
 
-    SUPERSEDED
-    = 已被后续 authoritative readiness record 取代
+SUPERSEDED 不要求回写旧历史版本。
+当新的 authoritative readiness record REPLACE 旧 record 后：
 
-历史 record 必须保留审计，不允许就地篡改历史业务决策。
+    old record
+    = SUPERSEDED in version-history / audit interpretation
+
+而不是修改历史版本中的旧对象。
+
+## 4.2 ClinicalReadinessCommitEvidence
+
+以下字段只有 P01 commit 后才产生，不属于预提交 StatePatch value：
+
+    readiness_record_id
+    effect_id
+    proposal_ref
+
+    commit_status
+    commit_result_ref
+    previous_clinical_state_version
+    committed_clinical_state_version
+    audit_ref
+
+    authoritative_readiness_record_ref
+    committed_at
+
+CommitResult / P05 / audit/effect ledger 保存上述 evidence。
+
+## 4.3 Authoritative read model
+
+系统可以形成只读 join：
+
+    ClinicalReadinessAuthoritativeView
+    =
+    ClinicalReadinessStateValue
+    + ClinicalReadinessCommitEvidence
+
+但必须保持：
+
+    read model join
+    != second Clinical State truth
+    != second commit
+    != permission to mutate history
+
+Proposal 不得预测：
+
+    committed_clinical_state_version
+    commit_result_ref
+    audit_ref
 
 ---
 
@@ -262,9 +304,59 @@ record_validity 是治理 metadata，不是第七个 Clinical Readiness business
 
 ---
 
-# 6. Commit-time currentness revalidation
+# 6. Replay-first reconciliation and commit-time currentness
 
-Proposal creation 前和 P01 commit 前必须再次确认：
+必须先区分“已经成功提交过的 exact replay”和“尚未提交的新 effect”。
+
+固定顺序：
+
+    R0 derive CLINICAL_READINESS_EFFECT_ID
+       from admitted snapshot + D03 decision
+
+    R1 reconcile effect ledger / authoritative commit evidence
+
+    R2 only if no prior authoritative exact effect exists:
+       validate current admission/decision/version/dependencies
+
+    R3 create K09 Proposal
+
+    R4 P01 performs final optimistic/currentness validation
+
+## 6.1 Exact authoritative replay
+
+若 R1 已发现：
+
+    same effect_id
+    + same normalized ClinicalReadinessStateValue payload
+    + prior COMMITTED authoritative evidence
+
+则：
+
+    REATTACH_AUTHORITATIVE_EFFECT
+    or authoritative NO_OP projection
+
+    no new Proposal required
+    no new state commit
+    no version equality requirement against the old D03 input version
+
+这是因为原 effect 成功 commit 后，当前 Clinical State Version 本来就可能已经高于原 Vn。
+
+若：
+
+    same effect_id
+    + different normalized payload
+
+则：
+
+    U05_READINESS_EFFECT_REPLAY_CONFLICT
+    -> fail closed
+    -> no new commit
+
+不得 reattach。
+
+## 6.2 New/uncommitted effect currentness
+
+只有 R1 未找到 prior authoritative exact effect 时，Proposal creation 前和 P01 commit 前必须确认：
 
     authoritative current Clinical State Version
     = D03 input_clinical_state_version
@@ -277,13 +369,16 @@ Proposal creation 前和 P01 commit 前必须再次确认：
     source restricted context remains compatible
     source readiness-input-set identity remains authoritative/current
 
-必须保持：
+如果：
 
     D03 decided at Vn
-    + state became Vn+1 before readiness commit
-    -> old D03 Proposal cannot blindly commit
+    + state became Vn+1 before first authoritative readiness commit
 
-此时：
+则：
+
+    old D03 Proposal cannot blindly commit
+
+处理：
 
     CommitResult = CONFLICT
     or proposal rejected before commit
@@ -701,14 +796,17 @@ readiness Proposal 以：
     version advancement alone
     != dependency invalidation
 
-Readiness record 保存：
+ClinicalReadinessStateValue 保存：
 
     derived_from_clinical_state_version = Vn
-    committed_in_clinical_state_version = Vn+1
+    state_validity = CURRENT
 
-只要依赖 identity 仍有效：
+ClinicalReadinessCommitEvidence 保存：
 
-    record_validity = CURRENT
+    previous_clinical_state_version = Vn
+    committed_clinical_state_version = Vn+1
+
+只要依赖 identity 仍有效，effective currentness 才成立。
 
 定义治理 effect classification：
 
@@ -777,11 +875,11 @@ Currentness 判断：
 
 ---
 
-# 17. Invalidation triggers
+# 17. Governed readiness invalidation path
 
 RDP-03 不新增医学失效规则，只落实 Phase 4 已冻结依赖。
 
-至少以下变化可使当前 readiness 失效：
+至少以下变化可使当前 readiness 的 dependency-currentness 失效：
 
     F1 framing/scope changes
 
@@ -801,53 +899,170 @@ RDP-03 不新增医学失效规则，只落实 Phase 4 已冻结依赖。
 
     restricted context changes or is revoked
 
-    D03 policy/rule release changes under an explicitly authorized migration
-    for a not-yet-consumed current decision
+    authorized D03 policy/rule migration
+    that invalidates the current not-yet-consumed readiness basis
 
-失效语义：
+定义 governed effect：
 
-    existing ClinicalReadinessRecord
-    -> STALE
+    CLINICAL_READINESS_INVALIDATION_EFFECT
 
-或者在新的 authoritative readiness commit 后：
+其唯一 state-governance Owner：
 
-    old record
-    -> SUPERSEDED
+    G2 Clinical State Governance
 
-必须由：
+它不是 Runtime decision，也不是 U05/D03 新的 Clinical Readiness value。
 
-    G2 State Governance / lawful owner-driven invalidation effect
+## 17.1 Invalidation effect identity
 
-执行。
+定义：
 
-U05/D03 不可直接修改历史 record。
+    CLINICAL_READINESS_INVALIDATION_EFFECT_ID
+
+至少绑定：
+
+    consultation_id
+    cdp_id
+    prior_readiness_record_ref
+    prior_readiness_effect_id
+    triggering_authoritative_change_ref
+    affected_dependency_refs[]
+    invalidation_reason_code
+    source_event_or_decision_ref
+    invalidation_contract_version
+
+same exact invalidation trigger：
+
+    -> same invalidation effect identity
+
+## 17.2 State-changing upstream effect
+
+若一个即将 commit 的上游 governed state change 已经确定性地使当前 readiness dependency 失效，例如 accepted fact/Gap/DDx/F6 change：
+
+    upstream owner effect/proposal
+    -> declares dependent readiness invalidation intent/ref
+    -> G2 State Governance validates dependency
+    -> same atomic P01 commit includes:
+         upstream authoritative change
+         + REPLACE clinical_readiness.state_validity = STALE
+         + invalidation_effect_ref / reason refs
+
+上游业务 Unit 不因此成为 Clinical Readiness Owner。
+
+它只能提供：
+
+    triggering change
+    dependency invalidation evidence
+
+真正修改 clinical_readiness lifecycle metadata 的 authority 仍是 G2/P01。
+
+## 17.3 Non-state-mutating authoritative currentness change
+
+某些 owner revalidation/currentness decision 可能不推进 Clinical State Version，但会改变 authoritative readiness-input-set identity 或使旧 dependency ref 不再 current。
+
+此时：
+
+    stored state_validity may still physically say CURRENT
+
+但：
+
+    effective routability
+    = FAIL_CLOSED
+
+只要任何 bound dependency cannot be proven current。
+
+在旧 readiness 再次被当作普通 routable state 之前，必须形成 dedicated governed invalidation：
+
+    authoritative currentness/invalidation signal
+    -> CLINICAL_READINESS_INVALIDATION_EFFECT
+    -> K09 invalidation proposal
+    -> G2/P01 commit
+    -> clinical_readiness.state_validity = STALE
+
+因此：
+
+    stored CURRENT marker alone
+    != sufficient proof of effective currentness
+
+同时：
+
+    Runtime fail-closed check
+    != Runtime becoming readiness validity Owner
+
+Runtime 只消费 authoritative dependency/currentness evidence。
+
+## 17.4 Invalidation-only version safety
+
+若 dedicated invalidation commit 只修改：
+
+    clinical_readiness.state_validity
+    + invalidation provenance metadata
+
+则分类为：
+
+    READINESS_INVALIDATION_ONLY_COMMIT
+
+该 commit 自身：
+
+    != new patient fact
+    != new Risk evidence
+    != new Gap/DDx/F6 truth
+
+所以 version advancement alone 不要求 U03/U04 无限重跑。
 
 ---
 
-# 18. Invalidation evidence
+# 18. Invalidation proposal / evidence
 
-任何 readiness invalidation 必须可绑定：
+Dedicated invalidation proposal 至少绑定：
 
     invalidation_effect_id
     prior_readiness_record_ref
+    prior_readiness_effect_id
+
     triggering_authoritative_change_ref
-    affected_dependency_ref
+    affected_dependency_refs[]
     invalidation_reason_code
-    source_decision/event ref
+    source_event_or_decision_ref
+
+    base_clinical_state_version
+
+    operation:
+      TEST expected readiness ref/effect
+      REPLACE same readiness business value/provenance
+      with state_validity = STALE
+      + invalidation effect/reason refs
+
+    idempotency_key
+    correlation_id
+    trace_id
+
+Commit evidence 至少绑定：
+
     proposal_ref
     commit_result_ref
     audit_ref
     before_version
     after_version
+    authoritative stale readiness ref
 
 不得：
 
     Runtime sees mismatch
-    -> silently ignore old readiness
+    -> silently rewrite old readiness
 
-而没有可审计 invalidation/currentness evidence。
+Runtime/RDP-01/RDP-04 可以且必须：
 
-但 Runtime 可在 routing/admission 时拒绝消费无法证明依赖 current 的 record。
+    refuse consumption
+    when dependency-currentness cannot be proven
+
+直到 authoritative invalidation/recomputation path 收敛。
+
+新 D03 readiness record commit 后：
+
+    prior historical readiness
+    = SUPERSEDED in history/audit interpretation
+
+不要求回写旧历史版本。
 
 ---
 
@@ -1088,13 +1303,18 @@ Trace 不可作为 authoritative Clinical Readiness 本身。
     P01 COMMITTED
     -> V11
 
-Authoritative record：
+Authoritative state value：
 
     clinical_readiness = CAN_ASK_MORE
     derived_from = V10
-    committed_in = V11
     effect_id = E1
-    record_validity = CURRENT
+    state_validity = CURRENT
+
+Commit evidence：
+
+    previous_version = V10
+    committed_version = V11
+    effect_id = E1
 
 ## Scenario B — exact replay after commit
 
@@ -1103,11 +1323,20 @@ Authoritative record：
     same Effect E1
     same payload
 
+Replay order：
+
+    derive E1
+    -> reconcile ledger/authoritative commit first
+    -> prior authoritative E1 found
+
 Result：
 
-    reattach prior authoritative commit
-    or NO_OP with prior commit ref
+    REATTACH_AUTHORITATIVE_EFFECT
+    or authoritative NO_OP projection
+    no new Proposal required
     no V12 only because replay occurred
+
+The fact that current state is already V11+ does not turn this exact replay into a new conflict.
 
 ## Scenario C — same value, new basis
 
@@ -1393,7 +1622,59 @@ RDP-06 至少验证：
 
 ---
 
-# 35. BF-U05-RG-03 disposition
+# 35. Independent Review Remediation
+
+Independent Review:
+
+    PR #172
+    review_id = 5263478202
+    verdict = REVISE_REQUIRED
+
+Findings:
+
+    BF-U05-RDP03-IR-01
+    = POST_COMMIT_FIELDS_EMBEDDED_IN_PRECOMMIT_STATE_VALUE
+
+    BF-U05-RDP03-IR-02
+    = EXACT_REPLAY_RECONCILIATION_ORDER_CONFLICT
+
+    BF-U05-RDP03-IR-03
+    = READINESS_INVALIDATION_AUTHORITATIVE_EFFECT_PATH_UNDERDEFINED
+
+Remediation:
+
+    IR-01
+    -> ClinicalReadinessStateValue separated from ClinicalReadinessCommitEvidence
+    -> proposal no longer predicts committed version / commit result / audit ref
+
+    IR-02
+    -> replay-first R0/R1 reconciliation added
+    -> exact authoritative replay may reattach before version-currentness check
+    -> same effect id + different payload fails closed
+
+    IR-03
+    -> CLINICAL_READINESS_INVALIDATION_EFFECT added
+    -> atomic upstream-state-change invalidation path defined
+    -> non-state currentness invalidation path defined
+    -> effective currentness distinguished from stored lifecycle marker
+
+Current finding status:
+
+    BF-U05-RDP03-IR-01 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-RDP03-IR-02 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-RDP03-IR-03 = REMEDIATED / TARGETED_REVIEW_PENDING
+
+Current design status:
+
+    U05-RDP-03
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
+
+    BF-U05-RG-03
+    = DESIGN_RESOLVED / TARGETED_REVIEW_PENDING
+
+---
+
+# 36. BF-U05-RG-03 disposition
 
 Original blocker：
 
@@ -1435,7 +1716,7 @@ Original blocker：
 
 ---
 
-# 36. Current aggregate readiness boundary
+# 37. Current aggregate readiness boundary
 
 当前：
 
@@ -1452,7 +1733,7 @@ Original blocker：
 
 ---
 
-# 37. Authorization boundary
+# 38. Authorization boundary
 
 本文件不授权：
 
