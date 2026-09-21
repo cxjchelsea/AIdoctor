@@ -3,7 +3,7 @@
 > Scope: U05 / D03 的 pre-D03 consumer admission、统一入站 envelope、route/gate/currentness/replay/restricted-context 边界。  
 > Design basis: U05 Implementation Readiness Re-Evaluation v0.2 / PR #170 exact head `39e13a91fc2fc2dc78fbda99c063af2411b8b24f`.  
 > Exact frozen semantic baseline: `3bd85f908a1cb09355f6ea1c5ce737638d1c0fdc`.  
-> Status: **PROPOSED / READY_FOR_INDEPENDENT_DESIGN_REVIEW**.  
+> Status: **REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW**.  
 > Target blocker: `BF-U05-RG-01`.  
 > 本文件不授予 U05 implementation、D03 execution、downstream execution、merge、production、release activation 或 real-patient authorization。
 
@@ -229,15 +229,22 @@ A1_POST_BARRIER_CURRENT
 
 而不是绕过 A1 直接把 `POST_SAFETY_INITIAL` 解释成当前 first-entry route。
 
-`POST_SAFETY_INITIAL` 作为 frozen non-A1 baseline 仍保留，但：
+`POST_SAFETY_INITIAL` 作为 frozen non-A1 baseline 仍保留，但在当前 exact frozen baseline 下：
 
 ```text
-it is admissible only when
-a separately valid current bootstrap architecture binding
-lawfully permits the non-A1 ordinary entry.
+active BootstrapArchitectureBindingRef = A1
+-> direct POST_SAFETY_INITIAL -> U05
+   = NOT_ACTIVE / REJECTED
 ```
 
-RDP-01 不自行选择 bootstrap architecture。
+只有未来经过单独治理、明确激活一个允许 non-A1 ordinary entry 的 architecture binding 后，该 historical baseline row 才可能重新成为可 admission 路径。
+
+```text
+RDP-01 alone
+!= authority to activate non-A1 bootstrap routing
+```
+
+RDP-01 不自行选择或激活 bootstrap architecture。
 
 ---
 
@@ -270,8 +277,12 @@ u04_gate_ref
 u04_gate_commit_ref
 gate_value
 
-routing_authorization_id
+route_authorization_type
+route_authorization_ref
 routing_policy_version
+
+source_routing_authorization_id?
+clinical_continuation_routing_id?
 
 bootstrap_architecture_binding_ref? 
 
@@ -318,7 +329,8 @@ route_source_ref
 u04_gate_ref
 u04_gate_commit_ref
 gate_value
-routing_authorization_id
+route_authorization_type
+route_authorization_ref
 readiness_input_manifest_ref
 readiness_input_set_identity
 canonical_event_ref / business_event_identity
@@ -370,7 +382,7 @@ POST_SAFETY_INITIAL
 ```text
 current committed U04 Gate
 + current U05 ordinary eligibility
-+ current routing_authorization_id
++ source-specific current U04 ordinary route authorization/eligibility ref
 ```
 
 不得在当前 A1 bootstrap required 时绕过 A1。
@@ -392,7 +404,7 @@ BootstrapArchitectureBindingRef = A1
 + current F3 readiness input exists
 + current post-barrier U04 Gate
 + current U05_ELIGIBLE
-+ current routing_authorization_id
++ current A1 routing_authorization_id
 ```
 
 必须禁止：
@@ -566,12 +578,36 @@ UNAVAILABLE
 
 ---
 
-# 9. Routing authorization contract
+# 9. Source-neutral route authorization contract
 
-U05 admission 必须绑定：
+U05 admission 必须统一绑定：
 
 ```text
-routing_authorization_id
+route_authorization_type
+route_authorization_ref
+```
+
+它们是 RDP-01 的 normalization layer，不要求所有 upstream source 暴露同名字段。
+
+合法 source-specific mapping：
+
+```text
+U04_A1_ROUTING_AUTHORIZATION
+-> route_authorization_ref = existing A1 routing_authorization_id
+
+U04_ORDINARY_ROUTING_AUTHORIZATION
+-> route_authorization_ref = current lawful U04 ordinary routing / eligibility identity
+   as defined by the active upstream contract
+
+CLINICAL_CONTINUATION_ROUTING_DECISION
+-> route_authorization_ref = CLINICAL_CONTINUATION_ROUTING_ID / current decision ref
+```
+
+因此：
+
+```text
+route_authorization_ref
+!= claim that every upstream contract has routing_authorization_id
 ```
 
 最小语义必须可证明：
@@ -589,7 +625,7 @@ routing policy/version
 validity
 ```
 
-RDP-01 不要求所有实现使用同一个 Java class，但上述语义不可缺失。
+RDP-01 不要求所有实现使用同一个 Java class，也不要求修改现有 frozen continuation contract 来新增统一 upstream ID；上述语义通过 source-specific lawful identity 归一化即可。
 
 ## 9.1 Routing authorization currentness
 
@@ -611,7 +647,7 @@ authorization explicitly revoked/expired
 禁止：
 
 ```text
-old routing_authorization_id
+old route_authorization_ref
 + new Clinical State Version
 -> automatic reuse
 ```
@@ -627,6 +663,48 @@ RDP-01 不重新定义 RDP-05 的 business signal 或 applicability vocabulary�
 ```text
 readiness_input_manifest_ref
 ```
+
+定义：
+
+```text
+U05ReadinessInputManifest
+= reference-only immutable admission snapshot/index
+  over authoritative RDP-05 input/applicability records
+```
+
+必须保持：
+
+```text
+U05ReadinessInputManifest
+!= readiness input
+!= applicability Owner
+!= business-signal Owner
+!= Clinical State truth
+!= D03 result
+```
+
+Manifest assembler 只允许：
+
+```text
+collect authoritative refs
+preserve authoritative statuses exactly
+normalize deterministic slot ordering
+calculate snapshot/set identity
+bind current context/version/trace refs
+```
+
+Manifest assembler 禁止：
+
+```text
+infer applicability
+infer business signal
+convert missing artifact -> NOT_YET_APPLICABLE
+convert missing artifact -> ABSENT_BY_DESIGN
+convert STALE/FAILED/UNAVAILABLE -> business negative
+rewrite owner-produced applicability evidence
+```
+
+每个非 PRESENT slot 必须绑定其 lawful Owner/governed contract 产生的 authoritative applicability evidence/decision ref。
 
 该 manifest 必须按当前 RDP-05 frozen semantics 覆盖当前 evaluation context 所需的 domain slots。
 
@@ -764,7 +842,7 @@ routing/admission stale
 
 | evaluation_context | route source | mandatory current route consequence | special prerequisites | U05 admission |
 |---|---|---|---|---|
-| POST_SAFETY_INITIAL | U04_ORDINARY_ROUTING | U05 ordinary eligibility | only when current bootstrap binding legally permits non-A1 ordinary path | conditional |
+| POST_SAFETY_INITIAL | U04_ORDINARY_ROUTING | U05 ordinary eligibility | historical non-A1 baseline only; under current active A1 binding direct U05 entry is NOT_ACTIVE / REJECTED | inactive in current baseline |
 | A1_POST_BARRIER_CURRENT | U04_A1_POST_BARRIER_ROUTING | U05_ELIGIBLE | A1 completion + F3 REVALIDATED_CURRENT + current F3 input | allowed |
 | POST_USER_FACT_UPDATE | CLINICAL_CONTINUATION_ROUTING | TO_U05_CLINICAL_READINESS | accepted mutation provenance current; no unresolved required owner recomputation | allowed |
 | POST_DDX_REEVALUATION | CLINICAL_CONTINUATION_ROUTING | TO_U05_CLINICAL_READINESS | current/compatible F3/F5/F6 route basis | allowed |
@@ -853,7 +931,8 @@ authoritative Clinical State Version
 evaluation_context
 route_source_ref
 u04_gate_ref
-routing_authorization_id
+route_authorization_type
+route_authorization_ref
 READINESS_INPUT_SET_IDENTITY
 restricted_context_ref when applicable
 business_event_identity
@@ -950,7 +1029,8 @@ clinical_state_version
 evaluation_context
 
 u04_gate_ref
-routing_authorization_id
+route_authorization_type
+route_authorization_ref
 route_source_ref
 readiness_input_set_identity
 restricted_context_ref?
@@ -1022,7 +1102,8 @@ clinical_state_version
 evaluation_context
 
 accepted_u04_gate_ref
-accepted_routing_authorization_id
+accepted_route_authorization_type
+accepted_route_authorization_ref
 accepted_route_source_ref
 
 accepted_readiness_input_manifest_ref
@@ -1399,7 +1480,8 @@ evaluation_context
 
 u04_gate_ref
 u04_gate_commit_ref
-routing_authorization_id
+route_authorization_type
+route_authorization_ref
 route_source_ref
 
 readiness_input_manifest_ref
@@ -1898,4 +1980,108 @@ U05 Implementation Readiness
 
 U05 Implementation Authorization
 = NOT_GRANTED
+```
+
+
+---
+
+# 34. Independent Review Remediation
+
+> Independent Review: PR #171 / review_id `5263400448`  
+> Reviewed prior head: `515f80419d69f5116d7b7d71a817c63f426a8c2e`
+
+## 34.1 BF-U05-RDP01-IR-01 remediation
+
+```text
+UNIVERSAL_ROUTING_AUTHORIZATION_ID_NOT_ALIGNED_WITH_FROZEN_CONTINUATION_CONTRACT
+```
+
+Remediated by introducing:
+
+```text
+route_authorization_type
+route_authorization_ref
+```
+
+as RDP-01 normalization fields.
+
+Source-specific identities remain authoritative:
+
+```text
+A1/U04
+-> existing routing_authorization_id
+
+ClinicalContinuationRoutingDecision
+-> CLINICAL_CONTINUATION_ROUTING_ID / current decision ref
+```
+
+No upstream frozen amendment is required merely to satisfy RDP-01.
+
+Status:
+
+```text
+BF-U05-RDP01-IR-01
+= REMEDIATED / TARGETED_REVIEW_PENDING
+```
+
+## 34.2 BF-U05-RDP01-IR-02 remediation
+
+```text
+READINESS_INPUT_MANIFEST_PARALLEL_TRUTH_RISK
+```
+
+Remediated by freezing:
+
+```text
+U05ReadinessInputManifest
+= immutable reference-only snapshot/index
+!= applicability truth owner
+!= readiness input
+!= Clinical State truth
+```
+
+Assembler may only collect authoritative RDP-05 refs/statuses and compute deterministic snapshot identity.
+
+Status:
+
+```text
+BF-U05-RDP01-IR-02
+= REMEDIATED / TARGETED_REVIEW_PENDING
+```
+
+## 34.3 RQ-U05-RDP01-IR-03 remediation
+
+Under the current exact baseline:
+
+```text
+BootstrapArchitectureBindingRef = A1
+```
+
+therefore:
+
+```text
+direct POST_SAFETY_INITIAL -> U05
+= NOT_ACTIVE / REJECTED
+```
+
+The preserved non-A1 historical row cannot be activated by RDP-01 itself.
+
+Status:
+
+```text
+RQ-U05-RDP01-IR-03
+= REMEDIATED / TARGETED_REVIEW_PENDING
+```
+
+Current design status:
+
+```text
+U05-RDP-01
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
+
+BF-U05-RG-01
+= DESIGN_RESOLVED / TARGETED_REVIEW_PENDING
+
+U05 Implementation Readiness
+= NOT_READY
 ```
