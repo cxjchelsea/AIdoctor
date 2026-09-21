@@ -5,7 +5,7 @@
 > D03 basis: U05-RDP-02 current REFROZEN / V1.
 > Input basis: U05-RDP-05 current REFROZEN / V1.
 > Exact frozen semantic baseline before U05 readiness-package additions: 3bd85f908a1cb09355f6ea1c5ce737638d1c0fdc.
-> Status: REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW.
+> Status: REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_REVIEW.
 > Target blocker: BF-U05-RG-03.
 > 本文件不授权 U05 runtime/code implementation、post-D03 downstream execution、merge、production、release activation 或 real-patient traffic。
 
@@ -199,6 +199,22 @@ readiness_record_id 不等于：
     effect_id
     Clinical State Version
 
+但它对同一个 CLINICAL_READINESS_EFFECT_ID 必须稳定：
+
+    same effect_id
+    -> same readiness_record_id
+
+实现可：
+
+    deterministically derive readiness_record_id from effect identity
+
+或：
+
+    ledger assigns once
+    -> all retries reattach the same assigned readiness_record_id
+
+禁止每次 retry 随机生成新的 readiness_record_id。
+
 state_validity 是治理 metadata，不是第七个 Clinical Readiness business value。
 
 当前 authoritative state value 只允许：
@@ -327,7 +343,7 @@ Proposal 不得预测：
 若 R1 已发现：
 
     same effect_id
-    + same normalized ClinicalReadinessStateValue payload
+    + same CLINICAL_READINESS_CANONICAL_PAYLOAD_FINGERPRINT
     + prior COMMITTED authoritative evidence
 
 则：
@@ -344,7 +360,7 @@ Proposal 不得预测：
 若：
 
     same effect_id
-    + different normalized payload
+    + different canonical payload fingerprint
 
 则：
 
@@ -445,6 +461,114 @@ Proposal 不得预测：
     different D03 policy version/rule
     different Gate/route basis
     different restricted context
+
+---
+
+# 7.1 Canonical replay payload fingerprint
+
+定义：
+
+    CLINICAL_READINESS_CANONICAL_PAYLOAD_FINGERPRINT
+
+它用于 exact-effect replay semantic equality，不得使用 raw serialized object equality。
+
+Fingerprint 必须覆盖 effect-defining governed data，至少：
+
+    clinical_readiness
+
+    consultation_id
+    cdp_id
+
+    derived_from_clinical_state_version
+    evaluation_context
+
+    source_admission_id
+    source_d03_decision_ref
+
+    source_readiness_input_set_identity
+    source_readiness_input_refs / authoritative slot identities
+
+    source_u04_gate_ref
+    source_route_authorization_type
+    source_route_authorization_ref
+    source_restricted_context_ref when applicable
+
+    policy_id
+    policy_version
+    policy_rule_ref
+
+    rule/knowledge release semantic refs
+
+    readiness_dependency_refs
+
+    state_validity at initial readiness commit = CURRENT
+
+    effect_id
+
+Fingerprint 明确排除 attempt-local / observational metadata：
+
+    retry timestamp
+    current retry attempt number
+    trace span / attempt-local trace metadata
+    transport message identity
+    Runtime run/checkpoint identity
+    transient storage receipt identity
+
+以下 procedural refs 不决定 Clinical Readiness effect semantic equality：
+
+    proposal_ref
+    commit_result_ref
+    audit_ref
+
+created_at：
+
+    first authoritative persisted effect/state creation time wins
+
+    retry wall-clock time
+    != new semantic payload
+
+因此 replay 判定必须是：
+
+    same effect_id
+    + same canonical payload fingerprint
+    -> exact semantic replay candidate
+
+而不是：
+
+    JSON object byte equality
+    or current retry timestamp equality
+
+## 7.2 Stable proposal identity
+
+一个 readiness effect 一旦生成 proposal identity：
+
+    same effect_id
+    -> same proposal_id / proposal_ref
+
+实现可以：
+
+    deterministically derive proposal_id from effect identity
+
+或：
+
+    durable ledger assigns proposal_id once
+    -> retry reuses it
+
+禁止：
+
+    same effect retry
+    -> new random proposal_id
+    -> new apparent effect
+
+若 crash 发生在 effect 已 durable、proposal 尚未 durable：
+
+    retry derives/recovers the same stable proposal identity
+    from effect identity + proposal contract version
+
+proposal attempt / transport attempt 如需单独编号：
+
+    belongs to Trace/Runtime metadata
+    != proposal business identity
 
 ---
 
@@ -604,7 +728,7 @@ Clinical Readiness 是单一 current system-level derived state。
 如果 authoritative state/effect ledger 已证明：
 
     same CLINICAL_READINESS_EFFECT_ID
-    + same normalized record payload
+    + same canonical payload fingerprint
     + prior commit authoritative
 
 则不得再生成第二个 state effect。
@@ -718,7 +842,7 @@ P01 commit 前至少验证：
 
     same exact effect identity
     already authoritatively committed
-    and same normalized record payload
+    and same canonical payload fingerprint
 
 NO_OP 不允许仅因为 new D03 produced same readiness enum 就跳过新的 provenance effect。
 
@@ -1622,7 +1746,52 @@ RDP-06 至少验证：
 
 ---
 
-# 35. Independent Review Remediation
+# 35. Targeted Replay Identity Remediation
+
+Targeted Independent Design Re-Review:
+
+    PR #172
+    review_id = 5263496116
+    verdict = REVISE_REQUIRED
+
+Finding:
+
+    BF-U05-RDP03-TR-01
+    = CANONICAL_REPLAY_PAYLOAD_AND_ATTEMPT_LOCAL_IDENTITY_UNDERDEFINED
+
+Remediation:
+
+    CLINICAL_READINESS_CANONICAL_PAYLOAD_FINGERPRINT added
+
+    raw serialized equality prohibited for replay semantics
+
+    attempt-local timestamp/trace/transport metadata excluded
+
+    readiness_record_id stable per effect
+
+    proposal_id / proposal_ref stable per effect once assigned
+
+    created_at first authoritative value wins;
+    retry wall-clock time does not create a new effect
+
+    same effect id
+    + different canonical payload fingerprint
+    -> replay conflict
+
+Current status:
+
+    BF-U05-RDP03-TR-01
+    = REMEDIATED / SECOND_TARGETED_REVIEW_PENDING
+
+    U05-RDP-03
+    = REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_REVIEW
+
+    BF-U05-RG-03
+    = DESIGN_RESOLVED / SECOND_TARGETED_REVIEW_PENDING
+
+---
+
+# 36. Independent Review Remediation
 
 Independent Review:
 
@@ -1650,7 +1819,7 @@ Remediation:
     IR-02
     -> replay-first R0/R1 reconciliation added
     -> exact authoritative replay may reattach before version-currentness check
-    -> same effect id + different payload fails closed
+    -> same effect id + different canonical payload fingerprint fails closed
 
     IR-03
     -> CLINICAL_READINESS_INVALIDATION_EFFECT added
@@ -1674,7 +1843,7 @@ Current design status:
 
 ---
 
-# 36. BF-U05-RG-03 disposition
+# 37. BF-U05-RG-03 disposition
 
 Original blocker：
 
@@ -1716,7 +1885,7 @@ Original blocker：
 
 ---
 
-# 37. Current aggregate readiness boundary
+# 38. Current aggregate readiness boundary
 
 当前：
 
@@ -1733,7 +1902,7 @@ Original blocker：
 
 ---
 
-# 38. Authorization boundary
+# 39. Authorization boundary
 
 本文件不授权：
 
