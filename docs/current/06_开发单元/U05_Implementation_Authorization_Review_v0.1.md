@@ -6,7 +6,7 @@
 > Current readiness status/provenance head: `a0f3af930940661e173b406686d7b4bfe2c7fbd1`  
 > Exact re-frozen six-contract package: `7acbeba0e066c6a7755bb07affe4ec30d6a6f562`  
 > Proposed authorization ID: `AUTH-U05-RUNTIME-IMPL-001`  
-> Status: **PROPOSED / READY_FOR_INDEPENDENT_AUTHORIZATION_REVIEW**  
+> Status: **REVISED / READY_FOR_TARGETED_AUTHORIZATION_REVIEW**  
 > This document does not itself grant implementation authorization.
 
 ---
@@ -336,8 +336,7 @@ The following live executions remain prohibited:
 
     U11 live safe-exit/delivery execution
 
-    U14 final recovery/business decision execution
-    unless already independently authorized outside this U05 slice
+    U14 live/final recovery or business decision execution
 
 For current U05 implementation:
 
@@ -462,17 +461,32 @@ Equivalent repository paths are acceptable if existing module structure requires
 
 The authorization does not grant broad permission to modify unrelated modules.
 
-Any non-U05 production/shared-runtime file change must be:
+Under AUTH-U05-RUNTIME-IMPL-001:
 
-    necessary
-    contract-preserving
-    explicitly identified in the implementation PR
+    no non-U05 production/shared-runtime source file modification is authorized.
 
-and reviewed before acceptance.
+Allowed outside U05-owned production source is limited to:
 
-If such a change alters shared semantics:
+    U05 tests
+    test fakes/spies
+    verification tools
+    CI workflow
+    U05 governance/evidence documents
 
-    authorization no longer covers it.
+and read-only consumption/import of existing shared runtime interfaces.
+
+If implementation requires any shared production source modification:
+
+    STOP
+
+    do not include that change under AUTH-U05-RUNTIME-IMPL-001
+
+    return for:
+      shared-runtime impact review
+      exact affected-file/surface analysis
+      separate explicit authorization.
+
+This rule is stricter than merely requiring the change to be contract-preserving.
 
 ---
 
@@ -594,17 +608,36 @@ Required:
 
 # 18. Required post-implementation governance
 
-After code implementation:
+After an implementation candidate exists, the mandatory order is:
 
-    1. exact-head implementation review
+    1. exact-head implementation/code-boundary review
 
-    2. authoritative exact-head CI verification
+    2. independent expectation-oracle review
 
-    3. independent evidence-only review
+    3. independent D03 precedence-oracle review
 
-    4. combined implementation/evidence review
+    4. independent fixture-manifest review
 
-    5. explicit implementation closure record
+    5. freeze the reviewed oracle / precedence / fixture digests
+
+    6. authoritative exact-head CI verification
+       consuming exactly those reviewed digests
+
+    7. independent evidence-only review
+
+    8. combined implementation/evidence review
+
+    9. explicit implementation closure record
+
+The system under test must not generate its own expected oracle.
+
+If expectation oracle, precedence oracle, or fixture manifest changes after its independent review:
+
+    prior authoritative CI evidence becomes stale
+
+    -> oracle/fixture re-review
+    -> exact-head CI rerun
+    -> evidence review rerun.
 
 Only after all of those may the implementation slice become:
 
@@ -680,7 +713,50 @@ In those cases:
 
 ---
 
-# 21. Authorization review verdict
+# 21. Independent Authorization Review Remediation
+
+Independent review:
+
+    PR #180
+    review_id = 5263950557
+    verdict = REVISE_REQUIRED
+
+Findings:
+
+    BF-U05-IA-IR-01
+    = SHARED_RUNTIME_SOURCE_CHANGE_SCOPE_TOO_BROAD
+
+    BF-U05-IA-IR-02
+    = ORACLE_FIXTURE_REVIEW_ORDER_NOT_EXPLICIT_IN_AUTHORIZATION_SEQUENCE
+
+    BF-U05-IA-IR-03
+    = U14_EXECUTION_EXCEPTION_LEAKS_AUTHORIZATION_SCOPE
+
+Remediation:
+
+    IR-01
+    -> no non-U05 production/shared-runtime source modification
+       is authorized under AUTH-U05-RUNTIME-IMPL-001
+
+    IR-02
+    -> oracle / precedence / fixture independent reviews
+       are mandatory before authoritative CI
+    -> reviewed digests must be the exact CI inputs
+
+    IR-03
+    -> U14 live/business execution is unconditionally outside
+       the U05 authorization scope
+    -> U05 may produce failure-governance handoff only
+
+Current:
+
+    BF-U05-IA-IR-01 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-IA-IR-02 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-IA-IR-03 = REMEDIATED / TARGETED_REVIEW_PENDING
+
+---
+
+# 22. Authorization review verdict
 
 Based on the current exact frozen/refrozen package:
 
