@@ -1754,3 +1754,62 @@ Re-freeze
 Capability activation / production use
 = NOT_AUTHORIZED
 ```
+
+
+---
+
+# U05 CL-04 Controlled Amendment — U10/C05 Mode-Aware Capability Timing
+
+> Authorization: `AUTH-U05-CL04-FROZEN-AMEND-001`  
+> Reviewed design: PR #160 exact head `80cd6d7d154aa3e8de093ef43328e8ee9c2733d3`  
+> Amendment status: **APPLIED / INDEPENDENT_AMENDMENT_REVIEW_PENDING**  
+> Re-freeze status: **NOT_YET_REFROZEN**
+
+U10 remains the first/only Unit consumer of C05 for the governed F6/Workup capability family.
+
+The Unit-level dependency row `U10 | C05` remains an aggregate dependency declaration. Invocation is mode-aware:
+
+```text
+U10 STANDARD_OFFLINE_EVIDENCE_ACTION
+-> C05 as required by existing frozen behavior
+
+U10 F6_CURRENT_VERSION_REASSESSMENT
+-> C05 required
+
+U10 F6_CURRENT_VERSION_REVALIDATION
+-> C05 MUST NOT be invoked
+-> deterministic F6 Owner decision only
+```
+
+The revalidation mode consumes the already-committed canonical F6 effect plus current dependency/release/Safety bindings to determine whether the effect may be projected as current for the target authoritative state version.
+
+Capability ownership boundaries remain unchanged:
+
+```text
+C05 result
+!= Offline Evidence truth
+!= Clinical Readiness
+!= Delivery Readiness
+!= Clinical State commit
+```
+
+C05 cannot directly own:
+
+```text
+F6 canonical semantic interpretation
+U05/D03 readiness
+F7 delivery readiness
+K09/P01 state mutation
+```
+
+For `RESTRICTED` Safety:
+
+```text
+C05 reassessment invocation
+requires explicit action-specific permission
+and restricted_context_ref propagation
+```
+
+No new Capability family is introduced.
+
+This amendment authorizes no capability activation, runtime implementation, production release, or real-patient execution.
