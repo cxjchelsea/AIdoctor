@@ -6,7 +6,7 @@
 > Decision basis: U05-RDP-02 current REFROZEN / V1.  
 > Input basis: U05-RDP-05 current REFROZEN / V1.  
 > Exact frozen semantic baseline before U05 RDP-04: `3bd85f908a1cb09355f6ea1c5ce737638d1c0fdc`.  
-> Status: **PROPOSED / READY_FOR_INDEPENDENT_DESIGN_REVIEW**.  
+> Status: **REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW**.  
 > Target blocker: `BF-U05-RG-04`.  
 > 本文件不授权 Runtime/code implementation、真实下游 Unit 执行、merge、production、release activation 或 real-patient traffic。
 
@@ -197,7 +197,14 @@ RDP-04 不得使用：
 
     source U04 Gate dependency-valid
 
-    source route / admission basis still valid for this post-readiness action
+    source admission / inbound route provenance has not been invalidated
+
+注意：
+
+    source inbound route authorization/ref
+    only proves how U05 was lawfully entered
+
+    it does NOT authorize the downstream target action
 
     restricted context still current when applicable
 
@@ -315,7 +322,8 @@ RDP-04 还必须能够表示“不产生 ordinary consequence”。
 
     FAILURE_REQUIRED
     -> no ordinary consequence
-    -> U14 failure/recovery eligibility
+    -> typed handoff into existing failure-governance path
+    -> not a U14 business decision
 
     REJECTED_STALE
     -> no ordinary consequence
@@ -366,23 +374,97 @@ RESTRICTED 必须针对：
 必须检查：
 
     restricted_context_ref
-    restricted_permission_ref
-    target action permission
+    + candidate downstream consequence
+    + target action
 
-如果 permitted：
+必须形成新的 route-time：
+
+    DOWNSTREAM_ACTION_PERMISSION_DECISION
+
+如果 permission_status = PERMITTED：
 
     ordinary typed eligibility may be emitted
 
-如果 not permitted：
+如果 permission_status = DENIED：
 
     no ordinary eligibility
     -> PREEMPTED
     -> current Safety policy / safe handling owns next consequence
 
+如果 permission_status = UNAVAILABLE：
+
+    no ordinary eligibility
+    -> FAILURE_REQUIRED
+    -> existing failure-governance handoff
+
 禁止：
 
     RESTRICTED
     -> silently ALLOW
+
+## 9.2.1 DOWNSTREAM_ACTION_PERMISSION_DECISION
+
+RDP-04 冻结一个 route-time permission result：
+
+    DownstreamActionPermissionDecision
+
+它不是 Clinical Readiness，不修改上游 admission 历史。
+
+最小字段：
+
+    permission_decision_id
+
+    consultation_id
+    cdp_id
+
+    current_u04_gate_ref
+    restricted_context_ref
+
+    candidate_downstream_consequence
+    target_action
+    target_unit_id
+
+    permission_status
+    permission_ref?
+
+    permission_policy_id
+    permission_policy_version
+
+    evaluated_at
+    validity
+
+permission_status 只允许：
+
+    PERMITTED
+    DENIED
+    UNAVAILABLE
+
+语义：
+
+    PERMITTED
+    -> RDP-04 may continue ordinary eligibility projection
+
+    DENIED
+    -> PREEMPTED
+    -> no ordinary eligibility
+
+    UNAVAILABLE
+    -> FAILURE_REQUIRED
+    -> no ordinary eligibility
+
+该 decision 的 authority 来自当前 Safety/permission governance，不来自：
+
+    RDP-01 historical U05 admission permission
+    D03
+    Scheduler preference
+    target Unit self-authorization
+
+因此：
+
+    permission to evaluate U05
+    != permission to execute downstream target
+
+---
 
 ## 9.3 BLOCKED
 
@@ -407,7 +489,8 @@ Safety path 根据现有 frozen U04/U11 semantics 处理。
 
     routing_status = FAILURE_REQUIRED
 
-    target = U14 failure/recovery path
+    no ordinary target_unit_id
+    failure_handoff_ref must identify the existing failure-governance handoff
 
 RDP-04 不把 UNAVAILABLE 解释成：
 
@@ -442,13 +525,21 @@ RDP-04 不把 UNAVAILABLE 解释成：
     source_u04_gate_ref
     gate_value
 
+    source_inbound_route_ref?
+
     restricted_context_ref?
-    restricted_permission_ref?
+
+    downstream_permission_decision_ref?
+    downstream_permission_ref?
 
     routing_status
 
     downstream_consequence?
     target_unit_id?
+
+    downstream_route_authorization_id?
+
+    failure_handoff_ref?
 
     routing_policy_id = U05_RDP04
     routing_policy_version
@@ -572,9 +663,37 @@ Eligibility：
 
 ---
 
-# 13. Route authorization / eligibility identity
+# 13. Downstream route authorization / eligibility identity
 
-定义：
+必须区分：
+
+    source inbound route authorization/ref
+    != downstream route authorization
+
+source inbound route ref 只作为 readiness provenance/currentness evidence。
+
+只有 routing_status = ELIGIBLE 时，RDP-04 才形成新的：
+
+    U05_DOWNSTREAM_ROUTE_AUTHORIZATION_ID
+
+它至少绑定：
+
+    route_effect_id
+    authoritative readiness effect
+    current Gate
+    downstream consequence
+    target Unit
+    downstream action permission when RESTRICTED
+    routing policy version
+
+该 authorization：
+
+    authorizes only Scheduler consideration of this exact target intent
+    != target Unit business execution
+    != capability invocation
+    != external side effect
+
+定义 eligibility identity：
 
     U05_DOWNSTREAM_ELIGIBILITY_ID
 
@@ -770,14 +889,26 @@ RDP-04 普通 readiness mapping 不把任何六值直接映射 U14。
     routing infrastructure failure
     target Unit binding resolution failure
     authorization incompatibility
-    route commit/ledger failure
+    route ledger failure
 
 才可能形成：
 
     FAILURE_REQUIRED
-    -> U14
 
-U14 决定：
+必须保持：
+
+    FAILURE_REQUIRED
+    != U14 business decision
+    != terminal failure
+    != safe exit
+
+它只是：
+
+    typed failure-governance handoff
+
+Scheduler/Runtime 可把该 handoff 交给现有 U14 failure boundary。
+
+U14 仍然唯一决定：
 
     retry
     repair
@@ -833,8 +964,14 @@ Route eligibility 与 target Unit binding availability 分层。
 
 RDP-04 形成 route 时至少要求：
 
-    target Unit exists in governed registry
-    route consequence -> target Unit mapping is valid/current
+    target_unit_id is one of the frozen identifiers:
+      U06
+      U08
+      U10
+      U11
+
+    route consequence -> target Unit mapping
+    exactly matches the frozen RDP-04 mapping
 
 但不要求在 U05 内执行目标 Capability binding resolution。
 
@@ -854,7 +991,45 @@ RDP-04 形成 route 时至少要求：
 
     no target execution
     no alternate clinical route invention
-    -> FAILURE_REQUIRED / U14
+    -> FAILURE_REQUIRED
+    -> typed failure-governance handoff
+    -> U14 remains owner of retry/repair/degraded-safe-exit/terminal outcome
+
+---
+
+# 21.1 No new Unit Registry dependency
+
+RDP-04 不新增独立 Unit Registry contract。
+
+它只冻结静态受治理 target set：
+
+    U06
+    U08
+    U10
+    U11
+
+以及 readiness-to-target mapping。
+
+真正的 execution availability：
+
+    Unit enabled state
+    CapabilityBindingRef
+    Rule/Knowledge release
+    schema compatibility
+    environment compatibility
+
+由现有：
+
+    Scheduler
+    Binding Resolver
+    target Unit admission
+
+在 invoke 前验证。
+
+因此：
+
+    RDP-04 target validation
+    != registry availability validation
 
 ---
 
@@ -1021,7 +1196,7 @@ Exact replay：
     target unit
 
     Gate ref
-    restricted context/permission
+    downstream route-time restricted context/permission decision
 
     relevant current routing context
 
@@ -1333,7 +1508,8 @@ U05 的最后一个普通 side effect 只允许是：
     gate_value
 
     restricted_context_ref?
-    restricted_permission_ref?
+    downstream_permission_decision_ref?
+    downstream_permission_ref?
 
     routing_status
 
@@ -1499,14 +1675,16 @@ Result：
 
     no U08 execution
     FAILURE_REQUIRED
-    U14/recovery
+    typed failure-governance handoff
+    U14 then owns recovery/outcome
 
 No silent U10/U11 fallback.
 
 ## Scenario I — exact route replay
 
     same readiness effect
-    same Gate/permission
+    same Gate
+    same downstream route-time permission decision
     same consequence/target
     same route fingerprint
 
@@ -1691,7 +1869,60 @@ RDP-06 至少验证：
 
 ---
 
-# 45. BF-U05-RG-04 disposition
+# 45. Independent Review Remediation
+
+Independent Review：
+
+    PR #173
+    review_id = 5263559817
+    verdict = REVISE_REQUIRED
+
+Findings：
+
+    BF-U05-RDP04-IR-01
+    = INBOUND_ROUTE_AUTHORIZATION_REUSED_AS_DOWNSTREAM_AUTHORITY
+
+    BF-U05-RDP04-IR-02
+    = DOWNSTREAM_RESTRICTED_PERMISSION_SOURCE_UNDERDEFINED
+
+    BF-U05-RDP04-IR-03
+    = UNFROZEN_TARGET_UNIT_REGISTRY_DEPENDENCY
+
+    RQ-U05-RDP04-IR-04
+    = FAILURE_REQUIRED_MUST_NOT_BE_U14_FINAL_ROUTE_DECISION
+
+Remediation：
+
+    IR-01
+    -> source inbound route ref is provenance only
+    -> new U05_DOWNSTREAM_ROUTE_AUTHORIZATION_ID is formed after post-readiness validation
+
+    IR-02
+    -> route-time DownstreamActionPermissionDecision added
+    -> PERMITTED / DENIED / UNAVAILABLE explicitly defined
+
+    IR-03
+    -> removed invented Unit Registry dependency
+    -> RDP-04 validates only frozen U06/U08/U10/U11 mapping
+    -> execution availability remains Scheduler/Binding Resolver/target Unit responsibility
+
+    IR-04
+    -> FAILURE_REQUIRED frozen as typed failure-governance handoff only
+    -> U14 remains outcome owner
+
+Current：
+
+    BF-U05-RDP04-IR-01 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-RDP04-IR-02 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-RDP04-IR-03 = REMEDIATED / TARGETED_REVIEW_PENDING
+    RQ-U05-RDP04-IR-04 = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    U05-RDP-04 = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
+    BF-U05-RG-04 = DESIGN_RESOLVED / TARGETED_REVIEW_PENDING
+
+---
+
+# 46. BF-U05-RG-04 disposition
 
 Original blocker：
 
@@ -1735,7 +1966,7 @@ Original blocker：
 
 ---
 
-# 46. Current aggregate readiness boundary
+# 47. Current aggregate readiness boundary
 
 当前：
 
@@ -1757,7 +1988,7 @@ Original blocker：
 
 ---
 
-# 47. Authorization boundary
+# 48. Authorization boundary
 
 本文件不授权：
 
