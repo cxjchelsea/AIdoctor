@@ -520,7 +520,8 @@ u04_gate_ref exists
 u04_gate_commit_ref exists
 Gate is committed
 Gate is current/routable for authoritative current state
-routing_authorization_id derives from that current Gate
+route_authorization_ref is lawfully anchored to that current Gate
+through its source-specific routing contract
 ```
 
 ## 8.2 RESTRICTED
