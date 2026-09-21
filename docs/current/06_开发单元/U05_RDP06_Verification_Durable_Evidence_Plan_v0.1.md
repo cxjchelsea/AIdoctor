@@ -502,6 +502,7 @@ Case identity 一旦进入 frozen RDP-06：
 
     Required equality:
        inbound_restricted_permission_ref
+       = admission_result_restricted_permission_ref
        = admitted_restricted_permission_ref
        = d03_restricted_permission_ref
        = readiness_source_restricted_permission_ref
@@ -955,6 +956,7 @@ Future implementation 至少应形成等价的 focused suites：
     inbound_restricted_permission_ref?
 
     admission_id?
+    admission_result_restricted_permission_ref?
     admitted_restricted_permission_ref?
     admitted_readiness_input_set_identity?
     admission_status?
@@ -1053,6 +1055,7 @@ Conditional fields 可为 null，但 schema 必须能区分：
 当 source Gate = RESTRICTED 时，还必须证明：
 
     inbound_restricted_permission_ref
+    = admission_result_restricted_permission_ref
     = admitted_restricted_permission_ref
     = d03_restricted_permission_ref
     = readiness_source_restricted_permission_ref
@@ -1062,7 +1065,8 @@ Conditional fields 可为 null，但 schema 必须能区分：
 Observed equality 必须从实际对象读取：
 
     U05ConsumerInboundRequest
-    U05AdmissionResult / U05AdmittedInput
+    U05AdmissionResult
+    U05AdmittedInput
     D03 decision object
     ClinicalReadinessStateValue / committed provenance
 
@@ -2658,3 +2662,40 @@ Current amendment status:
 
     AGR RDP-06 portion
     = AMENDED / INDEPENDENT_COMPATIBILITY_REVIEW_PENDING
+
+
+---
+
+# 54. Aggregate Compatibility Independent Review Remediation
+
+Independent Compatibility Review:
+
+    PR #176
+    review_id = 5263843388
+    verdict = REVISE_REQUIRED
+
+Finding:
+
+    BF-U05-AGR-AMEND-IR-01
+    = ADMISSION_RESULT_PERMISSION_PROVENANCE_NOT_COVERED_BY_RDP06_EVIDENCE
+
+Remediation:
+
+    U05_CASE_EVIDENCE_V0_1
+    now includes admission_result_restricted_permission_ref
+
+    EV-036 now verifies the full five-link chain:
+
+      inbound request
+      -> AdmissionResult
+      -> U05AdmittedInput
+      -> D03
+      -> committed readiness provenance
+
+Current:
+
+    BF-U05-AGR-AMEND-IR-01
+    = REMEDIATED / TARGETED_COMPATIBILITY_REVIEW_PENDING
+
+    Aggregate Compatibility Amendment
+    = REVISED / READY_FOR_TARGETED_COMPATIBILITY_REVIEW
