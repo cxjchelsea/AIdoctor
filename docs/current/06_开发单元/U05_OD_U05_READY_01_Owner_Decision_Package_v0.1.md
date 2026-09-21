@@ -19,10 +19,12 @@ Current status:
 
 ## 1. Decision question
 
-Whether to approve the proposed positive D03 rule:
+Whether to approve the proposed **first clinical-analysis entry** D03 rule:
 
     F1 = PRESENT / FRAMED_IN_SCOPE
     + F3 = PRESENT / NO_ACTIVE_ONLINE_BLOCKING_GAP
+    + F5 applicability = NOT_YET_APPLICABLE
+    + F6 applicability = NOT_YET_APPLICABLE
     + no qualified blocking offline signal
     + no lawful NEEDS_CLARIFICATION
     + no OUT_OF_SCOPE
@@ -30,6 +32,8 @@ Whether to approve the proposed positive D03 rule:
     -> READY_FOR_CLINICAL_ANALYSIS
 
 subject to normal U05 admission and D03 precedence.
+
+This rule is scoped only to the **pre-DDx / first U08 entry** profile.
 
 ## 2. Preconditions that are NOT part of the positive rule itself
 
@@ -96,27 +100,54 @@ Therefore:
 
 if Owner approves this policy.
 
-## 5. F5 / F6 before first DDx
+## 5. F5 / F6 applicability is an executable scope guard
 
-Before entering U08/DDx:
+For D03-POL-005 to be eligible:
 
-    F5 = NOT_YET_APPLICABLE
-    F6 = NOT_YET_APPLICABLE
+    F5 applicability = NOT_YET_APPLICABLE
+    F6 applicability = NOT_YET_APPLICABLE
 
-may be lawful under frozen RDP-05.
+must both be true under the current frozen RDP-05 evaluation context.
 
-This does not mean:
+This means only:
+
+    DDx/F5 has not yet legally activated for this analysis cycle
+    and F6 has not yet legally activated for this analysis cycle.
+
+It does NOT mean:
 
     F5 says no disease direction exists
-    F6 says no offline evidence is needed
+    F6 says no offline evidence is needed.
 
-It only means those stages have not yet legally activated.
+Therefore D03-POL-005 is explicitly:
 
-Therefore the proposed first-entry READY rule does not require F5/F6 positive completion before U08.
+    FIRST_CLINICAL_ANALYSIS_ENTRY_ONLY
 
-After DDx / later evaluation contexts, requiredness changes according to RDP-05 and the same first-entry shortcut cannot be blindly reused.
+and is NOT applicable when:
+
+    evaluation context = POST_DDX_REEVALUATION
+    or F5 is PRESENT
+    or F6 is PRESENT as an applicable producer result
+    or F5 = NO_RELIABLE_DIRECTION
+    or F5 = ANALYSIS_RESULT_AVAILABLE
+    or F5 = REASSESSMENT_REQUIRED.
+
+D03-POL-005 cannot override D03-POL-006.
+
+Later post-DDx / re-analysis / delivery contexts require their own already-frozen or separately governed policy expectations; this Owner decision does not extend D03-POL-005 into those contexts.
 
 ## 6. D03 precedence remains unchanged
+
+The first-entry scope guard is evaluated before D03-POL-005 eligibility is considered.
+
+Therefore:
+
+    post-DDx F5-present profiles
+    -> D03-POL-005 = NOT_APPLICABLE
+
+and continue through the applicable post-DDx rules / precedence.
+
+
 
 Technical/governance:
 
@@ -146,9 +177,17 @@ If approved, the executable expectation is:
 
     policy_id = D03
     policy_rule = D03-POL-005
+    policy_scope = FIRST_CLINICAL_ANALYSIS_ENTRY_ONLY
     result = DECIDED / READY_FOR_CLINICAL_ANALYSIS
 
-for an exact admitted input profile satisfying the conditions above.
+for an exact admitted input profile satisfying:
+
+    F1 FRAMED_IN_SCOPE
+    F3 NO_ACTIVE_ONLINE_BLOCKING_GAP
+    F5 NOT_YET_APPLICABLE
+    F6 NOT_YET_APPLICABLE
+    no higher-priority blocker
+    all required/current input validity constraints.
 
 Same:
 
@@ -173,10 +212,11 @@ Option A — APPROVE
 
 Meaning:
 
-    accept the exact proposed rule as the V1 positive READY policy;
+    accept the exact context-scoped rule as the V1 first-entry positive READY policy;
     authorize a narrow RDP-02 owner-policy amendment
     changing D03-POL-005 from PROPOSED_OWNER_EXPECTATION
-    to FROZEN_EXECUTABLE_EXPECTATION,
+    to FROZEN_EXECUTABLE_EXPECTATION
+    with scope FIRST_CLINICAL_ANALYSIS_ENTRY_ONLY,
     followed by targeted independent review and re-freeze.
 
 Option B — REVISE
@@ -223,7 +263,7 @@ Even APPROVE would NOT mean:
 ## 11. Current decision-package status
 
     OD-U05-READY-01 Decision Package
-    = PROPOSED / READY_FOR_INDEPENDENT_REVIEW
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
 
     OD-U05-READY-01
     = NOT_DECIDED
@@ -233,3 +273,22 @@ Even APPROVE would NOT mean:
 
     U05 Implementation Readiness
     = NOT_READY
+
+## 12. Independent-review remediation status
+
+    BF-U05-READY-IR-01
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+Remediation:
+
+    D03-POL-005 is now explicitly scoped to FIRST_CLINICAL_ANALYSIS_ENTRY_ONLY.
+
+    F5 applicability = NOT_YET_APPLICABLE
+    F6 applicability = NOT_YET_APPLICABLE
+
+are mandatory executable guards.
+
+Therefore post-DDx profiles cannot satisfy D03-POL-005, and D03-POL-006 / later-context policies cannot be shadowed by P6 READY.
+
+    OD-U05-READY-01
+    = NOT_DECIDED
