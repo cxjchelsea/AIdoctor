@@ -345,7 +345,12 @@ class U05NonProductionClinicalReadinessTest {
             int version,
             List<U05ReadinessInput> inputs) {
         String setIdentity = U05ReadinessInputManifest.semanticSetIdentity(
-                "consult-1", "cdp-1", version, context, inputs);
+                "consult-1",
+                "cdp-1",
+                version,
+                context,
+                U05ReadinessInputManifest.RDP05_CONTRACT_VERSION,
+                inputs);
         return new U05ReadinessInputManifest(
                 "manifest-" + context,
                 setIdentity,
@@ -353,6 +358,7 @@ class U05NonProductionClinicalReadinessTest {
                 "cdp-1",
                 version,
                 context,
+                U05ReadinessInputManifest.RDP05_CONTRACT_VERSION,
                 inputs);
     }
 
@@ -423,10 +429,14 @@ class U05NonProductionClinicalReadinessTest {
             String restrictedPermission,
             String environment) {
         String routeSource = routeSource(context);
-        String routeConsequence =
-                U05ConsumerInboundRequest.CLINICAL_CONTINUATION_ROUTING.equals(routeSource)
-                        ? U05ConsumerInboundRequest.TO_U05_CLINICAL_READINESS
-                        : null;
+        String routeConsequence;
+        if (U05ConsumerInboundRequest.CLINICAL_CONTINUATION_ROUTING.equals(routeSource)) {
+            routeConsequence = U05ConsumerInboundRequest.TO_U05_CLINICAL_READINESS;
+        } else if (U05ConsumerInboundRequest.U04_A1_POST_BARRIER_ROUTING.equals(routeSource)) {
+            routeConsequence = U05ConsumerInboundRequest.U05_ELIGIBLE;
+        } else {
+            routeConsequence = null;
+        }
         return new U05ConsumerInboundRequest(
                 "request-1",
                 "consult-1",
@@ -448,7 +458,7 @@ class U05NonProductionClinicalReadinessTest {
                 restrictedPermission,
                 manifest.getManifestRef(),
                 manifest.getSetIdentity(),
-                manifest.presentInputRefs(),
+                manifest.authoritativeRecordRefs(),
                 "canonical-event-1",
                 "business-event-1",
                 "corr-1",
@@ -476,10 +486,14 @@ class U05NonProductionClinicalReadinessTest {
             String environment,
             boolean environmentAuthorized) {
         String routeSource = routeSource(context);
-        String consequence =
-                U05ConsumerInboundRequest.CLINICAL_CONTINUATION_ROUTING.equals(routeSource)
-                        ? U05ConsumerInboundRequest.TO_U05_CLINICAL_READINESS
-                        : null;
+        String consequence;
+        if (U05ConsumerInboundRequest.CLINICAL_CONTINUATION_ROUTING.equals(routeSource)) {
+            consequence = U05ConsumerInboundRequest.TO_U05_CLINICAL_READINESS;
+        } else if (U05ConsumerInboundRequest.U04_A1_POST_BARRIER_ROUTING.equals(routeSource)) {
+            consequence = U05ConsumerInboundRequest.U05_ELIGIBLE;
+        } else {
+            consequence = null;
+        }
         boolean a1 = U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT.equals(context);
         return new U05AdmissionAuthoritySnapshot(
                 "consult-1",
