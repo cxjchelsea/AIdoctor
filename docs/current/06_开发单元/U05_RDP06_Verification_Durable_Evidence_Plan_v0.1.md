@@ -3,7 +3,7 @@
 > Scope: U05 当前 non-production implementation slice 的验证矩阵、expected-result authority、durable evidence schema、CI/exact-head binding、replay/crash/conflict evidence、regression gates 与 independent evidence acceptance criteria。  
 > Design basis: U05-RDP-01 / 02 / 03 / 04 / 05 current frozen/refrozen semantics.  
 > Immediate upstream design head: U05-RDP-04 status/provenance head `c800f8d8645d416c4a87b0d63d4fa02ec6ce8a97`.  
-> Status: **FROZEN / PASS_FOR_READINESS**.  
+> Status: **REFROZEN / V1 — PASS_FOR_READINESS**.  
 > Target blocker: `BF-U05-RG-06`.  
 > 本文件只定义“未来如何证明 U05 实现正确”，不等于实现已存在，不授予 implementation / merge / production / live downstream / real-patient authorization。
 
@@ -2662,7 +2662,7 @@ No live downstream execution is authorized.
 Current amendment status:
 
     AGR RDP-06 portion
-    = AMENDED / INDEPENDENT_COMPATIBILITY_REVIEW_PENDING
+    = REFROZEN / V1
 
 
 ---
@@ -2700,3 +2700,41 @@ Current:
 
     Aggregate Compatibility Amendment
     = REVISED / READY_FOR_TARGETED_COMPATIBILITY_REVIEW
+
+
+---
+
+## Aggregate Compatibility Re-Freeze Provenance
+
+Re-freeze authorization:
+
+    AUTH-U05-AGR-REFREEZE-001
+    = REFREEZE
+
+Owner decision record:
+
+    PR #177
+    decision head = 371aa622c1047022c89fcac368ba9b5ea12085e2
+
+Reviewed semantic amendment:
+
+    PR #176
+    exact reviewed head = f3a7823f2eb119b1103235a3e19d8e28f894b93d
+
+Targeted Compatibility Re-Review:
+
+    PASS
+    review_id = 5263853038
+
+Decision Package Gate Review:
+
+    PASS
+    review_id = 5263862081
+
+Current affected-scope state:
+
+    REFROZEN / V1
+
+This re-freeze changes status/provenance only after the reviewed amendment.
+It grants no runtime/code implementation, merge, live downstream execution,
+production, release activation, or real-patient authorization.
