@@ -126,6 +126,7 @@ class U05NonProductionClinicalReadinessTest {
                         "permission-u05-eval-1",
                         true));
 
+        assertEquals("permission-u05-eval-1", result.getAdmission().getRestrictedPermissionRef());
         assertEquals("permission-u05-eval-1", result.getAdmission().getAdmittedInput().getAcceptedRestrictedPermissionRef());
         assertEquals("permission-u05-eval-1", result.getDecision().getRestrictedPermissionRef());
 
@@ -482,6 +483,7 @@ class U05NonProductionClinicalReadinessTest {
                 "consult-1",
                 "cdp-1",
                 VERSION,
+                "clinical-state-cdp-1-v12",
                 environment,
                 environmentAuthorized,
                 true,
