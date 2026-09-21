@@ -3,7 +3,7 @@
 > Scope: U05 / D03 的 pre-D03 consumer admission、统一入站 envelope、route/gate/currentness/replay/restricted-context 边界。  
 > Design basis: U05 Implementation Readiness Re-Evaluation v0.2 / PR #170 exact head `39e13a91fc2fc2dc78fbda99c063af2411b8b24f`.  
 > Exact frozen semantic baseline: `3bd85f908a1cb09355f6ea1c5ce737638d1c0fdc`.  
-> Status: **REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW**.  
+> Status: **FROZEN / PASS_FOR_READINESS**.  
 > Target blocker: `BF-U05-RG-01`.  
 > 本文件不授予 U05 implementation、D03 execution、downstream execution、merge、production、release activation 或 real-patient authorization。
 
@@ -1926,24 +1926,17 @@ race/crash semantics
 RDP-02/03/04/05/06 boundaries
 ```
 
-因此当前只能推进到：
-
-```text
-BF-U05-RG-01
-= DESIGN_RESOLVED / INDEPENDENT_REVIEW_PENDING
-
-U05-RDP-01
-= PROPOSED / READY_FOR_INDEPENDENT_DESIGN_REVIEW
-```
-
-只有独立审查 PASS 后，才可考虑：
+Targeted Independent Design Re-Review 已 PASS，因此：
 
 ```text
 BF-U05-RG-01
 = CLOSED
+
 U05-RDP-01
 = FROZEN / PASS_FOR_READINESS
 ```
+
+该 closure 仅表示 Consumer Inbound Contract 的 readiness/design 缺口已经关闭，不表示 Runtime/code 已实现。
 
 ---
 
@@ -1969,7 +1962,7 @@ real-patient traffic
 当前 aggregate status 仍为：
 
 ```text
-BF-U05-RG-01 = DESIGN_RESOLVED / REVIEW_PENDING
+BF-U05-RG-01 = CLOSED
 BF-U05-RG-02 = CLOSED
 BF-U05-RG-03 = OPEN / BLOCKING
 BF-U05-RG-04 = OPEN / BLOCKING
@@ -2022,7 +2015,7 @@ Status:
 
 ```text
 BF-U05-RDP01-IR-01
-= REMEDIATED / TARGETED_REVIEW_PENDING
+= CLOSED
 ```
 
 ## 34.2 BF-U05-RDP01-IR-02 remediation
@@ -2047,7 +2040,7 @@ Status:
 
 ```text
 BF-U05-RDP01-IR-02
-= REMEDIATED / TARGETED_REVIEW_PENDING
+= CLOSED
 ```
 
 ## 34.3 RQ-U05-RDP01-IR-03 remediation
@@ -2071,18 +2064,45 @@ Status:
 
 ```text
 RQ-U05-RDP01-IR-03
-= REMEDIATED / TARGETED_REVIEW_PENDING
+= CLOSED
 ```
 
 Current design status:
 
 ```text
 U05-RDP-01
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
+= FROZEN / PASS_FOR_READINESS
 
 BF-U05-RG-01
-= DESIGN_RESOLVED / TARGETED_REVIEW_PENDING
+= CLOSED
 
 U05 Implementation Readiness
 = NOT_READY
 ```
+
+
+---
+
+# 35. Targeted Review / Freeze Provenance
+
+```text
+PR #171
+
+Targeted Independent Design Re-Review
+= PASS
+
+reviewed semantic head
+= a65946d34e3e8dc24c90014ed5f0dd97b5b8f4a6
+
+review_id
+= 5263410751
+
+BF-U05-RDP01-IR-01 = CLOSED
+BF-U05-RDP01-IR-02 = CLOSED
+RQ-U05-RDP01-IR-03 = CLOSED
+
+BF-U05-RG-01 = CLOSED
+U05-RDP-01 = FROZEN / PASS_FOR_READINESS
+```
+
+This provenance update changes status only and does not authorize implementation.
