@@ -2,7 +2,8 @@
 
 > Scope: U05 Clinical Readiness 输入来源、适用性、版本一致性与阶段依赖边界。
 >
-> Status: PROPOSED / READY_FOR_INDEPENDENT_REVIEW
+> Status: **REFROZEN / V1 — CURRENT AUTHORITATIVE STATUS**  
+> Historical `PROPOSED / READY_FOR_INDEPENDENT_REVIEW` metadata is superseded by the accepted independent-review / controlled-amendment / re-freeze provenance retained below.
 >
 > Review basis: main@6e68fd9fb7cd19e87aadae30f3bb53a2264d1920
 >
@@ -1230,3 +1231,46 @@ This amendment is **REFROZEN / V1** and authorizes no runtime implementation.
 > Re-freeze package review: **PASS** / review_id `5263272855`  
 > Current CL-04 amendment state: **REFROZEN / V1**
 
+
+
+---
+
+## 26. AGR-03 Status / Provenance Synchronization
+
+Basis:
+
+    U05 Implementation Readiness Re-Evaluation v0.3
+    PR #175
+    review_id = 5263778132
+
+Finding addressed:
+
+    BF-U05-AGR-03
+    = RDP05_AUTHORITATIVE_STATUS_METADATA_CONFLICT
+
+Current authoritative status:
+
+    U05-RDP-05
+    = REFROZEN / V1
+
+    BF-U05-RG-05
+    = CLOSED
+
+This synchronization changes status/provenance metadata only.
+
+It does NOT change:
+
+    readiness input vocabulary
+    applicability semantics
+    F1/F3/F5/F6 ownership
+    currentness rules
+    A1 sequencing
+    POL-005 / POL-011 applicability basis
+    any business signal
+
+Historical review/amendment provenance remains preserved in this file.
+
+Current synchronization status:
+
+    AGR-03
+    = STATUS_SYNC_APPLIED / INDEPENDENT_COMPATIBILITY_REVIEW_PENDING
