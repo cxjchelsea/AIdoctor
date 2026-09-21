@@ -1,6 +1,5 @@
 package com.aidoctor.diagnosis.runtime.u05;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -254,6 +253,6 @@ public final class U05ClinicalReadinessPolicy {
                 rule,
                 new ArrayList<String>(ruleRefs),
                 new ArrayList<String>(),
-                Instant.now().toString());
+                input.getAdmittedCreatedAt());
     }
 }
