@@ -146,7 +146,7 @@ public final class U05AdmissionService {
 
         // A13-A14 — stable semantic admission identity and replay reconciliation.
         String admissionId = admissionId(request);
-        String fingerprint = admissionFingerprint(request, manifest);
+        String fingerprint = admissionFingerprint(request, manifest, authority);
         U05AdmissionLedger.Entry existing = ledger.find(admissionId);
         if (existing != null) {
             if (!fingerprint.equals(existing.getFingerprint())) {
@@ -157,7 +157,7 @@ public final class U05AdmissionService {
                     U05AdmissionResult.REATTACHED);
         }
 
-        U05AdmittedInput input = new U05AdmittedInput(admissionId, request, manifest);
+        U05AdmittedInput input = new U05AdmittedInput(admissionId, request, manifest, authority);
         try {
             ledger.store(admissionId, fingerprint, input);
         } catch (IllegalStateException conflict) {
@@ -243,7 +243,8 @@ public final class U05AdmissionService {
 
     private static String admissionFingerprint(
             U05ConsumerInboundRequest request,
-            U05ReadinessInputManifest manifest) {
+            U05ReadinessInputManifest manifest,
+            U05AdmissionAuthoritySnapshot authority) {
         StringBuilder refs = new StringBuilder();
         for (String ref : manifest.presentInputRefs()) refs.append(ref).append('|');
         return U05Ids.hash(
@@ -252,7 +253,8 @@ public final class U05AdmissionService {
                 request.getReadinessInputManifestRef(),
                 refs.toString(),
                 request.getCanonicalEventRef(),
-                request.getRestrictedPermissionRef());
+                request.getRestrictedPermissionRef(),
+                authority.getCurrentReadinessRecordRef());
     }
 
     private static boolean isProduction(String environment) {
