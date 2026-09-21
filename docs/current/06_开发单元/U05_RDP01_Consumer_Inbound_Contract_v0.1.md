@@ -936,6 +936,7 @@ route_authorization_type
 route_authorization_ref
 READINESS_INPUT_SET_IDENTITY
 restricted_context_ref when applicable
+restricted_permission_ref when applicable
 business_event_identity
 admission_contract_version
 ```
@@ -995,6 +996,7 @@ new routing authorization
 new route source
 new readiness-input-set identity
 new restricted context
+new restricted permission / permission version
 ```
 
 不得 attach 到旧 admission identity。
@@ -1035,6 +1037,7 @@ route_authorization_ref
 route_source_ref
 readiness_input_set_identity
 restricted_context_ref?
+restricted_permission_ref?
 
 correlation_id
 trace_id
@@ -1112,6 +1115,7 @@ accepted_readiness_input_set_identity
 accepted_readiness_input_refs[]
 
 accepted_restricted_context_ref?
+accepted_restricted_permission_ref?
 
 canonical_event_ref
 business_event_identity
@@ -1490,6 +1494,7 @@ readiness_input_set_identity
 readiness_input_refs[]
 
 restricted_context_ref when applicable
+restricted_permission_ref when applicable
 
 canonical_event_ref
 business_event_identity
@@ -1561,6 +1566,56 @@ same Clinical State Version
 reject old request
 -> require re-admission
 ```
+
+---
+
+# 23.4 RESTRICTED permission provenance continuity
+
+当：
+
+    gate_value = RESTRICTED
+
+必须保持同一 admitted permission evidence identity 贯穿：
+
+    U05ConsumerInboundRequest.restricted_permission_ref
+    =
+    U05AdmissionResult.restricted_permission_ref
+    =
+    U05AdmittedInput.accepted_restricted_permission_ref
+
+并且该 ref 必须与：
+
+    accepted_restricted_context_ref
+    accepted_u04_gate_ref
+    accepted route authorization
+
+属于同一当前授权上下文。
+
+禁止：
+
+    admission passed under permission P1
+    -> U05AdmittedInput drops P1
+    -> D03/RDP-03 later re-lookup permission P2
+
+因为后续 lookup 不能替代：
+
+    exact admitted authorization provenance
+
+同样，RESTRICTED admission identity/fingerprint 必须绑定：
+
+    restricted_permission_ref
+
+因此：
+
+    same restricted context
+    + changed permission ref/version
+
+不得 exact-reattach 到旧 admission。
+
+必须：
+
+    new admission identity
+    or replay/currentness conflict according to current request identity rules
 
 ---
 
@@ -2106,3 +2161,42 @@ U05-RDP-01 = FROZEN / PASS_FOR_READINESS
 ```
 
 This provenance update changes status only and does not authorize implementation.
+
+
+---
+
+# 36. AGR-01 Controlled Compatibility Amendment
+
+Amendment basis:
+
+    U05 Implementation Readiness Re-Evaluation v0.3
+    PR #175
+    review_id = 5263778132
+
+Finding addressed:
+
+    BF-U05-AGR-01
+    = RESTRICTED_PERMISSION_PROVENANCE_CHAIN_BREAK
+
+This amendment freezes only provenance continuity:
+
+    restricted_permission_ref
+    becomes part of RESTRICTED admission identity/fingerprint semantics
+
+    U05AdmissionResult
+    preserves restricted_permission_ref
+
+    U05AdmittedInput
+    preserves accepted_restricted_permission_ref
+
+    admission trace
+    preserves restricted_permission_ref
+
+No Safety permission policy is changed.
+No downstream permission is granted by this amendment.
+No Clinical Readiness business rule is changed.
+
+Current amendment status:
+
+    AGR-01 RDP-01 portion
+    = AMENDED / INDEPENDENT_COMPATIBILITY_REVIEW_PENDING
