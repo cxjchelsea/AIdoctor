@@ -28,12 +28,14 @@ public final class U05AdmittedInput {
     private final String environmentId;
     private final String gateValue;
     private final String admittedCreatedAt;
+    private final String sourceCurrentReadinessRecordRef;
     private final U05ReadinessInputManifest manifest;
 
     U05AdmittedInput(
             String admissionId,
             U05ConsumerInboundRequest request,
-            U05ReadinessInputManifest manifest) {
+            U05ReadinessInputManifest manifest,
+            U05AdmissionAuthoritySnapshot authority) {
         this.admissionId = admissionId;
         this.consultationId = request.getConsultationId();
         this.cdpId = request.getCdpId();
@@ -56,6 +58,7 @@ public final class U05AdmittedInput {
         this.environmentId = request.getEnvironmentId();
         this.gateValue = request.getGateValue();
         this.admittedCreatedAt = request.getCreatedAt();
+        this.sourceCurrentReadinessRecordRef = authority.getCurrentReadinessRecordRef();
         this.manifest = manifest;
     }
 
@@ -81,5 +84,6 @@ public final class U05AdmittedInput {
     public String getEnvironmentId() { return environmentId; }
     public String getGateValue() { return gateValue; }
     public String getAdmittedCreatedAt() { return admittedCreatedAt; }
+    public String getSourceCurrentReadinessRecordRef() { return sourceCurrentReadinessRecordRef; }
     public U05ReadinessInputManifest getManifest() { return manifest; }
 }
