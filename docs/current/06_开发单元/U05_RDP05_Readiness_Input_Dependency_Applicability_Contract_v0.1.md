@@ -841,7 +841,7 @@ BF-U05-RG02-CL-01
 
 > Authorization: `AUTH-U05-PA-FROZEN-AMEND-001`  
 > Reviewed design source: PR #155 exact head `7e2d4d4255d51a10f58c63dec4e2ccb53920c33f`  
-> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **REFROZEN / V1**
 
 ### 18.1 Generalized consumer
 
@@ -932,8 +932,8 @@ evaluation_context included in routing identity
 
 ```text
 U05-RDP-05 post-analysis consumption scope
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 BF-U05-RG02-CL-02
-= REMEDIATED_BY_DESIGN / REVIEW_PENDING
+= REMEDIATED / REFROZEN / CLOSURE_REEVALUATION_PENDING
 ```
