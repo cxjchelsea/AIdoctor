@@ -26,7 +26,7 @@ public final class U05ReadinessInputManifest {
             String evaluationContext,
             List<U05ReadinessInput> inputs) {
         this.manifestRef = required(manifestRef, "manifestRef");
-        this.setIdentity = required(setIdentity, "setIdentity");
+        String declaredSetIdentity = required(setIdentity, "setIdentity");
         this.consultationId = required(consultationId, "consultationId");
         this.cdpId = required(cdpId, "cdpId");
         if (clinicalStateVersion < 0) throw new IllegalArgumentException("clinicalStateVersion must be non-negative");
@@ -43,6 +43,15 @@ public final class U05ReadinessInputManifest {
             }
         });
         this.inputs = Collections.unmodifiableList(copy);
+        this.setIdentity = semanticSetIdentity(
+                this.consultationId,
+                this.cdpId,
+                this.clinicalStateVersion,
+                this.evaluationContext,
+                this.inputs);
+        if (!this.setIdentity.equals(declaredSetIdentity)) {
+            throw new IllegalArgumentException("declared readiness input set identity does not match manifest content");
+        }
         requireDomain(U05ReadinessInput.F1);
         requireDomain(U05ReadinessInput.F3);
         requireDomain(U05ReadinessInput.F5);
@@ -89,12 +98,30 @@ public final class U05ReadinessInputManifest {
     }
 
     public String computedSemanticIdentity() {
+        return semanticSetIdentity(
+                consultationId, cdpId, clinicalStateVersion, evaluationContext, inputs);
+    }
+
+    public static String semanticSetIdentity(
+            String consultationId,
+            String cdpId,
+            int clinicalStateVersion,
+            String evaluationContext,
+            List<U05ReadinessInput> inputs) {
+        List<U05ReadinessInput> sorted = new ArrayList<U05ReadinessInput>(inputs);
+        Collections.sort(sorted, new Comparator<U05ReadinessInput>() {
+            @Override
+            public int compare(U05ReadinessInput left, U05ReadinessInput right) {
+                int domain = left.getSourceDomain().compareTo(right.getSourceDomain());
+                return domain != 0 ? domain : left.getReadinessInputId().compareTo(right.getReadinessInputId());
+            }
+        });
         List<String> parts = new ArrayList<String>();
         parts.add(consultationId);
         parts.add(cdpId);
         parts.add(String.valueOf(clinicalStateVersion));
         parts.add(evaluationContext);
-        for (U05ReadinessInput input : inputs) parts.add(input.semanticFingerprint());
+        for (U05ReadinessInput input : sorted) parts.add(input.semanticFingerprint());
         return U05Ids.hash("u05-input-set", parts.toArray(new String[parts.size()]));
     }
 
