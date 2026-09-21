@@ -1125,6 +1125,20 @@ U05-RDP-02 post-analysis boundary scope
 F3/F5/F6 STALE / INVALIDATED
 ```
 
+若绑定 current accepted mutation / invalidation provenance，则统一分类为：
+
+```text
+STALE_BY_UPSTREAM_MUTATION
+```
+
+并保持：
+
+```text
+STALE_BY_UPSTREAM_MUTATION
+!= FAILED
+!= UNAVAILABLE
+```
+
 在 continuation sequencing 尚未完成时，不应被提前送入 D03。
 
 因此：
