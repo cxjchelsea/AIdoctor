@@ -1,7 +1,7 @@
 # U05 Implementation Authorization Decision v0.1
 
 > Decision ID: `AUTH-U05-RUNTIME-IMPL-001`  
-> Decision status: **NOT_DECIDED**  
+> Decision status: **NOT_DECIDED / TARGETED_GATE_REVIEW_PENDING**  
 > Readiness basis: U05 Implementation Readiness Re-Evaluation v0.4 / PR #179  
 > Authorization Review: PR #180  
 > Reviewed semantic authorization head: `33001ae6301d250c6485df1284e5e78d8faf64ea`  
@@ -83,23 +83,54 @@ No broader interpretation is allowed.
 
 ---
 
-# 4. Exact implementation base
+# 4. Exact implementation lineage
 
-If authorized, implementation must begin from:
+Reviewed implementation semantic/governance base:
 
-    branch:
-      review/u05-implementation-authorization-review
+    review/u05-implementation-authorization-review
 
-    exact base:
+    exact reviewed base:
       8cbf2ed81d25fda5944bc19dcf88587fdd94a7fd
+
+However implementation must NOT branch directly from that pre-owner-decision head.
+
+If owner chooses AUTHORIZE:
+
+    1. the owner decision must first be recorded in this decision package;
+
+    2. that decision-record commit must be a descendant of:
+         8cbf2ed81d25fda5944bc19dcf88587fdd94a7fd
+
+    3. the decision record must explicitly contain:
+         AUTH-U05-RUNTIME-IMPL-001 = AUTHORIZED
+         exact authorization shape
+         reviewed authorization head
+         owner decision provenance
+
+    4. the actual implementation branch point is:
+         the final owner-authorized decision-record head.
 
 Recommended implementation branch:
 
     impl/u05-nonprod-clinical-readiness-v1
 
-The implementation branch must record this authorization ID and exact base.
+Therefore:
 
-If the base changes materially before implementation begins:
+    reviewed semantic/governance base
+    != actual implementation branch point
+
+The implementation lineage must contain the explicit owner authorization record.
+
+If implementation branches from a commit that does not contain:
+
+    AUTH-U05-RUNTIME-IMPL-001 = AUTHORIZED
+
+then:
+
+    AUTHORIZATION_LINEAGE_CHECK = FAIL
+    implementation must not begin.
+
+If the reviewed base or authorization scope changes materially before implementation begins:
 
     STOP
     -> revalidate authorization applicability.
@@ -655,7 +686,42 @@ U05 remains implementation-ready but unauthorized.
 
 ---
 
-# 21. Current state
+# 21. Independent Gate Review Remediation
+
+Independent Gate Review:
+
+    PR #181
+    review_id = 5263974730
+    verdict = REVISE_REQUIRED
+
+Finding:
+
+    BF-U05-IA-DG-01
+    = AUTHORIZATION_RECORD_NOT_REQUIRED_IN_IMPLEMENTATION_LINEAGE
+
+Remediation:
+
+    reviewed semantic/governance base remains:
+      8cbf2ed81d25fda5944bc19dcf88587fdd94a7fd
+
+    actual implementation branch point is now:
+      final owner-authorized decision-record head
+
+    implementation branch must inherit:
+      AUTH-U05-RUNTIME-IMPL-001 = AUTHORIZED
+      in its Git lineage.
+
+Current:
+
+    BF-U05-IA-DG-01
+    = REMEDIATED / TARGETED_GATE_REVIEW_PENDING
+
+    Decision Package
+    = REVISED / READY_FOR_TARGETED_GATE_REVIEW
+
+---
+
+# 22. Current state
 
 Until explicit owner decision:
 
