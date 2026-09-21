@@ -717,7 +717,7 @@ Implementation Authorization
 
 > Authorization: `AUTH-U05-PDX-FROZEN-AMEND-001`  
 > Reviewed design source: PR #153 exact head `a5b8aa6e23e5f54a0c2e1884ed027d7f7b7cbeee`  
-> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **REFROZEN / V1**
 
 ### 17.1 POST_DDX_REEVALUATION consumption
 
@@ -828,8 +828,8 @@ Stale/failed/conflicting expected inputs cannot be interpreted as normal routing
 
 ```text
 U05-RDP-05 post-DDx consumption scope
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 BF-U05-RG02-CL-01
-= REMEDIATED_BY_DESIGN / REVIEW_PENDING
+= REMEDIATED / REFROZEN / CLOSURE_REEVALUATION_PENDING
 ```
