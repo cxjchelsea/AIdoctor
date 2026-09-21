@@ -43,6 +43,9 @@ public final class U05ReadinessStateProposalFactory {
 
         String readinessRecordId = U05Ids.hash("u05-readiness-record", effectId);
         String proposalId = U05Ids.hash("u05-readiness-proposal", effectId);
+        String expectedCurrentReadinessRecordRef = input.getSourceCurrentReadinessRecordRef();
+        String mutationOperation =
+                expectedCurrentReadinessRecordRef == null ? "ADD" : "REPLACE";
 
         List<String> dependencyRefs = new ArrayList<String>();
         dependencyRefs.add(input.getAcceptedU04GateRef());
@@ -74,7 +77,9 @@ public final class U05ReadinessStateProposalFactory {
                 join(decision.getKnowledgeReleaseRefs()),
                 join(dependencyRefs),
                 "CURRENT",
-                effectId);
+                effectId,
+                mutationOperation,
+                expectedCurrentReadinessRecordRef);
 
         FoundationTypes.ContractEnvelope envelope = new FoundationTypes.ContractEnvelope();
         envelope.contractName = "StatePatch";
@@ -118,7 +123,7 @@ public final class U05ReadinessStateProposalFactory {
         value.put("canonical_payload_fingerprint", payloadFingerprint);
 
         StateTypes.StatePatchOperation operation = new StateTypes.StatePatchOperation();
-        operation.op = "ADD";
+        operation.op = mutationOperation;
         operation.path = READINESS_PATH;
         operation.value = value;
         operation.expectedCurrentValue = null;
@@ -132,6 +137,7 @@ public final class U05ReadinessStateProposalFactory {
         evidenceRefs.addAll(input.getAcceptedReadinessInputRefs());
         evidenceRefs.add(input.getAcceptedU04GateRef());
         evidenceRefs.add(input.getAcceptedRouteAuthorizationRef());
+        if (expectedCurrentReadinessRecordRef != null) evidenceRefs.add(expectedCurrentReadinessRecordRef);
         if (input.getAcceptedRestrictedContextRef() != null) evidenceRefs.add(input.getAcceptedRestrictedContextRef());
         if (input.getAcceptedRestrictedPermissionRef() != null) evidenceRefs.add(input.getAcceptedRestrictedPermissionRef());
 
@@ -154,6 +160,8 @@ public final class U05ReadinessStateProposalFactory {
                 proposalId,
                 payloadFingerprint,
                 decision.getDecisionId(),
+                mutationOperation,
+                expectedCurrentReadinessRecordRef,
                 patch);
     }
 
