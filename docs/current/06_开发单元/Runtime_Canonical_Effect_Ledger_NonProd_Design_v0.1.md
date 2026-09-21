@@ -202,14 +202,43 @@ Required invariant:
     -> exactly one durable canonical record
     -> all exact retries reattach it.
 
+Required exact reattachment equivalence:
+
+    same namespace
+    + same effect identity
+    + same canonical fingerprint
+    + same record_schema_version
+    + same payload SHA-256
+    + existing record integrity valid
+
+    -> REATTACHED.
+
 Required conflict invariant:
 
     same namespace
     + same effect identity
-    + different canonical fingerprint
+
+and any canonical record material differs:
+
+    canonical fingerprint differs
+    or record_schema_version differs
+    or payload SHA-256 differs
 
     -> CONFLICT
     -> no overwrite.
+
+Therefore:
+
+    same effect identity + same fingerprint
+    but different payload/schema
+    != exact replay.
+
+The first valid canonical record remains immutable.
+
+create_if_absent must always compare full canonical record equivalence.
+
+inspect may return the existing valid record for consumer-side strict decode/currentness checks,
+but must never hide storage-integrity corruption.
 
 ---
 
@@ -373,9 +402,84 @@ for equality verification after read.
 
 ---
 
+# 9.1 Root containment / symbolic-link boundary
+
+The caller must provide a dedicated non-production ledger root.
+
+At adapter construction:
+
+    root must exist or be explicitly created as the dedicated root
+    under caller control
+
+    root must resolve to one real/canonical directory
+
+    resolved root identity is fixed for the ledger instance.
+
+All derived canonical storage paths use only safe/hash-derived child names.
+
+Before any canonical/lock/temp file operation:
+
+    namespace directory
+    effect directory
+    canonical record path
+    coordination/lock path
+
+must be checked so that:
+
+    no used storage object is a symbolic link
+
+    resolved parent/object path remains contained under the fixed resolved root.
+
+If:
+
+    root/path resolution escapes configured root
+    or any derived storage component is a symbolic link
+    or containment cannot be established reliably
+
+then:
+
+    -> UNAVAILABLE
+    -> no read/write/create claim.
+
+A symlink violation must never be downgraded to:
+
+    ABSENT.
+
+Focused tests must include:
+
+    malicious-looking namespace/effect input
+
+    pre-created symlink at a derived namespace/effect/canonical path
+
+    attempted external target
+
+Expected:
+
+    UNAVAILABLE / fail closed
+    and no write outside the dedicated root.
+
+---
+
 # 10. Atomic create semantics
 
 The ledger must provide process-safe create-or-reattach behavior for the non-production harness.
+
+Canonical-existence authority:
+
+    canonical target record
+    = only source of durable record existence truth.
+
+Temporary files:
+
+    are staging only
+    != canonical record
+    != effect authority.
+
+Stable lock file/path:
+
+    = coordination metadata only
+    != canonical record
+    != replay authority.
 
 Required algorithmic properties:
 
@@ -383,44 +487,112 @@ Required algorithmic properties:
 
     one concurrent creator wins
 
-    loser reloads and returns:
+    loser reloads the canonical target and returns:
       REATTACHED
       or CONFLICT
+      or CORRUPT
 
-    crash during a new record write
+    crash during staging
     must not produce a partially valid canonical record.
 
-A permissible implementation pattern:
+Required publication sequence:
 
-    encode complete record to temporary file
+    encode complete record to a temporary file
+    located inside the dedicated ledger root / same filesystem
+
+    write complete bytes
 
     fsync temporary file
 
-    acquire process/filesystem coordination for target identity
-      using JDK FileChannel/FileLock or equivalent non-production mechanism
+    acquire stable per-identity filesystem coordination
+      via JDK FileChannel/FileLock or equivalent bounded JDK mechanism
 
-    while lock held:
-      re-inspect target
+    if lock cannot be acquired/reliably used:
+      -> UNAVAILABLE
 
-      if target already exists:
-        compare fingerprint/integrity
+    while coordination is held:
+      re-inspect canonical target
+
+      if canonical target exists:
+        validate integrity
+        compare full canonical equality
         -> REATTACHED / CONFLICT / CORRUPT
 
-      otherwise:
-        atomic move temp -> canonical target
-        without semantic overwrite
+      if canonical target does not exist:
+        publish temp -> canonical target
+        using an atomic non-overwriting filesystem operation
 
-    fsync target / containing directory where supported
+    fsync canonical target
 
-    release lock.
+    attempt/verify containing-directory durability
+    to the extent required by the supported non-production platform
 
-If required atomic filesystem primitives are unavailable:
+    only after the required durability steps succeed:
+      -> CREATED.
 
-    fail closed as UNAVAILABLE
+Forbidden fallback:
 
-rather than falling back to an unsafe overwrite.
+    copy-over-existing
+    replace-existing
+    last-writer-wins
+    truncate-and-rewrite canonical target
+    unsafe rename/copy when atomic non-overwrite cannot be established.
 
-No last-writer-wins behavior is permitted.
+If the configured filesystem/platform cannot provide the frozen
+non-production atomic publication guarantee:
+
+    -> UNAVAILABLE
+    -> no canonical record may be claimed CREATED.
+
+## 10.1 Orphan temporary files
+
+After process crash:
+
+    orphan temp file
+    != canonical record.
+
+On restart:
+
+    inspect canonical target first.
+
+If canonical target exists:
+
+    validate/use canonical target;
+    orphan temp files have no authority.
+
+If canonical target is absent:
+
+    result remains ABSENT
+    unless another lawful creator publishes a canonical record.
+
+Orphan temp cleanup may occur only as bounded housekeeping
+after canonical-target determination.
+
+Cleanup failure:
+
+    must not cause an orphan temp file to be treated as canonical.
+
+## 10.2 Crash-injection requirement
+
+Focused verification must include:
+
+    writer creates/fsyncs temp
+    -> aborts before canonical publication
+    -> new process opens same root
+    -> inspect identity
+
+Expected:
+
+    ABSENT
+
+unless a separate lawful concurrent creator published the canonical target.
+
+It must also include:
+
+    canonical publication completed
+    -> process reconstruct/restart
+    -> inspect
+    -> REATTACHED with exact prior canonical record.
 
 ---
 
@@ -761,12 +933,23 @@ At minimum:
     -> no rewrite
     -> first created_at retained.
 
-## C. fingerprint conflict
+## C. canonical record conflict
 
-    same identity
-    + different canonical fingerprint
-    -> CONFLICT
-    -> prior canonical record unchanged.
+Any of:
+
+    same identity + different canonical fingerprint
+
+    same identity + same fingerprint
+    + different record_schema_version
+
+    same identity + same fingerprint/schema
+    + different payload SHA-256
+
+must return:
+
+    CONFLICT
+
+and prior canonical record remains unchanged.
 
 ## D. service reconstruction
 
@@ -808,11 +991,21 @@ not merely a new Java object in the same process.
     under two namespaces
     -> two independent records.
 
-## J. traversal/path safety
+## J. traversal / symlink / containment safety
 
 malicious-looking namespace/effect strings:
 
     cannot escape configured root.
+
+Pre-create symbolic links at derived storage components:
+
+    namespace/effect/canonical/coordination path
+
+Expected:
+
+    UNAVAILABLE / fail closed
+
+    no read/write outside configured real root.
 
 ## K. concurrent creators
 
@@ -860,6 +1053,27 @@ shared package:
     no Spring annotations
     no default filesystem path
     no database/network client.
+
+## P. crash before publication
+
+    temp fully written/fsynced
+    process abort before canonical publication
+    restart on same root
+
+Expected:
+
+    ABSENT
+    unless another lawful creator published canonical target.
+
+Orphan temp is never reinterpreted as canonical.
+
+## Q. atomic publication unsupported
+
+Synthetic/injected filesystem publication failure:
+
+    -> UNAVAILABLE
+    -> no CREATED claim
+    -> no fallback overwrite/copy semantics.
 
 ---
 
@@ -928,3 +1142,51 @@ No merge/production/live authorization is implied.
     -> repeat U05 exact-head implementation review.
 
 No shared capability merge is authorized by this design.
+
+
+---
+
+# 24. Independent Design Review Remediation
+
+Initial Independent Design Review:
+
+    PR #185
+    verdict = REVISE_REQUIRED
+    review_id = 5265151036
+
+Findings:
+
+    BF-RUNTIME-EFFECT-LEDGER-NC-IR-01
+    = SAME_FINGERPRINT_DIFFERENT_PAYLOAD_UNDERDEFINED
+
+    BF-RUNTIME-EFFECT-LEDGER-NC-IR-02
+    = ATOMIC_FILE_COORDINATION_AND_STALE_TEMP_SEMANTICS_UNDERDEFINED
+
+    BF-RUNTIME-EFFECT-LEDGER-NC-IR-03
+    = FILESYSTEM_ROOT_SYMLINK_BOUNDARY_UNDERDEFINED
+
+Remediation:
+
+    IR-01:
+      exact REATTACHED requires identity + fingerprint + schema + payload digest equality
+
+    IR-02:
+      canonical-target-only authority, temp/lock non-authority,
+      fail-closed atomic publication and crash-injection semantics frozen
+
+    IR-03:
+      real-root containment and symlink fail-closed rules frozen
+
+Current:
+
+    BF-RUNTIME-EFFECT-LEDGER-NC-IR-01
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    BF-RUNTIME-EFFECT-LEDGER-NC-IR-02
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    BF-RUNTIME-EFFECT-LEDGER-NC-IR-03
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    RUNTIME-EFFECT-LEDGER-NC-01 Design
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
