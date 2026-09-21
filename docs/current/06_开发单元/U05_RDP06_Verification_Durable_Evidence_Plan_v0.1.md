@@ -1202,6 +1202,7 @@ schema：
 
     fixture_id
     fixture_semantic_id
+    fixture_source_ref
     fixture_digest
 
     synthetic = true
