@@ -59,7 +59,8 @@ public final class U05AdmissionService {
         if (!request.getCdpId().equals(authority.getCdpId())) {
             return U05AdmissionResult.rejected(CDP_ID_MISMATCH);
         }
-        if (request.getClaimedClinicalStateVersion() != authority.getCurrentClinicalStateVersion()) {
+        if (request.getClaimedClinicalStateVersion() != authority.getCurrentClinicalStateVersion()
+                || !request.getAuthoritativeStateRef().equals(authority.getAuthoritativeStateRef())) {
             return U05AdmissionResult.rejected(STATE_VERSION_MISMATCH);
         }
         if (!CONTRACT_VERSION.equals(request.getAdmissionContractVersion())) {
@@ -238,6 +239,7 @@ public final class U05AdmissionService {
                 request.getBusinessEventIdentity(),
                 request.getRoutingPolicyVersion(),
                 request.getAdmissionContractVersion(),
+                request.getAuthoritativeStateRef(),
                 request.getEnvironmentId());
     }
 
