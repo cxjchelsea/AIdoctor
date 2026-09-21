@@ -2247,3 +2247,98 @@ canonical F3 source/effect exists
 Phase 8 PostAnalysisRoutingDecision
 = REFROZEN / V1
 ```
+
+
+---
+
+# 28. Clinical Continuation Routing Contract
+
+> Authorization: `AUTH-U05-CCR-FROZEN-AMEND-001`  
+> Reviewed design source: PR #157 exact head `4c3c7eb7e9aa9b6f9506871f7d28e033b4a6482e`  
+> Status: **REFROZEN / V1**
+
+## 28.1 Superseded generalized contract
+
+Section 27 的：
+
+```text
+PostAnalysisRoutingDecision
+decision_type = POST_ANALYSIS_ROUTING
+```
+
+在 Runtime implementation 前进一步 generalized 为：
+
+```text
+ClinicalContinuationRoutingDecision
+decision_type = CLINICAL_CONTINUATION_ROUTING
+```
+
+No runtime migration is required.
+
+## 28.2 Evaluation contexts
+
+Mandatory：
+
+```text
+POST_USER_FACT_UPDATE
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+## 28.3 Allowed consequences
+
+```text
+TO_U05_CLINICAL_READINESS
+TO_F3_CURRENT_VERSION_REVALIDATION
+TO_U08_REASSESSMENT
+TO_U12_DELIVERY_PREPARATION
+FAILURE_ROUTE
+```
+
+该 decision：
+
+```text
+!= D11
+!= Clinical Readiness
+!= Delivery Readiness
+!= Clinical State truth category
+```
+
+## 28.4 Mutation provenance
+
+POST_USER_FACT_UPDATE 至少额外绑定：
+
+```text
+invalidation_refs[]
+prior_activation_refs[]
+accepted_fact_or_correction_event_ref
+```
+
+用于区分：
+
+```text
+STALE_BY_UPSTREAM_MUTATION
+vs
+FAILED / UNAVAILABLE
+```
+
+## 28.5 Idempotency
+
+```text
+CLINICAL_CONTINUATION_ROUTING_ID
+=
+consultation_id
++ input Clinical State Version
++ evaluation_context
++ accepted owner input refs
++ invalidation refs
++ current U04 Gate ref
++ routing policy version
+```
+
+## 28.6 Current status
+
+```text
+Phase 8 ClinicalContinuationRoutingDecision
+= REFROZEN / V1
+```
