@@ -4,7 +4,7 @@
 > Design baseline: `268d9c5e9075420aa76c5c1aa37c254a3a99e2b8`  
 > Closure finding source: PR #159 / exact review head `193a280cce0bb7c99ca0566166bffc7bb3aaec6a`  
 > Scope: design-only / governance-only / no frozen amendment yet  
-> Current status: **REVISED / TARGETED_INDEPENDENT_REVIEW_2_PENDING**
+> Current status: **OWNER_OPTION_A_INCORPORATED / INDEPENDENT_AMENDMENT_DESIGN_REVIEW_PENDING**
 
 ---
 
@@ -531,11 +531,48 @@ REVALIDATED_CURRENT
 -> re-enter ClinicalContinuationRoutingDecision
 ```
 
-The router may then choose the unique next consequence from current F3/F5/F6/Safety state.
+The router must evaluate the current continuation state; `NOT_NEEDED` itself is never READY.
+
+For an Owner-approved first-analysis profile:
 
 ```text
-NOT_NEEDED
-!= READY
+first-entry eligibility = satisfied
+evaluation_context in:
+  A1_POST_BARRIER_CURRENT
+  POST_USER_FACT_UPDATE
+  POST_OFFLINE_ASSESSMENT
+
+F1 = PRESENT / FRAMED_IN_SCOPE
+F3 = PRESENT / CURRENT / NO_ACTIVE_ONLINE_BLOCKING_GAP
+F5 = NOT_YET_APPLICABLE
+    = F5 has never lawfully activated in this Consultation path
+F6 = PRESENT / CURRENT / VALID
+F6 signal = NO_BLOCKING_OFFLINE_EVIDENCE_NEED
+no higher blocker
+all admission/currentness/provenance checks pass
+```
+
+the router may emit:
+
+```text
+TO_U05_CLINICAL_READINESS
+```
+
+and D03 may apply the Owner-approved:
+
+```text
+D03-POL-011
+policy_scope = FIRST_CLINICAL_ANALYSIS_ENTRY_AFTER_CURRENT_F6_NOT_NEEDED
+-> DECIDED / READY_FOR_CLINICAL_ANALYSIS
+```
+
+For all other current profiles, the router selects the unique existing consequence according to current F3/F5/F6/Safety semantics.
+
+Mandatory invariant:
+
+```text
+F6 NOT_NEEDED
+!= READY by itself
 != delivery
 != completion
 ```
@@ -813,7 +850,7 @@ Existing U08 no-progress/convergence protection remains unchanged.
 
 ---
 
-## 13. D03 boundary
+## 13. D03 boundary and Owner-approved D03-POL-011
 
 D03 must not receive a required mutation-stale F6 input.
 
@@ -836,7 +873,102 @@ TO_U05_CLINICAL_READINESS
 -> D03
 ```
 
-This is a pre-D03 continuation-routing consequence, not D03 INPUT_FAILURE.
+This remains a pre-D03 continuation-routing consequence, not D03 INPUT_FAILURE.
+
+Owner decision:
+
+```text
+OD-U05-READY-02
+= APPROVE_OPTION_A
+
+decision source:
+PR #161 exact reviewed head
+d73b16d272e2096d0461850c9b482cff982aa7fc
+
+decision record:
+PR #162
+```
+
+Therefore the amendment design must add a separate D03 rule:
+
+```text
+D03-POL-011
+policy_scope = FIRST_CLINICAL_ANALYSIS_ENTRY_AFTER_CURRENT_F6_NOT_NEEDED
+```
+
+Exact positive guards:
+
+```text
+first-entry eligibility is satisfied
+
+evaluation_context in:
+  A1_POST_BARRIER_CURRENT
+  POST_USER_FACT_UPDATE
+  POST_OFFLINE_ASSESSMENT
+
+F1 = PRESENT / FRAMED_IN_SCOPE
+
+F3 = PRESENT / CURRENT
+F3 signal = NO_ACTIVE_ONLINE_BLOCKING_GAP
+
+F5 = NOT_YET_APPLICABLE
+= F5 has never lawfully activated in this Consultation path
+
+F6 = PRESENT / CURRENT
+F6 Assessment = VALID
+F6 signal = NO_BLOCKING_OFFLINE_EVIDENCE_NEED
+
+no qualified blocking offline signal
+no lawful NEEDS_CLARIFICATION
+no OUT_OF_SCOPE
+no CAN_ASK_MORE
+no required input failure / stale / unavailable
+all required provenance/currentness/admission checks pass
+
+-> DECIDED / READY_FOR_CLINICAL_ANALYSIS
+```
+
+D03-POL-011 is explicitly NOT_APPLICABLE when:
+
+```text
+POST_DDX_REEVALUATION
+any prior/current F5 activation provenance
+F5 PRESENT / STALE / INVALIDATED / FAILED / UNAVAILABLE
+F6 STALE / FAILED / UNAVAILABLE
+F6 has a JUSTIFIED blocking offline need
+F3 is not current
+F3 = CAN_ASK_MORE
+OUT_OF_SCOPE
+NEEDS_CLARIFICATION
+Safety/admission does not permit first-analysis entry
+```
+
+Precedence remains:
+
+```text
+OUT_OF_SCOPE
+> blocking NEEDS_OFFLINE_EVIDENCE
+> NEEDS_CLARIFICATION
+> CAN_ASK_MORE
+> positive READY rules
+> NO_RELIABLE_DIRECTION as otherwise governed
+```
+
+and:
+
+```text
+D03-POL-005
+= unchanged / exact frozen meaning
+= F6 NOT_YET_APPLICABLE first-entry case
+
+D03-POL-011
+= separate current-F6-NOT_NEEDED first-entry case
+
+D03-POL-006
+= unchanged / authoritative for F5 NO_RELIABLE_DIRECTION
+```
+
+No new Clinical Readiness value is introduced.
 
 ---
 
@@ -931,9 +1063,18 @@ F6 mutation-stale
 -> TO_F6_CURRENT_VERSION_REASSESSMENT
 -> current F6
 -> continuation routing
+
+if current F6 = VALID / NO_BLOCKING_OFFLINE_EVIDENCE_NEED
++ F5 never activated
++ first-entry eligibility satisfied
+-> TO_U05_CLINICAL_READINESS
+-> D03-POL-011
+-> READY_FOR_CLINICAL_ANALYSIS
+-> governed U08/F5 first analysis
 ```
 
 Preserve F6 Owner and Clinical Readiness ownership.
+D03-POL-005 remains unchanged.
 
 ### B. Phase 6 — Verifiable Units
 
@@ -941,9 +1082,19 @@ Amend U10 with:
 
 ```text
 F6_CURRENT_VERSION_REASSESSMENT mode
+F6_CURRENT_VERSION_REVALIDATION mode
 assessment-only pre-D03 behavior
 current-assessment reuse guard for later ordinary U10 path
 ```
+
+Amend U05 verification/admission semantics with:
+
+```text
+D03-POL-011
+FIRST_CLINICAL_ANALYSIS_ENTRY_AFTER_CURRENT_F6_NOT_NEEDED
+```
+
+including explicit first-entry context and prior-F5-activation exclusion.
 
 Extend continuation routing consequences.
 
@@ -967,6 +1118,8 @@ Amend:
 ClinicalContinuationRoutingDecision vocabulary
 K08 / F6 reassessment provenance/currentness/idempotency envelope
 F6_CURRENT_VERSION_REVALIDATION deterministic decision envelope
+D03-POL-011 deterministic-decision evidence fields / rule identity
+first-entry eligibility/context provenance needed to distinguish never-activated F5
 mandatory dependency-requiredness manifest
 restricted-context propagation
 routing identity inputs
@@ -987,9 +1140,12 @@ TO_F6_CURRENT_VERSION_REASSESSMENT
 -> new current U04 Gate / routing authorization
 -> U10 F6_CURRENT_VERSION_REVALIDATION
 -> only REVALIDATED_CURRENT re-enters continuation routing
+-> if first-entry current-F6-NOT_NEEDED profile is satisfied:
+   TO_U05_CLINICAL_READINESS
+   -> D03-POL-011
 ```
 
-Prevent stale route replay.
+Prevent stale route replay and prevent direct Router -> U08 bypass.
 
 ### F. U05-RDP-02
 
@@ -1001,16 +1157,48 @@ F6 mutation-stale expected recomputation
 != INPUT_FAILURE
 ```
 
+Add Owner-approved:
+
+```text
+D03-POL-011
+= FIRST_CLINICAL_ANALYSIS_ENTRY_AFTER_CURRENT_F6_NOT_NEEDED
+= separate positive READY rule
+```
+
+Preserve:
+
+```text
+D03-POL-005 unchanged
+D03-POL-006 unchanged
+six-value readiness vocabulary unchanged
+```
+
 D03 becomes eligible only after current F6 requirements are satisfied.
 
 ### G. U05-RDP-05
 
-Extend POST_USER_FACT_UPDATE applicability and requiredness:
+Extend F6 continuation applicability and requiredness:
 
 ```text
 prior F6 activation
 + F6 mutation-stale
 -> F6 reassessment required before D03 when F6 is required by the current path
+```
+
+Freeze the D03-POL-011 first-entry eligibility axis:
+
+```text
+F5 = NOT_YET_APPLICABLE
+= never lawfully activated in this Consultation path
+
+allowed contexts:
+A1_POST_BARRIER_CURRENT
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+
+POST_DDX_REEVALUATION
+or any prior/current F5 activation provenance
+-> D03-POL-011 NOT_APPLICABLE
 ```
 
 ### Explicitly not expected to require semantic amendment
@@ -1128,6 +1316,69 @@ dependency manifest missing/incomplete
 CASE-12
 FAILED / UNAVAILABLE
 != STALE_BY_UPSTREAM_MUTATION
+
+CASE-13
+A1_POST_BARRIER_CURRENT
++ F5 never activated
++ F6 current VALID / NO_BLOCKING_OFFLINE_EVIDENCE_NEED
++ F1 framed in scope
++ F3 current no-gap
++ no higher blocker
+-> TO_U05_CLINICAL_READINESS
+-> D03-POL-011
+-> READY_FOR_CLINICAL_ANALYSIS
+
+CASE-14
+POST_USER_FACT_UPDATE
++ F6 mutation-stale
+-> reassessment -> post-Safety revalidation
+-> F6 current VALID / NO_BLOCKING_OFFLINE_EVIDENCE_NEED
++ F5 never activated
++ first-entry guards complete
+-> D03-POL-011
+-> READY_FOR_CLINICAL_ANALYSIS
+
+CASE-15
+POST_OFFLINE_ASSESSMENT
++ pre-F5 path
++ F5 never activated
++ F6 current VALID / NO_BLOCKING_OFFLINE_EVIDENCE_NEED
++ first-entry guards complete
+-> D03-POL-011
+-> READY_FOR_CLINICAL_ANALYSIS
+
+CASE-16
+same positive profile
+but F6 = NOT_YET_APPLICABLE
+-> D03-POL-005
+-> D03-POL-011 NOT_APPLICABLE
+
+CASE-17
+F6 current VALID / JUSTIFIED blocking need
+-> NEEDS_OFFLINE_EVIDENCE precedence
+-> D03-POL-011 NOT_APPLICABLE
+
+CASE-18
+F3 = CAN_ASK_MORE
++ F6 current NOT_NEEDED
+-> CAN_ASK_MORE precedence
+-> no READY shadowing
+
+CASE-19
+POST_DDX_REEVALUATION
+or prior F5 activation provenance
+-> D03-POL-011 NOT_APPLICABLE
+
+CASE-20
+F5 = NO_RELIABLE_DIRECTION
+-> D03-POL-006 remains authoritative
+-> D03-POL-011 NOT_APPLICABLE
+
+CASE-21
+F5 artifact absent
+but prior F5 activation provenance exists
+-> must not relabel F5 as NOT_YET_APPLICABLE
+-> no D03-POL-011
 ```
 
 ---
@@ -1282,9 +1533,135 @@ The exact controlled-amendment inventory is expanded to seven frozen artifacts a
 Current status:
 
 ```text
-F6 Mutation-Stale Reassessment Decision Package
-= REVISED / TARGETED_INDEPENDENT_REVIEW_2_PENDING
+F6 Mutation-Stale Reassessment + READY-02 Option A Amendment Design
+= OWNER_OPTION_A_INCORPORATED
+= INDEPENDENT_AMENDMENT_DESIGN_REVIEW_PENDING
+
+OD-U05-READY-02
+= APPROVE_OPTION_A
+
+BF-U05-F6R-TR-03
+= OWNER_POLICY_SELECTED / DESIGN_INCORPORATED
 
 BF-U05-RG02-CL-04
-= OPEN / BLOCKING pending targeted re-review #2
+= OPEN / BLOCKING pending independent amendment design review
+```
+
+
+---
+
+## 22. OD-U05-READY-02 Option A Incorporation
+
+Owner decision:
+
+```text
+OD-U05-READY-02
+= APPROVE_OPTION_A
+```
+
+Decision package:
+
+```text
+PR #161
+exact reviewed head = d73b16d272e2096d0461850c9b482cff982aa7fc
+Targeted Independent Re-Review = PASS
+review_id = 5263206685
+```
+
+Decision record:
+
+```text
+PR #162
+decision-record commit = 1b3e7c8786c65d8a40bd2ad753410b83d29746f8
+```
+
+Selected policy:
+
+```text
+D03-POL-011
+policy_scope = FIRST_CLINICAL_ANALYSIS_ENTRY_AFTER_CURRENT_F6_NOT_NEEDED
+```
+
+The selected policy is incorporated into this CL-04 controlled amendment design.
+
+Important:
+
+```text
+Owner APPROVE_OPTION_A
+!= frozen artifact amendment authorization
+!= D03-POL-011 refrozen
+!= implementation authorization
+```
+
+### 22.1 Exact combined frozen-artifact inventory
+
+The F6 recomputation design and D03-POL-011 overlap on existing artifacts.
+
+The combined amendment remains exactly seven frozen artifacts:
+
+```text
+1. docs/current/05_业务闭环/业务闭环设计_V1.md
+2. docs/current/06_开发单元/可验证开发单元拆分_V1.md
+3. docs/current/07_能力设计/按开发单元的Capability设计.md
+4. docs/current/08_契约与数据/Contract与数据语义设计.md
+5. docs/current/09_Runtime与技术架构/Runtime与技术架构设计_V1.md
+6. docs/current/06_开发单元/U05_RDP02_D03_Policy_Owner_Decision_Contract_v0.1.md
+7. docs/current/06_开发单元/U05_RDP05_Readiness_Input_Dependency_Applicability_Contract_v0.1.md
+```
+
+No eighth artifact is required merely because D03-POL-011 was selected.
+
+### 22.2 Semantic amendment summary
+
+```text
+Phase 5:
+  continuation loop includes F6 reassessment/revalidation
+  + D03-POL-011 first-entry return path
+
+Phase 6:
+  U10 reassessment/revalidation modes
+  + U05 D03-POL-011 admission/verification semantics
+
+Phase 7:
+  U10/C05 mode-aware dependency timing
+
+Phase 8:
+  typed F6 reassessment/revalidation envelopes
+  + D03-POL-011 decision evidence/context provenance
+
+Phase 9:
+  explicit Scheduler consequences
+  + post-F6 Safety barrier
+  + no Router->U08 bypass
+  + U05 routing only after actual D03 path exists
+
+RDP-02:
+  mutation-stale pre-D03 NON-ENTRY
+  + D03-POL-011 executable expectation
+  + D03-POL-005/006 preserved
+
+RDP-05:
+  F6 currentness/applicability
+  + never-activated-F5 first-entry axis
+  + cross-context eligibility/exclusion
+```
+
+### 22.3 Current governance state
+
+```text
+OD-U05-READY-02
+= APPROVE_OPTION_A
+
+D03-POL-011
+= OWNER_APPROVED_DESIGN_EXPECTATION
+= NOT_YET_FROZEN
+
+CL-04 combined controlled amendment design
+= READY_FOR_INDEPENDENT_AMENDMENT_DESIGN_REVIEW
+
+Frozen artifact modification
+= NOT_AUTHORIZED
+
+Runtime implementation
+= NOT_AUTHORIZED
 ```
