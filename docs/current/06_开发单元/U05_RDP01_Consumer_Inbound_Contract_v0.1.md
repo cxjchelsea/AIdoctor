@@ -3,7 +3,7 @@
 > Scope: U05 / D03 的 pre-D03 consumer admission、统一入站 envelope、route/gate/currentness/replay/restricted-context 边界。  
 > Design basis: U05 Implementation Readiness Re-Evaluation v0.2 / PR #170 exact head `39e13a91fc2fc2dc78fbda99c063af2411b8b24f`.  
 > Exact frozen semantic baseline: `3bd85f908a1cb09355f6ea1c5ce737638d1c0fdc`.  
-> Status: **FROZEN / PASS_FOR_READINESS**.  
+> Status: **REFROZEN / V1 — PASS_FOR_READINESS**.  
 > Target blocker: `BF-U05-RG-01`.  
 > 本文件不授予 U05 implementation、D03 execution、downstream execution、merge、production、release activation 或 real-patient authorization。
 
@@ -2199,4 +2199,42 @@ No Clinical Readiness business rule is changed.
 Current amendment status:
 
     AGR-01 RDP-01 portion
-    = AMENDED / INDEPENDENT_COMPATIBILITY_REVIEW_PENDING
+    = REFROZEN / V1
+
+
+---
+
+## Aggregate Compatibility Re-Freeze Provenance
+
+Re-freeze authorization:
+
+    AUTH-U05-AGR-REFREEZE-001
+    = REFREEZE
+
+Owner decision record:
+
+    PR #177
+    decision head = 371aa622c1047022c89fcac368ba9b5ea12085e2
+
+Reviewed semantic amendment:
+
+    PR #176
+    exact reviewed head = f3a7823f2eb119b1103235a3e19d8e28f894b93d
+
+Targeted Compatibility Re-Review:
+
+    PASS
+    review_id = 5263853038
+
+Decision Package Gate Review:
+
+    PASS
+    review_id = 5263862081
+
+Current affected-scope state:
+
+    REFROZEN / V1
+
+This re-freeze changes status/provenance only after the reviewed amendment.
+It grants no runtime/code implementation, merge, live downstream execution,
+production, release activation, or real-patient authorization.
