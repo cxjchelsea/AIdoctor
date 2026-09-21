@@ -748,6 +748,7 @@ Future implementation verification 必须包含静态、受审查的：
     case_id
     fixture_id
     fixture_semantic_id
+    fixture_source_ref
     fixture_digest
 
     expected_boundary
@@ -1313,7 +1314,6 @@ Authoritative U05 verification workflow 必须：
     expectation oracle digest
     precedence oracle digest
     fixture manifest digest
-    fixture manifest digest
 
     auth profile
 
@@ -1324,6 +1324,7 @@ Authoritative U05 verification workflow 必须：
     Maven version
     Python version
     materially relevant verification-tool versions
+    third_party_action_pins[]
 
 Authoritative workflow 中所有 third-party GitHub Actions 必须：
 
@@ -1617,6 +1618,13 @@ Crash scenarios 必须证明：
     expectation_oracle_digest
     precedence_oracle_digest
     fixture_manifest_digest
+
+    runner_os_image
+    jdk_vendor_version
+    maven_version
+    python_version
+    third_party_action_pins[]
+
     workflow identity
     repository/ref/run/attempt
 
@@ -1723,6 +1731,10 @@ Independent evidence review PASS 后，必须另外形成 repository-governed、
     contract manifest digest
     expectation oracle digest
     precedence oracle digest
+    fixture manifest digest
+
+    runner/toolchain identity summary
+    third-party action pin summary
 
     every EV case_id
     expected_authority_refs
@@ -1799,7 +1811,11 @@ Final exact-head run 至少要求：
 
     all 6 U05-VG gates PASS
 
-    all required precedence subcases PASS
+    every CONSTRUCTIBLE precedence subcase executed and PASS
+
+    every NOT_CONSTRUCTIBLE precedence pair
+    independently reviewed with frozen authority/rationale
+    and not counted as runtime skip
 
     independent expectation-oracle review PASS
     independent precedence-oracle review PASS
@@ -2018,6 +2034,7 @@ Reviewer 至少检查：
     every EV actual fixture digest matches reviewed fixture digest
     CI-consumed oracle/fixture digests match reviewed digests
     all third-party workflow actions are full-SHA pinned
+    recorded action pins match executed workflow
     toolchain provenance is complete
     HG/VG/precedence evidence schema complete
 
