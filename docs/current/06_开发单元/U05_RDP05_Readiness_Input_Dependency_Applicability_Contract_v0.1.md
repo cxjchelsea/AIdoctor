@@ -1219,7 +1219,7 @@ Inputs accepted for the same D03 evaluation must satisfy current binding rules, 
 
 A required stale/failed/unavailable source may not be converted into a business-negative signal.
 
-This amendment is not yet re-frozen and authorizes no runtime implementation.
+This amendment is **REFROZEN / V1** and authorizes no runtime implementation.
 
 ### CL-04 Re-Freeze Provenance
 
