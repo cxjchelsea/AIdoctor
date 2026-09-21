@@ -4,7 +4,7 @@
 > Design baseline: `268d9c5e9075420aa76c5c1aa37c254a3a99e2b8`  
 > Closure finding source: PR #159 / exact review head `193a280cce0bb7c99ca0566166bffc7bb3aaec6a`  
 > Scope: design-only / governance-only / no frozen amendment yet  
-> Current status: **REVISED / TARGETED_INDEPENDENT_REVIEW_PENDING**
+> Current status: **REVISED / TARGETED_INDEPENDENT_REVIEW_2_PENDING**
 
 ---
 
@@ -96,7 +96,9 @@ Execution host:
 
 ```text
 U10
-invocation_mode = F6_CURRENT_VERSION_REASSESSMENT
+mode = F6_CURRENT_VERSION_REASSESSMENT
+or
+mode = F6_CURRENT_VERSION_REVALIDATION
 ```
 
 High-level flow:
@@ -112,6 +114,8 @@ POST_USER_FACT_UPDATE
 -> reload authoritative state
 -> mandatory post-F6 Safety barrier
 -> establish a new current committed U04 Gate / routing authorization
+-> U10 F6_CURRENT_VERSION_REVALIDATION
+-> current F6 readiness-input projection
 -> re-enter ClinicalContinuationRoutingDecision
 ```
 
@@ -305,11 +309,12 @@ stale-before-commit validation, replay, and audit.
 
 U10 remains the only execution host for F6/C05.
 
-Add a scoped invocation mode:
+Add two scoped invocation modes:
 
 ```text
 U10
 mode = F6_CURRENT_VERSION_REASSESSMENT
+mode = F6_CURRENT_VERSION_REVALIDATION
 ```
 
 Existing ordinary U10 behavior remains a separate normal path:
@@ -405,6 +410,75 @@ It is never an authorization shortcut to VALIDATED / DELIVERABLE / patient-facin
 
 This mirrors the existing principle that pre-readiness clinical capability output cannot create downstream side effects by itself.
 
+### 7.4 F6 current-version revalidation mode
+
+After a successful canonical F6 reassessment commit and the mandatory post-F6 Safety barrier, U10 must execute:
+
+```text
+mode = F6_CURRENT_VERSION_REVALIDATION
+```
+
+This mode is a deterministic F6 Owner decision.
+
+It must NOT invoke C05 merely because the authoritative Clinical State Version advanced through downstream Risk/Safety commits.
+
+Its purpose is only to determine whether the already-committed canonical F6 effect can be projected as current for the new authoritative continuation basis.
+
+Required inputs:
+
+```text
+prior canonical F6 effect / assessment ref
+F6 canonical effect identity
+target current Clinical State Version
+current committed U04 Gate ref
+current routing_authorization_id
+F6 dependency-requiredness manifest
+current dependency refs
+CapabilityBindingRef used by the canonical F6 effect
+KnowledgeReleaseRef / RuleReleaseRef
+restricted_context_ref when applicable
+F6 revalidation policy/version
+```
+
+Allowed outcomes:
+
+```text
+REVALIDATED_CURRENT
+REASSESSMENT_REQUIRED
+FAILED
+```
+
+Semantics:
+
+```text
+REVALIDATED_CURRENT
+-> create durable/auditable current F6 readiness-input projection
+-> no canonical F6 state mutation
+-> no Clinical State Version advance
+-> continuation routing may resume
+
+REASSESSMENT_REQUIRED
+-> no D03
+-> return to U10 F6_CURRENT_VERSION_REASSESSMENT
+   against the now-current dependency basis
+
+FAILED
+-> no D03
+-> governed failure route
+```
+
+Mandatory invariant:
+
+```text
+F6_CURRENT_VERSION_REVALIDATION
+!= C05 assessment
+!= canonical F6 commit
+!= Clinical Readiness
+!= Delivery Readiness
+```
+
+Version advancement alone does not prove semantic invalidation, but currentness must be explicitly revalidated rather than assumed.
+
 ---
 
 ## 8. Reassessment result semantics
@@ -419,10 +493,11 @@ Offline Evidence Need
 = JUSTIFIED
 ```
 
-After commit:
+After commit and successful post-Safety F6 current-version revalidation:
 
 ```text
-re-enter governed continuation routing
+REVALIDATED_CURRENT
+-> re-enter governed continuation routing
 -> current F6 exposes an actual Clinical Readiness path
 -> TO_U05_CLINICAL_READINESS
 -> D03
@@ -441,10 +516,11 @@ Offline Evidence Need
 = NOT_NEEDED
 ```
 
-After commit:
+After commit and successful post-Safety F6 current-version revalidation:
 
 ```text
-re-enter ClinicalContinuationRoutingDecision
+REVALIDATED_CURRENT
+-> re-enter ClinicalContinuationRoutingDecision
 ```
 
 The router may then choose the unique next consequence from current F3/F5/F6/Safety state.
@@ -544,7 +620,9 @@ F6 reassessment commit
 -> establish current U03/U04 basis as required
 -> new current committed U04 Gate
 -> new routing authorization
--> only then re-enter ClinicalContinuationRoutingDecision
+-> U10 F6_CURRENT_VERSION_REVALIDATION
+-> REVALIDATED_CURRENT / REASSESSMENT_REQUIRED / FAILED
+-> only REVALIDATED_CURRENT may re-enter ClinicalContinuationRoutingDecision
 ```
 
 There is no design-level shortcut of:
@@ -576,6 +654,9 @@ RESTRICTED -> U11/U12
 ```
 
 without the relevant governed permission.
+
+The newly committed F6 assessment must not be treated as D03-current merely because the Safety barrier completed.
+Currentness is established only by the subsequent deterministic F6 revalidation decision.
 
 ---
 
@@ -636,6 +717,41 @@ stale-before-commit / commit conflict
 -> no blind replay
 ```
 
+### 11.1 F6 current-version revalidation identity
+
+Proposed deterministic revalidation identity:
+
+```text
+F6_CURRENT_VERSION_REVALIDATION_ID
+=
+consultation_id
++ canonical F6 effect identity
++ target current Clinical State Version
++ current U04 Gate ref
++ current routing_authorization_id
++ dependency-requiredness manifest identity
++ current dependency refs
++ capability/release compatibility refs
++ restricted_context_ref when applicable
++ F6 revalidation policy version
+```
+
+Same exact replay:
+
+```text
+-> attach authoritative prior revalidation decision
+-> no C05 invocation
+-> no second canonical F6 commit
+-> no Clinical State Version advance
+```
+
+If dependency/release compatibility cannot be proven:
+
+```text
+-> REASSESSMENT_REQUIRED or FAILED according to frozen failure semantics
+-> never silently REVALIDATED_CURRENT
+```
+
 ---
 
 ## 12. Termination / no-cycle proof
@@ -650,16 +766,23 @@ may be selected only while the exact prior F6 effect
 is mutation-stale for the exact current input basis.
 
 successful reassessment commit
--> produces a new current F6 assessment ref
--> the same exact route condition becomes false.
+-> produces a new canonical F6 assessment ref
+-> mandatory Safety barrier runs
+-> deterministic F6 current-version revalidation runs
+-> REVALIDATED_CURRENT makes the same exact mutation-stale route condition false.
 ```
 
 A subsequent F6 reassessment is lawful only if:
 
 ```text
-a new upstream mutation/dependency change
-creates a new invalidation identity
+a new upstream mutation/dependency change creates a new invalidation identity
+or
+F6_CURRENT_VERSION_REVALIDATION returns REASSESSMENT_REQUIRED
+because the post-barrier current dependency basis is not compatible
+with the canonical F6 effect.
 ```
+
+F6 current-version revalidation itself is non-state-mutating, so successful revalidation cannot create a version-chasing loop.
 
 If F5/F3 changes during prerequisite recomputation and invalidates F6 again, that is a distinct governed effect with distinct provenance, not replay of the same route.
 
@@ -727,6 +850,20 @@ FIRST_CONSUMER_UNIT remains U10
 
 The new path changes U10 invocation timing/mode, not the Capability Owner.
 
+Mode-aware dependency semantics are required:
+
+```text
+U10 STANDARD_OFFLINE_EVIDENCE_ACTION
+-> C05 as required by existing behavior
+
+U10 F6_CURRENT_VERSION_REASSESSMENT
+-> C05 required
+
+U10 F6_CURRENT_VERSION_REVALIDATION
+-> no C05 invocation
+-> deterministic F6 Owner decision only
+```
+
 Required bindings remain:
 
 ```text
@@ -746,13 +883,21 @@ Delivery Readiness
 Clinical State commit
 ```
 
-Therefore a Phase-7 semantic amendment is not required by this design unless independent review finds that the existing Capability document over-constrains U10 invocation timing.
+Therefore Phase 7 requires a controlled mode-aware clarification/amendment analogous to the existing U06/C03 timing rule.
+
+The aggregate dependency row may remain:
+
+```text
+U10 | C05
+```
+
+only if the same frozen section explicitly states that it is aggregate Unit-level dependency and that F6_CURRENT_VERSION_REVALIDATION is a no-C05 deterministic Owner mode.
 
 ---
 
 ## 16. Exact frozen-artifact impact inventory
 
-If this design passes independent review, a controlled amendment is expected to be required for exactly these six current frozen artifacts:
+If this design passes independent review, a controlled amendment is expected to be required for exactly these seven current frozen artifacts:
 
 ### A. Phase 5 — Business Loops
 
@@ -779,13 +924,26 @@ current-assessment reuse guard for later ordinary U10 path
 
 Extend continuation routing consequences.
 
-### C. Phase 8 — Contract & Data
+### C. Phase 7 — Capability Design
+
+Add mode-aware U10/C05 usage timing:
+
+```text
+STANDARD_OFFLINE_EVIDENCE_ACTION -> C05 as applicable
+F6_CURRENT_VERSION_REASSESSMENT -> C05 required
+F6_CURRENT_VERSION_REVALIDATION -> deterministic Owner decision / no C05
+```
+
+Preserve C05 ownership boundary and U10 as first/only consumer Unit.
+
+### D. Phase 8 — Contract & Data
 
 Amend:
 
 ```text
 ClinicalContinuationRoutingDecision vocabulary
 K08 / F6 reassessment provenance/currentness/idempotency envelope
+F6_CURRENT_VERSION_REVALIDATION deterministic decision envelope
 mandatory dependency-requiredness manifest
 restricted-context propagation
 routing identity inputs
@@ -793,7 +951,7 @@ routing identity inputs
 
 No new Clinical Readiness enum.
 
-### D. Phase 9 — Runtime
+### E. Phase 9 — Runtime
 
 Add Scheduler handling:
 
@@ -804,12 +962,13 @@ TO_F6_CURRENT_VERSION_REASSESSMENT
 -> prior routing authorization stale
 -> mandatory post-F6 Safety barrier
 -> new current U04 Gate / routing authorization
--> re-enter continuation routing
+-> U10 F6_CURRENT_VERSION_REVALIDATION
+-> only REVALIDATED_CURRENT re-enters continuation routing
 ```
 
 Prevent stale route replay.
 
-### E. U05-RDP-02
+### F. U05-RDP-02
 
 Freeze:
 
@@ -821,7 +980,7 @@ F6 mutation-stale expected recomputation
 
 D03 becomes eligible only after current F6 requirements are satisfied.
 
-### F. U05-RDP-05
+### G. U05-RDP-05
 
 Extend POST_USER_FACT_UPDATE applicability and requiredness:
 
@@ -835,7 +994,6 @@ prior F6 activation
 
 ```text
 Phase 4 state ownership
-Phase 7 Capability family ownership
 U04-RDP-04 Safety ownership
 Clinical Readiness six-value vocabulary
 F7 Delivery Readiness ownership
@@ -896,7 +1054,23 @@ CASE-09
 F6 commit advances state
 -> old continuation decision / routing authorization non-routable
 -> mandatory post-F6 Safety barrier
--> new current U04 Gate / routing authorization required
+-> new current U04 Gate / routing authorization
+-> F6_CURRENT_VERSION_REVALIDATION required
+-> only REVALIDATED_CURRENT resumes continuation routing
+
+CASE-09A
+post-F6 Safety barrier advances state version
+but declared F6 dependencies remain compatible
+-> deterministic revalidation
+-> REVALIDATED_CURRENT
+-> no C05 invocation
+-> no second canonical F6 commit
+
+CASE-09B
+post-F6 Safety barrier / dependency change makes F6 basis incompatible
+-> F6 revalidation = REASSESSMENT_REQUIRED
+-> U10 F6_CURRENT_VERSION_REASSESSMENT
+-> no silent reuse
 
 CASE-10
 D03 = NEEDS_OFFLINE_EVIDENCE after pre-D03 F6 reassessment
@@ -945,7 +1119,7 @@ Closure still requires:
 
 ```text
 explicit frozen amendment authorization
--> exact six-artifact amendment
+-> exact seven-artifact amendment
 -> independent amendment re-review
 -> explicit re-freeze
 -> repeat BF-U05-RG-02 Full Closure Re-Evaluation
@@ -1030,4 +1204,56 @@ F6 Mutation-Stale Reassessment Decision Package
 
 BF-U05-RG02-CL-04
 = OPEN / BLOCKING pending targeted re-review
+```
+
+
+---
+
+## 21. Targeted Re-Review #1 Remediation
+
+Review source:
+
+```text
+PR #160
+reviewed head = 330e4b76e7fe6f89ecc32b6ab98678e004d1814b
+review_id = 5263173177
+verdict = REVISE_REQUIRED
+```
+
+### BF-U05-F6R-TR-01
+
+```text
+POST_SAFETY_F6_CURRENTNESS_REVALIDATION_MISSING
+-> REMEDIATED
+```
+
+The design now adds:
+
+```text
+F6 reassessment commit
+-> mandatory post-F6 Safety barrier
+-> current U04 Gate / routing authorization
+-> U10 F6_CURRENT_VERSION_REVALIDATION
+-> REVALIDATED_CURRENT / REASSESSMENT_REQUIRED / FAILED
+```
+
+The revalidation mode is deterministic, does not invoke C05 when compatibility can be proven, does not commit a second canonical F6 effect, and does not advance Clinical State.
+
+### RQ-U05-F6R-TR-02
+
+```text
+PHASE7_MODE_AWARE_U10_C05_DEPENDENCY_IMPACT
+-> REMEDIATED
+```
+
+The exact controlled-amendment inventory is expanded to seven frozen artifacts and Phase 7 gains explicit mode-aware U10/C05 semantics.
+
+Current status:
+
+```text
+F6 Mutation-Stale Reassessment Decision Package
+= REVISED / TARGETED_INDEPENDENT_REVIEW_2_PENDING
+
+BF-U05-RG02-CL-04
+= OPEN / BLOCKING pending targeted re-review #2
 ```
