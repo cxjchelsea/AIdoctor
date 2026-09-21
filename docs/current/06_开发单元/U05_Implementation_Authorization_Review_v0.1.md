@@ -6,7 +6,7 @@
 > Current readiness status/provenance head: `a0f3af930940661e173b406686d7b4bfe2c7fbd1`  
 > Exact re-frozen six-contract package: `7acbeba0e066c6a7755bb07affe4ec30d6a6f562`  
 > Proposed authorization ID: `AUTH-U05-RUNTIME-IMPL-001`  
-> Status: **REVISED / READY_FOR_TARGETED_AUTHORIZATION_REVIEW**  
+> Status: **PASS / ELIGIBLE_FOR_EXPLICIT_OWNER_AUTHORIZATION**  
 > This document does not itself grant implementation authorization.
 
 ---
@@ -750,28 +750,26 @@ Remediation:
 
 Current:
 
-    BF-U05-IA-IR-01 = REMEDIATED / TARGETED_REVIEW_PENDING
-    BF-U05-IA-IR-02 = REMEDIATED / TARGETED_REVIEW_PENDING
-    BF-U05-IA-IR-03 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-IA-IR-01 = CLOSED
+    BF-U05-IA-IR-02 = CLOSED
+    BF-U05-IA-IR-03 = CLOSED
 
 ---
 
-# 22. Candidate authorization review verdict
+# 22. Authorization review verdict
 
-Based on the current exact frozen/refrozen package and the targeted fixes above:
+Based on the current exact frozen/refrozen package and Targeted Independent Re-Review PASS:
 
     U05 Implementation Readiness
     = READY
 
     U05 Implementation Authorization Review
-    = TARGETED_REVIEW_PENDING
-
-Candidate result if targeted re-review passes:
+    = PASS
 
     AUTH-U05-RUNTIME-IMPL-001
     = ELIGIBLE_FOR_EXPLICIT_REPOSITORY_OWNER_AUTHORIZATION
 
-If targeted re-review passes and owner later approves, the exact authorization must remain:
+If owner later approves, the exact authorization must remain:
 
     NON_PRODUCTION_ONLY
     FROZEN_RDP01_TO_RDP06_ONLY
@@ -789,7 +787,44 @@ Current:
 
 Next permitted governance step:
 
-    targeted independent authorization re-review.
+    explicit repository-owner decision
+    for AUTH-U05-RUNTIME-IMPL-001.
 
-Only after PASS may an explicit repository-owner decision
-for AUTH-U05-RUNTIME-IMPL-001 be opened.
+
+---
+
+# 23. Targeted Authorization Review Provenance
+
+PR:
+
+    #180
+
+Initial Independent Authorization Review:
+
+    REVISE_REQUIRED
+    review_id = 5263950557
+
+Targeted Independent Authorization Re-Review:
+
+    PASS
+    review_id = 5263958905
+
+Reviewed semantic authorization head:
+
+    33001ae6301d250c6485df1284e5e78d8faf64ea
+
+Final review state:
+
+    BF-U05-IA-IR-01 = CLOSED
+    BF-U05-IA-IR-02 = CLOSED
+    BF-U05-IA-IR-03 = CLOSED
+
+    U05 Implementation Authorization Review = PASS
+
+    AUTH-U05-RUNTIME-IMPL-001
+    = ELIGIBLE_FOR_EXPLICIT_REPOSITORY_OWNER_AUTHORIZATION
+
+    U05 Implementation Authorization
+    = NOT_GRANTED
+
+This status/provenance synchronization does not grant implementation authorization.
