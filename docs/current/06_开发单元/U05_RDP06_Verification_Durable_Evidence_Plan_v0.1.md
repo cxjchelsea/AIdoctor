@@ -3,7 +3,7 @@
 > Scope: U05 当前 non-production implementation slice 的验证矩阵、expected-result authority、durable evidence schema、CI/exact-head binding、replay/crash/conflict evidence、regression gates 与 independent evidence acceptance criteria。  
 > Design basis: U05-RDP-01 / 02 / 03 / 04 / 05 current frozen/refrozen semantics.  
 > Immediate upstream design head: U05-RDP-04 status/provenance head `c800f8d8645d416c4a87b0d63d4fa02ec6ce8a97`.  
-> Status: **REVISED / READY_FOR_FINAL_TARGETED_INDEPENDENT_DESIGN_REVIEW**.  
+> Status: **FROZEN / PASS_FOR_READINESS**.  
 > Target blocker: `BF-U05-RG-06`.  
 > 本文件只定义“未来如何证明 U05 实现正确”，不等于实现已存在，不授予 implementation / merge / production / live downstream / real-patient authorization。
 
@@ -2304,11 +2304,11 @@ Remediation：
 
 Current：
 
-    BF-U05-RDP06-IR-01 = REMEDIATED / TARGETED_REVIEW_PENDING
-    BF-U05-RDP06-IR-02 = REMEDIATED / TARGETED_REVIEW_PENDING
-    BF-U05-RDP06-IR-03 = REMEDIATED / TARGETED_REVIEW_PENDING
-    BF-U05-RDP06-IR-04 = REMEDIATED / TARGETED_REVIEW_PENDING
-    BF-U05-RDP06-IR-05 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-RDP06-IR-01 = CLOSED
+    BF-U05-RDP06-IR-02 = CLOSED
+    BF-U05-RDP06-IR-03 = CLOSED
+    BF-U05-RDP06-IR-04 = CLOSED
+    BF-U05-RDP06-IR-05 = CLOSED
 
     U05-RDP-06 = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
     BF-U05-RG-06 = DESIGN_RESOLVED / TARGETED_REVIEW_PENDING
@@ -2351,12 +2351,12 @@ Remediation：
 
 Current：
 
-    BF-U05-RDP06-TR-01 = REMEDIATED / FINAL_TARGETED_REVIEW_PENDING
-    BF-U05-RDP06-TR-02 = REMEDIATED / FINAL_TARGETED_REVIEW_PENDING
-    BF-U05-RDP06-TR-03 = REMEDIATED / FINAL_TARGETED_REVIEW_PENDING
+    BF-U05-RDP06-TR-01 = CLOSED
+    BF-U05-RDP06-TR-02 = CLOSED
+    BF-U05-RDP06-TR-03 = CLOSED
 
-    U05-RDP-06 = REVISED / READY_FOR_FINAL_TARGETED_INDEPENDENT_REVIEW
-    BF-U05-RG-06 = DESIGN_RESOLVED / FINAL_TARGETED_REVIEW_PENDING
+    U05-RDP-06 = FROZEN / PASS_FOR_READINESS
+    BF-U05-RG-06 = CLOSED
 
 ---
 
@@ -2395,34 +2395,38 @@ Original blocker：
     independent evidence-only review
     implementation closure criteria
 
-因此当前只能推进到：
-
-    BF-U05-RG-06
-    = DESIGN_RESOLVED / INDEPENDENT_REVIEW_PENDING
-
-    U05-RDP-06
-    = PROPOSED / READY_FOR_INDEPENDENT_DESIGN_REVIEW
-
-只有独立审查 PASS 后才可：
+Final Targeted Independent Design Re-Review 已 PASS，因此：
 
     BF-U05-RG-06 = CLOSED
     U05-RDP-06 = FROZEN / PASS_FOR_READINESS
 
+该 closure 只表示 Verification / Durable Evidence Plan 的 readiness/design 缺口已关闭，不表示 U05 implementation/evidence 已执行。
+
 ---
 
-# 50. Aggregate readiness boundary before RDP-06 review
+# 50. Aggregate readiness boundary after RDP-06 closure
 
-当前：
+当前六个 readiness blocker：
 
     BF-U05-RG-01 = CLOSED
     BF-U05-RG-02 = CLOSED
     BF-U05-RG-03 = CLOSED
     BF-U05-RG-04 = CLOSED
     BF-U05-RG-05 = CLOSED
-    BF-U05-RG-06 = DESIGN_RESOLVED / REVIEW_PENDING
+    BF-U05-RG-06 = CLOSED
+
+    closed = 6
+    open blocking = 0
+
+但必须保持：
+
+    all six blockers closed
+    != automatic Implementation Readiness READY
+
+当前正式状态：
 
     U05 Implementation Readiness
-    = NOT_READY
+    = NOT_YET_ESTABLISHED_PENDING_AGGREGATE_REEVALUATION
 
     U05 Implementation Authorization Review
     = NOT_PERMITTED_YET
@@ -2430,15 +2434,11 @@ Original blocker：
     U05 Implementation Authorization
     = NOT_GRANTED
 
-即使 RDP-06 review PASS 并关闭 RG-06：
-
-    do not automatically declare Implementation Readiness READY
-
-必须再做：
+必须下一步执行：
 
     U05 Implementation Readiness Re-Evaluation
     across RG-01..RG-06
-    against exact frozen contract package
+    against exact frozen six-contract package
 
 ---
 
@@ -2456,3 +2456,61 @@ Original blocker：
     production Clinical Runtime
     release activation
     real-patient traffic
+
+
+---
+
+# 52. Final Targeted Review / Freeze Provenance
+
+    PR #174
+
+    Initial Independent Design Review
+    = REVISE_REQUIRED
+    review_id = 5263669789
+
+    Targeted Independent Design Re-Review
+    = REVISE_REQUIRED
+    review_id = 5263689991
+
+    Final Targeted Independent Design Re-Review
+    = PASS
+    review_id = 5263703311
+
+    reviewed semantic head
+    = 6668adb46b516a03ca8117b9039a72286c473cb2
+
+    BF-U05-RDP06-IR-01 = CLOSED
+    BF-U05-RDP06-IR-02 = CLOSED
+    BF-U05-RDP06-IR-03 = CLOSED
+    BF-U05-RDP06-IR-04 = CLOSED
+    BF-U05-RDP06-IR-05 = CLOSED
+
+    BF-U05-RDP06-TR-01 = CLOSED
+    BF-U05-RDP06-TR-02 = CLOSED
+    BF-U05-RDP06-TR-03 = CLOSED
+
+    BF-U05-RG-06 = CLOSED
+    U05-RDP-06 = FROZEN / PASS_FOR_READINESS
+
+Current aggregate blocker state:
+
+    BF-U05-RG-01 = CLOSED
+    BF-U05-RG-02 = CLOSED
+    BF-U05-RG-03 = CLOSED
+    BF-U05-RG-04 = CLOSED
+    BF-U05-RG-05 = CLOSED
+    BF-U05-RG-06 = CLOSED
+
+    closed = 6
+    open blocking = 0
+
+    U05 Implementation Readiness
+    = NOT_YET_ESTABLISHED_PENDING_AGGREGATE_REEVALUATION
+
+    U05 Implementation Authorization Review
+    = NOT_PERMITTED_YET
+
+    U05 Implementation Authorization
+    = NOT_GRANTED
+
+This provenance update changes status only and does not authorize implementation.
