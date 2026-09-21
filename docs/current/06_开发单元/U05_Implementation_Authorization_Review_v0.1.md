@@ -756,22 +756,22 @@ Current:
 
 ---
 
-# 22. Authorization review verdict
+# 22. Candidate authorization review verdict
 
-Based on the current exact frozen/refrozen package:
+Based on the current exact frozen/refrozen package and the targeted fixes above:
 
     U05 Implementation Readiness
     = READY
 
     U05 Implementation Authorization Review
-    = PASS
+    = TARGETED_REVIEW_PENDING
 
-The permitted authorization shape is:
+Candidate result if targeted re-review passes:
 
     AUTH-U05-RUNTIME-IMPL-001
     = ELIGIBLE_FOR_EXPLICIT_REPOSITORY_OWNER_AUTHORIZATION
 
-If owner later approves, the exact authorization must remain:
+If targeted re-review passes and owner later approves, the exact authorization must remain:
 
     NON_PRODUCTION_ONLY
     FROZEN_RDP01_TO_RDP06_ONLY
@@ -789,5 +789,7 @@ Current:
 
 Next permitted governance step:
 
-    explicit repository-owner decision
-    for AUTH-U05-RUNTIME-IMPL-001.
+    targeted independent authorization re-review.
+
+Only after PASS may an explicit repository-owner decision
+for AUTH-U05-RUNTIME-IMPL-001 be opened.
