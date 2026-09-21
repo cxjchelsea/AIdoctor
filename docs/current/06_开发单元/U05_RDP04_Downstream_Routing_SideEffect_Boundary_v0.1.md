@@ -6,7 +6,7 @@
 > Decision basis: U05-RDP-02 current REFROZEN / V1.  
 > Input basis: U05-RDP-05 current REFROZEN / V1.  
 > Exact frozen semantic baseline before U05 RDP-04: `3bd85f908a1cb09355f6ea1c5ce737638d1c0fdc`.  
-> Status: **REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW**.  
+> Status: **REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_REVIEW**.  
 > Target blocker: `BF-U05-RG-04`.  
 > 本文件不授权 Runtime/code implementation、真实下游 Unit 执行、merge、production、release activation 或 real-patient traffic。
 
@@ -309,6 +309,10 @@ RDP-04 还必须能够表示“不产生 ordinary consequence”。
     PREEMPTED
     FAILURE_REQUIRED
     REJECTED_STALE
+
+另定义 replay_disposition：
+
+    ORIGINAL
     REATTACHED
 
 其中：
@@ -329,10 +333,20 @@ RDP-04 还必须能够表示“不产生 ordinary consequence”。
     -> no ordinary consequence
     -> old route/readiness cannot be consumed
 
-    REATTACHED
-    -> exact prior authoritative route eligibility reattached
+replay_disposition 语义：
 
-这些不是 Clinical Readiness value。
+    ORIGINAL
+    -> newly formed routing evaluation/effect record
+
+    REATTACHED
+    -> exact prior routing decision/eligibility record reattached
+
+例如 exact eligible replay：
+
+    routing_status = ELIGIBLE
+    replay_disposition = REATTACHED
+
+这些都不是 Clinical Readiness value。
 
 ---
 
@@ -508,6 +522,7 @@ RDP-04 不把 UNAVAILABLE 解释成：
 最小字段：
 
     routing_decision_id
+    routing_decision_fingerprint
 
     consultation_id
     cdp_id
@@ -533,6 +548,10 @@ RDP-04 不把 UNAVAILABLE 解释成：
     downstream_permission_ref?
 
     routing_status
+    replay_disposition
+
+    candidate_downstream_consequence?
+    candidate_target_unit_id?
 
     downstream_consequence?
     target_unit_id?
@@ -544,7 +563,7 @@ RDP-04 不把 UNAVAILABLE 解释成：
     routing_policy_id = U05_RDP04
     routing_policy_version
 
-    route_effect_id
+    route_effect_id?
 
     canonical_event_ref
     business_event_identity
@@ -616,9 +635,38 @@ Eligibility：
 
 ---
 
-# 12. Route effect identity
+# 12. Routing decision identity and eligible route effect identity
 
-定义：
+所有 RDP-04 evaluation outcome 都必须具有稳定：
+
+    U05_ROUTING_DECISION_ID
+
+该 identity 至少绑定：
+
+    consultation_id
+    cdp_id
+    authoritative readiness effect id
+    current Gate ref
+    candidate consequence/target when derivable
+    downstream permission decision when applicable
+    routing_status
+    routing policy version
+    routing decision contract version
+
+因此：
+
+    ELIGIBLE
+    PREEMPTED
+    FAILURE_REQUIRED
+    REJECTED_STALE
+
+都可以被 durable/replay 审计，而不需要伪造 ordinary route effect。
+
+只有：
+
+    routing_status = ELIGIBLE
+
+才定义：
 
     U05_DOWNSTREAM_ROUTE_EFFECT_ID
 
@@ -679,6 +727,7 @@ source inbound route ref 只作为 readiness provenance/currentness evidence。
 它至少绑定：
 
     route_effect_id
+    routing_decision_ref
     authoritative readiness effect
     current Gate
     downstream consequence
@@ -706,7 +755,7 @@ source inbound route ref 只作为 readiness provenance/currentness evidence。
 
 必须满足：
 
-    same route effect replay
+    same eligible route effect replay
     -> same eligibility identity
 
 禁止：
@@ -1148,36 +1197,40 @@ RDP-04 可在 Vn+1 consume：
 
 # 26. Exact route replay
 
-固定顺序：
+Replay 发生在当前 authoritative readiness/Gate/permission 已重新验证之后。
 
-    E0 derive U05_DOWNSTREAM_ROUTE_EFFECT_ID
+固定语义：
 
-    E1 reconcile route ledger / prior authoritative eligibility
+    derive U05_ROUTING_DECISION_ID
 
-    E2 if exact route effect already exists
-       + canonical route payload matches
-       -> REATTACH
-       -> no duplicate eligibility effect
+    reconcile Runtime/Canonical Effect Ledger
 
-    E3 if not exists
-       -> validate current readiness/Safety/permission
-       -> create routing decision / eligibility
+    if same routing decision identity
+       + same canonical routing-decision fingerprint
+       -> replay_disposition = REATTACHED
 
-Exact replay：
+若 routing_status = ELIGIBLE：
 
-    same route effect id
+    same U05_DOWNSTREAM_ROUTE_EFFECT_ID
     + same canonical route payload fingerprint
-    -> same eligibility identity
+    -> reuse same downstream route authorization
+    -> reuse same eligibility identity
+    -> no duplicate eligibility effect
 
 如果：
 
-    same route effect id
-    + different canonical payload fingerprint
+    same routing decision/effect identity
+    + different canonical fingerprint
 
 则：
 
     U05_ROUTE_REPLAY_CONFLICT
     -> fail closed
+
+PREEMPTED / FAILURE_REQUIRED / REJECTED_STALE replay：
+
+    reattach same routing decision record
+    without fabricating an ordinary route effect
 
 ---
 
@@ -1216,7 +1269,52 @@ first authoritative created_at wins。
 
 ---
 
-# 28. Route lifecycle
+# 28. Runtime route ledger ownership and lifecycle
+
+定义 durable non-clinical record：
+
+    U05DownstreamRouteLedgerRecord
+
+Owner：
+
+    Runtime / Canonical Effect Ledger
+
+它不属于：
+
+    Clinical State
+    G2 Clinical Readiness Resolver
+    D03
+    target Unit business state
+
+最小可记录：
+
+    routing_decision_id
+    routing_status
+    replay_disposition
+
+    readiness_record/effect refs
+    Gate/permission refs
+
+    candidate consequence/target
+
+    route_effect_id?
+    downstream_route_authorization_id?
+    eligibility_id?
+
+    failure_handoff_ref?
+
+    route_lifecycle
+    route_consumption_id?
+    scheduler_intent_ref?
+
+    correlation/trace refs
+
+该 ledger record：
+
+    = Runtime/governance durable evidence
+    != Clinical Truth
+    != Clinical Readiness
+    != target Unit effect
 
 定义：
 
@@ -1369,40 +1467,43 @@ U05 的最后一个普通 side effect 只允许是：
 
 ---
 
-# 33. Currentness check order
+# 33. Currentness / mapping / permission / replay order
 
-推荐固定：
+固定顺序：
 
-    C0 derive/reconcile exact route effect replay
+    C0 load authoritative Clinical State
 
-    C1 load authoritative Clinical State
+    C1 load authoritative readiness + commit evidence
 
-    C2 load authoritative readiness + commit evidence
+    C2 verify readiness effective currentness
 
-    C3 verify readiness effective currentness
+    C3 verify current/dependency-valid U04 Gate
 
-    C4 verify current/dependency-valid U04 Gate
+    C4 deterministically derive candidate consequence/target
+       from committed readiness
 
-    C5 verify RESTRICTED target permission when applicable
+    C5 if Gate = RESTRICTED:
+       resolve DOWNSTREAM_ACTION_PERMISSION_DECISION
+       for that exact candidate consequence/target
 
-    C6 apply deterministic readiness -> consequence mapping
+    C6 determine routing_status:
+       ELIGIBLE / PREEMPTED / FAILURE_REQUIRED / REJECTED_STALE
 
-    C7 verify target mapping / registry presence
+    C7 derive U05_ROUTING_DECISION_ID
+       and eligible-only route effect id when applicable
 
-    C8 create or reattach route decision
+    C8 reconcile Runtime/Canonical Effect Ledger
 
-    C9 create or reattach eligibility
+    C9 create or reattach routing decision / eligibility as applicable
 
-    C10 Scheduler revalidates before consumption
+    C10 Scheduler revalidates currentness before consumption
 
-先 replay reconciliation 的原因：
+必须保持：
 
-    exact prior route may already be durable
-    after later non-semantic version advancement
+    deterministic readiness mapping
+    != downstream execution authorization
 
-但 reattached eligibility 在实际 consumption 前仍必须通过 currentness validation。
-
-因此：
+以及：
 
     reattach
     != unconditional invoke
@@ -1552,7 +1653,10 @@ Trace 默认不复制完整 PHI。
     route effect
     -> at most one current eligibility identity
 
-    exact route replay
+    exact routing decision replay
+    -> same replay disposition / durable record
+
+    exact eligible route replay
     -> no duplicate eligibility
 
     one eligibility
@@ -1922,7 +2026,63 @@ Current：
 
 ---
 
-# 46. BF-U05-RG-04 disposition
+# 46. Second Targeted Review Remediation
+
+First Targeted Independent Design Re-Review：
+
+    PR #173
+    review_id = 5263574814
+    verdict = REVISE_REQUIRED
+
+Findings：
+
+    BF-U05-RDP04-TR-01
+    = REATTACHED_MODELED_AS_ROUTING_STATUS
+
+    BF-U05-RDP04-TR-02
+    = ROUTE_EFFECT_ID_REQUIRED_FOR_NON_ELIGIBLE_OUTCOMES
+
+    BF-U05-RDP04-TR-03
+    = RESTRICTED_PERMISSION_VALIDATION_ORDER_INVALID
+
+    BF-U05-RDP04-TR-04
+    = ROUTE_LEDGER_AND_LIFECYCLE_OWNER_UNDEFINED
+
+Remediation：
+
+    TR-01
+    -> routing_status separated from replay_disposition
+    -> ORIGINAL / REATTACHED no longer compete with ELIGIBLE/PREEMPTED/etc.
+
+    TR-02
+    -> U05_ROUTING_DECISION_ID added for every routing outcome
+    -> ordinary U05_DOWNSTREAM_ROUTE_EFFECT_ID exists only when ELIGIBLE
+
+    TR-03
+    -> order corrected:
+       current readiness/Gate
+       -> candidate mapping
+       -> RESTRICTED target permission
+       -> routing status
+
+    TR-04
+    -> U05DownstreamRouteLedgerRecord added
+    -> owner = Runtime / Canonical Effect Ledger
+    -> explicitly not Clinical State / Readiness / target business state
+
+Current：
+
+    BF-U05-RDP04-TR-01 = REMEDIATED / SECOND_TARGETED_REVIEW_PENDING
+    BF-U05-RDP04-TR-02 = REMEDIATED / SECOND_TARGETED_REVIEW_PENDING
+    BF-U05-RDP04-TR-03 = REMEDIATED / SECOND_TARGETED_REVIEW_PENDING
+    BF-U05-RDP04-TR-04 = REMEDIATED / SECOND_TARGETED_REVIEW_PENDING
+
+    U05-RDP-04 = REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_REVIEW
+    BF-U05-RG-04 = DESIGN_RESOLVED / SECOND_TARGETED_REVIEW_PENDING
+
+---
+
+# 47. BF-U05-RG-04 disposition
 
 Original blocker：
 
@@ -1966,7 +2126,7 @@ Original blocker：
 
 ---
 
-# 47. Current aggregate readiness boundary
+# 48. Current aggregate readiness boundary
 
 当前：
 
@@ -1988,7 +2148,7 @@ Original blocker：
 
 ---
 
-# 48. Authorization boundary
+# 49. Authorization boundary
 
 本文件不授权：
 
