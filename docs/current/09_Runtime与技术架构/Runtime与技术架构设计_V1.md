@@ -1309,3 +1309,94 @@ Phase 9 post-DDx affected scope
 Runtime implementation
 = NOT_AUTHORIZED
 ```
+
+
+---
+
+# 19. Post-Analysis Routing Extension — Runtime
+
+> Authorization: `AUTH-U05-PA-FROZEN-AMEND-001`  
+> Reviewed design source: PR #155 exact head `7e2d4d4255d51a10f58c63dec4e2ccb53920c33f`  
+> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+
+## 19.1 Generalized runtime router
+
+Section 18 的 `PostDdxRoutingDecision` 被 generalized：
+
+```text
+PostAnalysisRoutingDecision
+```
+
+支持：
+
+```text
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+Scheduler 只消费 committed/current routing decision，不自行解释 F3/F5/F6 semantics。
+
+## 19.2 U10 return path
+
+```text
+U10
+F6 VALID + NOT_NEEDED
+→ U09
+→ PostAnalysisRoutingDecision(POST_OFFLINE_ASSESSMENT)
+```
+
+不是：
+
+```text
+NOT_NEEDED
+→ U12
+```
+
+## 19.3 F3 revalidation loop
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+→ U06 MODE-3
+```
+
+结果：
+
+```text
+REVALIDATED_CURRENT
+→ materialize current F3 readiness input
+→ re-enter PostAnalysisRoutingDecision
+
+REASSESSMENT_REQUIRED
+→ fresh F3 assessment path
+→ re-enter routing after current F3 exists
+
+FAILED
+→ governed failure route
+```
+
+Scheduler 不得把 `ABSENT_BY_DESIGN` 当作 no-gap。
+
+## 19.4 Routing identity
+
+Runtime checkpoint / replay 必须绑定：
+
+```text
+POST_ANALYSIS_ROUTING_ID
+evaluation_context
+input Clinical State Version
+accepted F3/F5/F6 refs
+current Gate ref
+policy version
+```
+
+POST_DDX 与 POST_OFFLINE replay 不得互相 attach。
+
+## 19.5 Current status
+
+```text
+Phase 9 post-analysis extension
+= AMENDED / INDEPENDENT_REVIEW_PENDING
+
+Runtime implementation
+= NOT_AUTHORIZED
+```
