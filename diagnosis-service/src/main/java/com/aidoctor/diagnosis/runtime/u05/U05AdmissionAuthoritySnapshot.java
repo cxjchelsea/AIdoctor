@@ -10,6 +10,7 @@ public final class U05AdmissionAuthoritySnapshot {
     private final String consultationId;
     private final String cdpId;
     private final int currentClinicalStateVersion;
+    private final String authoritativeStateRef;
     private final String environmentId;
     private final boolean environmentAuthorized;
     private final boolean gateCommitted;
@@ -37,6 +38,7 @@ public final class U05AdmissionAuthoritySnapshot {
             String consultationId,
             String cdpId,
             int currentClinicalStateVersion,
+            String authoritativeStateRef,
             String environmentId,
             boolean environmentAuthorized,
             boolean gateCommitted,
@@ -63,6 +65,7 @@ public final class U05AdmissionAuthoritySnapshot {
         this.cdpId = required(cdpId, "cdpId");
         if (currentClinicalStateVersion < 0) throw new IllegalArgumentException("currentClinicalStateVersion must be non-negative");
         this.currentClinicalStateVersion = currentClinicalStateVersion;
+        this.authoritativeStateRef = required(authoritativeStateRef, "authoritativeStateRef");
         this.environmentId = required(environmentId, "environmentId");
         this.environmentAuthorized = environmentAuthorized;
         this.gateCommitted = gateCommitted;
@@ -90,6 +93,7 @@ public final class U05AdmissionAuthoritySnapshot {
     public String getConsultationId() { return consultationId; }
     public String getCdpId() { return cdpId; }
     public int getCurrentClinicalStateVersion() { return currentClinicalStateVersion; }
+    public String getAuthoritativeStateRef() { return authoritativeStateRef; }
     public String getEnvironmentId() { return environmentId; }
     public boolean isEnvironmentAuthorized() { return environmentAuthorized; }
     public boolean isGateCommitted() { return gateCommitted; }
