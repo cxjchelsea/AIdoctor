@@ -2255,7 +2255,7 @@ Phase 8 PostAnalysisRoutingDecision
 
 > Authorization: `AUTH-U05-CCR-FROZEN-AMEND-001`  
 > Reviewed design source: PR #157 exact head `4c3c7eb7e9aa9b6f9506871f7d28e033b4a6482e`  
-> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **REFROZEN / V1**
 
 ## 28.1 Superseded generalized contract
 
@@ -2340,5 +2340,5 @@ consultation_id
 
 ```text
 Phase 8 ClinicalContinuationRoutingDecision
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 ```
