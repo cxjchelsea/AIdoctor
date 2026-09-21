@@ -1201,3 +1201,160 @@ BF-U05-RG-02
 U05-RDP-02 continuation boundary
 = REFROZEN / V1
 ```
+
+
+---
+
+# CL-04 Controlled Amendment — F6 Mutation-Stale Pre-D03 Boundary + D03-POL-011
+
+> Authorization: `AUTH-U05-CL04-FROZEN-AMEND-001`  
+> Reviewed design: PR #160 exact head `80cd6d7d154aa3e8de093ef43328e8ee9c2733d3`  
+> Owner decision: `OD-U05-READY-02 = APPROVE_OPTION_A`  
+> Amendment status: **APPLIED / INDEPENDENT_AMENDMENT_REVIEW_PENDING**  
+> Re-freeze status: **NOT_YET_REFROZEN**
+
+## 23. F6 mutation-stale pre-D03 boundary
+
+For:
+
+```text
+POST_USER_FACT_UPDATE
++ prior F6 legally activated
++ F6 = STALE_BY_UPSTREAM_MUTATION
++ F6 is required for the current continuation basis
+```
+
+freeze:
+
+```text
+U05/D03 = NOT ELIGIBLE
+no D03 decision object
+no Clinical Readiness commit
+```
+
+The expected action is owner recomputation/revalidation before D03.
+
+```text
+F6 mutation-stale expected recomputation
+= PRE-D03 NON-ENTRY
+!= INPUT_FAILURE
+!= INPUT_CONFLICT
+```
+
+If actual reassessment/revalidation execution fails, normal governed failure semantics apply; failure must not be rewritten as `NOT_NEEDED`.
+
+## 24. D03-POL-011 — Owner-approved positive READY subrule
+
+Owner decision:
+
+```text
+OD-U05-READY-02
+= APPROVE_OPTION_A
+```
+
+Add:
+
+```text
+D03-POL-011
+policy_scope = FIRST_CLINICAL_ANALYSIS_ENTRY_AFTER_CURRENT_F6_NOT_NEEDED
+```
+
+Exact positive guards:
+
+```text
+first-entry eligibility satisfied
+
+evaluation_context in:
+  A1_POST_BARRIER_CURRENT
+  POST_USER_FACT_UPDATE
+  POST_OFFLINE_ASSESSMENT
+
+F1 = PRESENT / FRAMED_IN_SCOPE
+
+F3 = PRESENT / CURRENT
+F3 business signal = NO_ACTIVE_ONLINE_BLOCKING_GAP
+
+authoritative F5 readiness applicability input:
+  applicability_status = NOT_YET_APPLICABLE
+  = F5 has never lawfully activated in this Consultation path
+
+F6 = PRESENT / CURRENT
+F6 Assessment = VALID
+F6 business signal = NO_BLOCKING_OFFLINE_EVIDENCE_NEED
+
+no qualified blocking offline signal
+no lawful NEEDS_CLARIFICATION
+no OUT_OF_SCOPE
+no CAN_ASK_MORE
+no required input failure / stale / unavailable
+all required provenance/currentness/admission guards pass
+
+-> DECIDED / READY_FOR_CLINICAL_ANALYSIS
+```
+
+Meaning remains narrow:
+
+```text
+READY_FOR_CLINICAL_ANALYSIS
+= permission to enter governed U08/F5 first clinical analysis only
+```
+
+It does not mean diagnosis, safety, completion, delivery, or proof that no future gap exists.
+
+## 25. Explicit non-applicability
+
+D03-POL-011 is NOT_APPLICABLE when:
+
+```text
+POST_DDX_REEVALUATION
+any provenance proves prior/current F5 activation
+F5 PRESENT / STALE / INVALIDATED / FAILED / UNAVAILABLE
+F6 STALE / FAILED / UNAVAILABLE
+F6 has current justified blocking offline need
+F3 is not current
+F3 = CAN_ASK_MORE
+OUT_OF_SCOPE
+NEEDS_CLARIFICATION
+Safety/admission does not permit current first-analysis entry
+```
+
+Missing/null F5 artifact alone does not establish `NOT_YET_APPLICABLE`.
+
+## 26. P6 positive READY layer
+
+Preserve the existing P0-P7 precedence structure.
+
+```text
+P2 OUT_OF_SCOPE
+P3 NEEDS_OFFLINE_EVIDENCE
+P4 NEEDS_CLARIFICATION
+P5 CAN_ASK_MORE
+P6 positive READY layer:
+   D03-POL-005
+   D03-POL-011
+P7 NO_RELIABLE_DIRECTION
+```
+
+The two P6 subrules are mutually exclusive:
+
+```text
+D03-POL-005
+-> F6 applicability = NOT_YET_APPLICABLE
+
+D03-POL-011
+-> F6 = PRESENT / CURRENT / VALID
+   / NO_BLOCKING_OFFLINE_EVIDENCE_NEED
+```
+
+No internal 005-vs-011 ordering may change the result.
+
+Preserve unchanged:
+
+```text
+D03-POL-005 exact existing semantics
+D03-POL-006 exact existing semantics
+six-value Clinical Readiness vocabulary
+D03 unique Clinical Readiness ownership
+```
+
+This amendment is not yet re-frozen and does not authorize implementation.

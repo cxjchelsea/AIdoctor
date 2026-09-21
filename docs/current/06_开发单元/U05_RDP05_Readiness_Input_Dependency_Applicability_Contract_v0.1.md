@@ -1034,3 +1034,189 @@ U05-RDP-05 POST_USER_FACT_UPDATE continuation scope
 BF-U05-RG02-CL-03
 = REMEDIATED / REFROZEN / CLOSURE_REEVALUATION_PENDING
 ```
+
+
+---
+
+# CL-04 Controlled Amendment — F6 Currentness + First-Entry Applicability Extension
+
+> Authorization: `AUTH-U05-CL04-FROZEN-AMEND-001`  
+> Reviewed design: PR #160 exact head `80cd6d7d154aa3e8de093ef43328e8ee9c2733d3`  
+> Owner decision: `OD-U05-READY-02 = APPROVE_OPTION_A`  
+> Amendment status: **APPLIED / INDEPENDENT_AMENDMENT_REVIEW_PENDING**  
+> Re-freeze status: **NOT_YET_REFROZEN**
+
+## 20. F6 mutation-stale applicability
+
+For `POST_USER_FACT_UPDATE`, distinguish:
+
+```text
+NOT_YET_APPLICABLE
+STALE_BY_UPSTREAM_MUTATION
+PRESENT / CURRENT
+FAILED
+UNAVAILABLE
+```
+
+`STALE_BY_UPSTREAM_MUTATION` requires:
+
+```text
+accepted fact/correction mutation ref
+F6 invalidation ref
+prior F6 activation/assessment ref
+```
+
+and means:
+
+```text
+prior F6 domain was legally activated
++ a current accepted upstream mutation invalidated that effect
+```
+
+It is not:
+
+```text
+FAILED
+UNAVAILABLE
+NOT_NEEDED
+NOT_YET_APPLICABLE
+```
+
+When current continuation requires F6 and F6 is mutation-stale:
+
+```text
+D03 ordinary resolution = PROHIBITED
+-> F6 Owner reassessment/revalidation required
+```
+
+## 21. F6 reassessment prerequisite manifest
+
+Before `F6_CURRENT_VERSION_REASSESSMENT`, required owner dependencies must be current/compatible or lawfully not applicable according to an explicit dependency-requiredness manifest.
+
+At minimum:
+
+```text
+if required F3 stale/non-current
+-> F3 owner current-version path first
+
+if prior F5 activated and mutation-stale
+and F6 requires current F5
+-> governed U08/F5 reassessment first
+
+only then
+-> F6 current-version reassessment
+```
+
+Router/Scheduler may not infer dependency requiredness ad hoc.
+
+## 22. F6 current-version readiness input
+
+After canonical F6 reassessment commit and mandatory post-F6 Safety barrier:
+
+```text
+F6_CURRENT_VERSION_REVALIDATION
+-> REVALIDATED_CURRENT
+   or REASSESSMENT_REQUIRED
+   or FAILED
+```
+
+Only `REVALIDATED_CURRENT` may form a current F6 readiness input.
+
+Existing business signals remain:
+
+```text
+NEEDS_OFFLINE_EVIDENCE
+NO_BLOCKING_OFFLINE_EVIDENCE_NEED
+```
+
+No new F6 business signal is introduced.
+
+## 23. D03-POL-011 first-entry applicability axis
+
+For the Owner-approved rule:
+
+```text
+D03-POL-011
+FIRST_CLINICAL_ANALYSIS_ENTRY_AFTER_CURRENT_F6_NOT_NEEDED
+```
+
+`F5 = NOT_YET_APPLICABLE` must be represented by an authoritative RDP-05 readiness applicability input and retains its frozen meaning:
+
+```text
+F5 has never lawfully activated in this Consultation path
+```
+
+It must not be inferred from:
+
+```text
+missing F5 artifact
+null F5 ref
+empty lookup result
+```
+
+Allowed first-entry evaluation contexts:
+
+```text
+A1_POST_BARRIER_CURRENT
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+```
+
+Context requirements:
+
+```text
+A1_POST_BARRIER_CURRENT
+-> existing A1 bootstrap/barrier/F3-currentness requirements complete
+
+POST_USER_FACT_UPDATE
+-> accepted mutation provenance current
+-> required stale dependencies resolved/revalidated
+
+POST_OFFLINE_ASSESSMENT
+-> current F6 assessment complete/current
+-> pre-F5 return path
+```
+
+In every allowed context:
+
+```text
+F5 readiness applicability = NOT_YET_APPLICABLE
+```
+
+Explicitly excluded:
+
+```text
+POST_DDX_REEVALUATION
+any prior/current F5 activation provenance
+F5 PRESENT
+F5 STALE / INVALIDATED
+F5 FAILED / UNAVAILABLE
+```
+
+A prior-activated F5 cannot later be silently downgraded to `NOT_YET_APPLICABLE`.
+
+## 24. Context-specific U05 exposure
+
+Preserve routing-host separation:
+
+```text
+A1_POST_BARRIER_CURRENT
+-> existing A1 routing projection
+-> U05_ELIGIBLE / U05
+
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+-> ClinicalContinuationRoutingDecision
+-> TO_U05_CLINICAL_READINESS
+-> U05
+```
+
+A1 is not added as a ClinicalContinuationRoutingDecision context.
+
+## 25. Currentness / same-basis requirement
+
+Inputs accepted for the same D03 evaluation must satisfy current binding rules, including consultation/CDP identity, authoritative Clinical State compatibility, source decision/state refs, current U04 Gate, and required revalidation refs.
+
+A required stale/failed/unavailable source may not be converted into a business-negative signal.
+
+This amendment is not yet re-frozen and authorizes no runtime implementation.
