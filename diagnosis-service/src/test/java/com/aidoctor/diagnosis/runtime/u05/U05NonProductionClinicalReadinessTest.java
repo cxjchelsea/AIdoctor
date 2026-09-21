@@ -344,9 +344,11 @@ class U05NonProductionClinicalReadinessTest {
             String context,
             int version,
             List<U05ReadinessInput> inputs) {
+        String setIdentity = U05ReadinessInputManifest.semanticSetIdentity(
+                "consult-1", "cdp-1", version, context, inputs);
         return new U05ReadinessInputManifest(
                 "manifest-" + context,
-                "set-" + context,
+                setIdentity,
                 "consult-1",
                 "cdp-1",
                 version,
