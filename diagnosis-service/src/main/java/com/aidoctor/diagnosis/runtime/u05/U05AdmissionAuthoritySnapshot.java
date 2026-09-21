@@ -31,6 +31,7 @@ public final class U05AdmissionAuthoritySnapshot {
     private final boolean postF3SafetyBarrierComplete;
     private final boolean f3RevalidatedCurrent;
     private final boolean ownerRecomputationPending;
+    private final String currentReadinessRecordRef;
 
     public U05AdmissionAuthoritySnapshot(
             String consultationId,
@@ -56,7 +57,8 @@ public final class U05AdmissionAuthoritySnapshot {
             boolean a1CanonicalF3Complete,
             boolean postF3SafetyBarrierComplete,
             boolean f3RevalidatedCurrent,
-            boolean ownerRecomputationPending) {
+            boolean ownerRecomputationPending,
+            String currentReadinessRecordRef) {
         this.consultationId = required(consultationId, "consultationId");
         this.cdpId = required(cdpId, "cdpId");
         if (currentClinicalStateVersion < 0) throw new IllegalArgumentException("currentClinicalStateVersion must be non-negative");
@@ -82,6 +84,7 @@ public final class U05AdmissionAuthoritySnapshot {
         this.postF3SafetyBarrierComplete = postF3SafetyBarrierComplete;
         this.f3RevalidatedCurrent = f3RevalidatedCurrent;
         this.ownerRecomputationPending = ownerRecomputationPending;
+        this.currentReadinessRecordRef = currentReadinessRecordRef;
     }
 
     public String getConsultationId() { return consultationId; }
@@ -108,6 +111,7 @@ public final class U05AdmissionAuthoritySnapshot {
     public boolean isPostF3SafetyBarrierComplete() { return postF3SafetyBarrierComplete; }
     public boolean isF3RevalidatedCurrent() { return f3RevalidatedCurrent; }
     public boolean isOwnerRecomputationPending() { return ownerRecomputationPending; }
+    public String getCurrentReadinessRecordRef() { return currentReadinessRecordRef; }
 
     private static String required(String value, String name) {
         if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException(name + " is required");
