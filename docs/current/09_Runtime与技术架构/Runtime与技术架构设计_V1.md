@@ -1400,3 +1400,87 @@ Phase 9 post-analysis extension
 Runtime implementation
 = NOT_AUTHORIZED
 ```
+
+
+---
+
+# 20. Clinical Continuation Routing — Runtime
+
+> Authorization: `AUTH-U05-CCR-FROZEN-AMEND-001`  
+> Reviewed design source: PR #157 exact head `4c3c7eb7e9aa9b6f9506871f7d28e033b4a6482e`  
+> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+
+## 20.1 Generalized runtime continuation router
+
+Section 19 的 PostAnalysis router 被 generalized：
+
+```text
+ClinicalContinuationRoutingDecision
+```
+
+contexts：
+
+```text
+POST_USER_FACT_UPDATE
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+## 20.2 POST_USER_FACT_UPDATE sequence
+
+```text
+accepted USER_ANSWER / Correction
+→ U02/G2 fact commit
+→ reload authoritative Clinical State
+→ U03/U04 current Risk/Safety
+→ ClinicalContinuationRoutingDecision
+```
+
+Scheduler 不得在 mutation-stale required inputs 尚未完成受控 continuation routing 时直接 invoke U05。
+
+## 20.3 Recompute consequences
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+→ U06 MODE-3
+
+TO_U08_REASSESSMENT
+→ U08 only with valid mutation provenance + current bindings
+
+TO_U05_CLINICAL_READINESS
+→ U05/D03 only when applicable readiness inputs meet currentness/admission rules
+```
+
+## 20.4 Stale vs failure
+
+Runtime 必须保留：
+
+```text
+invalidation provenance
+prior activation ref
+failure provenance
+```
+
+禁止：
+
+```text
+mutation-stale
+→ generic D03 INPUT_FAILURE
+```
+
+也禁止：
+
+```text
+FAILED
+→ pretend normal reassessment
+```
+
+## 20.5 Current status
+
+```text
+Phase 9 Clinical Continuation Routing
+= AMENDED / INDEPENDENT_REVIEW_PENDING
+
+Runtime implementation
+= NOT_AUTHORIZED
+```
