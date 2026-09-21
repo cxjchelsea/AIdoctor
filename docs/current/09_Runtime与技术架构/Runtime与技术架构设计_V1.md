@@ -1317,7 +1317,7 @@ Runtime implementation
 
 > Authorization: `AUTH-U05-PA-FROZEN-AMEND-001`  
 > Reviewed design source: PR #155 exact head `7e2d4d4255d51a10f58c63dec4e2ccb53920c33f`  
-> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **REFROZEN / V1**
 
 ## 19.1 Generalized runtime router
 
@@ -1395,7 +1395,7 @@ POST_DDX 与 POST_OFFLINE replay 不得互相 attach。
 
 ```text
 Phase 9 post-analysis extension
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 Runtime implementation
 = NOT_AUTHORIZED
