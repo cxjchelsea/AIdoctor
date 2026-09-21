@@ -1,7 +1,7 @@
 # U05 Implementation Authorization Decision v0.1
 
 > Decision ID: `AUTH-U05-RUNTIME-IMPL-001`  
-> Decision status: **NOT_DECIDED / TARGETED_GATE_REVIEW_PENDING**  
+> Decision status: **NOT_DECIDED / READY_FOR_OWNER_DECISION**  
 > Readiness basis: U05 Implementation Readiness Re-Evaluation v0.4 / PR #179  
 > Authorization Review: PR #180  
 > Reviewed semantic authorization head: `33001ae6301d250c6485df1284e5e78d8faf64ea`  
@@ -714,10 +714,10 @@ Remediation:
 Current:
 
     BF-U05-IA-DG-01
-    = REMEDIATED / TARGETED_GATE_REVIEW_PENDING
+    = CLOSED
 
     Decision Package
-    = REVISED / READY_FOR_TARGETED_GATE_REVIEW
+    = READY_FOR_OWNER_DECISION
 
 ---
 
@@ -748,3 +748,44 @@ Until explicit owner decision:
 
     Real-patient traffic
     = NOT_AUTHORIZED
+
+
+---
+
+# 23. Targeted Gate Review Provenance
+
+PR:
+
+    #181
+
+Initial Independent Gate Review:
+
+    REVISE_REQUIRED
+    review_id = 5263974730
+
+Targeted Gate Re-Review:
+
+    PASS
+    review_id = 5263982315
+
+Reviewed decision-package semantic head:
+
+    73188c5f874e0ceb6bc5c25b7deaeef1b6f92a31
+
+Final gate state:
+
+    BF-U05-IA-DG-01 = CLOSED
+
+    U05 Implementation Authorization Decision Package
+    = READY_FOR_OWNER_DECISION
+
+    AUTH-U05-RUNTIME-IMPL-001
+    = NOT_DECIDED
+
+Owner options remain:
+
+    AUTHORIZE
+    REVISE
+    REJECT
+
+This status/provenance synchronization does not grant implementation authorization.
