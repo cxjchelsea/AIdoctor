@@ -2154,7 +2154,7 @@ Phase 8 PostDdxRoutingDecision
 
 > Authorization: `AUTH-U05-PA-FROZEN-AMEND-001`  
 > Reviewed design source: PR #155 exact head `7e2d4d4255d51a10f58c63dec4e2ccb53920c33f`  
-> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **REFROZEN / V1**
 
 ## 27.1 Superseded contract
 
@@ -2245,5 +2245,5 @@ canonical F3 source/effect exists
 
 ```text
 Phase 8 PostAnalysisRoutingDecision
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 ```
