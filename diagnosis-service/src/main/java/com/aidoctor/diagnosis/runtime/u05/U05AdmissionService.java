@@ -123,15 +123,18 @@ public final class U05AdmissionService {
             }
         }
 
-        // A10 — bootstrap binding: an active A1 binding may not be bypassed
-        // through the ordinary POST_SAFETY_INITIAL U05 route.
-        if (U05ConsumerInboundRequest.POST_SAFETY_INITIAL.equals(request.getEvaluationContext())
-                && "A1".equals(authority.getBootstrapArchitectureBindingRef())) {
+        // A10 — current frozen baseline: historical POST_SAFETY_INITIAL direct
+        // U05 entry is inactive regardless of caller-provided bootstrap metadata.
+        if (U05ConsumerInboundRequest.POST_SAFETY_INITIAL.equals(request.getEvaluationContext())) {
             return U05AdmissionResult.rejected(CONTEXT_MISMATCH);
         }
 
-        // A10 — A1 post-barrier prerequisites.
+        // A10 — A1 post-barrier prerequisites and mandatory U05_ELIGIBLE consequence.
         if (U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT.equals(request.getEvaluationContext())) {
+            if (!U05ConsumerInboundRequest.U05_ELIGIBLE.equals(request.getRouteConsequence())
+                    || !request.getRouteConsequence().equals(authority.getRouteConsequence())) {
+                return U05AdmissionResult.rejected(ROUTE_CONSEQUENCE_NOT_U05);
+            }
             if (!"A1".equals(request.getBootstrapArchitectureBindingRef())
                     || !"A1".equals(authority.getBootstrapArchitectureBindingRef())
                     || !authority.isA1CanonicalF3Complete()
@@ -207,7 +210,7 @@ public final class U05AdmissionService {
                 || !request.getEvaluationContext().equals(manifest.getEvaluationContext())) {
             return INPUT_SET_IDENTITY_MISMATCH;
         }
-        List<String> expectedRefs = manifest.presentInputRefs();
+        List<String> expectedRefs = manifest.authoritativeRecordRefs();
         if (!expectedRefs.equals(request.getReadinessInputRefs())) {
             return INPUT_REF_IDENTITY_MISMATCH;
         }
@@ -240,6 +243,7 @@ public final class U05AdmissionService {
                 request.getRouteAuthorizationType(),
                 request.getRouteAuthorizationRef(),
                 request.getRouteSourceRef(),
+                request.getRouteConsequence(),
                 request.getReadinessInputSetIdentity(),
                 request.getRestrictedContextRef(),
                 request.getRestrictedPermissionRef(),
