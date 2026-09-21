@@ -945,7 +945,7 @@ BF-U05-RG02-CL-02
 
 > Authorization: `AUTH-U05-CCR-FROZEN-AMEND-001`  
 > Reviewed design source: PR #157 exact head `4c3c7eb7e9aa9b6f9506871f7d28e033b4a6482e`  
-> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **REFROZEN / V1**
 
 ### 19.1 POST_USER_FACT_UPDATE classification
 
@@ -1029,8 +1029,8 @@ unexpected/invalid stale with no lawful recomputation provenance
 
 ```text
 U05-RDP-05 POST_USER_FACT_UPDATE continuation scope
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 BF-U05-RG02-CL-03
-= REMEDIATED_BY_DESIGN / REVIEW_PENDING
+= REMEDIATED / REFROZEN / CLOSURE_REEVALUATION_PENDING
 ```
