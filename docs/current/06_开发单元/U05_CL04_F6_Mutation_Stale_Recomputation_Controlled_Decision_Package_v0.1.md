@@ -947,8 +947,11 @@ F1 = PRESENT / FRAMED_IN_SCOPE
 F3 = PRESENT / CURRENT
 F3 signal = NO_ACTIVE_ONLINE_BLOCKING_GAP
 
-F5 = NOT_YET_APPLICABLE
+F5 readiness applicability input = NOT_YET_APPLICABLE
 = F5 has never lawfully activated in this Consultation path
+
+the applicability classification must come from the authoritative RDP-05 readiness-input contract;
+absence of an F5 artifact alone is not evidence for NOT_YET_APPLICABLE
 
 F6 = PRESENT / CURRENT
 F6 Assessment = VALID
@@ -1177,7 +1180,10 @@ ClinicalContinuationRoutingDecision vocabulary
 K08 / F6 reassessment provenance/currentness/idempotency envelope
 F6_CURRENT_VERSION_REVALIDATION deterministic decision envelope
 D03-POL-011 deterministic-decision evidence fields / rule identity
-first-entry eligibility/context provenance needed to distinguish never-activated F5
+authoritative F5 readiness applicability input ref
+with applicability_status = NOT_YET_APPLICABLE
+first-entry eligibility/context provenance;
+missing F5 artifact alone must never satisfy the guard
 mandatory dependency-requiredness manifest
 restricted-context propagation
 routing identity inputs
@@ -1253,8 +1259,11 @@ prior F6 activation
 Freeze the D03-POL-011 first-entry eligibility axis:
 
 ```text
-F5 = NOT_YET_APPLICABLE
+F5 readiness applicability input = NOT_YET_APPLICABLE
 = never lawfully activated in this Consultation path
+
+classification source = authoritative RDP-05 readiness input
+not "F5 artifact missing"
 
 allowed contexts:
 A1_POST_BARRIER_CURRENT
@@ -1796,3 +1805,40 @@ D03-POL-011
 Frozen artifact modification
 = NOT_AUTHORIZED
 ```
+
+
+### 23.1 Applicability-proof tightening
+
+RDP-05 already freezes:
+
+```text
+NOT_YET_APPLICABLE
+= source domain/stage has not yet been lawfully activated
+```
+
+and readiness inputs already carry:
+
+```text
+applicability_status
+source_decision_ref
+source_state_ref
+consultation_id
+cdp_id
+clinical_state_version
+```
+
+Therefore D03-POL-011 must consume an authoritative F5 readiness applicability input with:
+
+```text
+applicability_status = NOT_YET_APPLICABLE
+```
+
+It must never infer this classification from:
+
+```text
+missing F5 artifact
+null current F5 ref
+empty lookup result
+```
+
+No new cross-system F5 activation ledger is introduced by this amendment.
