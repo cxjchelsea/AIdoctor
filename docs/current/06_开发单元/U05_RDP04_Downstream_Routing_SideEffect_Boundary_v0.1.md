@@ -6,7 +6,7 @@
 > Decision basis: U05-RDP-02 current REFROZEN / V1.  
 > Input basis: U05-RDP-05 current REFROZEN / V1.  
 > Exact frozen semantic baseline before U05 RDP-04: `3bd85f908a1cb09355f6ea1c5ce737638d1c0fdc`.  
-> Status: **REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_REVIEW**.  
+> Status: **REVISED / READY_FOR_FINAL_TARGETED_INDEPENDENT_REVIEW**.  
 > Target blocker: `BF-U05-RG-04`.  
 > 本文件不授权 Runtime/code implementation、真实下游 Unit 执行、merge、production、release activation 或 real-patient traffic。
 
@@ -662,6 +662,64 @@ Eligibility：
 
 都可以被 durable/replay 审计，而不需要伪造 ordinary route effect。
 
+## 12.1 Routing decision canonical fingerprint
+
+定义：
+
+    U05_ROUTING_DECISION_CANONICAL_FINGERPRINT
+
+它用于所有 routing outcome 的 replay semantic equality，包括：
+
+    ELIGIBLE
+    PREEMPTED
+    FAILURE_REQUIRED
+    REJECTED_STALE
+
+至少覆盖：
+
+    authoritative readiness record/effect/value
+
+    current Gate ref/value
+
+    candidate downstream consequence/target
+    when derivable
+
+    downstream permission decision/status
+    when applicable
+
+    routing_status
+
+    failure/preemption/stale reason/ref
+    when applicable
+
+    routing policy version
+
+    routing decision contract version
+
+明确排除 attempt-local metadata：
+
+    retry timestamp
+    Runtime attempt number
+    trace span/attempt metadata
+    transport message identity
+    checkpoint/run identity
+
+因此：
+
+    same U05_ROUTING_DECISION_ID
+    + same U05_ROUTING_DECISION_CANONICAL_FINGERPRINT
+    -> exact routing-decision replay candidate
+
+    same U05_ROUTING_DECISION_ID
+    + different fingerprint
+    -> U05_ROUTE_REPLAY_CONFLICT
+
+只有 ELIGIBLE ordinary route effect 才继续使用：
+
+    U05_ROUTE_CANONICAL_PAYLOAD_FINGERPRINT
+
+---
+
 只有：
 
     routing_status = ELIGIBLE
@@ -1303,7 +1361,7 @@ Owner：
 
     failure_handoff_ref?
 
-    route_lifecycle
+    route_lifecycle?
     route_consumption_id?
     scheduler_intent_ref?
 
@@ -1315,6 +1373,33 @@ Owner：
     != Clinical Truth
     != Clinical Readiness
     != target Unit effect
+
+只有当：
+
+    routing_status = ELIGIBLE
+    and ordinary route effect / eligibility exists
+
+才允许 route_lifecycle 字段存在。
+
+对于：
+
+    PREEMPTED
+    FAILURE_REQUIRED
+    REJECTED_STALE
+
+必须：
+
+    route_lifecycle = absent
+
+这些 non-route outcomes 只保留：
+
+    routing_decision_id
+    routing_status
+    replay_disposition
+    preemption/failure/stale refs
+    trace refs
+
+不得伪造 ordinary route lifecycle。
 
 定义：
 
@@ -2082,7 +2167,45 @@ Current：
 
 ---
 
-# 47. BF-U05-RG-04 disposition
+# 47. Final Narrow Remediation
+
+Second Targeted Independent Design Re-Review：
+
+    PR #173
+    review_id = 5263583400
+    verdict = REVISE_REQUIRED
+
+Findings：
+
+    BF-U05-RDP04-TR2-01
+    = ROUTING_DECISION_CANONICAL_FINGERPRINT_REFERENCED_BUT_UNDEFINED
+
+    BF-U05-RDP04-TR2-02
+    = ROUTE_LIFECYCLE_APPLIED_TO_NON_ROUTE_OUTCOMES
+
+Remediation：
+
+    TR2-01
+    -> U05_ROUTING_DECISION_CANONICAL_FINGERPRINT formally defined
+    -> applies to all routing outcomes
+    -> eligible-only route payload fingerprint remains separate
+
+    TR2-02
+    -> route_lifecycle made optional/conditional
+    -> only ELIGIBLE ordinary route effects may own U05RouteLifecycle
+    -> PREEMPTED / FAILURE_REQUIRED / REJECTED_STALE keep decision-level durable evidence only
+
+Current：
+
+    BF-U05-RDP04-TR2-01 = REMEDIATED / FINAL_TARGETED_REVIEW_PENDING
+    BF-U05-RDP04-TR2-02 = REMEDIATED / FINAL_TARGETED_REVIEW_PENDING
+
+    U05-RDP-04 = REVISED / READY_FOR_FINAL_TARGETED_INDEPENDENT_REVIEW
+    BF-U05-RG-04 = DESIGN_RESOLVED / FINAL_TARGETED_REVIEW_PENDING
+
+---
+
+# 48. BF-U05-RG-04 disposition
 
 Original blocker：
 
@@ -2126,7 +2249,7 @@ Original blocker：
 
 ---
 
-# 48. Current aggregate readiness boundary
+# 49. Current aggregate readiness boundary
 
 当前：
 
@@ -2148,7 +2271,7 @@ Original blocker：
 
 ---
 
-# 49. Authorization boundary
+# 50. Authorization boundary
 
 本文件不授权：
 
