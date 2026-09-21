@@ -459,7 +459,41 @@ no D03
 
 Covered.
 
-### 5.5 Revalidated current F6 = JUSTIFIED
+### 5.5 RESTRICTED Safety continuation
+
+When current Safety is `RESTRICTED`:
+
+```text
+F6 reassessment/revalidation
+requires action-specific permission
++ restricted_context_ref propagation
+```
+
+The restricted context remains bound through:
+
+```text
+routing
+-> U10 reassessment
+-> C05 invocation
+-> canonical F6 commit trace
+-> post-F6 Safety barrier
+-> F6 revalidation
+-> subsequent U05/routing admission
+```
+
+A successful F6 revalidation does not widen:
+
+```text
+RESTRICTED
+-> generic ALLOW
+-> automatic U05/U08/U12 eligibility
+```
+
+If the current restricted policy does not permit the next consequence, that consequence is not lawfully routable.
+
+Covered.
+
+### 5.6 Revalidated current F6 = JUSTIFIED
 
 ```text
 readiness projection = NEEDS_OFFLINE_EVIDENCE
@@ -472,7 +506,7 @@ This is higher precedence than positive READY.
 
 Covered.
 
-### 5.6 Revalidated current F6 = NOT_NEEDED + F5 never activated
+### 5.7 Revalidated current F6 = NOT_NEEDED + F5 never activated
 
 Authoritative F5 readiness applicability must prove:
 
@@ -500,7 +534,7 @@ D03-POL-011
 
 Covered.
 
-### 5.7 Revalidated current F6 = NOT_NEEDED + prior/current F5 activation
+### 5.8 Revalidated current F6 = NOT_NEEDED + prior/current F5 activation
 
 D03-POL-011 is explicitly NOT_APPLICABLE.
 
@@ -729,6 +763,7 @@ POLICY_EXPECTATION_GAP
 | F6 revalidation REASSESSMENT_REQUIRED | F6 owner reassessment |
 | F6 reassessment/revalidation FAILED | governed failure |
 | post-F6 Safety BLOCKED / UNAVAILABLE | Safety/failure preemption |
+| RESTRICTED path | action-specific permission + restricted_context_ref preserved; no automatic widening |
 | prior/current F5 activation | existing U08/U12/U05/failure continuation rules |
 | F5 NO_RELIABLE_DIRECTION | D03-POL-006 / P7 |
 | missing F5 artifact alone | not first-entry proof / fail admission as applicable |
