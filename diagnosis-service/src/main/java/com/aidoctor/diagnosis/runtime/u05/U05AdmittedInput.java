@@ -27,6 +27,7 @@ public final class U05AdmittedInput {
     private final String admissionContractVersion;
     private final String environmentId;
     private final String gateValue;
+    private final String admittedCreatedAt;
     private final U05ReadinessInputManifest manifest;
 
     U05AdmittedInput(
@@ -54,6 +55,7 @@ public final class U05AdmittedInput {
         this.admissionContractVersion = request.getAdmissionContractVersion();
         this.environmentId = request.getEnvironmentId();
         this.gateValue = request.getGateValue();
+        this.admittedCreatedAt = request.getCreatedAt();
         this.manifest = manifest;
     }
 
@@ -78,5 +80,6 @@ public final class U05AdmittedInput {
     public String getAdmissionContractVersion() { return admissionContractVersion; }
     public String getEnvironmentId() { return environmentId; }
     public String getGateValue() { return gateValue; }
+    public String getAdmittedCreatedAt() { return admittedCreatedAt; }
     public U05ReadinessInputManifest getManifest() { return manifest; }
 }
