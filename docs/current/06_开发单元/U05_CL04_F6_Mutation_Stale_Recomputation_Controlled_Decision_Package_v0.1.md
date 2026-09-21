@@ -4,7 +4,7 @@
 > Design baseline: `268d9c5e9075420aa76c5c1aa37c254a3a99e2b8`  
 > Closure finding source: PR #159 / exact review head `193a280cce0bb7c99ca0566166bffc7bb3aaec6a`  
 > Scope: design-only / governance-only / no frozen amendment yet  
-> Current status: **DESIGN / INDEPENDENT_REVIEW_PENDING**
+> Current status: **REVISED / TARGETED_INDEPENDENT_REVIEW_PENDING**
 
 ---
 
@@ -108,8 +108,10 @@ POST_USER_FACT_UPDATE
 -> TO_F6_CURRENT_VERSION_REASSESSMENT
 -> U10/F6 Owner reassesses current version
 -> governed F6 commit
+-> prior continuation decision / routing authorization becomes stale
 -> reload authoritative state
--> re-establish current routable Safety basis as required
+-> mandatory post-F6 Safety barrier
+-> establish a new current committed U04 Gate / routing authorization
 -> re-enter ClinicalContinuationRoutingDecision
 ```
 
@@ -215,10 +217,16 @@ and the staleness is attributable to the current accepted mutation
 
 => classification = STALE_BY_UPSTREAM_MUTATION
 
-current U04 Safety basis permits the relevant ordinary continuation
+current committed U04 Safety basis permits the relevant action
+
+if Gate = RESTRICTED:
+the current governed restricted policy explicitly permits
+F6_CURRENT_VERSION_REASSESSMENT / C05 assessment for this context,
+and restricted_context_ref is present
 
 all F6 upstream dependencies required for the new assessment
-are current/compatible or lawfully not applicable
+are current/compatible or lawfully not applicable according to
+the explicit F6 dependency-requiredness manifest
 
 no higher unresolved owner prerequisite requires earlier recomputation
 ```
@@ -266,7 +274,30 @@ F5 mutation-stale may need to be resolved before F6
 because a fresh F5 result may change F6's assessment basis.
 ```
 
-The implementation must rely on declared dependency refs rather than hard-coded assumptions where possible.
+The reassessment contract MUST carry an explicit F6 dependency-requiredness manifest.
+
+Minimum semantics:
+
+```text
+dependency_domain
+dependency_ref
+dependency_role
+required_for_current_assessment = true / false
+currentness
+compatibility_status
+lawful_not_applicable_reason when applicable
+```
+
+This manifest is authoritative for prerequisite ordering.
+
+```text
+Router / Scheduler
+must not infer F3/F5 requiredness ad hoc
+must not treat missing dependency metadata as NOT_NEEDED
+```
+
+The manifest must participate in reassessment admission, effect identity,
+stale-before-commit validation, replay, and audit.
 
 ---
 
@@ -304,9 +335,10 @@ prior F6 assessment ref
 current mutation ref
 current F6 invalidation ref
 
-current declared F6 dependency refs
+current F6 dependency-requiredness manifest
 current CapabilityBindingRef for C05
 current KnowledgeReleaseRef / RuleReleaseRef
+restricted_context_ref when Gate = RESTRICTED
 trace / correlation refs
 ```
 
@@ -352,6 +384,24 @@ If C05 produces examination-suggestion candidate material during reassessment, i
 ```text
 support/trace-only until the downstream ordinary U10 path is lawfully reached.
 ```
+
+It must never be promoted merely because it already exists.
+
+Later ordinary U10 must perform the existing governed suggestion validation
+against the then-current:
+
+```text
+Clinical State basis
+F6 assessment ref
+CapabilityBindingRef
+KnowledgeReleaseRef
+RuleReleaseRef
+restricted_context_ref when applicable
+suggestion policy / validation rules
+```
+
+Pre-D03 candidate material may be referenced as evidence/support only.
+It is never an authorization shortcut to VALIDATED / DELIVERABLE / patient-facing output.
 
 This mirrors the existing principle that pre-readiness clinical capability output cannot create downstream side effects by itself.
 
@@ -443,10 +493,14 @@ U10 ordinary path
 The ordinary U10 path may then perform the remaining governed work allowed by the existing Unit, such as:
 
 ```text
-examination-suggestion generation/validation
+fresh/current suggestion generation when needed
+governed suggestion validation under current bindings
 patient-safe downstream preparation
 U11 handoff when the existing frozen business rule allows
 ```
+
+Any support-only suggestion candidate produced during pre-D03 reassessment
+must be revalidated and cannot be promoted by identity/replay alone.
 
 If the current F6 assessment is absent or non-current, the ordinary U10 path follows its normal assessment behavior.
 
@@ -460,7 +514,7 @@ while allowing the existing post-readiness U10 workflow to continue.
 
 ---
 
-## 10. Version safety after the F6 commit
+## 10. Mandatory post-F6 Safety barrier
 
 F6 is canonical Clinical State.
 
@@ -469,36 +523,59 @@ Therefore the reassessment result must use:
 ```text
 K09 StateChangeProposal
 -> G2/P01 commit
--> authoritative Clinical State Version
+-> authoritative Clinical State Version advances
 ```
 
-After commit:
+Current U04-RDP-04 semantics are authoritative:
 
 ```text
-the prior ClinicalContinuationRoutingDecision is stale/non-routable
-Scheduler reloads authoritative state
+Clinical State Version advance
+-> prior routing authorization = STALE / NON_ROUTABLE
 ```
 
-The old U04 routing authorization must not be blindly reused.
-
-Before re-entering ordinary continuation:
+Therefore the F6 reassessment path MUST be:
 
 ```text
-current U04 Safety basis must be proven current-compatible
-under existing dependency/version rules
-
-if not current-compatible:
-    -> re-establish required U03/U04 basis
+F6 reassessment commit
+-> prior ClinicalContinuationRoutingDecision stale
+-> prior routing authorization stale
+-> reload authoritative Clinical State
+-> mandatory post-F6 Safety barrier
+-> establish current U03/U04 basis as required
+-> new current committed U04 Gate
+-> new routing authorization
+-> only then re-enter ClinicalContinuationRoutingDecision
 ```
 
-This package does not invent a new Risk/Safety rule.
-
-It only requires:
+There is no design-level shortcut of:
 
 ```text
-F6 commit
-!= permission to bypass current Safety routing requirements
+"old Gate appears compatible"
+-> reuse old routing authorization
 ```
+
+unless a separately frozen future contract explicitly authorizes such a path.
+
+This package does not invent a new Risk/Safety semantic.
+It reuses existing U03/U04 machinery and existing Gate values.
+
+For `RESTRICTED`:
+
+```text
+new Gate / routing authorization
+must preserve the current restricted_context_ref
+and must explicitly permit the next consequence.
+```
+
+The post-F6 barrier must not widen:
+
+```text
+RESTRICTED -> generic ALLOW
+RESTRICTED -> suggestion delivery
+RESTRICTED -> U11/U12
+```
+
+without the relevant governed permission.
 
 ---
 
@@ -516,10 +593,11 @@ accepted mutation/correction event ref
 F6 invalidation ref
 prior F6 assessment/activation ref
 
-declared current dependency refs
+F6 dependency-requiredness manifest
 C05 CapabilityBindingRef
 KnowledgeReleaseRef
 RuleReleaseRef
+restricted_context_ref when applicable
 contract/policy version
 
 mode = F6_CURRENT_VERSION_REASSESSMENT
@@ -535,8 +613,9 @@ consultation_id
 + accepted mutation ref
 + F6 invalidation ref
 + prior F6 assessment ref
-+ declared dependency refs
++ dependency-requiredness manifest identity
 + capability/release binding refs
++ restricted_context_ref when applicable
 + reassessment policy version
 ```
 
@@ -707,6 +786,8 @@ Amend:
 ```text
 ClinicalContinuationRoutingDecision vocabulary
 K08 / F6 reassessment provenance/currentness/idempotency envelope
+mandatory dependency-requiredness manifest
+restricted-context propagation
 routing identity inputs
 ```
 
@@ -720,7 +801,9 @@ Add Scheduler handling:
 TO_F6_CURRENT_VERSION_REASSESSMENT
 -> U10 reassessment mode
 -> commit/reload
--> current Safety compatibility check
+-> prior routing authorization stale
+-> mandatory post-F6 Safety barrier
+-> new current U04 Gate / routing authorization
 -> re-enter continuation routing
 ```
 
@@ -811,8 +894,9 @@ same reassessment replay
 
 CASE-09
 F6 commit advances state
--> old continuation decision non-routable
--> reload/current Safety compatibility required
+-> old continuation decision / routing authorization non-routable
+-> mandatory post-F6 Safety barrier
+-> new current U04 Gate / routing authorization required
 
 CASE-10
 D03 = NEEDS_OFFLINE_EVIDENCE after pre-D03 F6 reassessment
@@ -821,7 +905,20 @@ D03 = NEEDS_OFFLINE_EVIDENCE after pre-D03 F6 reassessment
 
 CASE-11
 reassessment-mode C05 returns suggestion candidate
+-> support/trace-only
+-> later ordinary U10 must revalidate under current bindings
+-> no promotion-by-replay
 -> no patient-facing delivery before lawful downstream U10/F7 path
+
+CASE-11A
+Gate = RESTRICTED
+-> F6 reassessment only when restricted policy explicitly permits this action
+-> restricted_context_ref preserved through routing / C05 / commit / barrier / re-entry
+
+CASE-11B
+dependency manifest missing/incomplete
+-> no F6 normal reassessment eligibility
+-> no ad-hoc Router/Scheduler requiredness inference
 
 CASE-12
 FAILED / UNAVAILABLE
@@ -871,4 +968,66 @@ merge
 production Clinical Runtime
 release activation
 real-patient traffic
+```
+
+
+---
+
+## 20. Independent Design Review Remediation
+
+Review source:
+
+```text
+PR #160
+reviewed head = c67055c524a897e8ace66814bc133006f1380d20
+review_id = 5263166691
+verdict = REVISE_REQUIRED
+```
+
+Remediation applied in this revision:
+
+### BF-U05-F6R-IR-01
+
+```text
+POST_F6_COMMIT_SAFETY_BARRIER_UNDERSPECIFIED
+-> REMEDIATED
+```
+
+The design now requires a mandatory post-F6 Safety barrier and a new current committed U04 Gate / routing authorization after the F6 state commit.
+
+### BF-U05-F6R-IR-02
+
+```text
+RESTRICTED_ACTION_PERMISSION_NOT_EXPLICIT
+-> REMEDIATED
+```
+
+RESTRICTED may expose F6 reassessment only under explicit action-specific governed permission; the restricted context is carried through the entire effect chain.
+
+### RQ-U05-F6R-IR-03
+
+```text
+PRE_D03_SUGGESTION_REUSE_BOUNDARY
+-> REMEDIATED
+```
+
+Pre-D03 suggestion material remains support/trace-only and must be revalidated under current bindings before any formal suggestion/delivery state.
+
+### RQ-U05-F6R-IR-04
+
+```text
+F6_DEPENDENCY_REQUIREDNESS_MANIFEST
+-> REMEDIATED
+```
+
+The F6 dependency-requiredness manifest is now mandatory and participates in admission, ordering, identity, stale detection, replay, and audit.
+
+Current status:
+
+```text
+F6 Mutation-Stale Reassessment Decision Package
+= REVISED / TARGETED_INDEPENDENT_REVIEW_PENDING
+
+BF-U05-RG02-CL-04
+= OPEN / BLOCKING pending targeted re-review
 ```
