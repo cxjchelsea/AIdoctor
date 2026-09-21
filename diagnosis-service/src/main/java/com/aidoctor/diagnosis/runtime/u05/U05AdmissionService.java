@@ -123,6 +123,13 @@ public final class U05AdmissionService {
             }
         }
 
+        // A10 — bootstrap binding: an active A1 binding may not be bypassed
+        // through the ordinary POST_SAFETY_INITIAL U05 route.
+        if (U05ConsumerInboundRequest.POST_SAFETY_INITIAL.equals(request.getEvaluationContext())
+                && "A1".equals(authority.getBootstrapArchitectureBindingRef())) {
+            return U05AdmissionResult.rejected(CONTEXT_MISMATCH);
+        }
+
         // A10 — A1 post-barrier prerequisites.
         if (U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT.equals(request.getEvaluationContext())) {
             if (!"A1".equals(request.getBootstrapArchitectureBindingRef())
