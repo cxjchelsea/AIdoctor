@@ -3,7 +3,7 @@
 > Scope: U05 当前 non-production implementation slice 的验证矩阵、expected-result authority、durable evidence schema、CI/exact-head binding、replay/crash/conflict evidence、regression gates 与 independent evidence acceptance criteria。  
 > Design basis: U05-RDP-01 / 02 / 03 / 04 / 05 current frozen/refrozen semantics.  
 > Immediate upstream design head: U05-RDP-04 status/provenance head `c800f8d8645d416c4a87b0d63d4fa02ec6ce8a97`.  
-> Status: **PROPOSED / READY_FOR_INDEPENDENT_DESIGN_REVIEW**.  
+> Status: **REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_REVIEW**.  
 > Target blocker: `BF-U05-RG-06`.  
 > 本文件只定义“未来如何证明 U05 实现正确”，不等于实现已存在，不授予 implementation / merge / production / live downstream / real-patient authorization。
 
@@ -433,30 +433,24 @@ Case identity 一旦进入 frozen RDP-06：
     -> exactly one readiness according to frozen precedence
 
     U05-EV-026
-    missing artifact cannot infer NOT_YET_APPLICABLE / NOT_NEEDED / READY
-    -> fail according to frozen applicability/admission semantics
+    required non-PRESENT slot lacks authoritative applicability evidence
+    -> RDP-01 REJECTED
+    -> U05_ADMISSION_APPLICABILITY_EVIDENCE_MISSING
+    -> no D03
+    -> proves missing artifact cannot infer NOT_YET_APPLICABLE / NOT_NEEDED / READY
 
     U05-EV-027
     POST_DDX or prior-F5-activated profile
     -> POL-011 must not apply
 
     U05-EV-028
-    synthetic meta-case deliberately lacking frozen expectation authority
-    -> POLICY_EXPECTATION_GAP detector fires
-    -> harness verdict FAIL_CLOSED
+    required FAILED/UNAVAILABLE input
+    + one or more lower-priority business candidate signals
+    -> INPUT_FAILURE
+    -> no readiness
+    -> proves P0 is not bypassed by lower-level business candidates
 
-U05-EV-028 不是正常 runtime acceptance case。
-
-它验证：
-
-    the verification system itself
-    refuses to invent expected business truth
-
-Acceptance run 可以单独以“sentinel self-test”方式证明：
-
-    detector catches injected gap
-
-但正常 governed scenario matrix 必须：
+正常 governed scenario matrix 必须：
 
     policy_expectation_gap_count = 0
 
@@ -626,61 +620,239 @@ Acceptance run 可以单独以“sentinel self-test”方式证明：
 
 ---
 
-# 13. Required case matrix — structural / regression gates
+# 13. Verification namespaces
 
-    U05-EV-061
-    no direct U05 runtime dependency that invokes live U06/U08/U10/U11 owner execution
-    -> structural guard PASS
+RDP-06 冻结三类 identity，禁止混用。
 
-    U05-EV-062
-    no automatic production/Spring activation outside explicitly authorized profile
-    -> structural guard PASS
+## 13.1 Governed runtime / contract cases
 
-    U05-EV-063
-    no unauthorized model/tool/external-service call from U05 deterministic D03/routing slice
-    -> structural guard PASS
+    U05-EV-001 .. U05-EV-060
 
-    U05-EV-064
+这些 case 必须：
+
+    consume Frozen Contract expectations
+    execute implementation/runtime/governance surface
+    emit U05_CASE_EVIDENCE_V0_1
+
+Normal EV acceptance：
+
+    policy_expectation_gap_count = 0
+
+## 13.2 Harness self-tests
+
+定义：
+
+    U05-HG-001
+    POLICY_EXPECTATION_GAP_DETECTOR_SELF_TEST
+
+它故意向 verification oracle loader 提供：
+
+    a profile without lawful business expected-authority mapping
+
+Expected harness behavior：
+
+    detector = FIRED
+    verification path = FAIL_CLOSED
+    no business expected result invented
+
+U05-HG-001：
+
+    != normal U05 runtime case
+    != D03 runtime status
+    != part of normal policy_expectation_gap_count
+
+它的 authority 来自：
+
+    RDP-06 Section 4
+    verification-harness rule
+
+而不是伪造一个 RDP-02 business expectation。
+
+## 13.3 Verification / CI gates
+
+定义：
+
+    U05-VG-001
+    no direct U05 live U06/U08/U10/U11 owner invocation
+
+    U05-VG-002
+    no unauthorized automatic production/Spring activation
+
+    U05-VG-003
+    no unauthorized model/tool/external-service call
+    from deterministic U05 policy/routing slice
+
+    U05-VG-004
     no direct Clinical State write bypassing K09/P01
-    -> structural guard PASS
 
-    U05-EV-065
-    synthetic/non-PHI evidence fixture guard
-    -> PASS
+    U05-VG-005
+    synthetic/non-PHI fixture/evidence guard
 
-    U05-EV-066
-    Foundation + U01-U04 regression
-    -> PASS within accepted existing authorization-gated skips only
+    U05-VG-006
+    Foundation + U01-U04 regression gate
+
+VG records使用：
+
+    U05_VERIFICATION_GATE_EVIDENCE_V0_1
+
+而不是伪装成一个 Clinical Runtime case。
 
 ---
 
-# 14. Scenario matrix completeness rule
+# 14. Scenario / harness / gate completeness rule
 
-以上：
+Required governed cases：
 
-    U05-EV-001 .. U05-EV-066
+    U05-EV-001 .. U05-EV-060
+    = 60 required EV cases
 
-是最低 required governed matrix。
+Required harness self-tests：
 
-Implementation 可以增加 case，但不得删除 required case。
+    U05-HG-001
 
-如果某 case 因 implementation slice 还没有相应 executable surface：
+Required verification gates：
+
+    U05-VG-001 .. U05-VG-006
+
+Implementation 可以新增 identity，但不得删除 required identity。
+
+如果 required EV/VG/HG 因 implementation slice 尚无 executable surface：
 
     NOT_IMPLEMENTED
+    -> overall verification FAIL
 
 不得：
 
-    SKIP and still PASS readiness implementation verification
+    SKIP and still PASS
 
-除非 Frozen RDP-06 明确把该 case 标为：
+除非未来受控 amendment 明确把某 identity 改为 NOT_APPLICABLE。
 
-    NOT_APPLICABLE
+当前：
 
-当前 required 66 case 中：
+    no required EV/HG/VG identity is silently optional.
 
-    none is silently optional
+---
 
-U05-EV-028 是 sentinel self-test，可与 normal governed cases 分开计数，但必须执行。
+# 14.1 Independent machine-readable expectation oracle
+
+Future implementation verification 必须包含静态、受审查的：
+
+    u05-verification-expectations.json
+
+定义 schema：
+
+    U05_VERIFICATION_EXPECTATIONS_V0_1
+
+每个 EV 至少包含：
+
+    case_id
+    fixture_semantic_id
+
+    expected_boundary
+    expected_admission_status?
+    expected_admission_reason?
+
+    expected_d03_status?
+    expected_clinical_readiness?
+    expected_policy_rule_ref?
+
+    expected_commit_status?
+    expected_state_version_delta?
+
+    expected_routing_status?
+    expected_downstream_consequence?
+    expected_target_unit?
+
+    expected_replay_disposition?
+
+    expected_effect_counts{}
+
+    expected_authority_refs[]
+    authority_semantic_claims[]
+
+    contract_manifest_digest
+
+Oracle 必须：
+
+    derived from Frozen Contracts
+    independently reviewed
+    committed as static verification input
+    hashed into durable evidence
+
+禁止：
+
+    production U05 code generates oracle
+    D03 under test computes its own expected result
+    RDP-04 router under test computes its own expected route
+    observed output is copied into expected fields
+
+CI 应在 focused execution 前读取/校验 oracle identity。
+
+若 oracle 与 Frozen Contract 不一致：
+
+    verification FAIL
+    do not modify implementation expectation ad hoc.
+
+---
+
+# 14.2 D03 precedence coverage matrix
+
+除 EV-016..028 的 branch cases 外，必须有独立 machine-readable：
+
+    u05-d03-precedence-expectations.json
+
+schema：
+
+    U05_D03_PRECEDENCE_EXPECTATIONS_V0_1
+
+其 subcase identity 建议：
+
+    U05-PM-xxx
+
+最低覆盖标准：
+
+    P0 INPUT_FAILURE
+    -> with lawful lower-level business candidate signal(s) present
+
+    P1 INPUT_CONFLICT
+    -> with lawful lower-level business candidate signal(s) present
+       and no P0 failure
+
+    each P2-P6 business branch
+    -> exercised with at least one lawful lower-priority candidate signal
+       simultaneously present
+
+    P7
+    -> exercised only when no P0-P6 result applies
+
+    POL-005
+    -> positive first-entry coverage
+
+    POL-011
+    -> positive current-F6-NOT_NEEDED first-entry coverage
+
+    POL-005 / POL-011
+    -> mutual-exclusivity proof
+
+    POST_DDX / prior-F5 activation
+    -> POL-011 exclusion proof
+
+每个 precedence subcase 必须：
+
+    have stable subcase_id
+    bind RDP-02 authority
+    declare constructible fixture semantics
+    record higher candidate + lower candidate
+    prove emitted result equals higher lawful precedence
+
+禁止为了 coverage 发明违反 RDP-05 applicability 或 frozen lifecycle 的 impossible profile。
+
+如果 reviewer 发现一个 frozen lawful overlap 未被 precedence matrix 覆盖：
+
+    RDP-06 implementation verification incomplete
+    -> FAIL
+
+Precedence oracle 不能由 production D03 resolver 生成。
 
 ---
 
@@ -792,8 +964,9 @@ Future implementation 至少应形成等价的 focused suites：
     expected_result
     observed_result
 
-    expected_side_effect_count
-    observed_side_effect_count
+    expected_effect_counts{}
+    observed_effect_counts{}
+    side_effect_evidence_refs{}
 
     pass
 
@@ -804,6 +977,41 @@ Conditional fields 可为 null，但 schema 必须能区分：
     missing evidence
 
 “missing evidence”不得伪装为 null-is-valid。
+
+---
+
+# 16.1 Typed effect-count evidence
+
+expected_effect_counts / observed_effect_counts 至少包含：
+
+    state_commit_count
+    readiness_effect_count
+    invalidation_effect_count
+    route_decision_count
+    route_eligibility_count
+    scheduler_target_intent_count
+    downstream_unit_invocation_count
+    external_delivery_count
+    external_tool_model_call_count
+
+可按 case 增加：
+
+    admission_effect_count
+    failure_handoff_count
+    checkpoint_count
+
+每个 non-zero observed count 必须能通过：
+
+    side_effect_evidence_refs
+
+定位到 commit/effect/ledger/spy record。
+
+Verification builder 必须逐 key 比较：
+
+    expected_effect_counts[key]
+    == observed_effect_counts[key]
+
+禁止把多个 effect 类型压成单一总数后宣称幂等通过。
 
 ---
 
@@ -1124,6 +1332,8 @@ Crash scenarios 必须证明：
 
     evidence.json
     u05-case-evidence.json
+    u05-verification-expectations.json
+    u05-d03-precedence-expectations.json
     u05-contract-manifest.json
     workflow-provenance.txt
     auth-profile.json
@@ -1165,10 +1375,19 @@ Crash scenarios 必须证明：
     regression summary
     structural guard summary
 
-    required_case_count
-    executed_case_count
-    passed_case_count
-    failed_case_count
+    required_ev_case_count
+    executed_ev_case_count
+    passed_ev_case_count
+    failed_ev_case_count
+
+    required_harness_self_test_count
+    passed_harness_self_test_count
+
+    required_verification_gate_count
+    passed_verification_gate_count
+
+    precedence_subcase_count
+    passed_precedence_subcase_count
 
     policy_expectation_gap_count
 
@@ -1197,6 +1416,8 @@ CI 自己不得直接写：
 
     evidence.json
     u05-case-evidence.json
+    u05-verification-expectations.json
+    u05-d03-precedence-expectations.json
     u05-contract-manifest.json
     workflow-provenance.txt
     auth-profile.json
@@ -1219,31 +1440,73 @@ workflow report 必须记录：
 
 ---
 
-# 30. Retention / durable reference
+# 30. Retention / long-term durable evidence
 
 Raw CI artifact 最低 retention：
 
     90 days
 
-同时必须在 repository-governed verification status/evidence record 中长期保留：
+这只满足 near-term independent evidence review，不足以单独承担长期审计。
+
+Independent evidence review PASS 后，必须另外形成 repository-governed、去 PHI 的 accepted evidence snapshot：
+
+    U05_ACCEPTED_VERIFICATION_EVIDENCE_V0_1
+
+建议文件：
+
+    U05_Accepted_Verification_Evidence_v0.1.json
+
+至少长期保留：
 
     exact implementation_sha
     exact workflow run
     artifact id/ref
     artifact digest
+
+    workflow identity/digest
     contract manifest digest
-    required/passed case counts
+    expectation oracle digest
+    precedence oracle digest
+
+    every EV case_id
+    expected_authority_refs
+    expected vs observed boundary/result summary
+    key effect/commit/route refs
+    typed effect-count summary
+    pass status
+
+    HG self-test result
+    VG gate results
+
     regression summary
-    independent review ids
+    hard-boundary summary
+
+    independent evidence review ids
+    combined implementation/evidence review id
     final verification verdict
 
-不得只保留一个易过期 artifact URL 而没有 digest/status record。
+该 accepted snapshot：
+
+    must contain no PHI
+    must be repository governed
+    must be checksumable/reviewable
+    survives raw CI artifact expiry
+
+Raw JUnit / large traces / full bundle：
+
+    may retain 90-day minimum
 
 如果未来建立 approved long-lived Evidence Store：
 
-    may additionally retain raw bundle there
+    raw bundle may additionally or alternatively be preserved there
 
-但 RDP-06 不依赖一个当前不存在的外部 evidence system。
+但替代 repository snapshot 需要单独 governed reference rule；当前 RDP-06 不依赖一个不存在的外部 evidence system。
+
+不得：
+
+    artifact expires
+    + only opaque digest remains
+    -> still claim full long-term per-case auditability.
 
 ---
 
@@ -1273,8 +1536,14 @@ Case evidence 应优先保存：
 
 Final exact-head run 至少要求：
 
-    all required U05 governed cases executed
-    all required cases PASS
+    all 60 required U05 EV cases executed
+    all 60 EV cases PASS
+
+    U05-HG-001 PASS
+
+    all 6 U05-VG gates PASS
+
+    all required precedence subcases PASS
 
     failures = 0
     errors = 0
@@ -1283,8 +1552,8 @@ Final exact-head run 至少要求：
     policy_expectation_gap_count = 0
     in normal governed matrix
 
-    sentinel U05-EV-028
-    proves gap detector itself works
+    U05-HG-001
+    proves POLICY_EXPECTATION_GAP detector itself works
 
     expected_boundary == observed_boundary
     for every case
@@ -1292,7 +1561,8 @@ Final exact-head run 至少要求：
     expected_result == observed_result
     for every case where exact expected result is contract-defined
 
-    expected_side_effect_count == observed_side_effect_count
+    expected_effect_counts == observed_effect_counts
+    key-by-key
 
     all hard boundaries false / satisfied
 
@@ -1321,9 +1591,13 @@ Final exact-head run 至少要求：
 
     RDP-06 explicitly marks case NOT_APPLICABLE
 
-当前 U05 required 66-case matrix：
+当前 U05 required identities：
 
-    no case is NOT_APPLICABLE
+    EV-001..060
+    HG-001
+    VG-001..006
+
+均无 silent NOT_APPLICABLE
 
 U05 final evidence 必须单独列：
 
@@ -1465,11 +1739,15 @@ Reviewer 至少检查：
 
     auth profile is non-production
 
-    required case count complete
+    all EV/HG/VG required identities complete
 
-    case ids unique
+    EV case ids unique
+    precedence subcase ids unique
 
-    every case has expected_authority_refs
+    every EV has expected_authority_refs
+
+    expectation oracle digest matches bundle/contract manifest
+    precedence oracle digest matches bundle
 
     observed evidence fields are present for applicable boundary
 
@@ -1477,9 +1755,9 @@ Reviewer 至少检查：
 
     policy_expectation_gap_count = 0 normal cases
 
-    sentinel gap detector test PASS
+    HG-001 gap detector self-test PASS
 
-    side-effect counts match
+    typed effect-count maps match
 
     no live downstream execution
 
@@ -1493,10 +1771,12 @@ Reviewer 至少检查：
 
 Evidence builder must reject artifact if：
 
-    missing required case
-    duplicate case id
-    unknown case id used as replacement for required case
-    missing expected authority
+    missing required EV/HG/VG identity
+    duplicate EV/subcase identity
+    unknown identity used as replacement for required identity
+    missing EV expected authority
+    oracle digest mismatch
+    expected value generated from SUT/runtime output
     missing fixture digest
     missing correlation/trace for executed case
     expected/observed mismatch
@@ -1642,14 +1922,15 @@ RDP-06 design PASS：
 
 # 46. Coverage traceability matrix
 
-| Contract | Verification groups |
+| Contract / layer | Verification identities |
 |---|---|
 | RDP-01 | EV-001..015 |
-| RDP-02 | EV-016..028 |
+| RDP-02 | EV-016..028 + U05-PM-* precedence subcases |
 | RDP-03 | EV-029..043 |
 | RDP-04 | EV-044..060 |
 | RDP-05 | EV-001/011/012/015/016..028/033/037..039 |
-| Phase/Foundation regressions | EV-061..066 |
+| Harness correctness | HG-001 |
+| Structural / regression | VG-001..006 |
 
 Cross-contract replay/currentness：
 
@@ -1663,9 +1944,80 @@ Safety/RESTRICTED：
     EV-036
     EV-050..053
 
+Oracle integrity：
+
+    u05-verification-expectations.json
+    u05-d03-precedence-expectations.json
+
+Long-term evidence：
+
+    U05_ACCEPTED_VERIFICATION_EVIDENCE_V0_1
+
 ---
 
-# 47. BF-U05-RG-06 disposition
+# 47. Independent Review Remediation
+
+Independent Design Review：
+
+    PR #174
+    review_id = 5263669789
+    verdict = REVISE_REQUIRED
+
+Findings：
+
+    BF-U05-RDP06-IR-01
+    = GOVERNED_RUNTIME_CASES_CONFLATED_WITH_HARNESS_META_TESTS_AND_CI_GATES
+
+    BF-U05-RDP06-IR-02
+    = TEST_ORACLE_INDEPENDENCE_UNDERDEFINED
+
+    BF-U05-RDP06-IR-03
+    = D03_PRECEDENCE_COVERAGE_NOT_SUFFICIENTLY_SPECIFIED
+
+    BF-U05-RDP06-IR-04
+    = SIDE_EFFECT_EVIDENCE_CARDINALITY_TOO_COARSE
+
+    BF-U05-RDP06-IR-05
+    = RAW_EVIDENCE_EXPIRY_LEAVES_INSUFFICIENT_LONG_TERM_AUDITABILITY
+
+Remediation：
+
+    IR-01
+    -> EV / HG / VG namespaces separated
+    -> EV-001..060 normal governed cases
+    -> HG-001 harness sentinel
+    -> VG-001..006 structural/regression gates
+
+    IR-02
+    -> static independently reviewed u05-verification-expectations.json added
+    -> expected oracle cannot be generated by system under test
+
+    IR-03
+    -> separate D03 precedence expectation matrix added
+    -> branch/lower-priority overlap + POL-005/POL-011 exclusivity coverage frozen
+
+    IR-04
+    -> scalar side-effect count replaced by typed expected/observed effect maps
+    -> non-zero counts require evidence refs
+
+    IR-05
+    -> repository-retained sanitized accepted evidence snapshot required
+    -> raw CI artifact may expire without destroying long-term per-case audit record
+
+Current：
+
+    BF-U05-RDP06-IR-01 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-RDP06-IR-02 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-RDP06-IR-03 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-RDP06-IR-04 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-RDP06-IR-05 = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    U05-RDP-06 = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
+    BF-U05-RG-06 = DESIGN_RESOLVED / TARGETED_REVIEW_PENDING
+
+---
+
+# 48. BF-U05-RG-06 disposition
 
 Original blocker：
 
@@ -1679,18 +2031,22 @@ Original blocker：
     six verification layers
     non-production auth profile
     synthetic/non-PHI fixture boundary
-    66 required governed cases
+    60 required governed EV cases
+    1 required harness self-test
+    6 required verification gates
+    independently reviewed expectation oracle
+    D03 precedence oracle/coverage
     structured case evidence schema
     contract manifest
     exact-head CI binding
     structural guards
     real observed evidence requirement
-    side-effect counters
+    typed side-effect count maps
     replay/crash/conflict evidence
     P05 correlation
     durable artifact bundle
     checksum/digest
-    retention/status record
+    90-day raw retention + repository-retained accepted evidence snapshot
     regression acceptance
     no-live-downstream proof
     independent evidence-only review
@@ -1711,7 +2067,7 @@ Original blocker：
 
 ---
 
-# 48. Aggregate readiness boundary before RDP-06 review
+# 49. Aggregate readiness boundary before RDP-06 review
 
 当前：
 
@@ -1743,7 +2099,7 @@ Original blocker：
 
 ---
 
-# 49. Authorization boundary
+# 50. Authorization boundary
 
 本文件不授权：
 
