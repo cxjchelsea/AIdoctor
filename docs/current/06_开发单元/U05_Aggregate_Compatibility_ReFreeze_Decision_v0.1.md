@@ -1,7 +1,7 @@
 # U05 Aggregate Compatibility Re-Freeze Decision v0.1
 
 > Decision ID: `AUTH-U05-AGR-REFREEZE-001`  
-> Decision status: **NOT_DECIDED**  
+> Decision status: **REFREEZE / OWNER_APPROVED**  
 > Reviewed amendment: PR #176  
 > Exact reviewed amendment head: `f3a7823f2eb119b1103235a3e19d8e28f894b93d`  
 > Targeted Compatibility Re-Review: **PASS** / review_id `5263853038`  
@@ -229,10 +229,16 @@ Keeps the previous frozen baseline and the aggregate blockers remain open.
 
 ## 8. Current state
 
-Until explicit owner decision:
+Owner decision:
 
     AUTH-U05-AGR-REFREEZE-001
-    = NOT_DECIDED
+    = REFREEZE
+
+    Owner command
+    = REFREEZE
+
+    Decision applies only to exact reviewed amendment head:
+      f3a7823f2eb119b1103235a3e19d8e28f894b93d
 
     BF-U05-AGR-01
     = REMEDIATED / AMENDMENT_REVIEW_PASS / REFREEZE_PENDING
@@ -251,3 +257,50 @@ Until explicit owner decision:
 
     U05 Implementation Authorization
     = NOT_GRANTED
+
+
+---
+
+## 9. Owner Re-Freeze Decision Record
+
+Owner decision:
+
+    REFREEZE
+
+Authorization ID:
+
+    AUTH-U05-AGR-REFREEZE-001
+    = GRANTED_FOR_REFREEZE_ONLY
+
+Authorized exact reviewed amendment head:
+
+    f3a7823f2eb119b1103235a3e19d8e28f894b93d
+
+Independent gate basis:
+
+    PR #177
+    Gate Review = PASS
+    review_id = 5263862081
+
+Authorized action:
+
+    synchronize re-freeze status/provenance
+    for the five reviewed amended contracts only
+
+Required post-action verification:
+
+    prove status/provenance-only diff
+    against the reviewed semantic head
+
+    then repeat:
+      U05 Implementation Readiness Re-Evaluation
+
+Explicitly not authorized:
+
+    runtime/code implementation
+    merge
+    live Scheduler/downstream execution
+    production mutation
+    production Clinical Runtime
+    release activation
+    real-patient traffic
