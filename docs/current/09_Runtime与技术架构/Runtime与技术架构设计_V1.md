@@ -1495,3 +1495,159 @@ Phase 9 Clinical Continuation Routing
 Runtime implementation
 = NOT_AUTHORIZED
 ```
+
+
+---
+
+# U05 CL-04 Controlled Amendment — Runtime Scheduling / Safety / Revalidation Semantics
+
+> Authorization: `AUTH-U05-CL04-FROZEN-AMEND-001`  
+> Reviewed design: PR #160 exact head `80cd6d7d154aa3e8de093ef43328e8ee9c2733d3`  
+> Owner policy: `OD-U05-READY-02 = APPROVE_OPTION_A`  
+> Amendment status: **APPLIED / INDEPENDENT_AMENDMENT_REVIEW_PENDING**  
+> Re-freeze status: **NOT_YET_REFROZEN**
+
+## A. POST_USER_FACT_UPDATE F6 mutation-stale path
+
+After accepted fact/correction mutation and current U03/U04 Safety processing:
+
+```text
+ClinicalContinuationRoutingDecision
+-> TO_F6_CURRENT_VERSION_REASSESSMENT
+-> U10 mode F6_CURRENT_VERSION_REASSESSMENT
+```
+
+Admission requires mutation/invalidation/prior-F6 provenance and a complete F6 dependency-requiredness manifest.
+
+If required F3/F5 owner prerequisites are stale, their governed owner path resolves first.
+
+## B. Canonical F6 commit invalidates prior routing authorization
+
+```text
+F6 reassessment
+-> K09 StateChangeProposal
+-> G2/P01 canonical commit
+-> authoritative Clinical State Version advances
+-> prior ClinicalContinuationRoutingDecision STALE
+-> prior routing authorization NON_ROUTABLE
+```
+
+No old Gate/routing authorization may be reused merely because it appears compatible.
+
+## C. Mandatory post-F6 Safety barrier
+
+After the F6 canonical commit:
+
+```text
+reload authoritative Clinical State
+-> re-establish required U03/U04 basis
+-> new current committed U04 Gate
+-> new routing authorization
+```
+
+Safety preemption:
+
+```text
+BLOCKED
+-> no F6 current-version revalidation
+-> no ordinary continuation
+
+UNAVAILABLE
+-> governed safe/failure handling
+-> no F6 current-version revalidation
+-> no ordinary continuation
+
+ALLOW
+or RESTRICTED with explicit F6-revalidation permission
+-> U10 F6_CURRENT_VERSION_REVALIDATION
+```
+
+## D. F6 current-version revalidation
+
+```text
+U10 F6_CURRENT_VERSION_REVALIDATION
+-> deterministic F6 Owner decision
+
+REVALIDATED_CURRENT
+-> current F6 readiness-input projection
+-> no Clinical State mutation
+
+REASSESSMENT_REQUIRED
+-> no D03
+-> U10 F6_CURRENT_VERSION_REASSESSMENT on current basis
+
+FAILED
+-> no D03
+-> governed failure route
+```
+
+Successful revalidation is non-mutating and therefore cannot itself create a version-chasing loop.
+
+## E. Context-specific routing host
+
+After `REVALIDATED_CURRENT`:
+
+```text
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+-> ClinicalContinuationRoutingDecision
+-> existing typed consequence
+
+A1_POST_BARRIER_CURRENT
+-> existing A1 routing projection
+-> NOT ClinicalContinuationRoutingDecision
+```
+
+For an Owner-approved first-entry current-F6-NOT_NEEDED profile:
+
+```text
+A1_POST_BARRIER_CURRENT
+-> existing A1 routing projection
+-> U05_ELIGIBLE / U05
+-> D03-POL-011
+
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+-> ClinicalContinuationRoutingDecision
+-> TO_U05_CLINICAL_READINESS
+-> U05
+-> D03-POL-011
+```
+
+There is no direct Router -> U08 positive-readiness bypass.
+
+## F. Scheduler ownership boundary
+
+Scheduler may:
+
+```text
+consume typed routing/revalidation decisions
+sequence Unit execution
+reload authoritative state
+enforce stale/non-routable decisions
+enforce idempotency/replay
+```
+
+Scheduler must not:
+
+```text
+infer F6 clinical truth
+infer F5 NOT_YET_APPLICABLE from artifact absence
+recompute D03 policy
+interpret C05 output as Clinical Truth
+invent READY_FOR_CLINICAL_ANALYSIS
+```
+
+## G. Replay / progress
+
+```text
+TO_F6_CURRENT_VERSION_REASSESSMENT
+is eligible only while the exact prior F6 effect
+is mutation-stale for the exact current input basis.
+```
+
+Successful reassessment + barrier + `REVALIDATED_CURRENT` makes that exact stale condition false.
+
+A later reassessment requires either a new invalidation identity or `REASSESSMENT_REQUIRED` under a changed current dependency basis.
+
+This section is architecture-only and authorizes no live Clinical Runtime, production activation, merge, or real-patient traffic.
