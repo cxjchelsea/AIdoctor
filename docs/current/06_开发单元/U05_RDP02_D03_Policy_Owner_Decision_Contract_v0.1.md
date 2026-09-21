@@ -1,7 +1,7 @@
 # U05 RDP-02 D03 Policy / Owner Decision Contract v0.1
 
 > Scope: U05 / D03 Clinical Readiness deterministic policy, owner boundary, decision semantics, precedence and fail-closed behavior.
-> Status: READY-POLICY AMENDED / TARGETED_INDEPENDENT_REVIEW_PENDING
+> Status: READY-POLICY REFROZEN / V1
 > Review basis: main@6e68fd9fb7cd19e87aadae30f3bb53a2264d1920
 > Dependency baseline: U05-RDP-05 prior FROZEN / PASS_FOR_READINESS at fd0e88e21aaab2a2ab67ffd1449dce8e946d7ed5; A1 affected scope is now REFROZEN / V1 under AUTH-U05-A1-FROZEN-AMEND-001
 > 本文件只处理 BF-U05-RG-02；不授予 U05 implementation、owner execution、routing、production 或 real-patient authorization。
@@ -451,10 +451,6 @@ Current governance classification：
 
 ```text
 D03-POL-005
-= OWNER_APPROVED_EXECUTABLE_EXPECTATION
-= REFROZEN_PENDING
-
-Target classification after targeted review PASS + explicit re-freeze：
 = FROZEN_EXECUTABLE_EXPECTATION
 ```
 
@@ -617,7 +613,7 @@ RDP-02 本身不决定后续 U08/U10/U11 是否允许具体动作；它只确保
     D03_BLOCKING_OFFLINE_EVIDENCE_REQUIRED
     D03_CLARIFICATION_REQUIRED
     D03_HIGH_VALUE_ONLINE_GAP_AVAILABLE
-    D03_MINIMUM_ANALYSIS_CONDITIONS_SATISFIED  [OWNER_APPROVED / REFROZEN_PENDING]
+    D03_MINIMUM_ANALYSIS_CONDITIONS_SATISFIED  [FROZEN_EXECUTABLE_EXPECTATION]
     D03_NO_RELIABLE_DIRECTION
 
 非业务 runtime decision：
@@ -645,7 +641,7 @@ sentinel code 不是 runtime D03 reason code，也不是临床诊断。
 | D03-POL-002 | qualified blocking offline signal | DECIDED / NEEDS_OFFLINE_EVIDENCE |
 | D03-POL-003 | lawful F1/F2 NEEDS_CLARIFICATION | DECIDED / NEEDS_CLARIFICATION |
 | D03-POL-004 | current F3 CAN_ASK_MORE, no higher blocker | DECIDED / CAN_ASK_MORE |
-| D03-POL-005 | FIRST_CLINICAL_ANALYSIS_ENTRY_ONLY: F1 FRAMED_IN_SCOPE + current F3 NO_ACTIVE_ONLINE_BLOCKING_GAP + F5 NOT_YET_APPLICABLE + F6 NOT_YET_APPLICABLE + no higher blocker | OWNER_APPROVED / REFROZEN_PENDING: DECIDED / READY_FOR_CLINICAL_ANALYSIS |
+| D03-POL-005 | FIRST_CLINICAL_ANALYSIS_ENTRY_ONLY: F1 FRAMED_IN_SCOPE + current F3 NO_ACTIVE_ONLINE_BLOCKING_GAP + F5 NOT_YET_APPLICABLE + F6 NOT_YET_APPLICABLE + no higher blocker | FROZEN_EXECUTABLE_EXPECTATION: DECIDED / READY_FOR_CLINICAL_ANALYSIS |
 | D03-POL-006 | F5 NO_RELIABLE_DIRECTION + current F3 NO_ACTIVE_ONLINE_BLOCKING_GAP + no higher path | DECIDED / NO_RELIABLE_DIRECTION |
 | D03-POL-007 | A1 bootstrap incomplete: F1 FRAMED_IN_SCOPE + F3 not yet current | PRE-D03 NON-ENTRY: U05/D03 not invoked; no D03 object/status; route remains A1 pre-readiness/barrier/revalidation |
 | D03-POL-008 | stale required F3 | INPUT_FAILURE / no readiness |
@@ -698,8 +694,7 @@ Owner / controlled amendment status：
 
     D03-POL-005
     = FIRST_CLINICAL_ANALYSIS_ENTRY_ONLY
-    = OWNER_APPROVED_EXECUTABLE_EXPECTATION
-    = REFROZEN_PENDING
+    = FROZEN_EXECUTABLE_EXPECTATION
 
     U05_BOOTSTRAP_CROSS_PHASE_DESIGN_GAP
     = A1 selected
@@ -710,7 +705,7 @@ Owner / controlled amendment status：
 因此当前状态：
 
     BF-U05-RDP02-IR-01
-    = OWNER_DECISION_APPROVED / READY_POLICY_AMENDMENT_REVIEW_PENDING
+    = CLOSED_BY_OWNER_APPROVAL_AND_READY_POLICY_REFREEZE
 
     BF-U05-RDP02-IR-02
     = CLOSED_BY_A1_CONTROLLED_AMENDMENT_REFREEZE
@@ -723,15 +718,15 @@ Owner / controlled amendment status：
 
     BF-U05-RG-02
     = NOT_CLOSED
-    = BLOCKED_BY_READY_POLICY_AMENDMENT_REVIEW_REFREEZE
+    = READY_POLICY_REFROZEN / CLOSURE_EVALUATION_PENDING
 
     U05-RDP-02 A1 bootstrap scope
     = REFROZEN / V1
 
     U05-RDP-02 READY-policy affected scope
-    = AMENDED / TARGETED_INDEPENDENT_REVIEW_PENDING
+    = REFROZEN / V1
 
-BF-U05-RG-02 只有在当前 READY-policy amendment targeted re-review PASS、显式 re-freeze 完成并确认不存在其他 RDP-02 blocker 后才能 CLOSED。
+READY-policy amendment targeted re-review 与显式 re-freeze 已完成；BF-U05-RG-02 仍需单独 closure evaluation，确认不存在其他 RDP-02 blocker 后才能 CLOSED。
 
 ---
 
@@ -847,8 +842,7 @@ D03-POL-005
 当前分类：
 
 ```text
-OWNER_APPROVED_EXECUTABLE_EXPECTATION
-/ REFROZEN_PENDING
+FROZEN_EXECUTABLE_EXPECTATION
 ```
 
 Post-DDx / F5-present profile 不得进入本规则。
@@ -877,17 +871,17 @@ U05-RDP-02 A1 bootstrap affected scope
 = REFROZEN / V1
 
 U05-RDP-02 READY-policy affected scope
-= AMENDED / TARGETED_INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 BF-U05-RG-02
 = NOT_CLOSED
-= BLOCKED_BY_READY_POLICY_AMENDMENT_REVIEW_REFREEZE
+= READY_POLICY_REFROZEN / CLOSURE_EVALUATION_PENDING
 
 OD-U05-READY-01
 = APPROVE
 
 READY-policy re-freeze
-= NOT_YET_GRANTED
+= GRANTED / COMPLETE
 
 U05 Implementation Authorization
 = NOT_GRANTED
@@ -900,7 +894,7 @@ U05 Implementation Authorization
 
 > Authorization source: Owner APPROVE recorded against PR #145 exact head `9adab885db20e902b9c705d566651acd1a625739`  
 > Amendment ID: `AUTH-U05-READY-RDP02-AMEND-001`  
-> Status: **APPLIED / TARGETED_INDEPENDENT_REVIEW_PENDING**
+> Status: **APPLIED / REVIEW_PASS / REFROZEN**
 
 Only the D03-POL-005 positive READY expectation is amended.
 
@@ -917,7 +911,7 @@ U04 Safety ownership
 U05 implementation authorization
 ```
 
-Final target after PASS + re-freeze：
+Current final classification after PASS + re-freeze：
 
 ```text
 D03-POL-005
