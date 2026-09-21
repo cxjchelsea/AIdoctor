@@ -555,7 +555,7 @@ U09 first evaluates explicit post-DDx-only consequences:
    → TO_U08_REASSESSMENT
 
 2. F5 ANALYSIS_RESULT_AVAILABLE with no acquisition/offline blocker
-   → TO_F7_DELIVERY_EVALUATION
+   → TO_U12_DELIVERY_PREPARATION
 
 Otherwise:
    → TO_U05_CLINICAL_READINESS
