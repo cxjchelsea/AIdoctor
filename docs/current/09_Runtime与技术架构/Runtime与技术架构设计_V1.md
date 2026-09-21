@@ -1222,7 +1222,7 @@ Runtime Implementation Authorization
 
 > Authorization: `AUTH-U05-PDX-FROZEN-AMEND-001`  
 > Reviewed design source: PR #153 exact head `a5b8aa6e23e5f54a0c2e1884ed027d7f7b7cbeee`  
-> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **REFROZEN / V1**
 
 ## 18.1 Runtime chain
 
@@ -1304,7 +1304,7 @@ TO_U05_CLINICAL_READINESS
 
 ```text
 Phase 9 post-DDx affected scope
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 Runtime implementation
 = NOT_AUTHORIZED
