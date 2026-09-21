@@ -259,7 +259,7 @@ public final class U05AdmissionService {
             U05ReadinessInputManifest manifest,
             U05AdmissionAuthoritySnapshot authority) {
         StringBuilder refs = new StringBuilder();
-        for (String ref : manifest.presentInputRefs()) refs.append(ref).append('|');
+        for (String ref : manifest.authoritativeRecordRefs()) refs.append(ref).append('|');
         return U05Ids.hash(
                 "u05-admission-payload",
                 admissionId(request),
