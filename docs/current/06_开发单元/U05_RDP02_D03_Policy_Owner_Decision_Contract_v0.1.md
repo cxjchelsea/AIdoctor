@@ -1357,7 +1357,7 @@ six-value Clinical Readiness vocabulary
 D03 unique Clinical Readiness ownership
 ```
 
-This amendment is not yet re-frozen and does not authorize implementation.
+This amendment is **REFROZEN / V1** and still does not authorize implementation.
 
 ### CL-04 Re-Freeze Provenance
 
