@@ -298,6 +298,154 @@ class U05NonProductionClinicalReadinessTest {
     }
 
     @Test
+    void postSafetyInitialIsInactiveInCurrentFrozenBaseline() {
+        List<U05ReadinessInput> inputs = new ArrayList<U05ReadinessInput>();
+        inputs.add(present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION));
+        inputs.add(applicability(U05ReadinessInput.F3, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION));
+        inputs.add(applicability(U05ReadinessInput.F5, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION));
+        inputs.add(applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION));
+        U05ReadinessInputManifest manifest = manifest(
+                U05ConsumerInboundRequest.POST_SAFETY_INITIAL, VERSION, inputs);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+
+        U05ExecutionResult result = fixture.application.execute(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.POST_SAFETY_INITIAL,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.POST_SAFETY_INITIAL,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+
+        assertEquals(U05ExecutionResult.ADMISSION_REJECTED, result.getStatus());
+        assertEquals(U05AdmissionService.CONTEXT_MISMATCH, result.getAdmission().getReasonCode());
+        assertEquals(0, fixture.repository.commitCalls());
+    }
+
+    @Test
+    void routeIdentityDoesNotChaseUnrelatedStateVersionAdvance() {
+        U05ReadinessInputManifest manifest = pol005Manifest(
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                VERSION);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+        U05ExecutionResult result = fixture.application.execute(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+
+        U05InMemoryRouteLedger ledger = new U05InMemoryRouteLedger();
+        U05RoutingService routing = new U05RoutingService(
+                ledger,
+                (input, evidence, currentness, consequence, targetUnitId, targetAction) -> {
+                    throw new AssertionError("ALLOW route must not ask downstream permission");
+                });
+        U05RoutingCurrentness v13 = new U05RoutingCurrentness(
+                result.getCommitEvidence().getCommittedClinicalStateVersion(),
+                "stable-routing-context",
+                true, true, true, true, true,
+                result.getAdmission().getAdmittedInput().getAcceptedU04GateRef(),
+                U05ConsumerInboundRequest.GATE_ALLOW,
+                null);
+        U05RoutingCurrentness v14 = new U05RoutingCurrentness(
+                result.getCommitEvidence().getCommittedClinicalStateVersion() + 1,
+                "stable-routing-context",
+                true, true, true, true, true,
+                result.getAdmission().getAdmittedInput().getAcceptedU04GateRef(),
+                U05ConsumerInboundRequest.GATE_ALLOW,
+                null);
+
+        U05DownstreamRoutingDecision first = routing.route(
+                result.getAdmission().getAdmittedInput(),
+                result.getDecision(),
+                result.getCommitEvidence(),
+                v13);
+        U05DownstreamRoutingDecision replay = routing.route(
+                result.getAdmission().getAdmittedInput(),
+                result.getDecision(),
+                result.getCommitEvidence(),
+                v14);
+
+        assertEquals(first.getRoutingDecisionId(), replay.getRoutingDecisionId());
+        assertEquals(first.getRouteEffectId(), replay.getRouteEffectId());
+        assertEquals(U05DownstreamRoutingDecision.REATTACHED, replay.getReplayDisposition());
+    }
+
+    @Test
+    void invalidationProposalPreservesReadinessAndOnlyMarksItStale() {
+        U05ReadinessInputManifest manifest = pol005Manifest(
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                VERSION);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+        U05ExecutionResult result = fixture.application.execute(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> prior =
+                (Map<String, Object>) result.getProposal().getStatePatch().operations.get(0).value;
+
+        U05ReadinessInvalidationRequest request = new U05ReadinessInvalidationRequest(
+                "consult-1",
+                "cdp-1",
+                result.getCommitEvidence().getCommittedClinicalStateVersion(),
+                String.valueOf(prior.get("readiness_record_id")),
+                String.valueOf(prior.get("effect_id")),
+                prior,
+                "authoritative-change-1",
+                Collections.singletonList("dependency-f3"),
+                "F3_INPUT_CHANGED",
+                "owner-decision-1",
+                "corr-1",
+                "trace-1",
+                ENV,
+                "2026-09-21T08:05:00Z");
+
+        U05ReadinessInvalidationProposalFactory factory =
+                new U05ReadinessInvalidationProposalFactory();
+        U05ReadinessInvalidationProposal first = factory.create(request);
+        U05ReadinessInvalidationProposal replay = factory.create(request);
+
+        assertEquals(first.getInvalidationEffectId(), replay.getInvalidationEffectId());
+        assertEquals(first.getProposalId(), replay.getProposalId());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> stale =
+                (Map<String, Object>) first.getStatePatch().operations.get(0).value;
+        assertEquals(prior.get("clinical_readiness"), stale.get("clinical_readiness"));
+        assertEquals(prior.get("readiness_record_id"), stale.get("readiness_record_id"));
+        assertEquals(prior.get("effect_id"), stale.get("effect_id"));
+        assertEquals("STALE", stale.get("state_validity"));
+        assertEquals(first.getInvalidationEffectId(), stale.get("invalidation_effect_ref"));
+    }
+
+    @Test
     void productionEnvironmentIsRejectedBeforeD03OrCommit() {
         U05ReadinessInputManifest manifest = pol005Manifest(
                 U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
