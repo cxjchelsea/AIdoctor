@@ -833,3 +833,107 @@ U05-RDP-05 post-DDx consumption scope
 BF-U05-RG02-CL-01
 = REMEDIATED / REFROZEN / CLOSURE_REEVALUATION_PENDING
 ```
+
+
+---
+
+## 18. Post-Analysis Routing Consumption Extension
+
+> Authorization: `AUTH-U05-PA-FROZEN-AMEND-001`  
+> Reviewed design source: PR #155 exact head `7e2d4d4255d51a10f58c63dec4e2ccb53920c33f`  
+> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+
+### 18.1 Generalized consumer
+
+Section 17 的 post-DDx consumer 被 generalized：
+
+```text
+PostAnalysisRoutingDecision
+```
+
+支持：
+
+```text
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+### 18.2 POST_OFFLINE_ASSESSMENT F6 semantics
+
+```text
+F6 = NEEDS_OFFLINE_EVIDENCE
+→ Clinical Readiness path / Safe Exit semantics
+
+F6 = NO_BLOCKING_OFFLINE_EVIDENCE_NEED
+→ removes only the blocking-offline-evidence condition
+→ does NOT imply READY / delivery / completion
+```
+
+### 18.3 F3 ABSENT_BY_DESIGN
+
+RDP-05 保持：
+
+```text
+ABSENT_BY_DESIGN
+!= NO_ACTIVE_ONLINE_BLOCKING_GAP
+```
+
+若 POST_OFFLINE 当前 routing 需要 materialized F3 evidence，而：
+
+```text
+F3 = ABSENT_BY_DESIGN
+```
+
+则：
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+→ U06 MODE-3
+```
+
+只有：
+
+```text
+F3 = PRESENT / NO_ACTIVE_ONLINE_BLOCKING_GAP
+validity = CURRENT
+```
+
+才可作为 delivery-preparation no-gap guard。
+
+### 18.4 Exact post-offline consequences
+
+不存在更高 Clinical Readiness path 时：
+
+```text
+F6 = NO_BLOCKING_OFFLINE_EVIDENCE_NEED
++ F5 = ANALYSIS_RESULT_AVAILABLE
++ F3 = PRESENT / NO_ACTIVE_ONLINE_BLOCKING_GAP
+→ TO_U12_DELIVERY_PREPARATION
+
+F6 = NO_BLOCKING_OFFLINE_EVIDENCE_NEED
++ F5 = REASSESSMENT_REQUIRED
++ no higher path
+→ TO_U08_REASSESSMENT
+```
+
+### 18.5 Identity/currentness
+
+PostAnalysisRoutingDecision consumed inputs 必须满足：
+
+```text
+same consultation_id
+same cdp_id
+current/compatible Clinical State Version
+validity = CURRENT
+evaluation_context included in routing identity
+```
+
+### 18.6 Current status
+
+```text
+U05-RDP-05 post-analysis consumption scope
+= AMENDED / INDEPENDENT_REVIEW_PENDING
+
+BF-U05-RG02-CL-02
+= REMEDIATED_BY_DESIGN / REVIEW_PENDING
+```
