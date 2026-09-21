@@ -1,7 +1,7 @@
 # U05 Implementation Authorization Decision v0.1
 
 > Decision ID: `AUTH-U05-RUNTIME-IMPL-001`  
-> Decision status: **NOT_DECIDED / READY_FOR_OWNER_DECISION**  
+> Decision status: **AUTHORIZED / OWNER_APPROVED**  
 > Readiness basis: U05 Implementation Readiness Re-Evaluation v0.4 / PR #179  
 > Authorization Review: PR #180  
 > Reviewed semantic authorization head: `33001ae6301d250c6485df1284e5e78d8faf64ea`  
@@ -723,10 +723,13 @@ Current:
 
 # 22. Current state
 
-Until explicit owner decision:
+Owner decision:
 
     AUTH-U05-RUNTIME-IMPL-001
-    = NOT_DECIDED
+    = AUTHORIZED
+
+    Owner command
+    = AUTHORIZE
 
     U05 Implementation Readiness
     = READY
@@ -789,3 +792,61 @@ Owner options remain:
     REJECT
 
 This status/provenance synchronization does not grant implementation authorization.
+
+
+---
+
+# 24. Owner Implementation Authorization Record
+
+Owner decision:
+
+    AUTHORIZE
+
+Authorization:
+
+    AUTH-U05-RUNTIME-IMPL-001
+    = AUTHORIZED
+
+Exact authorization shape:
+
+    NON_PRODUCTION_ONLY
+    FROZEN_RDP01_TO_RDP06_ONLY
+    NO_LIVE_UPSTREAM_CUTOVER
+    NO_LIVE_DOWNSTREAM_EXECUTION
+    NO_PRODUCTION_MUTATION
+    NO_SHARED_RUNTIME_SEMANTIC_CHANGE
+
+Reviewed authorization basis:
+
+    PR #180
+    semantic review head = 33001ae6301d250c6485df1284e5e78d8faf64ea
+    Targeted Authorization Re-Review = PASS
+    review_id = 5263958905
+
+Decision package gate basis:
+
+    PR #181
+    semantic decision head = 73188c5f874e0ceb6bc5c25b7deaeef1b6f92a31
+    Targeted Gate Re-Review = PASS
+    review_id = 5263982315
+
+Implementation lineage rule:
+
+    the actual implementation branch MUST descend from
+    this owner-authorized decision-record commit.
+
+Authorized implementation branch name:
+
+    impl/u05-nonprod-clinical-readiness-v1
+
+This authorization does NOT grant:
+
+    merge
+    production Clinical Runtime
+    production Clinical State mutation
+    live U04 -> U05 cutover
+    live U06/U08/U10/U11/U14 execution
+    external delivery
+    release activation
+    real-patient traffic
+    shared/core runtime semantic modification.
