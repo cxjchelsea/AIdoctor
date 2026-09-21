@@ -1461,17 +1461,28 @@ prior activation ref
 failure provenance
 ```
 
+统一分类：
+
+```text
+STALE_BY_UPSTREAM_MUTATION
+= mutation-stale + valid current mutation/invalidation provenance
+
+STALE_BY_UPSTREAM_MUTATION
+!= FAILED
+!= UNAVAILABLE
+```
+
 禁止：
 
 ```text
-mutation-stale
+STALE_BY_UPSTREAM_MUTATION
 → generic D03 INPUT_FAILURE
 ```
 
 也禁止：
 
 ```text
-FAILED
+FAILED / UNAVAILABLE
 → pretend normal reassessment
 ```
 
