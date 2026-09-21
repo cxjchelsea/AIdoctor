@@ -6,7 +6,7 @@
 > Decision basis: U05-RDP-02 current REFROZEN / V1.  
 > Input basis: U05-RDP-05 current REFROZEN / V1.  
 > Exact frozen semantic baseline before U05 RDP-04: `3bd85f908a1cb09355f6ea1c5ce737638d1c0fdc`.  
-> Status: **REVISED / READY_FOR_FINAL_TARGETED_INDEPENDENT_REVIEW**.  
+> Status: **FROZEN / PASS_FOR_READINESS**.  
 > Target blocker: `BF-U05-RG-04`.  
 > 本文件不授权 Runtime/code implementation、真实下游 Unit 执行、merge、production、release activation 或 real-patient traffic。
 
@@ -2101,10 +2101,10 @@ Remediation：
 
 Current：
 
-    BF-U05-RDP04-IR-01 = REMEDIATED / TARGETED_REVIEW_PENDING
-    BF-U05-RDP04-IR-02 = REMEDIATED / TARGETED_REVIEW_PENDING
-    BF-U05-RDP04-IR-03 = REMEDIATED / TARGETED_REVIEW_PENDING
-    RQ-U05-RDP04-IR-04 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-RDP04-IR-01 = CLOSED
+    BF-U05-RDP04-IR-02 = CLOSED
+    BF-U05-RDP04-IR-03 = CLOSED
+    RQ-U05-RDP04-IR-04 = CLOSED
 
     U05-RDP-04 = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
     BF-U05-RG-04 = DESIGN_RESOLVED / TARGETED_REVIEW_PENDING
@@ -2157,10 +2157,10 @@ Remediation：
 
 Current：
 
-    BF-U05-RDP04-TR-01 = REMEDIATED / SECOND_TARGETED_REVIEW_PENDING
-    BF-U05-RDP04-TR-02 = REMEDIATED / SECOND_TARGETED_REVIEW_PENDING
-    BF-U05-RDP04-TR-03 = REMEDIATED / SECOND_TARGETED_REVIEW_PENDING
-    BF-U05-RDP04-TR-04 = REMEDIATED / SECOND_TARGETED_REVIEW_PENDING
+    BF-U05-RDP04-TR-01 = CLOSED
+    BF-U05-RDP04-TR-02 = CLOSED
+    BF-U05-RDP04-TR-03 = CLOSED
+    BF-U05-RDP04-TR-04 = CLOSED
 
     U05-RDP-04 = REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_REVIEW
     BF-U05-RG-04 = DESIGN_RESOLVED / SECOND_TARGETED_REVIEW_PENDING
@@ -2197,11 +2197,11 @@ Remediation：
 
 Current：
 
-    BF-U05-RDP04-TR2-01 = REMEDIATED / FINAL_TARGETED_REVIEW_PENDING
-    BF-U05-RDP04-TR2-02 = REMEDIATED / FINAL_TARGETED_REVIEW_PENDING
+    BF-U05-RDP04-TR2-01 = CLOSED
+    BF-U05-RDP04-TR2-02 = CLOSED
 
-    U05-RDP-04 = REVISED / READY_FOR_FINAL_TARGETED_INDEPENDENT_REVIEW
-    BF-U05-RG-04 = DESIGN_RESOLVED / FINAL_TARGETED_REVIEW_PENDING
+    U05-RDP-04 = FROZEN / PASS_FOR_READINESS
+    BF-U05-RG-04 = CLOSED
 
 ---
 
@@ -2234,18 +2234,12 @@ Original blocker：
     trace/audit
     no-direct-side-effect boundary
 
-因此当前只能推进到：
-
-    BF-U05-RG-04
-    = DESIGN_RESOLVED / INDEPENDENT_REVIEW_PENDING
-
-    U05-RDP-04
-    = PROPOSED / READY_FOR_INDEPENDENT_DESIGN_REVIEW
-
-只有独立审查 PASS 后才可：
+Final Targeted Independent Design Re-Review 已 PASS，因此：
 
     BF-U05-RG-04 = CLOSED
     U05-RDP-04 = FROZEN / PASS_FOR_READINESS
+
+该 closure 仅表示 Downstream Routing / Side-effect Boundary 的 readiness/design 缺口已经关闭，不表示 Scheduler 或任何 downstream Unit 已实现/激活。
 
 ---
 
@@ -2256,7 +2250,7 @@ Original blocker：
     BF-U05-RG-01 = CLOSED
     BF-U05-RG-02 = CLOSED
     BF-U05-RG-03 = CLOSED
-    BF-U05-RG-04 = DESIGN_RESOLVED / REVIEW_PENDING
+    BF-U05-RG-04 = CLOSED
     BF-U05-RG-05 = CLOSED
     BF-U05-RG-06 = OPEN / BLOCKING
 
@@ -2284,3 +2278,63 @@ Original blocker：
     production Clinical Runtime
     release activation
     real-patient traffic
+
+
+---
+
+# 51. Final Targeted Review / Freeze Provenance
+
+    PR #173
+
+    Initial Independent Design Review
+    = REVISE_REQUIRED
+    review_id = 5263559817
+
+    First Targeted Independent Design Re-Review
+    = REVISE_REQUIRED
+    review_id = 5263574814
+
+    Second Targeted Independent Design Re-Review
+    = REVISE_REQUIRED
+    review_id = 5263583400
+
+    Final Targeted Independent Design Re-Review
+    = PASS
+    review_id = 5263589876
+
+    reviewed semantic head
+    = 99b69879fccc4a213ad1572dffee32ab8c1d4351
+
+    BF-U05-RDP04-IR-01 = CLOSED
+    BF-U05-RDP04-IR-02 = CLOSED
+    BF-U05-RDP04-IR-03 = CLOSED
+    RQ-U05-RDP04-IR-04 = CLOSED
+
+    BF-U05-RDP04-TR-01 = CLOSED
+    BF-U05-RDP04-TR-02 = CLOSED
+    BF-U05-RDP04-TR-03 = CLOSED
+    BF-U05-RDP04-TR-04 = CLOSED
+
+    BF-U05-RDP04-TR2-01 = CLOSED
+    BF-U05-RDP04-TR2-02 = CLOSED
+
+    BF-U05-RG-04 = CLOSED
+    U05-RDP-04 = FROZEN / PASS_FOR_READINESS
+
+Current aggregate:
+
+    BF-U05-RG-01 = CLOSED
+    BF-U05-RG-02 = CLOSED
+    BF-U05-RG-03 = CLOSED
+    BF-U05-RG-04 = CLOSED
+    BF-U05-RG-05 = CLOSED
+    BF-U05-RG-06 = OPEN / BLOCKING
+
+    closed = 5
+    open blocking = 1
+
+    U05 Implementation Readiness = NOT_READY
+    U05 Implementation Authorization Review = NOT_PERMITTED_YET
+    U05 Implementation Authorization = NOT_GRANTED
+
+This provenance update changes status only and does not authorize implementation.
