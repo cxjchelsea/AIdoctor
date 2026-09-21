@@ -2034,7 +2034,7 @@ Implementation / Merge / Production Authorization
 
 > Authorization: `AUTH-U05-PDX-FROZEN-AMEND-001`  
 > Reviewed design source: PR #153 exact head `a5b8aa6e23e5f54a0c2e1884ed027d7f7b7cbeee`  
-> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **REFROZEN / V1**
 
 ## 26.1 Contract type
 
@@ -2144,5 +2144,5 @@ Same replay：
 
 ```text
 Phase 8 PostDdxRoutingDecision
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 ```
