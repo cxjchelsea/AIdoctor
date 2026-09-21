@@ -3,7 +3,7 @@
 > Scope: U05 当前 non-production implementation slice 的验证矩阵、expected-result authority、durable evidence schema、CI/exact-head binding、replay/crash/conflict evidence、regression gates 与 independent evidence acceptance criteria。  
 > Design basis: U05-RDP-01 / 02 / 03 / 04 / 05 current frozen/refrozen semantics.  
 > Immediate upstream design head: U05-RDP-04 status/provenance head `c800f8d8645d416c4a87b0d63d4fa02ec6ce8a97`.  
-> Status: **REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_REVIEW**.  
+> Status: **REVISED / READY_FOR_FINAL_TARGETED_INDEPENDENT_DESIGN_REVIEW**.  
 > Target blocker: `BF-U05-RG-06`.  
 > 本文件只定义“未来如何证明 U05 实现正确”，不等于实现已存在，不授予 implementation / merge / production / live downstream / real-patient authorization。
 
@@ -746,7 +746,9 @@ Future implementation verification 必须包含静态、受审查的：
 每个 EV 至少包含：
 
     case_id
+    fixture_id
     fixture_semantic_id
+    fixture_digest
 
     expected_boundary
     expected_admission_status?
@@ -818,12 +820,37 @@ schema：
     -> with lawful lower-level business candidate signal(s) present
        and no P0 failure
 
-    each P2-P6 business branch
-    -> exercised with at least one lawful lower-priority candidate signal
-       simultaneously present
+    every legally constructible precedence pair
+    Pi > Pj
+    where i < j
+
+    must have a stable subcase proving:
+      both candidate conditions are present
+      -> Pi wins
+      -> Pj is not emitted
+
+    This applies to:
+      P0 / P1 technical statuses
+      when lawful lower business candidates can co-exist
+
+      P2 .. P7 business precedence
+
+    If a theoretical pair is NOT legally constructible
+    under RDP-05 / lifecycle / context semantics:
+
+      precedence oracle must mark:
+        constructibility = NOT_CONSTRUCTIBLE
+
+      and bind:
+        frozen authority refs
+        rationale
+
+    NOT_CONSTRUCTIBLE:
+      != runtime skip
+      != implementation choice
 
     P7
-    -> exercised only when no P0-P6 result applies
+    -> executable only when no P0-P6 result applies
 
     POL-005
     -> positive first-entry coverage
@@ -843,7 +870,10 @@ schema：
     bind RDP-02 authority
     declare constructible fixture semantics
     record higher candidate + lower candidate
+    record constructibility = CONSTRUCTIBLE / NOT_CONSTRUCTIBLE
+    bind constructibility authority refs
     prove emitted result equals higher lawful precedence
+    for every CONSTRUCTIBLE pair
 
 禁止为了 coverage 发明违反 RDP-05 applicability 或 frozen lifecycle 的 impossible profile。
 
@@ -1157,6 +1187,68 @@ Exact-head CI 必须消费相同 digest。
 
 ---
 
+# 17.3 Independently reviewed fixture manifest
+
+Future implementation verification 必须包含静态：
+
+    u05-verification-fixtures.json
+
+schema：
+
+    U05_VERIFICATION_FIXTURES_V0_1
+
+每个 fixture 至少包含：
+
+    fixture_id
+    fixture_semantic_id
+    fixture_digest
+
+    synthetic = true
+    contains_real_phi = false
+
+    authoritative_semantic_input_summary
+
+    evaluation_context
+    relevant Gate / applicability / currentness semantics
+
+    applicable_contract_refs[]
+
+Fixture manifest 必须经过独立 review，并记录：
+
+    fixture_manifest_review_id
+    fixture_manifest_digest
+
+Expectation oracle 必须绑定：
+
+    fixture_id
+    fixture_digest
+
+或绑定：
+
+    exact reviewed fixture_manifest_digest
+    + fixture_id
+
+Exact-head CI 必须在执行前验证：
+
+    actual fixture digest
+    == reviewed fixture digest
+
+禁止：
+
+    same expectation oracle
+    + modified fixture content
+    -> reuse prior oracle review
+
+任何 fixture semantic/content change：
+
+    invalidates fixture review
+    invalidates dependent oracle review
+    requires authoritative verification rerun
+
+Fixture manifest 不能由 SUT 运行时动态生成。
+
+---
+
 # 18. Contract manifest
 
 Durable evidence bundle 必须包含：
@@ -1180,6 +1272,14 @@ Durable evidence bundle 必须包含：
     Phase 9
 
 identity。
+
+同时记录：
+
+    expectation_oracle_digest
+    precedence_oracle_digest
+    fixture_manifest_digest
+
+以及对应独立 review ids。
 
 验证 run 不得只写：
 
@@ -1210,10 +1310,31 @@ Authoritative U05 verification workflow 必须：
     workflow file identity/digest
 
     contract manifest digest
+    expectation oracle digest
+    precedence oracle digest
+    fixture manifest digest
+    fixture manifest digest
 
     auth profile
 
     environment
+
+    runner OS/image identity
+    JDK vendor/version
+    Maven version
+    Python version
+    materially relevant verification-tool versions
+
+Authoritative workflow 中所有 third-party GitHub Actions 必须：
+
+    pinned by immutable full commit SHA
+
+禁止使用 floating tag 作为 authoritative evidence dependency，例如：
+
+    actions/checkout@v4
+    actions/setup-java@v4
+
+可读版本标签可以写在注释/记录中，但实际 uses 引用必须是 full SHA。
 
 只有 exact tested head 才能进入：
 
@@ -1235,6 +1356,8 @@ Future U05 workflow 至少执行：
     G0 governance/auth profile guard
 
     G1 exact-head checkout identity
+
+    G1A immutable action-pin / toolchain provenance guard
 
     G2 dependency/shared-contract install
 
@@ -1459,6 +1582,7 @@ Crash scenarios 必须证明：
     u05-d03-precedence-evidence.json
     u05-verification-expectations.json
     u05-d03-precedence-expectations.json
+    u05-verification-fixtures.json
     u05-contract-manifest.json
     workflow-provenance.txt
     auth-profile.json
@@ -1490,6 +1614,9 @@ Crash scenarios 必须证明：
     implementation_sha
 
     contract_manifest_digest
+    expectation_oracle_digest
+    precedence_oracle_digest
+    fixture_manifest_digest
     workflow identity
     repository/ref/run/attempt
 
@@ -1546,6 +1673,7 @@ CI 自己不得直接写：
     u05-d03-precedence-evidence.json
     u05-verification-expectations.json
     u05-d03-precedence-expectations.json
+    u05-verification-fixtures.json
     u05-contract-manifest.json
     workflow-provenance.txt
     auth-profile.json
@@ -1675,9 +1803,13 @@ Final exact-head run 至少要求：
 
     independent expectation-oracle review PASS
     independent precedence-oracle review PASS
+    independent fixture-manifest review PASS
 
-    CI-consumed oracle digests
-    = reviewed oracle digests
+    CI-consumed oracle/fixture digests
+    = reviewed digests
+
+    immutable action-pin guard PASS
+    toolchain provenance complete
 
     failures = 0
     errors = 0
@@ -1882,7 +2014,11 @@ Reviewer 至少检查：
 
     expectation oracle digest matches independently reviewed oracle
     precedence oracle digest matches independently reviewed precedence oracle
-    CI-consumed oracle digests match reviewed digests
+    fixture manifest digest matches independently reviewed fixture manifest
+    every EV actual fixture digest matches reviewed fixture digest
+    CI-consumed oracle/fixture digests match reviewed digests
+    all third-party workflow actions are full-SHA pinned
+    toolchain provenance is complete
     HG/VG/precedence evidence schema complete
 
     observed evidence fields are present for applicable boundary
@@ -1912,7 +2048,9 @@ Evidence builder must reject artifact if：
     unknown identity used as replacement for required identity
     missing EV expected authority
     oracle digest mismatch
+    fixture manifest/digest mismatch
     expected value generated from SUT/runtime output
+    precedence constructible pair missing from matrix
     missing fixture digest
     missing correlation/trace for executed case
     expected/observed mismatch
@@ -1962,6 +2100,11 @@ Historical evidence：
     rerun focused verification
     regenerate exact-head evidence
     independent evidence review
+
+Expectation oracle / precedence oracle / fixture manifest semantic change：
+
+    invalidates dependent verification evidence
+    -> re-review + rerun required
 
 Status-only provenance update：
 
@@ -2080,10 +2223,11 @@ Safety/RESTRICTED：
     EV-036
     EV-050..053
 
-Oracle integrity：
+Oracle / fixture integrity：
 
     u05-verification-expectations.json
     u05-d03-precedence-expectations.json
+    u05-verification-fixtures.json
 
 Long-term evidence：
 
@@ -2153,7 +2297,52 @@ Current：
 
 ---
 
-# 48. BF-U05-RG-06 disposition
+# 48. Final Targeted Remediation
+
+Targeted Independent Design Re-Review：
+
+    PR #174
+    review_id = 5263689991
+    verdict = REVISE_REQUIRED
+
+Findings：
+
+    BF-U05-RDP06-TR-01
+    = D03_PRECEDENCE_PAIRWISE_COMPLETENESS_UNDERDEFINED
+
+    BF-U05-RDP06-TR-02
+    = ORACLE_NOT_BOUND_TO_REVIEWED_FIXTURE_IDENTITY
+
+    BF-U05-RDP06-TR-03
+    = CI_SUPPLY_CHAIN_AND_TOOLCHAIN_PROVENANCE_UNDERDEFINED
+
+Remediation：
+
+    TR-01
+    -> every legally constructible Pi>Pj precedence pair required
+    -> non-constructible pairs require frozen authority/rationale in oracle
+
+    TR-02
+    -> independently reviewed u05-verification-fixtures.json added
+    -> oracle binds fixture id/digest
+    -> actual CI fixture digest must match reviewed digest
+
+    TR-03
+    -> authoritative workflow actions require immutable full-SHA pins
+    -> runner/JDK/Maven/Python/material toolchain provenance required
+
+Current：
+
+    BF-U05-RDP06-TR-01 = REMEDIATED / FINAL_TARGETED_REVIEW_PENDING
+    BF-U05-RDP06-TR-02 = REMEDIATED / FINAL_TARGETED_REVIEW_PENDING
+    BF-U05-RDP06-TR-03 = REMEDIATED / FINAL_TARGETED_REVIEW_PENDING
+
+    U05-RDP-06 = REVISED / READY_FOR_FINAL_TARGETED_INDEPENDENT_REVIEW
+    BF-U05-RG-06 = DESIGN_RESOLVED / FINAL_TARGETED_REVIEW_PENDING
+
+---
+
+# 49. BF-U05-RG-06 disposition
 
 Original blocker：
 
@@ -2203,7 +2392,7 @@ Original blocker：
 
 ---
 
-# 49. Aggregate readiness boundary before RDP-06 review
+# 50. Aggregate readiness boundary before RDP-06 review
 
 当前：
 
@@ -2235,7 +2424,7 @@ Original blocker：
 
 ---
 
-# 50. Authorization boundary
+# 51. Authorization boundary
 
 本文件不授权：
 
