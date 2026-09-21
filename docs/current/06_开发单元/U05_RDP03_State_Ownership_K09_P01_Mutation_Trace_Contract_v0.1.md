@@ -5,7 +5,7 @@
 > D03 basis: U05-RDP-02 current REFROZEN / V1.
 > Input basis: U05-RDP-05 current REFROZEN / V1.
 > Exact frozen semantic baseline before U05 readiness-package additions: 3bd85f908a1cb09355f6ea1c5ce737638d1c0fdc.
-> Status: REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_REVIEW.
+> Status: FROZEN / PASS_FOR_READINESS.
 > Target blocker: BF-U05-RG-03.
 > 本文件不授权 U05 runtime/code implementation、post-D03 downstream execution、merge、production、release activation 或 real-patient traffic。
 
@@ -1781,13 +1781,13 @@ Remediation:
 Current status:
 
     BF-U05-RDP03-TR-01
-    = REMEDIATED / SECOND_TARGETED_REVIEW_PENDING
+    = CLOSED
 
     U05-RDP-03
-    = REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_REVIEW
+    = FROZEN / PASS_FOR_READINESS
 
     BF-U05-RG-03
-    = DESIGN_RESOLVED / SECOND_TARGETED_REVIEW_PENDING
+    = CLOSED
 
 ---
 
@@ -1829,9 +1829,9 @@ Remediation:
 
 Current finding status:
 
-    BF-U05-RDP03-IR-01 = REMEDIATED / TARGETED_REVIEW_PENDING
-    BF-U05-RDP03-IR-02 = REMEDIATED / TARGETED_REVIEW_PENDING
-    BF-U05-RDP03-IR-03 = REMEDIATED / TARGETED_REVIEW_PENDING
+    BF-U05-RDP03-IR-01 = CLOSED
+    BF-U05-RDP03-IR-02 = CLOSED
+    BF-U05-RDP03-IR-03 = CLOSED
 
 Current design status:
 
@@ -1870,18 +1870,12 @@ Original blocker：
     no-capability trace
     P05 end-to-end evidence chain
 
-因此当前只能推进到：
-
-    BF-U05-RG-03
-    = DESIGN_RESOLVED / INDEPENDENT_REVIEW_PENDING
-
-    U05-RDP-03
-    = PROPOSED / READY_FOR_INDEPENDENT_DESIGN_REVIEW
-
-只有独立设计审查 PASS 后才可：
+Second Targeted Independent Design Re-Review 已 PASS，因此：
 
     BF-U05-RG-03 = CLOSED
     U05-RDP-03 = FROZEN / PASS_FOR_READINESS
+
+该 closure 仅表示 State Ownership / K09-P01 Mutation / Trace readiness 设计缺口已经关闭，不表示 Runtime/code 已实现。
 
 ---
 
@@ -1891,7 +1885,7 @@ Original blocker：
 
     BF-U05-RG-01 = CLOSED
     BF-U05-RG-02 = CLOSED
-    BF-U05-RG-03 = DESIGN_RESOLVED / REVIEW_PENDING
+    BF-U05-RG-03 = CLOSED
     BF-U05-RG-04 = OPEN / BLOCKING
     BF-U05-RG-05 = CLOSED
     BF-U05-RG-06 = OPEN / BLOCKING
@@ -1915,3 +1909,51 @@ Original blocker：
     production Clinical Runtime
     release activation
     real-patient traffic
+
+
+---
+
+# 40. Second Targeted Review / Freeze Provenance
+
+    PR #172
+
+    Initial Independent Design Review
+    = REVISE_REQUIRED
+    review_id = 5263478202
+
+    First Targeted Independent Design Re-Review
+    = REVISE_REQUIRED
+    review_id = 5263496116
+
+    Second Targeted Independent Design Re-Review
+    = PASS
+    review_id = 5263504145
+
+    reviewed semantic head
+    = 6a531e69459f05c7b41938dc28b6c6a30abe5e40
+
+    BF-U05-RDP03-IR-01 = CLOSED
+    BF-U05-RDP03-IR-02 = CLOSED
+    BF-U05-RDP03-IR-03 = CLOSED
+    BF-U05-RDP03-TR-01 = CLOSED
+
+    BF-U05-RG-03 = CLOSED
+    U05-RDP-03 = FROZEN / PASS_FOR_READINESS
+
+Current aggregate:
+
+    BF-U05-RG-01 = CLOSED
+    BF-U05-RG-02 = CLOSED
+    BF-U05-RG-03 = CLOSED
+    BF-U05-RG-04 = OPEN / BLOCKING
+    BF-U05-RG-05 = CLOSED
+    BF-U05-RG-06 = OPEN / BLOCKING
+
+    closed = 4
+    open blocking = 2
+
+    U05 Implementation Readiness = NOT_READY
+    U05 Implementation Authorization Review = NOT_PERMITTED_YET
+    U05 Implementation Authorization = NOT_GRANTED
+
+This provenance update changes status only and does not authorize implementation.
