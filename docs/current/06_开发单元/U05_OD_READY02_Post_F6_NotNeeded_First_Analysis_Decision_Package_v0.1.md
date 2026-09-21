@@ -4,7 +4,7 @@
 > Target finding: `BF-U05-F6R-TR-03`  
 > Design baseline: `268d9c5e9075420aa76c5c1aa37c254a3a99e2b8`  
 > Finding source: PR #160 exact head `48783988f127f7aa5ded775db28a75f023dc074b`, review `5263189477`  
-> Decision status: **NOT_DECIDED**  
+> Decision status: **NOT_DECIDED / REVISED_FOR_TARGETED_REVIEW**  
 > Scope: Owner policy decision preparation only; no frozen amendment or implementation authorization.
 
 ---
@@ -110,6 +110,81 @@ This is a policy-scope decision, not a new clinical truth assertion.
 
 The package does not decide it automatically.
 
+### 3.1 Executable first-entry eligibility axis
+
+For this decision package, `FIRST_CLINICAL_ANALYSIS_ENTRY` is not inferred from step number or from the absence of an F5 artifact.
+
+It requires:
+
+```text
+F5 applicability = NOT_YET_APPLICABLE
+= F5 has never been lawfully activated in this Consultation path
+
++ current intent is entry to the first governed U08/F5 clinical-analysis cycle
++ current Safety/admission permits that entry
+```
+
+The candidate rule may be evaluated only in these frozen evaluation contexts:
+
+```text
+A1_POST_BARRIER_CURRENT
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+```
+
+with context-specific guards:
+
+```text
+A1_POST_BARRIER_CURRENT
+-> A1 bootstrap/barrier/current-F3 requirements complete
+-> F5 still NOT_YET_APPLICABLE
+
+POST_USER_FACT_UPDATE
+-> accepted mutation/correction provenance current
+-> required mutation-stale dependencies resolved/revalidated
+-> F5 still NOT_YET_APPLICABLE
+
+POST_OFFLINE_ASSESSMENT
+-> current F6 assessment is complete/current
+-> this is a pre-F5 offline-assessment return
+-> F5 still NOT_YET_APPLICABLE
+```
+
+Important:
+
+```text
+POST_OFFLINE_ASSESSMENT
+!= POST_DDX_REEVALUATION
+
+POST_OFFLINE_ASSESSMENT
+does not by itself prove F5 has already activated.
+```
+
+The rule is NOT eligible in:
+
+```text
+POST_DDX_REEVALUATION
+
+any context where F5 is:
+PRESENT
+STALE
+INVALIDATED
+FAILED
+UNAVAILABLE
+
+or any provenance proves prior F5 activation
+```
+
+Therefore:
+
+```text
+F5 NOT_YET_APPLICABLE
+!= "no current F5 artifact"
+= "F5 has never lawfully activated on this Consultation path"
+```
+
+This first-entry eligibility axis applies to both Option A and Option B.
+
 ---
 
 ## 4. Option A — add a separate narrow first-entry rule
@@ -124,7 +199,11 @@ policy_scope = FIRST_CLINICAL_ANALYSIS_ENTRY_AFTER_CURRENT_F6_NOT_NEEDED
 Exact proposed guards:
 
 ```text
-evaluation purpose = FIRST_CLINICAL_ANALYSIS_ENTRY
+first-entry eligibility = Section 3.1 SATISFIED
+evaluation_context in:
+  A1_POST_BARRIER_CURRENT
+  POST_USER_FACT_UPDATE
+  POST_OFFLINE_ASSESSMENT
 
 F1 = PRESENT / FRAMED_IN_SCOPE
 
@@ -152,9 +231,10 @@ all required provenance/currentness/admission checks pass
 D03-POL-011 would be NOT_APPLICABLE when:
 
 ```text
-F5 is PRESENT
 POST_DDX_REEVALUATION
-POST_OFFLINE_ASSESSMENT after F5 activation
+F5 has any prior activation provenance
+F5 is PRESENT / STALE / INVALIDATED / FAILED / UNAVAILABLE
+POST_OFFLINE_ASSESSMENT with prior/current F5 activation
 F6 is STALE / FAILED / UNAVAILABLE
 F6 has JUSTIFIED blocking offline evidence need
 F3 is not current
@@ -243,7 +323,9 @@ OR
 F6 = PRESENT / CURRENT / VALID / NO_BLOCKING_OFFLINE_EVIDENCE_NEED
 ```
 
-while retaining every other first-entry guard.
+while retaining every other first-entry guard and the exact Section 3.1 first-entry eligibility/context contract.
+
+Option B must not interpret "F6 PRESENT is now allowed" as permission in post-DDx or prior-F5-activation contexts.
 
 ### 5.1 Advantage
 
@@ -448,6 +530,38 @@ NEEDS_CLARIFICATION or OUT_OF_SCOPE
 CASE-R02-10
 RESTRICTED without explicit first-analysis permission
 -> no READY-to-U08 execution eligibility
+
+CASE-R02-11
+A1_POST_BARRIER_CURRENT
++ F5 never activated
++ F6 PRESENT / VALID / NOT_NEEDED
++ all positive guards
+-> candidate positive rule eligible
+
+CASE-R02-12
+POST_USER_FACT_UPDATE
++ F5 never activated
++ F6 PRESENT / VALID / NOT_NEEDED
++ mutation/currentness guards complete
+-> candidate positive rule eligible
+
+CASE-R02-13
+POST_OFFLINE_ASSESSMENT
++ pre-F5 path
++ F5 never activated
++ F6 PRESENT / VALID / NOT_NEEDED
++ all positive guards
+-> candidate positive rule eligible
+
+CASE-R02-14
+POST_DDX_REEVALUATION
+-> candidate positive rule NOT_APPLICABLE
+
+CASE-R02-15
+prior F5 activation exists
++ current F5 artifact absent/stale/invalidated
+-> must not relabel F5 as NOT_YET_APPLICABLE
+-> candidate positive rule NOT_APPLICABLE
 ```
 
 ---
@@ -546,4 +660,63 @@ Current permitted next step:
 Independent Review
 -> if required, targeted design remediation
 -> if PASS, OD-U05-READY-02 becomes READY_FOR_OWNER_DECISION
+```
+
+
+---
+
+## 15. Independent Review Remediation
+
+Review source:
+
+```text
+PR #161
+reviewed head = 40a9a7ebfc2804d094b87c38818328530536c996
+review_id = 5263202893
+verdict = REVISE_REQUIRED
+```
+
+### BF-U05-READY02-IR-01
+
+```text
+FIRST_ENTRY_EVALUATION_CONTEXT_SET_UNDERDEFINED
+-> REMEDIATED
+```
+
+The package now freezes an executable first-entry eligibility axis:
+
+```text
+F5 = NOT_YET_APPLICABLE
+= never lawfully activated in this Consultation path
+```
+
+and explicitly allows only:
+
+```text
+A1_POST_BARRIER_CURRENT
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+```
+
+subject to their context-specific admission/currentness guards.
+
+`POST_DDX_REEVALUATION` and all prior-F5-activation profiles are explicitly excluded.
+
+### RQ-U05-READY02-IR-02
+
+```text
+CROSS_CONTEXT_VERIFICATION_MATRIX_REQUIRED
+-> REMEDIATED
+```
+
+The evidence matrix now covers each allowed first-entry context and proves exclusion of post-DDx and prior-F5-activation profiles.
+
+Current:
+
+```text
+OD-U05-READY-02
+= NOT_DECIDED
+
+Decision Package
+= REVISED / TARGETED_INDEPENDENT_REVIEW_PENDING
 ```
