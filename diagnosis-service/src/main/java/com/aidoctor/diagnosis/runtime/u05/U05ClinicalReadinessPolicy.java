@@ -89,8 +89,13 @@ public final class U05ClinicalReadinessPolicy {
     }
 
     private static void validateAdmittedBinding(U05AdmittedInput input) {
-        if (!input.getAdmissionId().equals(input.getAdmissionId())
-                || !input.getAcceptedReadinessInputSetIdentity().equals(input.getManifest().getSetIdentity())) {
+        U05ReadinessInputManifest manifest = input.getManifest();
+        if (!input.getAcceptedReadinessInputManifestRef().equals(manifest.getManifestRef())
+                || !input.getAcceptedReadinessInputSetIdentity().equals(manifest.getSetIdentity())
+                || !input.getConsultationId().equals(manifest.getConsultationId())
+                || !input.getCdpId().equals(manifest.getCdpId())
+                || input.getClinicalStateVersion() != manifest.getClinicalStateVersion()
+                || !input.getEvaluationContext().equals(manifest.getEvaluationContext())) {
             throw new IllegalStateException("D03 admitted-snapshot binding mismatch");
         }
     }
