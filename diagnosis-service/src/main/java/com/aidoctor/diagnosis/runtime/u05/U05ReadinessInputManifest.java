@@ -9,12 +9,14 @@ import java.util.Set;
 
 /** Immutable reference-only admission snapshot over authoritative RDP-05 records. */
 public final class U05ReadinessInputManifest {
+    public static final String RDP05_CONTRACT_VERSION = "U05-RDP05-REFROZEN-V1";
     private final String manifestRef;
     private final String setIdentity;
     private final String consultationId;
     private final String cdpId;
     private final int clinicalStateVersion;
     private final String evaluationContext;
+    private final String rdp05ContractVersion;
     private final List<U05ReadinessInput> inputs;
 
     public U05ReadinessInputManifest(
@@ -24,6 +26,7 @@ public final class U05ReadinessInputManifest {
             String cdpId,
             int clinicalStateVersion,
             String evaluationContext,
+            String rdp05ContractVersion,
             List<U05ReadinessInput> inputs) {
         this.manifestRef = required(manifestRef, "manifestRef");
         String declaredSetIdentity = required(setIdentity, "setIdentity");
@@ -32,6 +35,10 @@ public final class U05ReadinessInputManifest {
         if (clinicalStateVersion < 0) throw new IllegalArgumentException("clinicalStateVersion must be non-negative");
         this.clinicalStateVersion = clinicalStateVersion;
         this.evaluationContext = required(evaluationContext, "evaluationContext");
+        this.rdp05ContractVersion = required(rdp05ContractVersion, "rdp05ContractVersion");
+        if (!RDP05_CONTRACT_VERSION.equals(this.rdp05ContractVersion)) {
+            throw new IllegalArgumentException("unsupported RDP-05 contract version");
+        }
         if (inputs == null || inputs.isEmpty()) throw new IllegalArgumentException("inputs are required");
 
         List<U05ReadinessInput> copy = new ArrayList<U05ReadinessInput>(inputs);
@@ -48,14 +55,17 @@ public final class U05ReadinessInputManifest {
                 this.cdpId,
                 this.clinicalStateVersion,
                 this.evaluationContext,
+                this.rdp05ContractVersion,
                 this.inputs);
         if (!this.setIdentity.equals(declaredSetIdentity)) {
             throw new IllegalArgumentException("declared readiness input set identity does not match manifest content");
         }
-        requireDomain(U05ReadinessInput.F1);
-        requireDomain(U05ReadinessInput.F3);
-        requireDomain(U05ReadinessInput.F5);
-        requireDomain(U05ReadinessInput.F6);
+        requireExactlyOneDomain(U05ReadinessInput.F1);
+        requireAtMostOneDomain(U05ReadinessInput.F2_CLARIFICATION);
+        requireExactlyOneDomain(U05ReadinessInput.F3);
+        requireExactlyOneDomain(U05ReadinessInput.F5);
+        requireExactlyOneDomain(U05ReadinessInput.F6);
+        validateNoDuplicateInputIdConflict();
     }
 
     public String getManifestRef() { return manifestRef; }
@@ -64,6 +74,7 @@ public final class U05ReadinessInputManifest {
     public String getCdpId() { return cdpId; }
     public int getClinicalStateVersion() { return clinicalStateVersion; }
     public String getEvaluationContext() { return evaluationContext; }
+    public String getRdp05ContractVersion() { return rdp05ContractVersion; }
     public List<U05ReadinessInput> getInputs() { return inputs; }
 
     public List<U05ReadinessInput> getInputs(String domain) {
@@ -74,10 +85,10 @@ public final class U05ReadinessInputManifest {
         return Collections.unmodifiableList(result);
     }
 
-    public List<String> presentInputRefs() {
+    public List<String> authoritativeRecordRefs() {
         List<String> refs = new ArrayList<String>();
         for (U05ReadinessInput input : inputs) {
-            if (input.isPresent()) refs.add(input.getReadinessInputId());
+            refs.add(input.getReadinessInputId());
         }
         return Collections.unmodifiableList(refs);
     }
@@ -99,7 +110,7 @@ public final class U05ReadinessInputManifest {
 
     public String computedSemanticIdentity() {
         return semanticSetIdentity(
-                consultationId, cdpId, clinicalStateVersion, evaluationContext, inputs);
+                consultationId, cdpId, clinicalStateVersion, evaluationContext, rdp05ContractVersion, inputs);
     }
 
     public static String semanticSetIdentity(
@@ -107,6 +118,7 @@ public final class U05ReadinessInputManifest {
             String cdpId,
             int clinicalStateVersion,
             String evaluationContext,
+            String rdp05ContractVersion,
             List<U05ReadinessInput> inputs) {
         List<U05ReadinessInput> sorted = new ArrayList<U05ReadinessInput>(inputs);
         Collections.sort(sorted, new Comparator<U05ReadinessInput>() {
@@ -121,6 +133,7 @@ public final class U05ReadinessInputManifest {
         parts.add(cdpId);
         parts.add(String.valueOf(clinicalStateVersion));
         parts.add(evaluationContext);
+        parts.add(rdp05ContractVersion);
         for (U05ReadinessInput input : sorted) parts.add(input.semanticFingerprint());
         return U05Ids.hash("u05-input-set", parts.toArray(new String[parts.size()]));
     }
@@ -134,8 +147,17 @@ public final class U05ReadinessInputManifest {
         }
     }
 
-    private void requireDomain(String domain) {
-        if (getInputs(domain).isEmpty()) throw new IllegalArgumentException("manifest missing required domain " + domain);
+    private void requireExactlyOneDomain(String domain) {
+        int count = getInputs(domain).size();
+        if (count != 1) {
+            throw new IllegalArgumentException("manifest requires exactly one slot for " + domain);
+        }
+    }
+
+    private void requireAtMostOneDomain(String domain) {
+        if (getInputs(domain).size() > 1) {
+            throw new IllegalArgumentException("manifest permits at most one slot for " + domain);
+        }
     }
 
     private static String required(String value, String name) {
