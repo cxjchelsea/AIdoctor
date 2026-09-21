@@ -926,7 +926,7 @@ D03-POL-005
 
 > Authorization: `AUTH-U05-PDX-FROZEN-AMEND-001`  
 > Reviewed design source: PR #153 exact head `a5b8aa6e23e5f54a0c2e1884ed027d7f7b7cbeee`  
-> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+> Status: **REFROZEN / V1**
 
 ### 21.1 D03 remains unique Clinical Readiness Resolver
 
@@ -1010,10 +1010,10 @@ Unknown admitted D03 profiles may still trigger POLICY_EXPECTATION_GAP and remai
 
 ```text
 U05-RDP-02 post-DDx boundary scope
-= AMENDED / INDEPENDENT_REVIEW_PENDING
+= REFROZEN / V1
 
 BF-U05-RG02-CL-01
-= REMEDIATED_BY_DESIGN / REVIEW_PENDING
+= REMEDIATED / REFROZEN / CLOSURE_REEVALUATION_PENDING
 
 BF-U05-RG-02
 = NOT_CLOSED
