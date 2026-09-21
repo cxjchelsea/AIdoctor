@@ -2342,3 +2342,259 @@ consultation_id
 Phase 8 ClinicalContinuationRoutingDecision
 = REFROZEN / V1
 ```
+
+
+---
+
+# U05 CL-04 Controlled Amendment — F6 Reassessment/Revalidation + D03-POL-011 Contract
+
+> Authorization: `AUTH-U05-CL04-FROZEN-AMEND-001`  
+> Reviewed design: PR #160 exact head `80cd6d7d154aa3e8de093ef43328e8ee9c2733d3`  
+> Owner policy: `OD-U05-READY-02 = APPROVE_OPTION_A`  
+> Amendment status: **APPLIED / INDEPENDENT_AMENDMENT_REVIEW_PENDING**  
+> Re-freeze status: **NOT_YET_REFROZEN**
+
+## A. ClinicalContinuationRoutingDecision vocabulary extension
+
+Add one Unit-level consequence:
+
+```text
+TO_F6_CURRENT_VERSION_REASSESSMENT
+```
+
+The consequence vocabulary becomes:
+
+```text
+TO_U05_CLINICAL_READINESS
+TO_F3_CURRENT_VERSION_REVALIDATION
+TO_F6_CURRENT_VERSION_REASSESSMENT
+TO_U08_REASSESSMENT
+TO_U12_DELIVERY_PREPARATION
+FAILURE_ROUTE
+```
+
+The existing context set remains unchanged:
+
+```text
+POST_USER_FACT_UPDATE
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+`A1_POST_BARRIER_CURRENT` is not a new ClinicalContinuationRoutingDecision context.
+
+These consequences remain:
+
+```text
+!= Clinical Readiness
+!= Delivery Readiness
+!= new Clinical State truth category
+```
+
+## B. F6 dependency-requiredness manifest
+
+F6 reassessment must carry an explicit manifest sufficient to prove owner-prerequisite ordering:
+
+```text
+dependency_domain
+dependency_ref
+dependency_role
+required_for_current_assessment
+currentness
+compatibility_status
+lawful_not_applicable_reason when applicable
+```
+
+Router/Scheduler must not infer F3/F5 requiredness ad hoc.
+
+The manifest participates in:
+
+```text
+admission
+reassessment identity
+stale-before-commit detection
+replay/idempotency
+audit
+```
+
+## C. F6 reassessment effect envelope
+
+Minimum bound semantics:
+
+```text
+consultation_id
+cdp_id
+mode = F6_CURRENT_VERSION_REASSESSMENT
+input_clinical_state_version
+accepted_mutation_or_correction_ref
+f6_invalidation_ref
+prior_f6_assessment_ref
+dependency_manifest_ref / identity
+current_u04_gate_ref
+routing_authorization_id
+C05 CapabilityBindingRef
+KnowledgeReleaseRef
+RuleReleaseRef
+restricted_context_ref when applicable
+policy/contract version
+trace/correlation refs
+```
+
+Proposed deterministic effect identity:
+
+```text
+F6_CURRENT_VERSION_REASSESSMENT_ID
+=
+consultation_id
++ input Clinical State Version
++ accepted mutation ref
++ F6 invalidation ref
++ prior F6 assessment ref
++ dependency manifest identity
++ capability/release binding refs
++ restricted_context_ref when applicable
++ reassessment policy version
+```
+
+Same exact replay must attach/return the authoritative prior effect and must not duplicate C05-owned clinical effect or K09/P01 state commit.
+
+## D. F6 current-version revalidation decision
+
+Add a deterministic F6 Owner decision envelope:
+
+```text
+decision_type = F6_CURRENT_VERSION_REVALIDATION
+
+consultation_id
+cdp_id
+canonical_f6_effect_ref
+canonical_f6_effect_identity
+source_clinical_state_version
+target_clinical_state_version
+current_u04_gate_ref
+routing_authorization_id
+dependency_manifest_ref / identity
+current_dependency_refs[]
+CapabilityBindingRef
+KnowledgeReleaseRef
+RuleReleaseRef
+restricted_context_ref when applicable
+revalidation_policy_version
+
+outcome:
+  REVALIDATED_CURRENT
+  REASSESSMENT_REQUIRED
+  FAILED
+
+reason_codes[]
+basis_refs[]
+created_at
+```
+
+Revalidation identity:
+
+```text
+F6_CURRENT_VERSION_REVALIDATION_ID
+=
+consultation_id
++ canonical F6 effect identity
++ target Clinical State Version
++ current U04 Gate ref
++ routing_authorization_id
++ dependency manifest identity
++ current dependency refs
++ capability/release compatibility refs
++ restricted_context_ref when applicable
++ revalidation policy version
+```
+
+`REVALIDATED_CURRENT` creates an auditable current F6 readiness-input projection but:
+
+```text
+does not invoke C05
+does not create a second canonical F6 effect
+does not advance Clinical State
+does not create Clinical Readiness
+```
+
+Projection mapping uses existing F6 business vocabulary only:
+
+```text
+canonical F6 VALID + justified need
+-> NEEDS_OFFLINE_EVIDENCE
+
+canonical F6 VALID + not needed
+-> NO_BLOCKING_OFFLINE_EVIDENCE_NEED
+```
+
+## E. D03-POL-011 evidence contract
+
+Add rule identity:
+
+```text
+D03-POL-011
+policy_scope = FIRST_CLINICAL_ANALYSIS_ENTRY_AFTER_CURRENT_F6_NOT_NEEDED
+```
+
+D03-POL-011 must consume authoritative readiness inputs. In particular, the F5 first-entry guard must be proven by an RDP-05 readiness applicability input:
+
+```text
+source_domain = F5
+applicability_status = NOT_YET_APPLICABLE
+consultation_id
+cdp_id
+clinical_state_version / currentness semantics as governed
+source_decision_ref
+source_state_ref when applicable
+evidence_refs[]
+policy_or_rule_refs[]
+```
+
+Meaning:
+
+```text
+NOT_YET_APPLICABLE
+= F5 has never lawfully activated in this Consultation path
+```
+
+The following are never sufficient to prove the guard:
+
+```text
+missing F5 artifact
+null F5 ref
+empty lookup result
+```
+
+D03 decision evidence must bind:
+
+```text
+policy_rule_ref = D03-POL-011
+evaluation_context
+first_entry_eligibility evidence
+accepted F1 ref
+accepted F3 ref
+authoritative F5 applicability input ref
+accepted F6 current readiness input ref
+current U04 Gate / restricted context
+basis/evidence refs
+```
+
+No new Clinical Readiness enum is introduced.
+
+## F. Restricted-context propagation
+
+When current Safety is `RESTRICTED`, `restricted_context_ref` must survive:
+
+```text
+routing decision
+-> U10 reassessment envelope
+-> C05 invocation
+-> F6 proposal/commit trace
+-> post-F6 Safety barrier
+-> F6 revalidation
+-> subsequent U05 routing/admission
+```
+
+No restricted path may widen itself into generic ALLOW, suggestion delivery, U11, or U12.
+
+This amendment changes contracts only; it does not authorize runtime implementation.
