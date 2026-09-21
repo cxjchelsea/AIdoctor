@@ -67,6 +67,9 @@ D03 使用 Phase 8 generic Deterministic Decision Contract，并增加 U05 所�
     cdp_id
     input_clinical_state_version
 
+    source_admission_ref
+    source_readiness_input_set_identity
+
     evaluation_context
     decision_status
     clinical_readiness
@@ -81,6 +84,7 @@ D03 使用 Phase 8 generic Deterministic Decision Contract，并增加 U05 所�
 
     safety_gate_ref
     restricted_context_ref
+    restricted_permission_ref?
     created_at
     validity / staleness
 
@@ -123,6 +127,52 @@ design/readiness sentinel POLICY_EXPECTATION_GAP：
     no production/runtime authorization
     no readiness commit
     no ordinary route
+
+---
+
+## 3.1 Admitted-snapshot binding
+
+D03 只能对 RDP-01 已形成的：
+
+    U05AdmittedInput
+
+执行确定性求值。
+
+必须显式绑定：
+
+    source_admission_ref
+    = U05AdmittedInput.admission_id
+
+    source_readiness_input_set_identity
+    = U05AdmittedInput.accepted_readiness_input_set_identity
+
+当 Gate = RESTRICTED：
+
+    restricted_context_ref
+    = U05AdmittedInput.accepted_restricted_context_ref
+
+    restricted_permission_ref
+    = U05AdmittedInput.accepted_restricted_permission_ref
+
+D03 禁止：
+
+    silently re-fetch a different readiness input set
+    silently replace admitted permission evidence
+    infer admission identity only from generic basis_refs[]
+
+basis_refs[] / input_refs[] 可以继续保存扩展 provenance，
+但不能替代上述 canonical named bindings。
+
+如果这些 binding 与 admitted snapshot 不一致：
+
+    D03 evaluation must not continue as a normal business decision
+
+处理必须遵循：
+
+    stale/admission mismatch
+    -> re-admission / fail-closed governance path
+
+不得通过修改 D03 input fields 继续。
 
 ---
 
@@ -573,6 +623,12 @@ NO_RELIABLE_DIRECTION 只能是合法业务 negative，不是 fallback。
 
     restricted context must be preserved in D03 basis_refs / restricted_context_ref
 
+    exact admitted U05 evaluation permission evidence
+    must be preserved in restricted_permission_ref
+
+    restricted_permission_ref
+    = U05AdmittedInput.accepted_restricted_permission_ref
+
 D03 不得：
 
     RESTRICTED -> ALLOW
@@ -588,8 +644,11 @@ RDP-02 本身不决定后续 U08/U10/U11 是否允许具体动作；它只确保
 
     policy_version
     + current Clinical State Version
+    + source_admission_ref
+    + source_readiness_input_set_identity
     + exact accepted readiness input refs
     + exact Safety Gate ref
+    + restricted_permission_ref when RESTRICTED
 
 必须得到相同：
 
@@ -1368,3 +1427,39 @@ This amendment is **REFROZEN / V1** and still does not authorize implementation.
 > Re-freeze package review: **PASS** / review_id `5263272855`  
 > Current CL-04 amendment state: **REFROZEN / V1**
 
+
+
+---
+
+## 27. AGR-01 / AGR-02 Controlled Compatibility Amendment
+
+Amendment basis:
+
+    U05 Implementation Readiness Re-Evaluation v0.3
+    PR #175
+    review_id = 5263778132
+
+Findings addressed:
+
+    BF-U05-AGR-01
+    BF-U05-AGR-02
+
+This amendment adds only explicit provenance bindings:
+
+    source_admission_ref
+    source_readiness_input_set_identity
+    restricted_permission_ref when RESTRICTED
+
+It does not change:
+
+    D03 decision_status vocabulary
+    six Clinical Readiness values
+    P0-P7 precedence
+    POL-005
+    POL-011
+    any Clinical Readiness business result
+
+Current amendment status:
+
+    AGR-01/02 RDP-02 portion
+    = AMENDED / INDEPENDENT_COMPATIBILITY_REVIEW_PENDING
