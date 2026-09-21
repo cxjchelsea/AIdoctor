@@ -16,6 +16,7 @@ public final class U05ConsumerInboundRequest {
     public static final String U04_A1_POST_BARRIER_ROUTING = "U04_A1_POST_BARRIER_ROUTING";
     public static final String CLINICAL_CONTINUATION_ROUTING = "CLINICAL_CONTINUATION_ROUTING";
     public static final String TO_U05_CLINICAL_READINESS = "TO_U05_CLINICAL_READINESS";
+    public static final String U05_ELIGIBLE = "U05_ELIGIBLE";
 
     public static final String GATE_ALLOW = "ALLOW";
     public static final String GATE_RESTRICTED = "RESTRICTED";
