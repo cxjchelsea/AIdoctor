@@ -1107,3 +1107,83 @@ BF-U05-RG-02
 U05-RDP-02 post-analysis boundary scope
 = REFROZEN / V1
 ```
+
+
+---
+
+## 23. Clinical Continuation Routing Boundary
+
+> Authorization: `AUTH-U05-CCR-FROZEN-AMEND-001`  
+> Reviewed design source: PR #157 exact head `4c3c7eb7e9aa9b6f9506871f7d28e033b4a6482e`  
+> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+
+### 23.1 POST_USER_FACT_UPDATE pre-D03 boundary
+
+正常 upstream mutation 导致的：
+
+```text
+F3/F5/F6 STALE / INVALIDATED
+```
+
+在 continuation sequencing 尚未完成时，不应被提前送入 D03。
+
+因此：
+
+```text
+mutation-stale expected recomputation
+→ ClinicalContinuationRoutingDecision
+→ not D03 INPUT_FAILURE
+```
+
+### 23.2 When D03 becomes eligible
+
+只有 current continuation consequence 为：
+
+```text
+TO_U05_CLINICAL_READINESS
+```
+
+且 RDP-05 currentness/admission 条件满足后，D03 才执行。
+
+### 23.3 F5 stale is not a new Clinical Readiness value
+
+```text
+prior F5 activated
++ current F5 STALE/INVALIDATED by current fact mutation
++ current F3 no-gap
++ no higher path
+→ TO_U08_REASSESSMENT
+```
+
+该结果：
+
+```text
+!= READY_FOR_CLINICAL_ANALYSIS
+!= INPUT_FAILURE
+!= new Clinical Readiness enum
+```
+
+### 23.4 True failure remains failure
+
+```text
+FAILED / UNAVAILABLE
+```
+
+不得因为 continuation router 存在而自动变成 reassessment。
+
+### 23.5 Blocker status
+
+```text
+BF-U05-RG02-CL-03
+= REMEDIATED_BY_DESIGN / REVIEW_PENDING
+
+BF-U05-RG-02
+= NOT_CLOSED
+```
+
+### 23.6 Current status
+
+```text
+U05-RDP-02 continuation boundary
+= AMENDED / INDEPENDENT_REVIEW_PENDING
+```
