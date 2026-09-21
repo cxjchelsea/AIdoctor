@@ -446,7 +446,7 @@ committed Facts
 → U05 Readiness
 ```
 
-Readiness 再决定 U06 / U08 / U10 / U11 / U12 等合法路径。
+Clinical Readiness 决定适用的 U06 / U08(first-entry) / U10 / U11 等 Clinical Readiness 路径；post-DDx normal-progress 可由 PostDdxRoutingDecision 进入 U08 reassessment 或 U12 delivery preparation。
 
 U14 failure routing 可抢占普通路径。
 
@@ -1213,4 +1213,99 @@ Re-freeze
 
 Runtime Implementation Authorization
 = NOT_GRANTED
+```
+
+
+---
+
+# 18. Post-DDx Controlled Amendment — Runtime Routing
+
+> Authorization: `AUTH-U05-PDX-FROZEN-AMEND-001`  
+> Reviewed design source: PR #153 exact head `a5b8aa6e23e5f54a0c2e1884ed027d7f7b7cbeee`  
+> Status: **AMENDED / INDEPENDENT_REVIEW_PENDING**
+
+## 18.1 Runtime chain
+
+```text
+U08 DDx
+→ U09 F3/post-DDx reevaluation
+→ PostDdxRoutingDecision
+```
+
+Then exactly one ordinary consequence：
+
+```text
+TO_U05_CLINICAL_READINESS
+→ U05/D03
+
+TO_U08_REASSESSMENT
+→ U08
+
+TO_U12_DELIVERY_PREPARATION
+→ U12/F7
+
+FAILURE_ROUTE
+→ U14 / governed recovery
+```
+
+Safety may preempt before ordinary routing.
+
+## 18.2 Scheduler boundary
+
+Scheduler consumes the committed/current:
+
+```text
+PostDdxRoutingDecision
+```
+
+and does not infer post-DDx semantics itself.
+
+Scheduler must not:
+
+```text
+map ANALYSIS_RESULT_AVAILABLE to READY_FOR_CLINICAL_ANALYSIS
+infer Delivery Readiness from no-gap
+bypass U05/D03 when a Clinical Readiness consequence exists
+```
+
+## 18.3 U12 delivery preparation
+
+```text
+TO_U12_DELIVERY_PREPARATION
+```
+
+means only that U12 may validate its S_in and begin F7 delivery assembly/validation.
+
+It does not mean:
+
+```text
+Delivery Readiness READY
+delivery already sent
+Consultation COMPLETED
+```
+
+F7 remains the sole business interpreter of Delivery Readiness.
+
+## 18.4 Reassessment
+
+```text
+TO_U08_REASSESSMENT
+```
+
+requires current U08 binding/release context and no-progress protection.
+
+If current owner outputs expose a Clinical Readiness consequence, router must instead choose：
+
+```text
+TO_U05_CLINICAL_READINESS
+```
+
+## 18.5 Current status
+
+```text
+Phase 9 post-DDx affected scope
+= AMENDED / INDEPENDENT_REVIEW_PENDING
+
+Runtime implementation
+= NOT_AUTHORIZED
 ```
