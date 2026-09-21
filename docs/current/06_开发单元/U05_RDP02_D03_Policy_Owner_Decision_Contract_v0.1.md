@@ -1018,3 +1018,92 @@ BF-U05-RG02-CL-01
 BF-U05-RG-02
 = NOT_CLOSED
 ```
+
+
+---
+
+## 22. Post-Analysis Routing Boundary Extension
+
+> Authorization: `AUTH-U05-PA-FROZEN-AMEND-001`  
+> Reviewed design source: PR #155 exact head `7e2d4d4255d51a10f58c63dec4e2ccb53920c33f`  
+> Status: **REFROZEN / V1**
+
+### 22.1 D03 scope remains unchanged
+
+D03 继续只拥有 Clinical Readiness。
+
+PostAnalysisRoutingDecision 不新增或重定义任何 D03 value。
+
+### 22.2 POST_OFFLINE_ASSESSMENT non-D03 consequences
+
+以下合法 profile 不要求伪造 D03 result：
+
+```text
+F6 = NO_BLOCKING_OFFLINE_EVIDENCE_NEED
++ F5 = ANALYSIS_RESULT_AVAILABLE
++ current F3 = PRESENT / NO_ACTIVE_ONLINE_BLOCKING_GAP
++ no higher Clinical Readiness path
+→ TO_U12_DELIVERY_PREPARATION
+```
+
+以及：
+
+```text
+F6 = NO_BLOCKING_OFFLINE_EVIDENCE_NEED
++ F5 = REASSESSMENT_REQUIRED
++ no higher Clinical Readiness path
+→ TO_U08_REASSESSMENT
+```
+
+若 current F3 仅为：
+
+```text
+ABSENT_BY_DESIGN
+```
+
+且当前 consequence 需要 F3 no-gap evidence，则：
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+```
+
+不是 D03 business result。
+
+### 22.3 Clinical Readiness paths still go to D03
+
+若 current inputs 形成：
+
+```text
+OUT_OF_SCOPE
+blocking NEEDS_OFFLINE_EVIDENCE
+NEEDS_CLARIFICATION
+CAN_ASK_MORE
+NO_RELIABLE_DIRECTION
+```
+
+则：
+
+```text
+TO_U05_CLINICAL_READINESS
+→ D03
+```
+
+### 22.4 Closure blocker status
+
+```text
+BF-U05-RG02-CL-01
+= REMEDIATED / REFROZEN / CLOSURE_REEVALUATION_PENDING
+
+BF-U05-RG02-CL-02
+= REMEDIATED / REFROZEN / CLOSURE_REEVALUATION_PENDING
+
+BF-U05-RG-02
+= NOT_CLOSED
+```
+
+### 22.5 Current status
+
+```text
+U05-RDP-02 post-analysis boundary scope
+= REFROZEN / V1
+```

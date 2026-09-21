@@ -2146,3 +2146,104 @@ Same replay：
 Phase 8 PostDdxRoutingDecision
 = REFROZEN / V1
 ```
+
+
+---
+
+# 27. Post-Analysis Routing Extension Contract
+
+> Authorization: `AUTH-U05-PA-FROZEN-AMEND-001`  
+> Reviewed design source: PR #155 exact head `7e2d4d4255d51a10f58c63dec4e2ccb53920c33f`  
+> Status: **REFROZEN / V1**
+
+## 27.1 Superseded contract
+
+Section 26 的：
+
+```text
+PostDdxRoutingDecision
+decision_type = POST_DDX_ROUTING
+```
+
+在任何 Runtime implementation 前被 generalized contract 取代：
+
+```text
+PostAnalysisRoutingDecision
+decision_type = POST_ANALYSIS_ROUTING
+```
+
+无需 runtime migration。
+
+## 27.2 Evaluation context
+
+Mandatory：
+
+```text
+evaluation_context
+```
+
+Allowed V1 values：
+
+```text
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+## 27.3 Allowed decisions
+
+```text
+TO_U05_CLINICAL_READINESS
+TO_F3_CURRENT_VERSION_REVALIDATION
+TO_U08_REASSESSMENT
+TO_U12_DELIVERY_PREPARATION
+FAILURE_ROUTE
+```
+
+这些仍然是 Unit-level routing consequences：
+
+```text
+!= Clinical Readiness
+!= Delivery Readiness
+!= D11
+!= new Clinical State truth category
+```
+
+## 27.4 Identity / idempotency
+
+```text
+POST_ANALYSIS_ROUTING_ID
+=
+consultation_id
++ input_clinical_state_version
++ evaluation_context
++ accepted F3/F5/F6 refs
++ current U04 Gate ref
++ routing policy version
+```
+
+`evaluation_context` 为 mandatory identity component。
+
+## 27.5 F3 revalidation consequence
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+```
+
+只能在：
+
+```text
+canonical F3 source/effect exists
++ current routing requires materialized current F3 input
++ F3 input is lawfully ABSENT_BY_DESIGN
+```
+
+等受控情形形成。
+
+该 decision 不等于 F3 revalidation outcome；真正 revalidation 仍由 U06 MODE-3 / F3 Owner 执行。
+
+## 27.6 Current status
+
+```text
+Phase 8 PostAnalysisRoutingDecision
+= REFROZEN / V1
+```
