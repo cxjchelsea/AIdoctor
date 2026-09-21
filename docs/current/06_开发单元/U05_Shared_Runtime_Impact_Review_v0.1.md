@@ -130,22 +130,28 @@ Allowed semantic scope:
     SyntheticJsonPointerApplier
     and PBNC-02 tests only
 
-Generic behavior:
+Generic behavior must exactly mirror the existing
+StatePatchBoundaryValidator controlled-value boundary.
 
-    ADD / REPLACE may accept recursively JSON-compatible:
+Allowed:
 
-      Map<String,Object>
-      List<Object>
+    one top-level Map<String,Object>
+
+    Map values limited to:
       String
       Number
       Boolean
       null
+      List of scalar values
 
-    nested maps/lists are copied using existing SyntheticStateSnapshot copy semantics.
+    existing scalar/list values remain unchanged.
 
-Must remain prohibited:
+Still prohibited:
 
+    nested Map
+    list-of-Map
     arbitrary Java objects
+    any value rejected by StatePatchBoundaryValidator
     domain inference
     medical interpretation
     production persistence
@@ -153,7 +159,11 @@ Must remain prohibited:
     network/provider/CDP integration
     PHI/real-patient content.
 
-No Shared Contracts schema change is required.
+PBNC-02A must therefore align the synthetic applier
+with the already-authorized StatePatch boundary;
+it must not broaden Shared Contracts value semantics.
+
+No Shared Contracts schema/validator semantic change is required.
 
 ## 2.5 Required U05 consumption after extension
 
@@ -434,3 +444,40 @@ Recommended next governance sequence:
     6. consume them from U05 without changing frozen U05 semantics
 
     7. repeat exact-head U05 implementation review.
+
+
+---
+
+# 8. Independent Impact Review Remediation
+
+Independent review:
+
+    PR #183
+    review_id = 5265053120
+    verdict = REVISE_REQUIRED
+
+Finding:
+
+    BF-U05-SR-IMPACT-IR-01
+    = PBNC02A_OBJECT_SCOPE_BROADER_THAN_CURRENT_STATEPATCH_BOUNDARY
+
+Remediation:
+
+    PBNC-02A scope is narrowed to the existing
+    StatePatchBoundaryValidator controlled-value semantics only.
+
+    top-level Map = allowed
+    scalar/list-of-scalar children = allowed
+
+    nested Map = prohibited
+    list-of-Map = prohibited
+
+    Shared Contracts semantics remain unchanged.
+
+Current:
+
+    BF-U05-SR-IMPACT-IR-01
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    U05 Shared Runtime Impact Review
+    = REVISED / READY_FOR_TARGETED_REVIEW
