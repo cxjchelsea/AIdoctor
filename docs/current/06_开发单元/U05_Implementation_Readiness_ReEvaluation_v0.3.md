@@ -732,3 +732,60 @@ This re-evaluation does not authorize:
     production Clinical Runtime
     release activation
     real-patient traffic
+
+
+---
+
+# 13. Independent Aggregate Review Provenance
+
+    PR #175
+
+    reviewed re-evaluation head
+    = c927563652291ddf873beb8ebfdb4af40e2c47c6
+
+    Independent Aggregate Review
+    = PASS
+
+    review_id
+    = 5263778132
+
+Confirmed findings:
+
+    BF-U05-AGR-01
+    = RESTRICTED_PERMISSION_PROVENANCE_CHAIN_BREAK
+    = OPEN / BLOCKING
+
+    BF-U05-AGR-02
+    = D03_ADMISSION_INPUTSET_BINDING_UNDERDEFINED
+    = OPEN / BLOCKING
+
+    BF-U05-AGR-03
+    = RDP05_AUTHORITATIVE_STATUS_METADATA_CONFLICT
+    = OPEN / BLOCKING
+
+No additional aggregate blocker was identified.
+
+Final status:
+
+    BF-U05-RG-01 = CLOSED
+    BF-U05-RG-02 = CLOSED
+    BF-U05-RG-03 = CLOSED
+    BF-U05-RG-04 = CLOSED
+    BF-U05-RG-05 = CLOSED
+    BF-U05-RG-06 = CLOSED
+
+    U05 Implementation Readiness
+    = NOT_READY
+
+    U05 Implementation Authorization Review
+    = NOT_PERMITTED_YET
+
+    U05 Implementation Authorization
+    = NOT_GRANTED
+
+Next permitted work:
+
+    U05 Aggregate Compatibility Amendment
+    for AGR-01 / AGR-02 / AGR-03 only
+
+This provenance update does not authorize implementation.
