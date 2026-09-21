@@ -918,3 +918,103 @@ D03-POL-005
 = FROZEN_EXECUTABLE_EXPECTATION
 = FIRST_CLINICAL_ANALYSIS_ENTRY_ONLY
 ```
+
+
+---
+
+## 21. Post-DDx Routing Boundary Amendment
+
+> Authorization: `AUTH-U05-PDX-FROZEN-AMEND-001`  
+> Reviewed design source: PR #153 exact head `a5b8aa6e23e5f54a0c2e1884ed027d7f7b7cbeee`  
+> Status: **REFROZEN / V1**
+
+### 21.1 D03 remains unique Clinical Readiness Resolver
+
+Post-DDx routing does not add new D03 values.
+
+Frozen six-value Clinical Readiness remains：
+
+```text
+OUT_OF_SCOPE
+NEEDS_OFFLINE_EVIDENCE
+NEEDS_CLARIFICATION
+CAN_ASK_MORE
+READY_FOR_CLINICAL_ANALYSIS
+NO_RELIABLE_DIRECTION
+```
+
+### 21.2 Post-DDx profiles owned outside D03
+
+For：
+
+```text
+evaluation_context = POST_DDX_REEVALUATION
+F5 = ANALYSIS_RESULT_AVAILABLE
+F3 = NO_ACTIVE_ONLINE_BLOCKING_GAP
+no higher Clinical Readiness blocker
+```
+
+D03-POL-005 remains NOT_APPLICABLE.
+
+Instead：
+
+```text
+U09 PostDdxRoutingDecision
+→ TO_U12_DELIVERY_PREPARATION
+```
+
+For：
+
+```text
+F5 = REASSESSMENT_REQUIRED
+F3 = NO_ACTIVE_ONLINE_BLOCKING_GAP
+no higher Clinical Readiness blocker
+```
+
+the governed consequence is：
+
+```text
+U09 PostDdxRoutingDecision
+→ TO_U08_REASSESSMENT
+```
+
+These are not Clinical Readiness results and do not create D03 decision objects.
+
+### 21.3 When D03 still applies post-DDx
+
+If current post-DDx owner outputs expose any actual Clinical Readiness path：
+
+```text
+OUT_OF_SCOPE
+blocking NEEDS_OFFLINE_EVIDENCE
+NEEDS_CLARIFICATION
+CAN_ASK_MORE
+NO_RELIABLE_DIRECTION
+```
+
+then：
+
+```text
+U09
+→ TO_U05_CLINICAL_READINESS
+→ D03 frozen precedence
+```
+
+### 21.4 POLICY_EXPECTATION_GAP boundary
+
+The known CL-01 profiles are no longer D03 expectation gaps once this amendment is independently reviewed/re-frozen, because they are explicitly classified as non-D03 post-DDx routing consequences.
+
+Unknown admitted D03 profiles may still trigger POLICY_EXPECTATION_GAP and remain readiness blockers.
+
+### 21.5 Current status
+
+```text
+U05-RDP-02 post-DDx boundary scope
+= REFROZEN / V1
+
+BF-U05-RG02-CL-01
+= REMEDIATED / REFROZEN / CLOSURE_REEVALUATION_PENDING
+
+BF-U05-RG-02
+= NOT_CLOSED
+```

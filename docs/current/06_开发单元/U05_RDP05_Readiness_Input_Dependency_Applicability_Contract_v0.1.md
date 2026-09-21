@@ -709,3 +709,127 @@ Prior RDP-05 freeze
 Implementation Authorization
 = NOT_GRANTED
 ```
+
+
+---
+
+## 17. Post-DDx Routing Consumption Amendment
+
+> Authorization: `AUTH-U05-PDX-FROZEN-AMEND-001`  
+> Reviewed design source: PR #153 exact head `a5b8aa6e23e5f54a0c2e1884ed027d7f7b7cbeee`  
+> Status: **REFROZEN / V1**
+
+### 17.1 POST_DDX_REEVALUATION consumption
+
+RDP-05 继续冻结：
+
+```text
+POST_DDX_REEVALUATION
+F3 = PRESENT expected
+F5 = PRESENT expected
+F6 = NOT_YET_APPLICABLE or PRESENT
+```
+
+但 post-DDx F5 signals 不再被假设全部必须进入 D03。
+
+### 17.2 Signal consumers
+
+```text
+F5 = ANALYSIS_RESULT_AVAILABLE
+F5 = REASSESSMENT_REQUIRED
+```
+
+可作为：
+
+```text
+U09 PostDdxRoutingDecision
+```
+
+的 current governed inputs。
+
+在不存在更高优先级 Clinical Readiness path 时，exact consequence 冻结为：
+
+```text
+F5 = ANALYSIS_RESULT_AVAILABLE
++ F3 = NO_ACTIVE_ONLINE_BLOCKING_GAP
++ no blocking F6 need
+→ TO_U12_DELIVERY_PREPARATION
+
+F5 = REASSESSMENT_REQUIRED
++ F3 = NO_ACTIVE_ONLINE_BLOCKING_GAP
++ no higher Safety/acquisition/offline/scope path
+→ TO_U08_REASSESSMENT
+```
+
+若存在：
+
+```text
+OUT_OF_SCOPE
+blocking NEEDS_OFFLINE_EVIDENCE
+NEEDS_CLARIFICATION
+F3 CAN_ASK_MORE
+F5 NO_RELIABLE_DIRECTION
+```
+
+则必须优先：
+
+```text
+TO_U05_CLINICAL_READINESS
+```
+
+由 D03 按 frozen precedence 形成唯一 Clinical Readiness。
+
+而：
+
+```text
+OUT_OF_SCOPE
+blocking NEEDS_OFFLINE_EVIDENCE
+NEEDS_CLARIFICATION
+F3 CAN_ASK_MORE
+F5 NO_RELIABLE_DIRECTION
+```
+
+仍要求：
+
+```text
+TO_U05_CLINICAL_READINESS
+→ D03
+```
+
+### 17.3 No semantic shortcut
+
+禁止：
+
+```text
+ANALYSIS_RESULT_AVAILABLE
+→ READY_FOR_CLINICAL_ANALYSIS
+
+ANALYSIS_RESULT_AVAILABLE
+→ Delivery Readiness READY
+
+REASSESSMENT_REQUIRED
+→ automatic U08 without higher-path checks
+```
+
+### 17.4 Currentness
+
+PostDdxRoutingDecision consumed inputs must satisfy：
+
+```text
+same consultation_id
+same cdp_id
+current/compatible Clinical State Version
+validity = CURRENT
+```
+
+Stale/failed/conflicting expected inputs cannot be interpreted as normal routing negatives.
+
+### 17.5 Current status
+
+```text
+U05-RDP-05 post-DDx consumption scope
+= REFROZEN / V1
+
+BF-U05-RG02-CL-01
+= REMEDIATED / REFROZEN / CLOSURE_REEVALUATION_PENDING
+```

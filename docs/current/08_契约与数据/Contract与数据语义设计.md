@@ -2026,3 +2026,123 @@ Re-freeze
 Implementation / Merge / Production Authorization
 = NOT IMPLIED
 ```
+
+
+---
+
+# 26. Post-DDx Controlled Amendment — Routing Decision Contract
+
+> Authorization: `AUTH-U05-PDX-FROZEN-AMEND-001`  
+> Reviewed design source: PR #153 exact head `a5b8aa6e23e5f54a0c2e1884ed027d7f7b7cbeee`  
+> Status: **REFROZEN / V1**
+
+## 26.1 Contract type
+
+新增 scoped deterministic routing decision：
+
+```text
+PostDdxRoutingDecision
+```
+
+复用统一：
+
+```text
+DeterministicDecision
+```
+
+结构，但：
+
+```text
+!= D11
+!= new D01-D10 system-level decision family
+!= Clinical Readiness
+!= Delivery Readiness
+!= Clinical State truth category
+```
+
+## 26.2 Minimum fields
+
+```text
+decision_id
+decision_type = POST_DDX_ROUTING
+consultation_id
+input_clinical_state_version
+evaluation_context = POST_DDX_REEVALUATION
+
+f1_input_ref
+f3_input_ref
+f5_input_ref
+f6_input_ref?
+current_u04_gate_ref
+
+decision
+reason_codes[]
+basis_refs[]
+
+policy_id = POST_DDX_ROUTING
+policy_version
+rule_release_refs[]
+knowledge_release_refs[]
+created_at
+validity / staleness
+trace_refs[]
+```
+
+## 26.3 Allowed decision vocabulary
+
+```text
+TO_U05_CLINICAL_READINESS
+TO_U08_REASSESSMENT
+TO_U12_DELIVERY_PREPARATION
+FAILURE_ROUTE
+```
+
+禁止直接输出：
+
+```text
+OUT_OF_SCOPE
+NEEDS_OFFLINE_EVIDENCE
+NEEDS_CLARIFICATION
+CAN_ASK_MORE
+READY_FOR_CLINICAL_ANALYSIS
+NO_RELIABLE_DIRECTION
+```
+
+这些不是 PostDdxRoutingDecision vocabulary。
+
+## 26.4 Ownership
+
+```text
+F3 owner -> Gap semantics
+F5 owner -> DDx/Must-Exclude semantics
+F6 owner -> offline-evidence semantics
+F7 owner -> Delivery Readiness
+U05/D03 -> Clinical Readiness
+U09 -> scoped routing policy host only
+```
+
+## 26.5 Idempotency
+
+```text
+POST_DDX_ROUTING_ID
+=
+consultation_id
++ input Clinical State Version
++ accepted F3/F5/F6 refs
++ current U04 Gate ref
++ routing policy version
+```
+
+Same replay：
+
+```text
+→ attach authoritative prior routing decision
+→ no duplicate U08/U12 side effect
+```
+
+## 26.6 Current status
+
+```text
+Phase 8 PostDdxRoutingDecision
+= REFROZEN / V1
+```
