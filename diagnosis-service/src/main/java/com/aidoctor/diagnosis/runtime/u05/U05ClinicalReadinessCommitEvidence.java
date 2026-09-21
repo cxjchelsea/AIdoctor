@@ -47,7 +47,12 @@ public final class U05ClinicalReadinessCommitEvidence {
                 || result.committedVersion == null) {
             throw new IllegalStateException("authoritative readiness commit evidence requires COMMITTED result");
         }
-        String audit = result.auditRef == null ? "audit-unavailable" : result.auditRef.auditId;
+        if (result.auditRef == null
+                || result.auditRef.auditId == null
+                || result.auditRef.auditId.trim().isEmpty()) {
+            throw new IllegalStateException("COMMITTED readiness result requires audit_ref");
+        }
+        String audit = result.auditRef.auditId;
         String resultRef = U05Ids.hash(
                 "u05-readiness-commit-result",
                 result.patchId,
