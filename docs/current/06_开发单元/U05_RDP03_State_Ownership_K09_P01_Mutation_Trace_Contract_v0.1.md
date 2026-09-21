@@ -298,9 +298,18 @@ Proposal 不得预测：
       consultation_id
       cdp_id
       input_clinical_state_version
-      admission_id / admitted snapshot
-      readiness_input_set_identity
+
+      source_admission_ref
+      = U05AdmittedInput.admission_id
+
+      source_readiness_input_set_identity
+      = U05AdmittedInput.accepted_readiness_input_set_identity
+
       current Gate/restricted context
+
+      when RESTRICTED:
+        D03.restricted_permission_ref
+        = U05AdmittedInput.accepted_restricted_permission_ref
 
     D03 decision validity = current for commit
 
@@ -317,6 +326,55 @@ Proposal 不得预测：
     lost restricted context
     changed readiness-input-set identity
     untrusted policy version
+
+---
+
+# 5.1 Canonical D03-to-admission provenance equality
+
+在生成 CLINICAL_READINESS_EFFECT_ID 前，必须验证：
+
+    D03.source_admission_ref
+    = U05AdmittedInput.admission_id
+
+    D03.source_readiness_input_set_identity
+    = U05AdmittedInput.accepted_readiness_input_set_identity
+
+    D03.safety_gate_ref
+    = U05AdmittedInput.accepted_u04_gate_ref
+
+    D03.restricted_context_ref
+    = U05AdmittedInput.accepted_restricted_context_ref
+      when RESTRICTED
+
+    D03.restricted_permission_ref
+    = U05AdmittedInput.accepted_restricted_permission_ref
+      when RESTRICTED
+
+任一不等：
+
+    no readiness effect
+    no K09 Proposal
+    no Clinical Readiness commit
+
+处理：
+
+    stale / provenance mismatch
+    -> fail closed
+    -> re-admit / re-evaluate from current authoritative state
+
+禁止：
+
+    use generic basis_refs[]
+    to override a mismatched canonical named binding
+
+ClinicalReadinessStateValue 中：
+
+    source_admission_id
+    source_readiness_input_set_identity
+    source_restricted_permission_ref
+
+必须从已验证的 admitted/D03 provenance chain 投影，
+不得通过后续 side lookup 重新生成。
 
 ---
 
@@ -1258,8 +1316,20 @@ Runtime/RDP-01/RDP-04 可以且必须：
 则 Clinical Readiness record、effect、proposal、trace 必须保留：
 
     source_restricted_context_ref
+    source_restricted_permission_ref
 
-以及能证明 U05 evaluation was permitted 的 permission evidence ref。
+并要求：
+
+    source_restricted_permission_ref
+    = D03.restricted_permission_ref
+    = U05AdmittedInput.accepted_restricted_permission_ref
+
+该 ref 必须证明：
+
+    the exact admitted U05 evaluation
+    was permitted under the source RESTRICTED context
+
+禁止在 D03/commit 阶段重新 lookup 一个不同 permission ref 替代 admitted provenance。
 
 Readiness commit：
 
@@ -1957,3 +2027,41 @@ Current aggregate:
     U05 Implementation Authorization = NOT_GRANTED
 
 This provenance update changes status only and does not authorize implementation.
+
+
+---
+
+# 41. AGR-01 / AGR-02 Controlled Compatibility Amendment
+
+Amendment basis:
+
+    U05 Implementation Readiness Re-Evaluation v0.3
+    PR #175
+    review_id = 5263778132
+
+Findings addressed:
+
+    BF-U05-AGR-01
+    BF-U05-AGR-02
+
+This amendment freezes equality/provenance continuity only:
+
+    D03.source_admission_ref
+    -> admitted admission_id
+
+    D03.source_readiness_input_set_identity
+    -> admitted readiness-input-set identity
+
+    D03.restricted_permission_ref
+    -> admitted restricted permission ref when RESTRICTED
+
+    ClinicalReadinessStateValue
+    -> projects the same validated provenance
+
+No readiness value, policy precedence, K09/P01 ownership,
+or downstream route semantic is changed.
+
+Current amendment status:
+
+    AGR-01/02 RDP-03 portion
+    = AMENDED / INDEPENDENT_COMPATIBILITY_REVIEW_PENDING

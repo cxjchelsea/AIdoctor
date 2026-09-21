@@ -494,7 +494,19 @@ Case identity 一旦进入 frozen RDP-06：
 
     U05-EV-036
     RESTRICTED source context
-    -> context/permission evidence preserved through readiness commit
+    -> exact permission evidence preserved through:
+       inbound request
+       -> admission result
+       -> admitted input
+       -> D03 decision
+       -> committed readiness provenance
+
+    Required equality:
+       inbound_restricted_permission_ref
+       = admission_result_restricted_permission_ref
+       = admitted_restricted_permission_ref
+       = d03_restricted_permission_ref
+       = readiness_source_restricted_permission_ref
 
     U05-EV-037
     READINESS_ONLY_COMMIT
@@ -768,6 +780,8 @@ Future implementation verification 必须包含静态、受审查的：
 
     expected_replay_disposition?
 
+    expected_provenance_equalities[]
+
     expected_effect_counts{}
 
     expected_authority_refs[]
@@ -940,7 +954,12 @@ Future implementation 至少应形成等价的 focused suites：
     gate_value
     restricted_context_ref?
 
+    inbound_restricted_permission_ref?
+
     admission_id?
+    admission_result_restricted_permission_ref?
+    admitted_restricted_permission_ref?
+    admitted_readiness_input_set_identity?
     admission_status?
     admission_reason?
     admission_replay_disposition?
@@ -953,10 +972,15 @@ Future implementation 至少应形成等价的 focused suites：
     clinical_readiness?
     d03_policy_rule_ref?
 
+    d03_source_admission_ref?
+    d03_source_readiness_input_set_identity?
+    d03_restricted_permission_ref?
+
     policy_expectation_gap
 
     readiness_effect_id?
     readiness_payload_fingerprint?
+    readiness_source_restricted_permission_ref?
 
     proposal_id?
     proposal_base_version?
@@ -995,6 +1019,9 @@ Future implementation 至少应形成等价的 focused suites：
     expected_result
     observed_result
 
+    expected_provenance_equalities[]
+    observed_provenance_equalities[]
+
     expected_effect_counts{}
     observed_effect_counts{}
     side_effect_evidence_refs{}
@@ -1011,7 +1038,64 @@ Conditional fields 可为 null，但 schema 必须能区分：
 
 ---
 
-# 16.1 Typed effect-count evidence
+# 16.1 Cross-contract provenance equality evidence
+
+所有进入 D03 的 admitted EV case 必须证明：
+
+    d03_source_admission_ref
+    = admission_id
+
+    d03_source_readiness_input_set_identity
+    = admitted_readiness_input_set_identity
+
+并证明：
+
+    admitted_readiness_input_set_identity
+    = readiness_input_set_identity used by the admitted manifest/evidence
+
+当 source Gate = RESTRICTED 时，还必须证明：
+
+    inbound_restricted_permission_ref
+    = admission_result_restricted_permission_ref
+    = admitted_restricted_permission_ref
+    = d03_restricted_permission_ref
+    = readiness_source_restricted_permission_ref
+
+这些 equality 不能只由同一个 test fixture 常量填充。
+
+Observed equality 必须从实际对象读取：
+
+    U05ConsumerInboundRequest
+    U05AdmissionResult
+    U05AdmittedInput
+    D03 decision object
+    ClinicalReadinessStateValue / committed provenance
+
+然后由 evidence harness 比较。
+
+若任一 required provenance field：
+
+    missing
+    mismatched
+    or later side-lookup replaced the admitted ref
+
+则：
+
+    case FAIL
+
+Expected oracle 必须为适用 case 保存：
+
+    expected_provenance_equalities[]
+
+例如：
+
+    D03_SOURCE_ADMISSION_EQUALS_ADMISSION
+    D03_INPUT_SET_EQUALS_ADMITTED_INPUT_SET
+    RESTRICTED_PERMISSION_CHAIN_CONTINUOUS
+
+---
+
+# 16.2 Typed effect-count evidence
 
 expected_effect_counts / observed_effect_counts 至少包含：
 
@@ -1288,6 +1372,32 @@ identity。
     "latest"
 
 必须绑定 exact contract identities。
+
+---
+
+# 18.1 Contract authority-status consistency gate
+
+u05-contract-manifest.json builder 必须拒绝：
+
+    contradictory active status metadata
+    ambiguous current frozen/refrozen status
+    authority inferred only from an arbitrary later paragraph
+
+对于 RDP-05 当前 contract：
+
+    current authoritative status
+    = REFROZEN / V1
+
+must be read from the synchronized current status/provenance metadata.
+
+历史状态可以保留用于审计，
+但必须标记为 historical/superseded，
+不得与 current_authoritative_status 并列竞争。
+
+如果任一 contract 的 current authority status 无法唯一确定：
+
+    verification FAIL
+    oracle acceptance prohibited
 
 ---
 
@@ -2514,3 +2624,79 @@ Current aggregate blocker state:
     = NOT_GRANTED
 
 This provenance update changes status only and does not authorize implementation.
+
+
+---
+
+# 53. AGR-01 / AGR-02 / AGR-03 Controlled Compatibility Amendment
+
+Amendment basis:
+
+    U05 Implementation Readiness Re-Evaluation v0.3
+    PR #175
+    review_id = 5263778132
+
+Findings addressed:
+
+    BF-U05-AGR-01
+    BF-U05-AGR-02
+    BF-U05-AGR-03
+
+Verification contract additions:
+
+    explicit request/admission/D03/readiness permission-ref chain evidence
+
+    explicit D03.source_admission_ref equality evidence
+
+    explicit D03.source_readiness_input_set_identity equality evidence
+
+    expected_provenance_equalities[]
+    observed_provenance_equalities[]
+
+    contract authority-status consistency gate
+
+No business expected result is changed.
+No new runtime readiness value is introduced.
+No live downstream execution is authorized.
+
+Current amendment status:
+
+    AGR RDP-06 portion
+    = AMENDED / INDEPENDENT_COMPATIBILITY_REVIEW_PENDING
+
+
+---
+
+# 54. Aggregate Compatibility Independent Review Remediation
+
+Independent Compatibility Review:
+
+    PR #176
+    review_id = 5263843388
+    verdict = REVISE_REQUIRED
+
+Finding:
+
+    BF-U05-AGR-AMEND-IR-01
+    = ADMISSION_RESULT_PERMISSION_PROVENANCE_NOT_COVERED_BY_RDP06_EVIDENCE
+
+Remediation:
+
+    U05_CASE_EVIDENCE_V0_1
+    now includes admission_result_restricted_permission_ref
+
+    EV-036 now verifies the full five-link chain:
+
+      inbound request
+      -> AdmissionResult
+      -> U05AdmittedInput
+      -> D03
+      -> committed readiness provenance
+
+Current:
+
+    BF-U05-AGR-AMEND-IR-01
+    = REMEDIATED / TARGETED_COMPATIBILITY_REVIEW_PENDING
+
+    Aggregate Compatibility Amendment
+    = REVISED / READY_FOR_TARGETED_COMPATIBILITY_REVIEW
