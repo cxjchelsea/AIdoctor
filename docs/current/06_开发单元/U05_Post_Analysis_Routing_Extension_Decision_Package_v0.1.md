@@ -109,6 +109,7 @@ Exactly:
 
 ```text
 TO_U05_CLINICAL_READINESS
+TO_F3_CURRENT_VERSION_REVALIDATION
 TO_U08_REASSESSMENT
 TO_U12_DELIVERY_PREPARATION
 FAILURE_ROUTE
@@ -153,12 +154,18 @@ For POST_OFFLINE_ASSESSMENT:
 if current owner outputs expose a Clinical Readiness path
 → TO_U05_CLINICAL_READINESS
 
+else if:
+F3 = ABSENT_BY_DESIGN
+and canonical F3 source state/effect exists
+and current context now requires an F3 artifact to decide delivery/reanalysis
+→ TO_F3_CURRENT_VERSION_REVALIDATION
+
 else if F5 = REASSESSMENT_REQUIRED
 → TO_U08_REASSESSMENT
 
 else if:
 F5 = ANALYSIS_RESULT_AVAILABLE
-+ F3 = NO_ACTIVE_ONLINE_BLOCKING_GAP or lawful ABSENT_BY_DESIGN
++ F3 = PRESENT / NO_ACTIVE_ONLINE_BLOCKING_GAP
 + F6 = NO_BLOCKING_OFFLINE_EVIDENCE_NEED
 + Safety permits
 + U12 preparation prerequisites current
@@ -188,23 +195,58 @@ RDP-05 already permits in POST_OFFLINE_ASSESSMENT:
 F3 = ABSENT_BY_DESIGN
 ```
 
-only if F3 was lawfully activated previously and current context requires no F3 input artifact.
+only if F3 was lawfully activated previously and the prior context required no current F3 input artifact.
 
-For normal-delivery preparation this may be accepted only when a frozen reference/basis proves:
+For V1, ABSENT_BY_DESIGN is never sufficient evidence for normal-delivery preparation.
 
-```text
-no current online blocking Gap obligation remains
-```
-
-It must not be inferred from missing F3 data.
-
-If that proof is absent:
+If the current post-offline route now needs to determine whether an online blocking Gap remains, and:
 
 ```text
-TO_U05_CLINICAL_READINESS or failure/reevaluation
+canonical F3 source state/effect exists
+F3 readiness input = ABSENT_BY_DESIGN
 ```
 
-must occur instead of delivery preparation.
+the only lawful consequence is:
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+→ U06 MODE-3 F3_CURRENT_VERSION_REVALIDATION
+```
+
+MODE-3 applies the already frozen F3 revalidation contract:
+
+```text
+REVALIDATED_CURRENT
+→ current F3 readiness input is materialized
+→ re-enter PostAnalysisRoutingDecision
+
+REASSESSMENT_REQUIRED
+→ U06 MODE-1 / fresh governed F3 assessment
+→ re-enter routing after canonical/current F3 exists
+
+FAILED
+→ FAILURE_ROUTE / governed failure handling
+```
+
+Only:
+
+```text
+F3 = PRESENT / NO_ACTIVE_ONLINE_BLOCKING_GAP
+```
+
+may satisfy the F3 guard for:
+
+```text
+TO_U12_DELIVERY_PREPARATION
+```
+
+Therefore:
+
+```text
+ABSENT_BY_DESIGN
+!= no active gap
+!= delivery evidence
+```
 
 # 9. Contract rename/compatibility
 
@@ -224,13 +266,26 @@ is superseded by the generalized V1 contract before runtime implementation.
 
 No runtime compatibility migration is required because implementation is not yet authorized.
 
-Decision identity includes:
+Decision contract MUST include:
 
 ```text
 evaluation_context
 ```
 
-so post-DDx and post-offline decisions cannot collide.
+and the idempotency identity MUST be:
+
+```text
+POST_ANALYSIS_ROUTING_ID
+=
+consultation_id
++ input Clinical State Version
++ evaluation_context
++ accepted F3/F5/F6 refs
++ current U04 Gate ref
++ routing policy version
+```
+
+Therefore POST_DDX_REEVALUATION and POST_OFFLINE_ASSESSMENT decisions cannot collide even on the same Consultation/version.
 
 # 10. Unit changes
 
@@ -262,13 +317,15 @@ U09 still does not own F6 truth.
 PA-E01 F6 VALID+JUSTIFIED -> U11 unchanged
 PA-E02 F6 FAILED -> U14 unchanged
 PA-E03 F6 VALID+NOT_NEEDED -> PostAnalysisRoutingDecision
-PA-E04 post-offline F5 ANALYSIS_RESULT_AVAILABLE + no blockers -> U12 preparation
-PA-E05 F6 NOT_NEEDED alone never implies delivery ready
-PA-E06 post-offline CAN_ASK_MORE -> U05/D03
-PA-E07 post-offline F5 REASSESSMENT_REQUIRED -> U08 if no higher path
-PA-E08 F3 ABSENT_BY_DESIGN without proof -> no delivery preparation
-PA-E09 POST_DDX behavior unchanged
-PA-E10 decision identity differs by evaluation_context
+PA-E04 post-offline F3 ABSENT_BY_DESIGN -> TO_F3_CURRENT_VERSION_REVALIDATION
+PA-E05 REVALIDATED_CURRENT -> re-enter router with F3 PRESENT/current
+PA-E06 post-offline F5 ANALYSIS_RESULT_AVAILABLE + current F3 no-gap + no blockers -> U12 preparation
+PA-E07 F6 NOT_NEEDED alone never implies delivery ready
+PA-E08 post-offline CAN_ASK_MORE -> U05/D03
+PA-E09 post-offline F5 REASSESSMENT_REQUIRED -> U08 if no higher path
+PA-E10 F3 ABSENT_BY_DESIGN never routes directly to delivery
+PA-E11 POST_DDX behavior unchanged
+PA-E12 routing idempotency identity differs by evaluation_context
 ```
 
 # 12. Impact inventory
@@ -302,4 +359,27 @@ BF-U05-RG-02
 
 U05 Implementation Readiness
 = NOT_READY
+```
+
+
+# 14. Independent-review remediation status
+
+```text
+BF-U05-PA-IR-01
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+RQ-U05-PA-IR-02
+= REMEDIATED / TARGETED_REVIEW_PENDING
+```
+
+Remediation:
+
+```text
+IR-01:
+F3 ABSENT_BY_DESIGN now routes only to TO_F3_CURRENT_VERSION_REVALIDATION
+when current routing requires a materialized F3 input.
+No direct delivery preparation is allowed until F3 = PRESENT/current.
+
+IR-02:
+evaluation_context is mandatory in the decision contract and POST_ANALYSIS_ROUTING_ID.
 ```
