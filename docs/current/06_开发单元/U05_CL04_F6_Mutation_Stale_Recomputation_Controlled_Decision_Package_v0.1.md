@@ -592,7 +592,7 @@ policy_scope = FIRST_CLINICAL_ANALYSIS_ENTRY_AFTER_CURRENT_F6_NOT_NEEDED
 -> DECIDED / READY_FOR_CLINICAL_ANALYSIS
 ```
 
-For all other current profiles, the router selects the unique existing consequence according to current F3/F5/F6/Safety semantics.
+For all other current profiles, the applicable context-specific routing host selects the unique existing consequence according to current F3/F5/F6/Safety semantics.
 
 Mandatory invariant:
 
@@ -892,14 +892,24 @@ POST_USER_FACT_UPDATE
 -> no Clinical Readiness commit
 ```
 
-Only after F6 is current, or lawfully not required in the exact context, may:
+Only after F6 is current, or lawfully not required in the exact context, may the context-specific routing host expose U05:
 
 ```text
-TO_U05_CLINICAL_READINESS
+A1_POST_BARRIER_CURRENT
+-> existing A1 routing projection
+-> U05_ELIGIBLE / U05
+-> D03
+
+POST_USER_FACT_UPDATE
+or POST_OFFLINE_ASSESSMENT
+-> ClinicalContinuationRoutingDecision
+-> TO_U05_CLINICAL_READINESS
+-> U05
 -> D03
 ```
 
-This remains a pre-D03 continuation-routing consequence, not D03 INPUT_FAILURE.
+For continuation-router contexts, the F6 reassessment path remains a pre-D03 routing consequence, not D03 INPUT_FAILURE.
+A1 keeps its existing routing projection.
 
 Owner decision:
 
