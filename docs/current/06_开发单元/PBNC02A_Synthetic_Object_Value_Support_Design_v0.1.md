@@ -103,23 +103,59 @@ and each value limited to:
     null
     List of scalar values.
 
-PBNC-02A must reject:
+PBNC-02A must implement exact parity with the existing
+StatePatchBoundaryValidator controlled-value constraints.
 
-    nested Map
+Current exact constraints to preserve:
 
-    Map inside List
+    top-level operation value:
+      String <= 4000 characters
+      Number abs(value) <= 9007199254740991
+      Boolean
+      List size <= 64
+      one top-level Map size 1..32
 
-    nested List
+    Map key:
+      opaque-id syntax
+      length 1..64
 
-    arbitrary Java object
+    Map child value:
+      String <= 1000 characters
+      Number abs(value) <= 9007199254740991
+      Boolean
+      null
+      List size <= 64 containing scalar values only
 
-    unsupported Number outside current StatePatch boundary
+    List item string:
+      <= 1000 characters
 
-    malformed object key
+    nested List:
+      prohibited
 
-    object larger than the existing controlled-value limit.
+    nested Map:
+      prohibited
+
+    Map inside List:
+      prohibited
+
+    arbitrary Java object:
+      prohibited
+
+    ADD / REPLACE top-level operation value:
+      non-null required
+
+    REMOVE:
+      non-null value prohibited
 
 The implementation must not create a second, broader value vocabulary.
+
+Normative parity rule:
+
+    SyntheticJsonPointerApplier accepts an operation value
+    only if the same semantic value shape is accepted by the existing
+    StatePatchBoundaryValidator operation-value boundary.
+
+PBNC-02A does not change the validator; it mirrors the already-frozen boundary.
 
 ---
 
@@ -372,6 +408,47 @@ Even if caller bypasses StateCommitter boundary validation,
 SyntheticJsonPointerApplier itself must not accept values broader
 than the frozen controlled-value shape.
 
+Required parity rejection tests:
+
+    top-level Map size = 33
+    -> reject
+
+    malformed / >64-char Map key
+    -> reject
+
+    List size = 65
+    -> reject
+
+    child String length = 1001
+    -> reject
+
+    top-level String length = 4001
+    -> reject
+
+    Number abs(value) > 9007199254740991
+    -> reject
+
+    nested List
+    -> reject
+
+    nested Map
+    -> reject
+
+    list-of-Map
+    -> reject
+
+    ADD/REPLACE with top-level null
+    -> reject
+
+Boundary acceptance tests:
+
+    Map size = 32
+    valid opaque keys
+    child String length = 1000
+    List size = 64
+    safe-integer boundary value
+    -> accepted when all other StatePatch requirements are valid.
+
 ## H. conflict/idempotency regression
 
 Existing PBNC-01/PBNC-02 tests remain PASS.
@@ -442,3 +519,37 @@ Required sequence:
     -> independent verification
     -> U05 consumption
     -> U05 targeted implementation re-review.
+
+
+---
+
+# 14. Independent Design Review Remediation
+
+Initial Independent Design Review:
+
+    PR #184
+    verdict = REVISE_REQUIRED
+    review_id = 5265098433
+
+Finding:
+
+    BF-PBNC02A-IR-01
+    = CONTROLLED_VALUE_PARITY_LIMITS_UNDERDEFINED
+
+Remediation:
+
+    exact current StatePatch controlled-value limits are now frozen
+    into PBNC-02A design and focused parity tests.
+
+    PBNC-02A accepts no value that the current
+    StatePatchBoundaryValidator would reject.
+
+    StatePatchBoundaryValidator remains unchanged.
+
+Current:
+
+    BF-PBNC02A-IR-01
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    PBNC-02A Design
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
