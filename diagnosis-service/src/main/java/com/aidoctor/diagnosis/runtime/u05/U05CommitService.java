@@ -56,8 +56,17 @@ public final class U05CommitService {
         }
         if (patch.operations == null
                 || patch.operations.size() != 1
-                || !U05ReadinessStateProposalFactory.READINESS_PATH.equals(patch.operations.get(0).path)) {
+                || !U05ReadinessStateProposalFactory.READINESS_PATH.equals(patch.operations.get(0).path)
+                || !proposal.getMutationOperation().equals(patch.operations.get(0).op)) {
             throw new IllegalStateException("unsupported U05 proposal operation set");
+        }
+        if ("ADD".equals(proposal.getMutationOperation())
+                && proposal.getExpectedCurrentReadinessRecordRef() != null) {
+            throw new IllegalStateException("ADD proposal has unexpected current readiness precondition");
+        }
+        if ("REPLACE".equals(proposal.getMutationOperation())
+                && !proposal.getExpectedCurrentReadinessRecordRef().equals(input.getSourceCurrentReadinessRecordRef())) {
+            throw new IllegalStateException("REPLACE readiness precondition mismatch");
         }
         Object raw = patch.operations.get(0).value;
         if (!(raw instanceof Map<?, ?>)) throw new IllegalStateException("U05 readiness payload malformed");
