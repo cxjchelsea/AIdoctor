@@ -496,6 +496,7 @@ Case identity 一旦进入 frozen RDP-06：
     RESTRICTED source context
     -> exact permission evidence preserved through:
        inbound request
+       -> admission result
        -> admitted input
        -> D03 decision
        -> committed readiness provenance
