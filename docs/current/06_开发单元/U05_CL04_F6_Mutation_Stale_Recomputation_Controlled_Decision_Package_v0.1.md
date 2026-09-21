@@ -114,7 +114,10 @@ POST_USER_FACT_UPDATE
 -> reload authoritative state
 -> mandatory post-F6 Safety barrier
 -> establish a new current committed U04 Gate / routing authorization
--> U10 F6_CURRENT_VERSION_REVALIDATION
+-> if BLOCKED: Safety preempts; no F6 revalidation
+-> if UNAVAILABLE: failure/safe handling preempts; no F6 revalidation
+-> if ALLOW or action-permitted RESTRICTED:
+   U10 F6_CURRENT_VERSION_REVALIDATION
 -> current F6 readiness-input projection
 -> re-enter ClinicalContinuationRoutingDecision
 ```
@@ -453,6 +456,11 @@ Semantics:
 ```text
 REVALIDATED_CURRENT
 -> create durable/auditable current F6 readiness-input projection
+-> if canonical F6 = VALID + JUSTIFIED:
+   project existing F6 business signal NEEDS_OFFLINE_EVIDENCE
+-> if canonical F6 = VALID + NOT_NEEDED:
+   project existing F6 business signal NO_BLOCKING_OFFLINE_EVIDENCE_NEED
+-> no new F6 business vocabulary
 -> no canonical F6 state mutation
 -> no Clinical State Version advance
 -> continuation routing may resume
@@ -620,6 +628,19 @@ F6 reassessment commit
 -> establish current U03/U04 basis as required
 -> new current committed U04 Gate
 -> new routing authorization
+
+BLOCKED
+-> Safety preempts
+-> no F6 current-version revalidation
+-> no ordinary continuation
+
+UNAVAILABLE
+-> governed failure/safe handling preempts
+-> no F6 current-version revalidation
+-> no ordinary continuation
+
+ALLOW
+or RESTRICTED with explicit F6-revalidation permission
 -> U10 F6_CURRENT_VERSION_REVALIDATION
 -> REVALIDATED_CURRENT / REASSESSMENT_REQUIRED / FAILED
 -> only REVALIDATED_CURRENT may re-enter ClinicalContinuationRoutingDecision
@@ -642,7 +663,9 @@ For `RESTRICTED`:
 ```text
 new Gate / routing authorization
 must preserve the current restricted_context_ref
-and must explicitly permit the next consequence.
+and must explicitly permit:
+F6_CURRENT_VERSION_REVALIDATION
+and any subsequent continuation consequence.
 ```
 
 The post-F6 barrier must not widen:
@@ -1059,7 +1082,8 @@ F6 commit advances state
 -> only REVALIDATED_CURRENT resumes continuation routing
 
 CASE-09A
-post-F6 Safety barrier advances state version
+post-F6 Safety barrier = ALLOW or action-permitted RESTRICTED
+and advances state version
 but declared F6 dependencies remain compatible
 -> deterministic revalidation
 -> REVALIDATED_CURRENT
@@ -1067,10 +1091,17 @@ but declared F6 dependencies remain compatible
 -> no second canonical F6 commit
 
 CASE-09B
-post-F6 Safety barrier / dependency change makes F6 basis incompatible
+post-F6 Safety barrier permits continuation
+but dependency change makes F6 basis incompatible
 -> F6 revalidation = REASSESSMENT_REQUIRED
 -> U10 F6_CURRENT_VERSION_REASSESSMENT
 -> no silent reuse
+
+CASE-09C
+post-F6 Safety barrier = BLOCKED / UNAVAILABLE
+-> no F6 current-version revalidation
+-> no ordinary continuation
+-> governed Safety/failure route
 
 CASE-10
 D03 = NEEDS_OFFLINE_EVIDENCE after pre-D03 F6 reassessment
