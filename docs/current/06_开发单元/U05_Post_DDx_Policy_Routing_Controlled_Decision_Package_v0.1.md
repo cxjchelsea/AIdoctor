@@ -292,32 +292,46 @@ For:
 F5 = ANALYSIS_RESULT_AVAILABLE
 F3 = NO_ACTIVE_ONLINE_BLOCKING_GAP
 no blocking F6 need
-current Safety permits normal delivery
+current Safety permits ordinary/normal-delivery preparation
 ```
 
 U09 emits:
 
 ```text
-DELIVERY_EVALUATION_ELIGIBLE
+TO_U12_DELIVERY_PREPARATION
 ```
 
-Scheduler invokes F7/U12 preparation path.
-
-F7 evaluates existing BL-10/U12 delivery prerequisites:
+This consequence means only:
 
 ```text
-current version
-valid Risk
-valid DDx
-Must-Exclude appropriately handled
-no blocking online/offline Gap
-scope/safety/evidence constraints
+the current post-DDx state is eligible to enter U12's existing normal-delivery preparation/validation path
 ```
 
-Then:
+It does NOT mean:
 
 ```text
-F7 NOT_STARTED/ASSEMBLING/VALIDATING
+Delivery Readiness = READY
+delivery side effect is already authorized
+Consultation may already complete
+```
+
+U12 admission must still validate the existing BL-10/U12 prerequisites:
+
+```text
+Consultation ACTIVE
+current Safety permits normal delivery
+current Clinical State Version valid
+Risk valid for the required basis
+F5 DDx Assessment VALID/current
+key Must-Exclude appropriately handled
+no blocking online/offline critical Gap
+required governance/binding refs current
+```
+
+Inside U12, F7 remains the unique Delivery Readiness Owner:
+
+```text
+F7 NOT_STARTED / ASSEMBLING / VALIDATING
 → Delivery Readiness NOT_READY
 
 F7 VALIDATION_FAILED
@@ -326,12 +340,14 @@ F7 VALIDATION_FAILED
 
 F7 VALIDATED
 → Delivery Readiness READY
-→ U12 normal delivery
+→ delivery side effect may execute
 
 F7 DELIVERED
 → Delivery Readiness DELIVERED
 → Consultation COMPLETED
 ```
+
+Thus U12 creates/advances Delivery Readiness; Delivery Readiness READY is not a prerequisite for entering U12.
 
 No Clinical Readiness enum is added.
 
@@ -346,21 +362,34 @@ F5 = REASSESSMENT_REQUIRED
 + F3 = NO_ACTIVE_ONLINE_BLOCKING_GAP
 + no blocking offline evidence
 + no clarification need
++ no OUT_OF_SCOPE
++ current F5 result valid/current
 ```
 
-U09 emits:
+U09 may emit:
 
 ```text
-DDX_REASSESSMENT_ELIGIBLE
+TO_U08_REASSESSMENT
 ```
 
-Scheduler invokes:
+only after proving no higher Safety / acquisition / offline path exists.
+
+Scheduler invokes U08 only when:
 
 ```text
-U08
+required U08 CapabilityBindingRef / RuleReleaseRef / KnowledgeReleaseRef are current
+current Clinical State Version is compatible
+current U04 Gate permits the action
+existing bounded/no-progress protection permits another analysis cycle
 ```
 
-under current U08 admission / binding rules.
+If a new CAN_ASK_MORE, NEEDS_CLARIFICATION, blocking NEEDS_OFFLINE_EVIDENCE, or OUT_OF_SCOPE signal exists, U09 must emit:
+
+```text
+TO_U05_CLINICAL_READINESS
+```
+
+instead.
 
 This path must be idempotent and bounded.
 
@@ -481,14 +510,35 @@ Allowed decisions:
 ```text
 TO_U05_CLINICAL_READINESS
 TO_U08_REASSESSMENT
-TO_F7_DELIVERY_EVALUATION
-TO_U10_OFFLINE_EVIDENCE
-TO_U11_SAFE_EXIT
-TO_U06_QUESTION
+TO_U12_DELIVERY_PREPARATION
 FAILURE_ROUTE
 ```
 
-These are routing consequences, not new Clinical Readiness values.
+These are Unit-level routing consequences only.
+
+They are:
+
+```text
+!= Clinical Readiness
+!= Delivery Readiness
+!= D11
+!= new D01-D10 system-level policy family
+!= new Clinical State truth category
+```
+
+The decision reuses the generic Phase-8 `DeterministicDecision` contract as a scoped U09 routing decision.
+
+It must never directly emit:
+
+```text
+OUT_OF_SCOPE
+NEEDS_OFFLINE_EVIDENCE
+NEEDS_CLARIFICATION
+CAN_ASK_MORE
+NO_RELIABLE_DIRECTION
+```
+
+Those remain exclusively resolved by U05/D03.
 
 ---
 
@@ -532,31 +582,46 @@ Input: current post-DDx owner outputs
 
 Step 1
 If Safety does not permit ordinary progression
-→ existing Safety route
+→ existing Safety route outside PostDdxRoutingDecision
 
 Step 2
 If required post-DDx inputs are stale/failed/conflicting
-→ failure/reevaluation handling
+or required routing/binding context is invalid
+→ FAILURE_ROUTE
 
 Step 3
-If any current owner input exposes a possible Clinical Readiness blocker/path:
-OUT_OF_SCOPE
-NEEDS_OFFLINE_EVIDENCE
-NEEDS_CLARIFICATION
-CAN_ASK_MORE
-NO_RELIABLE_DIRECTION
+If any current owner output requires a Clinical Readiness consequence:
+- OUT_OF_SCOPE
+- qualified blocking NEEDS_OFFLINE_EVIDENCE
+- NEEDS_CLARIFICATION
+- F3 CAN_ASK_MORE
+- F5 NO_RELIABLE_DIRECTION
+
 → TO_U05_CLINICAL_READINESS
 
+U09 does not decide which Clinical Readiness value wins.
+D03 applies its existing frozen precedence.
+
 Step 4
-Else if F5 = REASSESSMENT_REQUIRED
+Else if:
+F5 = REASSESSMENT_REQUIRED
++ F3 = NO_ACTIVE_ONLINE_BLOCKING_GAP
++ no higher acquisition/offline/scope path
++ current U08 bindings valid
++ bounded/no-progress policy permits another analysis cycle
+
 → TO_U08_REASSESSMENT
 
 Step 5
-Else if F5 = ANALYSIS_RESULT_AVAILABLE
-   and F3 = NO_ACTIVE_ONLINE_BLOCKING_GAP
-   and no blocking F6 need
-→ TO_F7_DELIVERY_EVALUATION
+Else if:
+F5 = ANALYSIS_RESULT_AVAILABLE
++ F3 = NO_ACTIVE_ONLINE_BLOCKING_GAP
++ no blocking F6 need
++ normal-delivery preparation prerequisites are current enough to enter U12
 
+→ TO_U12_DELIVERY_PREPARATION
+
+Step 6
 Else
 → POLICY_EXPECTATION_GAP / design blocker
 ```
@@ -565,10 +630,18 @@ Important:
 
 ```text
 absence of blocker
-!= delivery ready
+!= Delivery Readiness READY
 ```
 
-Only F7 can produce Delivery Readiness READY.
+Only F7 inside the governed U12 path can interpret Delivery Readiness.
+
+Likewise:
+
+```text
+TO_U12_DELIVERY_PREPARATION
+!= normal delivery completed
+!= Delivery Readiness READY
+```
 
 ---
 
@@ -578,9 +651,9 @@ If this design is approved and frozen consistently across affected artifacts:
 
 ```text
 ANALYSIS_RESULT_AVAILABLE
-→ TO_F7_DELIVERY_EVALUATION
-→ F7 Delivery Readiness
-→ U12 only when READY
+→ TO_U12_DELIVERY_PREPARATION
+→ U12/F7 assembles and validates
+→ Delivery Readiness NOT_READY → READY → DELIVERED
 
 REASSESSMENT_REQUIRED
 → TO_U08_REASSESSMENT
@@ -638,16 +711,18 @@ At minimum:
 
 ```text
 PDX-E01 ANALYSIS_RESULT_AVAILABLE + no gap/blocker
-→ U09 TO_F7_DELIVERY_EVALUATION
+→ U09 TO_U12_DELIVERY_PREPARATION
 → no D03 READY fabrication
 
-PDX-E02 F7 NOT_READY
-→ no U12 delivery
+PDX-E02 TO_U12_DELIVERY_PREPARATION
+→ Delivery Readiness initially NOT_READY
+→ no delivery side effect before F7 validation
 
-PDX-E03 F7 READY
-→ U12 allowed
+PDX-E03 F7 VALIDATED
+→ Delivery Readiness READY
+→ delivery side effect may execute
 
-PDX-E04 F7 BLOCKED
+PDX-E04 F7 VALIDATION_FAILED / BLOCKED
 → no COMPLETED
 
 PDX-E05 REASSESSMENT_REQUIRED + no higher blocker
@@ -683,10 +758,17 @@ Recommended V1 architecture:
 ```text
 KEEP six-value Clinical Readiness unchanged
 
-ADD deterministic PostDdxRoutingDecision hosted by U09
+ADD scoped deterministic PostDdxRoutingDecision hosted by U09
+
+allowed routing outputs only:
+TO_U05_CLINICAL_READINESS
+TO_U08_REASSESSMENT
+TO_U12_DELIVERY_PREPARATION
+FAILURE_ROUTE
 
 ANALYSIS_RESULT_AVAILABLE
-→ F7 Delivery Readiness evaluation
+→ U12 delivery preparation
+→ F7 owns Delivery Readiness inside U12
 
 REASSESSMENT_REQUIRED
 → U08 reassessment
@@ -719,4 +801,43 @@ BF-U05-RG-02
 
 U05 Implementation Readiness
 = NOT_READY
+```
+
+
+---
+
+# 20. Independent-review remediation status
+
+```text
+BF-U05-PDX-IR-01
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+BF-U05-PDX-IR-02
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+RQ-U05-PDX-IR-03
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+RQ-U05-PDX-IR-04
+= REMEDIATED / TARGETED_REVIEW_PENDING
+```
+
+Remediation summary:
+
+```text
+IR-01:
+PostDdxRoutingDecision no longer emits U06/U10/U11 outcomes.
+All Clinical Readiness values remain exclusively resolved by U05/D03.
+
+IR-02:
+Delivery path is now TO_U12_DELIVERY_PREPARATION.
+U12/F7 creates Delivery Readiness; READY is not an entry prerequisite.
+
+IR-03:
+POST_DDX_ROUTING explicitly reuses generic DeterministicDecision,
+is not D11, and is not a new Clinical State truth family.
+
+IR-04:
+REASSESSMENT_REQUIRED -> U08 requires no higher Safety/acquisition/offline path,
+current F5 and U08 bindings, current Gate, and bounded/no-progress eligibility.
 ```
