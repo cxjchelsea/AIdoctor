@@ -4,7 +4,7 @@
 > Design baseline: `268d9c5e9075420aa76c5c1aa37c254a3a99e2b8`  
 > Closure finding source: PR #159 / exact review head `193a280cce0bb7c99ca0566166bffc7bb3aaec6a`  
 > Scope: design-only / governance-only / no frozen amendment yet  
-> Current status: **OWNER_OPTION_A_INCORPORATED / INDEPENDENT_AMENDMENT_DESIGN_REVIEW_PENDING**
+> Current status: **REVISED / TARGETED_INDEPENDENT_AMENDMENT_DESIGN_REVIEW_PENDING**
 
 ---
 
@@ -524,14 +524,32 @@ Offline Evidence Need
 = NOT_NEEDED
 ```
 
-After commit and successful post-Safety F6 current-version revalidation:
+After commit and successful post-Safety F6 current-version revalidation, the next routing host is context-specific.
+
+For:
+
+```text
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+```
+
+use:
 
 ```text
 REVALIDATED_CURRENT
--> re-enter ClinicalContinuationRoutingDecision
+-> ClinicalContinuationRoutingDecision
 ```
 
-The router must evaluate the current continuation state; `NOT_NEEDED` itself is never READY.
+For:
+
+```text
+A1_POST_BARRIER_CURRENT
+```
+
+do NOT enter ClinicalContinuationRoutingDecision.
+Use the existing A1 routing projection after the current Gate/F3-currentness requirements are satisfied.
+
+In all contexts, `NOT_NEEDED` itself is never READY.
 
 For an Owner-approved first-analysis profile:
 
@@ -552,10 +570,18 @@ no higher blocker
 all admission/currentness/provenance checks pass
 ```
 
-the router may emit:
+the context-specific routing host may expose U05:
 
 ```text
-TO_U05_CLINICAL_READINESS
+A1_POST_BARRIER_CURRENT
+-> existing A1 routing projection
+-> U05_ELIGIBLE / U05
+
+POST_USER_FACT_UPDATE
+or POST_OFFLINE_ASSESSMENT
+-> ClinicalContinuationRoutingDecision
+-> TO_U05_CLINICAL_READINESS
+-> U05
 ```
 
 and D03 may apply the Owner-approved:
@@ -946,13 +972,35 @@ Safety/admission does not permit first-analysis entry
 Precedence remains:
 
 ```text
-OUT_OF_SCOPE
-> blocking NEEDS_OFFLINE_EVIDENCE
-> NEEDS_CLARIFICATION
-> CAN_ASK_MORE
-> positive READY rules
-> NO_RELIABLE_DIRECTION as otherwise governed
+P2 OUT_OF_SCOPE
+P3 blocking NEEDS_OFFLINE_EVIDENCE
+P4 NEEDS_CLARIFICATION
+P5 CAN_ASK_MORE
+P6 positive READY layer:
+   D03-POL-005
+   D03-POL-011
+P7 NO_RELIABLE_DIRECTION
 ```
+
+Within P6:
+
+```text
+D03-POL-005
+and
+D03-POL-011
+are mutually exclusive on F6 applicability/current-result state.
+
+D03-POL-005:
+  F6 = NOT_YET_APPLICABLE
+
+D03-POL-011:
+  F6 = PRESENT / CURRENT / VALID
+  + NO_BLOCKING_OFFLINE_EVIDENCE_NEED
+
+No 005-vs-011 internal ordering may affect the result.
+```
+
+D03-POL-006 remains P7 and cannot be shadowed because F5-present / NO_RELIABLE_DIRECTION profiles make both first-entry P6 subrules inapplicable.
 
 and:
 
@@ -1139,13 +1187,20 @@ TO_F6_CURRENT_VERSION_REASSESSMENT
 -> mandatory post-F6 Safety barrier
 -> new current U04 Gate / routing authorization
 -> U10 F6_CURRENT_VERSION_REVALIDATION
--> only REVALIDATED_CURRENT re-enters continuation routing
+
+context = POST_USER_FACT_UPDATE / POST_OFFLINE_ASSESSMENT
+-> only REVALIDATED_CURRENT enters ClinicalContinuationRoutingDecision
 -> if first-entry current-F6-NOT_NEEDED profile is satisfied:
    TO_U05_CLINICAL_READINESS
    -> D03-POL-011
+
+context = A1_POST_BARRIER_CURRENT
+-> do not enter ClinicalContinuationRoutingDecision
+-> preserve existing A1 routing projection
+-> U05_ELIGIBLE / U05 when D03-POL-011 guards hold
 ```
 
-Prevent stale route replay and prevent direct Router -> U08 bypass.
+Prevent stale route replay, prevent Router -> U08 bypass, and do not expand ClinicalContinuationRoutingDecision with an A1 context.
 
 ### F. U05-RDP-02
 
@@ -1324,9 +1379,11 @@ A1_POST_BARRIER_CURRENT
 + F1 framed in scope
 + F3 current no-gap
 + no higher blocker
--> TO_U05_CLINICAL_READINESS
+-> existing A1 routing projection
+-> U05_ELIGIBLE / U05
 -> D03-POL-011
 -> READY_FOR_CLINICAL_ANALYSIS
+-> ClinicalContinuationRoutingDecision NOT invoked
 
 CASE-14
 POST_USER_FACT_UPDATE
@@ -1335,6 +1392,8 @@ POST_USER_FACT_UPDATE
 -> F6 current VALID / NO_BLOCKING_OFFLINE_EVIDENCE_NEED
 + F5 never activated
 + first-entry guards complete
+-> ClinicalContinuationRoutingDecision
+-> TO_U05_CLINICAL_READINESS
 -> D03-POL-011
 -> READY_FOR_CLINICAL_ANALYSIS
 
@@ -1344,6 +1403,8 @@ POST_OFFLINE_ASSESSMENT
 + F5 never activated
 + F6 current VALID / NO_BLOCKING_OFFLINE_EVIDENCE_NEED
 + first-entry guards complete
+-> ClinicalContinuationRoutingDecision
+-> TO_U05_CLINICAL_READINESS
 -> D03-POL-011
 -> READY_FOR_CLINICAL_ANALYSIS
 
@@ -1663,5 +1724,65 @@ Frozen artifact modification
 = NOT_AUTHORIZED
 
 Runtime implementation
+= NOT_AUTHORIZED
+```
+
+
+---
+
+## 23. Combined Amendment Design Independent Review Remediation
+
+Review source:
+
+```text
+PR #160
+reviewed head = f6f2200a874707ce687162052a17be30ab70a502
+review_id = 5263224396
+verdict = REVISE_REQUIRED
+```
+
+### BF-U05-F6R-ADR-01
+
+```text
+FIRST_ENTRY_ROUTING_HOST_CONFLATION
+-> REMEDIATED
+```
+
+The design now keeps one D03-POL-011 but separates routing hosts:
+
+```text
+A1_POST_BARRIER_CURRENT
+-> existing A1 routing projection
+-> U05
+
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+-> ClinicalContinuationRoutingDecision
+-> TO_U05_CLINICAL_READINESS
+-> U05
+```
+
+A1 is not added as a ClinicalContinuationRoutingDecision context.
+
+### RQ-U05-F6R-ADR-02
+
+```text
+POSITIVE_READY_SUBRULE_PRECEDENCE_EXPLICITNESS
+-> REMEDIATED
+```
+
+D03-POL-005 and D03-POL-011 are explicit mutually exclusive P6 positive READY subrules.
+D03-POL-006 remains P7 and cannot be shadowed by either first-entry subrule.
+
+Current:
+
+```text
+Combined Amendment Design
+= REVISED / TARGETED_INDEPENDENT_AMENDMENT_DESIGN_REVIEW_PENDING
+
+D03-POL-011
+= OWNER_APPROVED_DESIGN_EXPECTATION / NOT_YET_FROZEN
+
+Frozen artifact modification
 = NOT_AUTHORIZED
 ```
