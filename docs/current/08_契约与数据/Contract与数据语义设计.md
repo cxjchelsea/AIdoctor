@@ -2351,8 +2351,8 @@ Phase 8 ClinicalContinuationRoutingDecision
 > Authorization: `AUTH-U05-CL04-FROZEN-AMEND-001`  
 > Reviewed design: PR #160 exact head `80cd6d7d154aa3e8de093ef43328e8ee9c2733d3`  
 > Owner policy: `OD-U05-READY-02 = APPROVE_OPTION_A`  
-> Amendment status: **APPLIED / INDEPENDENT_AMENDMENT_REVIEW_PENDING**  
-> Re-freeze status: **NOT_YET_REFROZEN**
+> Amendment status: **REVIEW_PASS / REFROZEN / V1**  
+> Re-freeze status: **REFROZEN / V1**
 
 ## A. ClinicalContinuationRoutingDecision vocabulary extension
 
@@ -2598,3 +2598,13 @@ routing decision
 No restricted path may widen itself into generic ALLOW, suggestion delivery, U11, or U12.
 
 This amendment changes contracts only; it does not authorize runtime implementation.
+
+### CL-04 Re-Freeze Provenance
+
+> Re-freeze decision: `AUTH-U05-CL04-REFREEZE-001 = REFREEZE`  
+> Owner decision record: PR #167  
+> Semantic reviewed baseline: `1ed229dfe1cbdf095b31dc51345863fb28bcf1ac`  
+> Targeted Independent Amendment Re-Review: **PASS** / review_id `5263265912`  
+> Re-freeze package review: **PASS** / review_id `5263272855`  
+> Current CL-04 amendment state: **REFROZEN / V1**
+
