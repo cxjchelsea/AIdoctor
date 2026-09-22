@@ -5,7 +5,7 @@
 > Exact reviewed design head: `54d61f71f39abd651ba721428afb1ab4c71a78bf`  
 > Design PR: #198  
 > Targeted Independent Re-Review: PASS / review_id `5273800024`  
-> Current status: **OWNER_DECISION_PENDING**  
+> Current status: **AUTHORIZED / OWNER_APPROVED**  
 > This package itself grants no workflow modification authorization.
 
 ---
@@ -412,7 +412,71 @@ Authorization not granted; runner implementation must not proceed.
     review_id = 5273800024
 
     AUTH-U05-M2-INTEGRATION-BASELINE-VERIFIER-001
-    = NOT_GRANTED / OWNER_DECISION_PENDING
+    = AUTHORIZED / OWNER_APPROVED
 
 No workflow modification, executable verification PASS,
 U05 blocker closure, merge, production, or live authorization is granted.
+
+
+---
+
+# 18. Owner Authorization Record
+
+Owner command:
+
+    AUTHORIZE
+
+Authorization:
+
+    AUTH-U05-M2-INTEGRATION-BASELINE-VERIFIER-001
+    = AUTHORIZED
+
+Exact authorization shape:
+
+    VERIFICATION_ONLY
+    / ONE_WORKFLOW_FILE_ONLY
+    / EXACT_M2_TARGET_SHA
+    / EXACT_M2_ORDER_ANCESTRY
+    / EXACT_14_FILE_INVENTORY
+    / U05_TREE_PRESERVATION
+    / PBNC_CONTENT_EQUIVALENCE
+    / EFFECT_LEDGER_CONTENT_EQUIVALENCE
+    / PBNC_FOCUSED_ZERO_SKIP
+    / EFFECT_LEDGER_FOCUSED_ZERO_SKIP
+    / U05_FOCUSED_ZERO_SKIP
+    / FULL_DIAGNOSIS_REGRESSION
+    / READ_ONLY_GITHUB_PERMISSIONS
+    / NO_SOURCE_TEST_CHANGE
+    / NO_MERGE
+    / NO_PRODUCTION
+
+Reviewed basis:
+
+    design PR #198
+    exact reviewed design head
+    = 54d61f71f39abd651ba721428afb1ab4c71a78bf
+
+    targeted independent review
+    = PASS
+    review_id = 5273800024
+
+    authorization package PR #199
+    package review
+    = PASS
+    review_id = 5273807369
+
+Implementation lineage rule:
+
+    verify/u05-m2-integration-baseline-v1
+    MUST descend from this owner-authorized decision-record commit.
+
+This authorization does NOT grant:
+
+    M2 Integration Baseline Verification PASS
+    BF-U05-IMPL-IR-05 closure
+    BF-U05-IMPL-IR-06 closure
+    U05 Implementation Verification PASS
+    RDP-06 PASS
+    merge
+    production/live traffic
+    real-patient use.
