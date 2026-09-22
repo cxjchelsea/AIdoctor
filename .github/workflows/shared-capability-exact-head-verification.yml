@@ -1,0 +1,193 @@
+name: Shared Capability Exact-Head Verification
+
+on:
+  push:
+    branches:
+      - verify/shared-capabilities-exact-head-v1
+    paths:
+      - '.github/workflows/shared-capability-exact-head-verification.yml'
+
+permissions:
+  contents: read
+
+env:
+  PBNC02A_IMPLEMENTATION_SHA: 5e9f05f4b45d82cec4e67a6a24bc3a4d8507b02d
+  PBNC02A_AUTHORIZATION_BASE_SHA: 5ca69deaad861e6298856fa36d583c1d660bd831
+  EFFECT_LEDGER_IMPLEMENTATION_SHA: c0315bf11d8a96a6c2426ce38c8ef02f7bef298f
+  EFFECT_LEDGER_AUTHORIZATION_BASE_SHA: 0aa1565110b32a0a0a7ed28badac6127af29879e
+
+jobs:
+  pbnc02a-exact-head:
+    name: PBNC02A_EXACT_HEAD_EXECUTABLE_EVIDENCE
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record verification identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "verify/shared-capabilities-exact-head-v1"
+          echo "VERIFICATION_WORKFLOW_COMMIT=$GITHUB_SHA"
+          echo "VERIFICATION_WORKFLOW_REF=$GITHUB_REF"
+          echo "TARGET_IMPLEMENTATION_SHA=$PBNC02A_IMPLEMENTATION_SHA"
+          echo "AUTHORIZATION_BASE_SHA=$PBNC02A_AUTHORIZATION_BASE_SHA"
+
+      - name: Checkout exact PBNC-02A implementation SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.PBNC02A_IMPLEMENTATION_SHA }}
+          fetch-depth: 0
+
+      - name: Verify exact PBNC-02A lineage and diff inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PBNC02A_IMPLEMENTATION_SHA"
+          git merge-base --is-ancestor "$PBNC02A_AUTHORIZATION_BASE_SHA" "$PBNC02A_IMPLEMENTATION_SHA"
+          git diff --name-status "$PBNC02A_AUTHORIZATION_BASE_SHA" "$PBNC02A_IMPLEMENTATION_SHA" > /tmp/pbnc02a.actual
+          cat > /tmp/pbnc02a.expected <<'EOF'
+          M	diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/SyntheticJsonPointerApplier.java
+          A	diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/SyntheticJsonPointerApplierObjectValueParityTest.java
+          A	diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/SyntheticStructuredObjectRepositoryIntegrationTest.java
+          EOF
+          sed -i 's/^          //' /tmp/pbnc02a.expected
+          diff -u /tmp/pbnc02a.expected /tmp/pbnc02a.actual
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      - name: Install Shared Contracts v1 Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+
+      - name: Compile diagnosis-service
+        run: mvn -f diagnosis-service/pom.xml -DskipTests compile
+
+      - name: Run focused PBNC-02A and StateCommitter tests
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest='SyntheticJsonPointerApplierObjectValueParityTest,SyntheticStructuredObjectRepositoryIntegrationTest,SyntheticVersionedStateRepositoryTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest'
+          test
+
+      - name: Verify focused PBNC-02A Surefire evidence has zero skips
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          root = Path("diagnosis-service/target/surefire-reports")
+          reports = [
+              "TEST-com.aidoctor.diagnosis.state.committer.SyntheticJsonPointerApplierObjectValueParityTest.xml",
+              "TEST-com.aidoctor.diagnosis.state.committer.SyntheticStructuredObjectRepositoryIntegrationTest.xml",
+              "TEST-com.aidoctor.diagnosis.state.committer.SyntheticVersionedStateRepositoryTest.xml",
+              "TEST-com.aidoctor.diagnosis.state.committer.StateCommitterArchitectureGuardTest.xml",
+              "TEST-com.aidoctor.diagnosis.state.committer.StateCommitterContractBoundaryTest.xml",
+              "TEST-com.aidoctor.diagnosis.state.committer.StateCommitterMechanicalCoreTest.xml",
+          ]
+          for name in reports:
+              path = root / name
+              if not path.is_file():
+                  raise SystemExit(f"missing focused Surefire report: {path}")
+              suite = ET.parse(path).getroot()
+              values = {k: int(suite.attrib.get(k, "0")) for k in ("errors", "failures", "skipped")}
+              if any(values.values()):
+                  raise SystemExit(f"focused report not clean: {name}: {values}")
+              print(f"FOCUSED_REPORT_PASS {name} {values}")
+          PY
+
+      - name: Run diagnosis-service regression suite
+        run: mvn -f diagnosis-service/pom.xml test
+
+      - name: Declare PBNC-02A evidence boundary
+        run: |
+          echo "PBNC02A_EXECUTABLE_EVIDENCE_GENERATED=YES"
+          echo "PBNC02A_VERIFICATION_PASS=NOT_DECIDED_BY_WORKFLOW"
+          echo "U05_IR05_CLOSED=NO"
+
+  effect-ledger-exact-head:
+    name: EFFECT_LEDGER_EXACT_HEAD_EXECUTABLE_EVIDENCE
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record verification identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "verify/shared-capabilities-exact-head-v1"
+          echo "VERIFICATION_WORKFLOW_COMMIT=$GITHUB_SHA"
+          echo "VERIFICATION_WORKFLOW_REF=$GITHUB_REF"
+          echo "TARGET_IMPLEMENTATION_SHA=$EFFECT_LEDGER_IMPLEMENTATION_SHA"
+          echo "AUTHORIZATION_BASE_SHA=$EFFECT_LEDGER_AUTHORIZATION_BASE_SHA"
+
+      - name: Checkout exact Effect Ledger implementation SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EFFECT_LEDGER_IMPLEMENTATION_SHA }}
+          fetch-depth: 0
+
+      - name: Verify exact Effect Ledger lineage and diff inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EFFECT_LEDGER_IMPLEMENTATION_SHA"
+          git merge-base --is-ancestor "$EFFECT_LEDGER_AUTHORIZATION_BASE_SHA" "$EFFECT_LEDGER_IMPLEMENTATION_SHA"
+          git diff --name-status "$EFFECT_LEDGER_AUTHORIZATION_BASE_SHA" "$EFFECT_LEDGER_IMPLEMENTATION_SHA" > /tmp/effect.actual
+          cat > /tmp/effect.expected <<'EOF'
+          A	diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedger.java
+          A	diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedgerDecision.java
+          A	diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedgerRecord.java
+          A	diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/NonProductionFileCanonicalEffectLedger.java
+          A	diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedgerProcessProbe.java
+          A	diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/effects/NonProductionFileCanonicalEffectLedgerTest.java
+          EOF
+          sed -i 's/^          //' /tmp/effect.expected
+          diff -u /tmp/effect.expected /tmp/effect.actual
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      - name: Install Shared Contracts v1 Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+
+      - name: Compile diagnosis-service
+        run: mvn -f diagnosis-service/pom.xml -DskipTests compile
+
+      - name: Run focused Runtime Effect Ledger tests
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest=NonProductionFileCanonicalEffectLedgerTest
+          test
+
+      - name: Verify focused Effect Ledger Surefire evidence has zero skips
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          path = Path("diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.effects.NonProductionFileCanonicalEffectLedgerTest.xml")
+          if not path.is_file():
+              raise SystemExit(f"missing focused Surefire report: {path}")
+          suite = ET.parse(path).getroot()
+          values = {k: int(suite.attrib.get(k, "0")) for k in ("errors", "failures", "skipped")}
+          if any(values.values()):
+              raise SystemExit(f"focused report not clean: {path.name}: {values}")
+          print(f"FOCUSED_REPORT_PASS {path.name} {values}")
+          PY
+
+      - name: Run diagnosis-service regression suite
+        run: mvn -f diagnosis-service/pom.xml test
+
+      - name: Declare Effect Ledger evidence boundary
+        run: |
+          echo "EFFECT_LEDGER_EXECUTABLE_EVIDENCE_GENERATED=YES"
+          echo "EFFECT_LEDGER_VERIFICATION_PASS=NOT_DECIDED_BY_WORKFLOW"
+          echo "U05_IR06_CLOSED=NO"
