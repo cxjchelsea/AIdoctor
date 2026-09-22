@@ -233,7 +233,9 @@ class NonProductionFileCanonicalEffectLedgerTest {
                 ledger.createIfAbsent(NS, ID, FP, SCHEMA, PAYLOAD);
 
         assertEquals(CanonicalEffectLedgerDecision.Status.UNAVAILABLE, decision.getStatus());
-        assertEquals(0L, Files.list(outside).count());
+        try (java.util.stream.Stream<Path> stream = Files.list(outside)) {
+            assertEquals(0L, stream.count());
+        }
     }
 
     @Test
@@ -275,14 +277,14 @@ class NonProductionFileCanonicalEffectLedgerTest {
     }
 
     private static Process probe(Path root, String mode) throws IOException {
-        String java = System.getProperty("java.home")
+        String javaExecutable = System.getProperty("java.home")
                 + java.io.File.separator + "bin"
                 + java.io.File.separator + "java";
         String classpath = System.getProperty(
                 "surefire.test.class.path",
                 System.getProperty("java.class.path"));
         return new ProcessBuilder(
-                java,
+                javaExecutable,
                 "-cp",
                 classpath,
                 CanonicalEffectLedgerProcessProbe.class.getName(),
