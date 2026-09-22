@@ -5,11 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -156,6 +158,28 @@ class NonProductionFileCanonicalEffectLedgerTest {
     }
 
     @Test
+    void unsupportedLedgerFormatVersionIsCorruptEvenWithValidChecksum() throws Exception {
+        NonProductionFileCanonicalEffectLedger ledger =
+                new NonProductionFileCanonicalEffectLedger(root);
+        ledger.createIfAbsent(NS, ID, FP, SCHEMA, PAYLOAD);
+        Path record = recordPath(root);
+        byte[] file = Files.readAllBytes(record);
+        int bodyLength = ByteBuffer.wrap(file, 0, 4).getInt();
+        int versionOffset = 4 + 8;
+        ByteBuffer.wrap(file, versionOffset, 4).putInt(999);
+
+        byte[] body = Arrays.copyOfRange(file, 4, 4 + bodyLength);
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(body);
+        int digestOffset = 4 + bodyLength + 4;
+        System.arraycopy(digest, 0, file, digestOffset, digest.length);
+        Files.write(record, file);
+
+        CanonicalEffectLedgerDecision inspected = ledger.inspect(NS, ID, FP);
+
+        assertEquals(CanonicalEffectLedgerDecision.Status.CORRUPT, inspected.getStatus());
+    }
+
+    @Test
     void namespacesIsolateSameEffectIdentity() {
         NonProductionFileCanonicalEffectLedger ledger =
                 new NonProductionFileCanonicalEffectLedger(root);
@@ -239,6 +263,44 @@ class NonProductionFileCanonicalEffectLedgerTest {
     }
 
     @Test
+    void concurrentConflictingCreatorsHaveOneCreatedAndOneConflict() throws Exception {
+        final NonProductionFileCanonicalEffectLedger ledger =
+                new NonProductionFileCanonicalEffectLedger(root);
+        final CountDownLatch ready = new CountDownLatch(2);
+        final CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<CanonicalEffectLedgerDecision> left =
+                    executor.submit(new Callable<CanonicalEffectLedgerDecision>() {
+                        @Override
+                        public CanonicalEffectLedgerDecision call() throws Exception {
+                            ready.countDown();
+                            start.await();
+                            return ledger.createIfAbsent(NS, ID, "fingerprint-left", SCHEMA, PAYLOAD);
+                        }
+                    });
+            Future<CanonicalEffectLedgerDecision> right =
+                    executor.submit(new Callable<CanonicalEffectLedgerDecision>() {
+                        @Override
+                        public CanonicalEffectLedgerDecision call() throws Exception {
+                            ready.countDown();
+                            start.await();
+                            return ledger.createIfAbsent(NS, ID, "fingerprint-right", SCHEMA, PAYLOAD);
+                        }
+                    });
+            ready.await();
+            start.countDown();
+
+            List<CanonicalEffectLedgerDecision.Status> statuses =
+                    Arrays.asList(left.get().getStatus(), right.get().getStatus());
+            assertEquals(1, count(statuses, CanonicalEffectLedgerDecision.Status.CREATED));
+            assertEquals(1, count(statuses, CanonicalEffectLedgerDecision.Status.CONFLICT));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void concurrentExactCreatorsHaveOneCreatedAndRestReattached() throws Exception {
         final NonProductionFileCanonicalEffectLedger ledger =
                 new NonProductionFileCanonicalEffectLedger(root);
@@ -274,6 +336,16 @@ class NonProductionFileCanonicalEffectLedgerTest {
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    private static int count(
+            List<CanonicalEffectLedgerDecision.Status> statuses,
+            CanonicalEffectLedgerDecision.Status expected) {
+        int total = 0;
+        for (CanonicalEffectLedgerDecision.Status status : statuses) {
+            if (expected.equals(status)) total++;
+        }
+        return total;
     }
 
     private static Process probe(Path root, String mode) throws IOException {
