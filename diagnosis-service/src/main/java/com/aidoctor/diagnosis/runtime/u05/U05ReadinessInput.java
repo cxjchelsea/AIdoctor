@@ -80,7 +80,9 @@ public final class U05ReadinessInput {
         this.clinicalStateVersion = clinicalStateVersion;
         this.sourceDecisionRef = required(sourceDecisionRef, "sourceDecisionRef");
         this.sourceStateRef = sourceStateRef;
-        this.applicabilityEvidenceRef = required(applicabilityEvidenceRef, "applicabilityEvidenceRef");
+        this.applicabilityEvidenceRef = PRESENT.equals(this.applicabilityStatus)
+                ? required(applicabilityEvidenceRef, "applicabilityEvidenceRef")
+                : optional(applicabilityEvidenceRef);
         this.evidenceRefs = immutable(evidenceRefs, "evidenceRefs");
         this.policyOrRuleRefs = immutable(policyOrRuleRefs, "policyOrRuleRefs");
         this.producedAt = required(producedAt, "producedAt");
@@ -141,6 +143,10 @@ public final class U05ReadinessInput {
             throw new IllegalArgumentException("unsupported applicabilityStatus");
         }
         return v;
+    }
+
+    private static String optional(String value) {
+        return value == null || value.trim().isEmpty() ? null : value;
     }
 
     private static List<String> immutable(List<String> values, String name) {
