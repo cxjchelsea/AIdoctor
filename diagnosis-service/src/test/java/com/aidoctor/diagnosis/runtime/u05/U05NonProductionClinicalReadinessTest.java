@@ -3,7 +3,8 @@ package com.aidoctor.diagnosis.runtime.u05;
 import com.aidoctor.contracts.v1.StateTypes;
 import com.aidoctor.diagnosis.state.committer.StateCommitter;
 import com.aidoctor.diagnosis.state.committer.fakes.InMemoryIdempotencyFake;
-import com.aidoctor.diagnosis.state.committer.fakes.MechanicalVersionRepositoryFake;
+import com.aidoctor.diagnosis.state.committer.SyntheticStateSnapshot;
+import com.aidoctor.diagnosis.state.committer.SyntheticVersionedStateRepository;
 import com.aidoctor.diagnosis.state.committer.fakes.RecordingCommitEventEvidenceFake;
 import com.aidoctor.diagnosis.state.committer.fakes.SyntheticAuditPortFake;
 import com.aidoctor.diagnosis.state.committer.ports.CapabilityPolicyPort;
@@ -18,6 +19,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -67,7 +69,7 @@ class U05NonProductionClinicalReadinessTest {
                 result.getRoutingDecision().getDownstreamConsequence());
         assertEquals("U08", result.getRoutingDecision().getTargetUnitId());
         assertNotNull(result.getRoutingDecision().getEligibility());
-        assertEquals(1, fixture.repository.commitCalls());
+        assertEquals(1, fixture.repository.mutationCount());
     }
 
     @Test
@@ -166,7 +168,7 @@ class U05NonProductionClinicalReadinessTest {
         assertEquals(U05DownstreamRoutingDecision.PREEMPTED, result.getRoutingDecision().getRoutingStatus());
         assertNull(result.getRoutingDecision().getEligibility());
         assertNull(result.getRoutingDecision().getDownstreamConsequence());
-        assertEquals(1, fixture.repository.commitCalls());
+        assertEquals(1, fixture.repository.mutationCount());
     }
 
     @Test
@@ -197,7 +199,7 @@ class U05NonProductionClinicalReadinessTest {
         assertEquals(U05AdmissionResult.REATTACHED, replay.getAdmission().getReplayDisposition());
         assertEquals(U05DownstreamRoutingDecision.REATTACHED,
                 replay.getRoutingDecision().getReplayDisposition());
-        assertEquals(1, fixture.repository.commitCalls());
+        assertEquals(1, fixture.repository.mutationCount());
     }
 
     @Test
@@ -230,7 +232,7 @@ class U05NonProductionClinicalReadinessTest {
         assertEquals(U05AdmissionService.PENDING_OWNER_RECOMPUTATION,
                 result.getAdmission().getReasonCode());
         assertNull(result.getDecision());
-        assertEquals(0, fixture.repository.commitCalls());
+        assertEquals(0, fixture.repository.mutationCount());
     }
 
     @Test
@@ -262,7 +264,7 @@ class U05NonProductionClinicalReadinessTest {
         assertEquals(U05ExecutionResult.D03_INPUT_FAILURE, result.getStatus());
         assertEquals(U05ClinicalReadinessDecision.INPUT_FAILURE, result.getDecision().getDecisionStatus());
         assertNull(result.getDecision().getClinicalReadiness());
-        assertEquals(0, fixture.repository.commitCalls());
+        assertEquals(0, fixture.repository.mutationCount());
     }
 
     @Test
@@ -325,7 +327,7 @@ class U05NonProductionClinicalReadinessTest {
 
         assertEquals(U05ExecutionResult.ADMISSION_REJECTED, result.getStatus());
         assertEquals(U05AdmissionService.CONTEXT_MISMATCH, result.getAdmission().getReasonCode());
-        assertEquals(0, fixture.repository.commitCalls());
+        assertEquals(0, fixture.repository.mutationCount());
     }
 
     @Test
@@ -474,7 +476,7 @@ class U05NonProductionClinicalReadinessTest {
 
         assertEquals(U05ExecutionResult.ADMISSION_REJECTED, result.getStatus());
         assertEquals(U05AdmissionService.ENVIRONMENT_NOT_AUTHORIZED, result.getAdmission().getReasonCode());
-        assertEquals(0, fixture.repository.commitCalls());
+        assertEquals(0, fixture.repository.mutationCount());
     }
 
     private static U05ReadinessInputManifest pol005Manifest(String context, int version) {
@@ -693,11 +695,17 @@ class U05NonProductionClinicalReadinessTest {
     }
 
     private static final class Fixture {
-        final MechanicalVersionRepositoryFake repository = new MechanicalVersionRepositoryFake(new ArrayList<String>());
+        final SyntheticVersionedStateRepository repository;
         final U05NonProductionApplicationService application;
 
         Fixture(int currentVersion, final String downstreamPermissionStatus) {
-            repository.seed("cdp-1", currentVersion);
+            Map<String, Object> state = new LinkedHashMap<String, Object>();
+            state.put("patient_state", new LinkedHashMap<String, Object>());
+            Map<String, SyntheticStateSnapshot> initial =
+                    new LinkedHashMap<String, SyntheticStateSnapshot>();
+            initial.put("cdp-1", new SyntheticStateSnapshot(currentVersion, state));
+            repository = new SyntheticVersionedStateRepository(initial);
+
             List<String> order = new ArrayList<String>();
             StateCommitter committer = new StateCommitter(
                     repository,
@@ -718,7 +726,9 @@ class U05NonProductionClinicalReadinessTest {
             U05ClinicalReadinessPolicy policy = new U05ClinicalReadinessPolicy();
             U05ReadinessStateProposalFactory proposalFactory =
                     new U05ReadinessStateProposalFactory();
-            U05CommitService commitService = new U05CommitService(committer);
+            U05CommitService commitService = new U05CommitService(
+                    committer,
+                    new U05SyntheticClinicalReadinessSnapshotAdapter(repository));
 
             U05RoutingCurrentnessPort currentnessPort =
                     (input, decision, evidence) ->
