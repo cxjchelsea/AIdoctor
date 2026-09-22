@@ -85,6 +85,9 @@ The workflow must hard-pin:
     PBNC02A_CLOSURE_SHA
     = 95a49831c29165b86300af9f6bdd8e76952177a7
 
+    M2_PBNC_MERGE_SHA
+    = 9c997fbefb58fa97664716bb6d5681557b01044f
+
     EFFECT_LEDGER_CLOSURE_SHA
     = 5ce8c106942d64e5fb5ba4e71698f0ab1d31ded2
 
@@ -219,14 +222,25 @@ After checkout of the target SHA:
 
 must PASS.
 
-The runner must then prove all three ancestors:
+The runner must prove the frozen M2 order explicitly.
+
+First merge identity:
+
+    M2_PBNC_MERGE_SHA
+    = 9c997fbefb58fa97664716bb6d5681557b01044f
+
+Required ancestry:
 
     git merge-base --is-ancestor
       f98163e5a8dd038280cdfa3f66b9172abaef133d
-      d620df6361cec2f757b01341918dfeef115a6475
+      9c997fbefb58fa97664716bb6d5681557b01044f
 
     git merge-base --is-ancestor
       95a49831c29165b86300af9f6bdd8e76952177a7
+      9c997fbefb58fa97664716bb6d5681557b01044f
+
+    git merge-base --is-ancestor
+      9c997fbefb58fa97664716bb6d5681557b01044f
       d620df6361cec2f757b01341918dfeef115a6475
 
     git merge-base --is-ancestor
@@ -234,6 +248,11 @@ The runner must then prove all three ancestors:
       d620df6361cec2f757b01341918dfeef115a6475
 
 All must PASS.
+
+This executably binds the reviewed sequence:
+
+    PBNC-02A first
+    Effect Ledger second.
 
 ---
 
@@ -293,6 +312,53 @@ Required command semantics:
 must PASS.
 
 This prevents a green regression suite from masking an accidental U05 baseline mutation.
+
+---
+
+# 9.1 Shared capability content-equivalence guards
+
+The exact 14-file inventory proves the set of changed paths.
+The runner must separately prove that the implementation CONTENT
+of each verified capability remains identical to its PMV-approved closure.
+
+## PBNC-02A content guard
+
+Required:
+
+    git diff --quiet
+      95a49831c29165b86300af9f6bdd8e76952177a7
+      d620df6361cec2f757b01341918dfeef115a6475
+      --
+      diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/SyntheticJsonPointerApplier.java
+      diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/SyntheticJsonPointerApplierObjectValueParityTest.java
+      diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/SyntheticStructuredObjectRepositoryIntegrationTest.java
+
+must PASS.
+
+## Runtime Effect Ledger content guard
+
+Required:
+
+    git diff --quiet
+      5ce8c106942d64e5fb5ba4e71698f0ab1d31ded2
+      d620df6361cec2f757b01341918dfeef115a6475
+      --
+      diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects
+      diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/effects
+
+must PASS.
+
+Together with Section 9 U05 preservation, the integration baseline must prove:
+
+    original U05 content preserved
+
+    PBNC-02A verified content preserved
+
+    Runtime Effect Ledger verified content preserved.
+
+Any content difference:
+
+    FAIL.
 
 ---
 
@@ -559,3 +625,44 @@ If approved:
     / NO_SOURCE_TEST_CHANGE
     / NO_MERGE
     / NO_PRODUCTION.
+
+
+---
+
+# 21. Independent Design Review Remediation
+
+Initial Independent Design Review:
+
+    PR #198
+    review_id = 5273796472
+    verdict = REVISE_REQUIRED
+
+Findings:
+
+    BF-U05-M2-VR-IR-01
+    = MERGE_ORDER_IDENTITY_NOT_EXECUTABLY_BOUND
+
+    BF-U05-M2-VR-IR-02
+    = CAPABILITY_CONTENT_EQUIVALENCE_NOT_EXECUTABLY_GUARDED
+
+Remediation:
+
+    IR-01:
+      M2_PBNC_MERGE_SHA is frozen and the four-step ancestry chain
+      now proves PBNC-02A first / Effect Ledger second.
+
+    IR-02:
+      PBNC-02A and Effect Ledger content-equivalence guards now
+      compare the exact verified implementation paths against their
+      PMV-approved closure commits.
+
+Current:
+
+    BF-U05-M2-VR-IR-01
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    BF-U05-M2-VR-IR-02
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    U05 M2 Integration Baseline Verification Runner Design
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
