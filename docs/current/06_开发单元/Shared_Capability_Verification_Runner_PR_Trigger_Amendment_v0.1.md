@@ -150,15 +150,20 @@ Required:
 
 must equal exactly:
 
-    A .github/workflows/shared-capability-exact-head-verification.yml
-
-or, if Git lineage necessarily carries the v1 workflow as an ancestor and
-the new authorization branch already contains it:
-
     M .github/workflows/shared-capability-exact-head-verification.yml
 
-The exact expected status must be frozen in the implementation authorization
-after the final authorization lineage is known.
+Reason:
+
+    this amendment design branch descends from the v1 workflow implementation
+    head 2b9df5555c716f5b84b7f93b5fd529e6c0c2bb4d;
+
+    the amendment authorization decision branch will descend from this reviewed
+    amendment design head;
+
+    therefore the authorized decision base already contains the v1 workflow,
+    and v2 is strictly one-file modification of that workflow.
+
+No added/deleted/renamed/second file is permitted.
 
 No other file may differ.
 
