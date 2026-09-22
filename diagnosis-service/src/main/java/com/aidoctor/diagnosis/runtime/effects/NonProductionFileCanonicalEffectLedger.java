@@ -322,9 +322,14 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
             }
             return;
         }
-        Files.createDirectory(directory);
+        try {
+            Files.createDirectory(directory);
+        } catch (FileAlreadyExistsException race) {
+            // A concurrent ledger creator may have created the same safe
+            // namespace/effect directory after our initial existence check.
+        }
         if (!safeExistingPath(directory)) {
-            throw new IOException("unsafe ledger directory after create");
+            throw new IOException("unsafe ledger directory after create/race");
         }
         forceDirectory(directory);
         Path parent = directory.getParent();
