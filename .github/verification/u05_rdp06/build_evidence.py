@@ -78,6 +78,13 @@ def main():
         raise SystemExit("expected exactly 28 precedence evidence files, got %d" % len(precedence_files))
     precedence = [load(p) for p in precedence_files]
 
+    special_path = evidence_root / "u05-d03-special-proof-evidence.json"
+    if not special_path.exists():
+        raise SystemExit("missing D03 special-proof evidence")
+    special_proofs = load(special_path).get("proofs", [])
+    if len(special_proofs) != 4:
+        raise SystemExit("expected exactly 4 D03 special proofs")
+
     harness_path = evidence_root / "u05-harness-self-test-evidence.json"
     if not harness_path.exists():
         raise SystemExit("missing harness self-test evidence")
@@ -126,11 +133,15 @@ def main():
     precedence_bundle = {
         "schema": "U05_D03_PRECEDENCE_EVIDENCE_BUNDLE_V0_1",
         "pairs": precedence,
+        "special_proofs": special_proofs,
     }
     gate_bundle = {"schema": "U05_VERIFICATION_GATE_EVIDENCE_V0_1", "gates": vg}
 
     all_cases_pass = all(c.get("pass") is True for c in cases)
-    all_precedence_pass = all(p.get("pass") is True for p in precedence)
+    all_precedence_pass = (
+        all(p.get("pass") is True for p in precedence)
+        and all(p.get("pass") is True for p in special_proofs)
+    )
     all_vg_pass = all(g["pass"] is True for g in vg)
     harness_pass = harness.get("pass") is True
     no_hard_boundary = all(v is False for v in hard_boundaries.values())
