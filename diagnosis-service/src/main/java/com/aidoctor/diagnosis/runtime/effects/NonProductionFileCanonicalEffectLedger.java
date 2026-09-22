@@ -42,6 +42,14 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
     private static final Pattern OPAQUE =
             Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._:-]*$");
 
+    /*
+     * Java FileLock throws OverlappingFileLockException instead of blocking
+     * when two threads in the same JVM lock the same region. Serialize the
+     * bounded non-production publication critical section in-process, while
+     * retaining FileLock for cross-process coordination.
+     */
+    private static final Object JVM_FILE_LOCK_COORDINATION = new Object();
+
     private final Path root;
     private final Clock clock;
 
@@ -88,6 +96,7 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
                     || !effectIdentity.equals(record.getEffectIdentity())) {
                 return CanonicalEffectLedgerDecision.corrupt("LEDGER_IDENTITY_MISMATCH");
             }
+            ensureCanonicalDurability(paths.canonicalRecord, paths.effectDirectory);
             if (!expectedCanonicalFingerprint.equals(record.getCanonicalFingerprint())) {
                 return CanonicalEffectLedgerDecision.conflict(
                         record, "LEDGER_CANONICAL_FINGERPRINT_CONFLICT");
@@ -153,10 +162,11 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
                 return CanonicalEffectLedgerDecision.unavailable("LEDGER_LOCK_PATH_UNSAFE");
             }
 
-            try (FileChannel lockChannel = FileChannel.open(
-                    paths.lockFile,
-                    StandardOpenOption.WRITE);
-                 FileLock ignored = lockChannel.lock()) {
+            synchronized (JVM_FILE_LOCK_COORDINATION) {
+                try (FileChannel lockChannel = FileChannel.open(
+                        paths.lockFile,
+                        StandardOpenOption.WRITE);
+                     FileLock ignored = lockChannel.lock()) {
 
                 if (!safeExistingPath(paths.effectDirectory)
                         || !safeLeaf(paths.canonicalRecord)
@@ -214,9 +224,11 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
                     return CanonicalEffectLedgerDecision.corrupt(
                             "LEDGER_PUBLISHED_RECORD_MISMATCH");
                 }
-                return CanonicalEffectLedgerDecision.created(published.record);
-            } catch (IOException lockFailure) {
-                return CanonicalEffectLedgerDecision.unavailable("LEDGER_COORDINATION_UNAVAILABLE");
+                    return CanonicalEffectLedgerDecision.created(published.record);
+                } catch (IOException lockFailure) {
+                    return CanonicalEffectLedgerDecision.unavailable(
+                            "LEDGER_PUBLICATION_OR_COORDINATION_UNAVAILABLE");
+                }
             }
         } catch (IOException exception) {
             return CanonicalEffectLedgerDecision.unavailable("LEDGER_CREATE_IO_UNAVAILABLE");
@@ -260,6 +272,7 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
                 || !effectIdentity.equals(record.getEffectIdentity())) {
             return CanonicalEffectLedgerDecision.corrupt("LEDGER_IDENTITY_MISMATCH");
         }
+        ensureCanonicalDurability(canonicalRecord, canonicalRecord.getParent());
         if (record.canonicalEquals(
                 namespace,
                 effectIdentity,
@@ -378,6 +391,11 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
             while (buffer.hasRemaining()) channel.write(buffer);
             channel.force(true);
         }
+    }
+
+    private static void ensureCanonicalDurability(Path file, Path directory) throws IOException {
+        forceFile(file);
+        forceDirectory(directory);
     }
 
     private static void forceFile(Path file) throws IOException {
