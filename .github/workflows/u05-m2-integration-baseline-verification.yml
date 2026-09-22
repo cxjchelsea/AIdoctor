@@ -1,0 +1,238 @@
+name: U05 M2 Integration Baseline Verification
+
+on:
+  pull_request:
+    branches:
+      - decision/u05-m2-integration-baseline-verification-authorization
+    paths:
+      - '.github/workflows/u05-m2-integration-baseline-verification.yml'
+
+permissions:
+  contents: read
+
+env:
+  VERIFIER_AUTHORIZATION_BASE_SHA: 11e79525c9180da690b18349b64807d4969272ab
+  M2_TARGET_SHA: d620df6361cec2f757b01341918dfeef115a6475
+  ORIGINAL_U05_SHA: f98163e5a8dd038280cdfa3f66b9172abaef133d
+  M2_PBNC_MERGE_SHA: 9c997fbefb58fa97664716bb6d5681557b01044f
+  PBNC02A_CLOSURE_SHA: 95a49831c29165b86300af9f6bdd8e76952177a7
+  EFFECT_LEDGER_CLOSURE_SHA: 5ce8c106942d64e5fb5ba4e71698f0ab1d31ded2
+
+jobs:
+  m2-integration-baseline:
+    name: U05_M2_INTEGRATION_BASELINE_EXECUTABLE_EVIDENCE
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Record and verify verifier PR identity
+        shell: bash
+        env:
+          VERIFICATION_WORKFLOW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          VERIFICATION_EVENT_SHA: ${{ github.sha }}
+          VERIFICATION_EVENT_NAME: ${{ github.event_name }}
+          VERIFICATION_PR_NUMBER: ${{ github.event.pull_request.number }}
+          VERIFICATION_HEAD_REF: ${{ github.head_ref }}
+          VERIFICATION_BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          test "$VERIFICATION_EVENT_NAME" = "pull_request"
+          test "$VERIFICATION_HEAD_REF" = "verify/u05-m2-integration-baseline-v1"
+          test "$VERIFICATION_BASE_REF" = "decision/u05-m2-integration-baseline-verification-authorization"
+          test -n "$VERIFICATION_WORKFLOW_HEAD_SHA"
+          test -n "$VERIFICATION_EVENT_SHA"
+          test -n "$VERIFICATION_PR_NUMBER"
+          echo "VERIFICATION_WORKFLOW_HEAD_SHA=$VERIFICATION_WORKFLOW_HEAD_SHA"
+          echo "VERIFICATION_EVENT_SHA=$VERIFICATION_EVENT_SHA"
+          echo "VERIFICATION_EVENT_NAME=$VERIFICATION_EVENT_NAME"
+          echo "VERIFICATION_PR_NUMBER=$VERIFICATION_PR_NUMBER"
+          echo "VERIFICATION_HEAD_REF=$VERIFICATION_HEAD_REF"
+          echo "VERIFICATION_BASE_REF=$VERIFICATION_BASE_REF"
+          echo "VERIFIER_AUTHORIZATION_BASE_SHA=$VERIFIER_AUTHORIZATION_BASE_SHA"
+          echo "M2_TARGET_SHA=$M2_TARGET_SHA"
+
+      - name: Checkout exact verifier workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify verifier authorization lineage and one-file scope
+        shell: bash
+        env:
+          VERIFICATION_WORKFLOW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$VERIFICATION_WORKFLOW_HEAD_SHA"
+          git merge-base --is-ancestor "$VERIFIER_AUTHORIZATION_BASE_SHA" "$VERIFICATION_WORKFLOW_HEAD_SHA"
+          git diff --name-status "$VERIFIER_AUTHORIZATION_BASE_SHA" "$VERIFICATION_WORKFLOW_HEAD_SHA" > /tmp/verifier.actual
+          printf 'A\t.github/workflows/u05-m2-integration-baseline-verification.yml\n' > /tmp/verifier.expected
+          diff -u /tmp/verifier.expected /tmp/verifier.actual
+
+      - name: Checkout exact M2 integration target
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.M2_TARGET_SHA }}
+          fetch-depth: 0
+
+      - name: Verify exact M2 target and merge order ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$M2_TARGET_SHA"
+          git merge-base --is-ancestor "$ORIGINAL_U05_SHA" "$M2_PBNC_MERGE_SHA"
+          git merge-base --is-ancestor "$PBNC02A_CLOSURE_SHA" "$M2_PBNC_MERGE_SHA"
+          git merge-base --is-ancestor "$M2_PBNC_MERGE_SHA" "$M2_TARGET_SHA"
+          git merge-base --is-ancestor "$EFFECT_LEDGER_CLOSURE_SHA" "$M2_TARGET_SHA"
+          echo "M2_ORDER_ANCESTRY_PASS=YES"
+
+      - name: Verify exact 14-file integration inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-status "$ORIGINAL_U05_SHA" "$M2_TARGET_SHA" > /tmp/m2.actual
+          cat > /tmp/m2.expected <<'EOF'
+          A	diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedger.java
+          A	diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedgerDecision.java
+          A	diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedgerRecord.java
+          A	diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/NonProductionFileCanonicalEffectLedger.java
+          M	diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/SyntheticJsonPointerApplier.java
+          A	diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedgerProcessProbe.java
+          A	diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/effects/NonProductionFileCanonicalEffectLedgerTest.java
+          A	diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/SyntheticJsonPointerApplierObjectValueParityTest.java
+          A	diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/SyntheticStructuredObjectRepositoryIntegrationTest.java
+          A	docs/current/06_开发单元/PBNC02A_Explicit_Owner_Authorization_Decision_v0.1.md
+          A	docs/current/06_开发单元/PBNC02A_Synthetic_Object_Value_Support_Design_v0.1.md
+          A	docs/current/06_开发单元/Runtime_Canonical_Effect_Ledger_NonProd_Design_v0.1.md
+          A	docs/current/06_开发单元/Runtime_Effect_Ledger_NC01_Explicit_Owner_Authorization_Decision_v0.1.md
+          A	docs/current/06_开发单元/U05_Shared_Runtime_Impact_Review_v0.1.md
+          EOF
+          sed -i 's/^          //' /tmp/m2.expected
+          diff -u /tmp/m2.expected /tmp/m2.actual
+          echo "M2_EXACT_INVENTORY_PASS=YES"
+
+      - name: Verify original U05 content preservation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --quiet "$ORIGINAL_U05_SHA" "$M2_TARGET_SHA" --             diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05             diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05             .github/workflows/u05-engineering-smoke.yml
+          echo "U05_CONTENT_EQUIVALENCE_PASS=YES"
+
+      - name: Verify PBNC-02A content equivalence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --quiet "$PBNC02A_CLOSURE_SHA" "$M2_TARGET_SHA" --             diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/SyntheticJsonPointerApplier.java             diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/SyntheticJsonPointerApplierObjectValueParityTest.java             diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/SyntheticStructuredObjectRepositoryIntegrationTest.java
+          echo "PBNC02A_CONTENT_EQUIVALENCE_PASS=YES"
+
+      - name: Verify Runtime Effect Ledger content equivalence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --quiet "$EFFECT_LEDGER_CLOSURE_SHA" "$M2_TARGET_SHA" --             diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects             diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/effects
+          echo "EFFECT_LEDGER_CONTENT_EQUIVALENCE_PASS=YES"
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      - name: Install Shared Contracts v1 Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+
+      - name: Compile diagnosis-service
+        run: mvn -f diagnosis-service/pom.xml -DskipTests compile
+
+      - name: Run focused PBNC-02A and StateCommitter tests
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest='SyntheticJsonPointerApplierObjectValueParityTest,SyntheticStructuredObjectRepositoryIntegrationTest,SyntheticVersionedStateRepositoryTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest'
+          test
+
+      - name: Verify focused PBNC-02A Surefire evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          root = Path("diagnosis-service/target/surefire-reports")
+          reports = [
+              "TEST-com.aidoctor.diagnosis.state.committer.SyntheticJsonPointerApplierObjectValueParityTest.xml",
+              "TEST-com.aidoctor.diagnosis.state.committer.SyntheticStructuredObjectRepositoryIntegrationTest.xml",
+              "TEST-com.aidoctor.diagnosis.state.committer.SyntheticVersionedStateRepositoryTest.xml",
+              "TEST-com.aidoctor.diagnosis.state.committer.StateCommitterArchitectureGuardTest.xml",
+              "TEST-com.aidoctor.diagnosis.state.committer.StateCommitterContractBoundaryTest.xml",
+              "TEST-com.aidoctor.diagnosis.state.committer.StateCommitterMechanicalCoreTest.xml",
+          ]
+          for name in reports:
+              p = root / name
+              if not p.is_file():
+                  raise SystemExit(f"missing focused Surefire report: {p}")
+              suite = ET.parse(p).getroot()
+              values = {k: int(suite.attrib.get(k, "0")) for k in ("errors", "failures", "skipped")}
+              if any(values.values()):
+                  raise SystemExit(f"focused report not clean: {name}: {values}")
+              print(f"PBNC_FOCUSED_REPORT_PASS {name} {values}")
+          PY
+
+      - name: Run focused Runtime Effect Ledger tests
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest=NonProductionFileCanonicalEffectLedgerTest
+          test
+
+      - name: Verify focused Effect Ledger Surefire evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          p = Path("diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.effects.NonProductionFileCanonicalEffectLedgerTest.xml")
+          if not p.is_file():
+              raise SystemExit(f"missing focused Surefire report: {p}")
+          suite = ET.parse(p).getroot()
+          values = {k: int(suite.attrib.get(k, "0")) for k in ("errors", "failures", "skipped")}
+          if any(values.values()):
+              raise SystemExit(f"focused report not clean: {p.name}: {values}")
+          print(f"EFFECT_FOCUSED_REPORT_PASS {p.name} {values}")
+          PY
+
+      - name: Run focused U05 engineering tests
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest=U05NonProductionClinicalReadinessTest
+          test
+
+      - name: Verify focused U05 Surefire evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          p = Path("diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u05.U05NonProductionClinicalReadinessTest.xml")
+          if not p.is_file():
+              raise SystemExit(f"missing focused Surefire report: {p}")
+          suite = ET.parse(p).getroot()
+          values = {k: int(suite.attrib.get(k, "0")) for k in ("errors", "failures", "skipped")}
+          if any(values.values()):
+              raise SystemExit(f"focused report not clean: {p.name}: {values}")
+          print(f"U05_FOCUSED_REPORT_PASS {p.name} {values}")
+          PY
+
+      - name: Run full diagnosis-service regression
+        run: mvn -f diagnosis-service/pom.xml test
+
+      - name: Declare M2 evidence boundary
+        run: |
+          echo "M2_INTEGRATION_BASELINE_EXECUTABLE_EVIDENCE_GENERATED=YES"
+          echo "M2_INTEGRATION_BASELINE_VERIFICATION_PASS=NOT_DECIDED_BY_WORKFLOW"
+          echo "U05_IR05_CLOSED=NO"
+          echo "U05_IR06_CLOSED=NO"
+          echo "RDP06_AUTHORITATIVE_VERIFICATION=NOT_RUN"
