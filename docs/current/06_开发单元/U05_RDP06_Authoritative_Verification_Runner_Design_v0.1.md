@@ -139,7 +139,7 @@ contains_real_phi = false
 Each fixture must have a stable semantic ID, source ref, canonical digest and contract-driven semantic summary.
 
 
-### 4.5 Canonical digest model — non-circular and reproducible
+### 4.4 Canonical digest model — non-circular and reproducible
 
 To remove digest self-reference/cycles, the verifier freezes two contract-manifest layers.
 
@@ -209,7 +209,7 @@ Each fixture is represented as:
 CI and the evidence builder independently recompute all authority-core/oracle/precedence/fixture digests and fail closed on mismatch.
 
 
-### 4.6 Static review gate
+### 4.5 Static review gate
 
 Before any authoritative run, the exact verifier implementation head must receive an independent review confirming:
 
