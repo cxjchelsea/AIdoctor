@@ -175,14 +175,6 @@ public final class U05RoutingService {
                 ROUTING_POLICY_VERSION,
                 ROUTING_DECISION_CONTRACT_VERSION);
 
-        U05RouteLedger.Entry existing = ledger.find(routingDecisionId);
-        if (existing != null) {
-            if (!fingerprint.equals(existing.getFingerprint())) {
-                throw new IllegalStateException("U05_ROUTE_REPLAY_CONFLICT");
-            }
-            return existing.getDecision().reattached();
-        }
-
         String routeEffectId = null;
         String routeAuthorizationId = null;
         U05DownstreamEligibility eligibility = null;
@@ -251,8 +243,11 @@ public final class U05RoutingService {
                 failureHandoffRef,
                 reasonCode,
                 eligibility);
-        ledger.store(routingDecisionId, fingerprint, decision);
-        return decision;
+        U05RouteLedger.Entry reconciled =
+                ledger.reconcile(routingDecisionId, fingerprint, decision);
+        return reconciled.isReattached()
+                ? reconciled.getDecision().reattached()
+                : reconciled.getDecision();
     }
 
     private static boolean validPermissionBinding(
