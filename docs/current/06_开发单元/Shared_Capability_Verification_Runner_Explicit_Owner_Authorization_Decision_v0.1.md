@@ -5,7 +5,7 @@
 > Exact reviewed design head: `ff81cbcfadbf87fe32b58971e76051165a44250f`  
 > Design PR: #190  
 > Targeted Independent Design Review: PASS / review_id `5273391778`  
-> Current status: **OWNER_DECISION_PENDING**  
+> Current status: **AUTHORIZED / OWNER_APPROVED**  
 > This package itself grants no workflow modification authorization.
 
 ---
@@ -421,7 +421,64 @@ Meaning:
     review_id = 5273391778
 
     AUTH-SHARED-CAP-VERIFICATION-RUNNER-001
-    = NOT_GRANTED / OWNER_DECISION_PENDING
+    = AUTHORIZED / OWNER_APPROVED
 
 No workflow modification, shared-capability verification PASS,
 U05 closure, merge, production, or live authorization is granted.
+
+
+---
+
+# 17. Owner Authorization Record
+
+Owner command:
+
+    AUTHORIZE
+
+Authorization:
+
+    AUTH-SHARED-CAP-VERIFICATION-RUNNER-001
+    = AUTHORIZED
+
+Exact authorization shape:
+
+    VERIFICATION_ONLY
+    / ONE_WORKFLOW_FILE_ONLY
+    / PINNED_EXACT_HEADS_ONLY
+    / READ_ONLY_GITHUB_PERMISSIONS
+    / EXACT_DIFF_INVENTORY_GUARDS
+    / FOCUSED_ZERO_SKIP_SUREFIRE_CHECKS
+    / FULL_DIAGNOSIS_REGRESSION
+    / NO_SOURCE_OR_TEST_MODIFICATION
+    / NO_MERGE
+    / NO_PRODUCTION
+
+Reviewed basis:
+
+    design PR #190
+    exact reviewed design head
+    = ff81cbcfadbf87fe32b58971e76051165a44250f
+
+    targeted design review
+    = PASS
+    review_id = 5273391778
+
+    authorization package PR #191
+    package review
+    = PASS
+    review_id = 5273397195
+
+Implementation lineage rule:
+
+    workflow implementation branch MUST descend from
+    this owner-authorized decision-record commit.
+
+This authorization does NOT grant:
+
+    PBNC-02A verification PASS
+    Runtime Effect Ledger verification PASS
+    U05 IR-05 / IR-06 closure
+    U05 RDP-06 PASS
+    merge
+    production/live traffic
+    real-patient use.
