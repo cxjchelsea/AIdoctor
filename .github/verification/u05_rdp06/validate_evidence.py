@@ -107,6 +107,12 @@ def main():
     auth = load(root / "auth-profile.json")
     if auth.get("implementation_sha") != TARGET:
         fail("auth-profile target mismatch")
+    if auth.get("authorization_record_sha") != "c31f654779a4a3dc6316d955c7e4a5c6b5b8c094":
+        fail("auth-profile authorization record SHA mismatch")
+    if auth.get("authorization_record_blob_sha") != "9893a016130d807ecb2f1da06af23312e898fb22":
+        fail("auth-profile authorization record blob mismatch")
+    if auth.get("authorization_record_path") != "docs/current/06_开发单元/U05_RDP06_Authoritative_Verifier_Target_Rebind_Authorization_Decision_v0.1.md":
+        fail("auth-profile authorization record path mismatch")
     if auth.get("environment") != "ci-nonprod-u05":
         fail("auth-profile environment mismatch")
     hard_auth_keys = [
