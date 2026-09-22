@@ -1095,7 +1095,8 @@ public final class U05VerificationSupport {
         @SuppressWarnings("unchecked")
         Map<String, Object> payload =
                 (Map<String, Object>) c.proposal.getStatePatch().operations.get(0).value;
-        o.details.put("inbound_restricted_permission_ref", restrictedPermission);
+        o.details.put("inbound_restricted_permission_ref",
+                c.input.getAcceptedRestrictedPermissionRef());
         o.details.put("admission_result_restricted_permission_ref",
                 c.admission.getRestrictedPermissionRef());
         o.details.put("admitted_restricted_permission_ref",
