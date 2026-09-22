@@ -765,6 +765,7 @@ public final class U05VerificationSupport {
         Assertions.assertEquals(U05ExecutionResult.D03_INPUT_FAILURE, r.getStatus());
         Assertions.assertEquals(0, f.repository.mutationCount());
         Observation o = observation("MUTATION", "NO_EFFECT");
+        addAdmissionDetails(o, r.getAdmission(), manifest);
         addDecisionDetails(o, r.getDecision());
         return o;
     }
@@ -1078,6 +1079,18 @@ public final class U05VerificationSupport {
         mutationCounts(o, 1, 1, 0);
         routingCounts(o, 1, 0, 0);
         addCommittedDetails(o, c);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload =
+                (Map<String, Object>) c.proposal.getStatePatch().operations.get(0).value;
+        o.details.put("inbound_restricted_permission_ref", restrictedPermission);
+        o.details.put("admission_result_restricted_permission_ref",
+                c.admission.getRestrictedPermissionRef());
+        o.details.put("admitted_restricted_permission_ref",
+                c.input.getAcceptedRestrictedPermissionRef());
+        o.details.put("d03_restricted_permission_ref",
+                c.decision.getRestrictedPermissionRef());
+        o.details.put("readiness_source_restricted_permission_ref",
+                payload.get("source_restricted_permission_ref"));
         addRouteDetails(o, route);
         return o;
     }
@@ -1967,20 +1980,36 @@ public final class U05VerificationSupport {
         evidence.put("observed_boundary", observed.boundary);
         evidence.put("expected_result", expected.get("expected_result"));
         evidence.put("observed_result", observed.result);
-        evidence.put("expected_provenance_equalities",
-                expected.get("expected_provenance_equalities"));
-        evidence.put("observed_provenance_equalities",
-                observedProvenanceEqualities(observed));
+        @SuppressWarnings("unchecked")
+        List<String> expectedEqualityIds =
+                (List<String>) expected.get("expected_provenance_equalities");
+        List<Map<String, Object>> observedEqualities =
+                observedProvenanceEqualities(observed);
+        List<String> observedEqualityIds = new ArrayList<String>();
+        for (Map<String, Object> eq : observedEqualities) {
+            observedEqualityIds.add(String.valueOf(eq.get("equality")));
+            Assertions.assertEquals(Boolean.TRUE, eq.get("equal"),
+                    caseId + " provenance equality failed: " + eq.get("equality"));
+        }
+        Collections.sort(expectedEqualityIds);
+        Collections.sort(observedEqualityIds);
+        boolean provenanceCoverageMatch = expectedEqualityIds.equals(observedEqualityIds);
+
+        evidence.put("expected_provenance_equalities", expectedEqualityIds);
+        evidence.put("observed_provenance_equalities", observedEqualities);
         evidence.put("expected_effect_counts", expectedCounts);
         evidence.put("observed_effect_counts", observed.counts);
         evidence.put("side_effect_evidence_refs", observed.sideEffectRefs);
         evidence.put("contract_manifest_digest", expected.get("contract_manifest_digest"));
-        evidence.put("pass", boundaryMatch && resultMatch && countsMatch);
+        evidence.put("pass", boundaryMatch && resultMatch && countsMatch && provenanceCoverageMatch);
         writeJson(evidenceRoot().resolve("cases").resolve(caseId + ".json"), evidence);
 
         Assertions.assertTrue(boundaryMatch, caseId + " boundary mismatch");
         Assertions.assertTrue(resultMatch, caseId + " result mismatch");
         Assertions.assertTrue(countsMatch, caseId + " effect-count mismatch");
+        Assertions.assertTrue(provenanceCoverageMatch,
+                caseId + " provenance equality coverage mismatch expected="
+                        + expectedEqualityIds + " observed=" + observedEqualityIds);
     }
 
     private static List<Map<String, Object>> observedProvenanceEqualities(Observation o) {
@@ -1995,7 +2024,32 @@ public final class U05VerificationSupport {
                     o.details.get("admitted_readiness_input_set_identity"),
                     o.details.get("d03_source_readiness_input_set_identity")));
         }
+        if (o.details.get("inbound_restricted_permission_ref") != null
+                || o.details.get("admission_result_restricted_permission_ref") != null
+                || o.details.get("admitted_restricted_permission_ref") != null
+                || o.details.get("d03_restricted_permission_ref") != null
+                || o.details.get("readiness_source_restricted_permission_ref") != null) {
+            out.add(chainEquality(
+                    "restricted_permission_ref_chain",
+                    o.details.get("inbound_restricted_permission_ref"),
+                    o.details.get("admission_result_restricted_permission_ref"),
+                    o.details.get("admitted_restricted_permission_ref"),
+                    o.details.get("d03_restricted_permission_ref"),
+                    o.details.get("readiness_source_restricted_permission_ref")));
+        }
         return out;
+    }
+
+    private static Map<String, Object> chainEquality(String id, Object... values) {
+        Map<String, Object> e = new LinkedHashMap<String, Object>();
+        e.put("equality", id);
+        e.put("values", Arrays.asList(values));
+        boolean equal = values.length > 0 && values[0] != null;
+        for (int i = 1; i < values.length; i++) {
+            equal = equal && Objects.equals(values[0], values[i]);
+        }
+        e.put("equal", equal);
+        return e;
     }
 
     private static Map<String, Object> equality(String id, Object left, Object right) {
