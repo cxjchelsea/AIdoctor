@@ -329,6 +329,97 @@ public final class U05VerificationSupport {
             Assertions.assertEquals("P" + high, actual, subcase);
             recordPrecedence(entry, decision, true);
         }
+
+        U05ClinicalReadinessDecision pol005 = decisionFor(
+                profilePol005(VERSION, "special-pol005"),
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT);
+        U05ClinicalReadinessDecision pol011 = decisionFor(
+                profilePol011(),
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT);
+        U05ClinicalReadinessDecision postDdx = decisionFor(
+                profilePostDdxPol011Excluded(),
+                U05ConsumerInboundRequest.POST_DDX_REEVALUATION);
+
+        Assertions.assertEquals("D03-POL-005", pol005.getPolicyRuleRef());
+        Assertions.assertEquals("D03-POL-011", pol011.getPolicyRuleRef());
+        Assertions.assertEquals("D03-POL-006", postDdx.getPolicyRuleRef());
+
+        List<Map<String, Object>> proofs = new ArrayList<Map<String, Object>>();
+        proofs.add(specialProof(
+                "POL-005-POSITIVE", "D03-POL-005", pol005.getPolicyRuleRef(),
+                Arrays.asList("RDP-02"), "runtime positive POL-005 profile"));
+        proofs.add(specialProof(
+                "POL-011-POSITIVE", "D03-POL-011", pol011.getPolicyRuleRef(),
+                Arrays.asList("RDP-02"), "runtime positive POL-011 profile"));
+
+        Map<String, Object> mutual = specialProof(
+                "POL-005-POL-011-MUTUAL-EXCLUSION",
+                "MUTUALLY_EXCLUSIVE",
+                "MUTUALLY_EXCLUSIVE",
+                Arrays.asList("RDP-02", "RDP-05"),
+                "POL-005 requires F6 NOT_YET_APPLICABLE while POL-011 requires PRESENT NO_BLOCKING_OFFLINE_EVIDENCE_NEED; both runtime positive branches were independently executed.");
+        mutual.put("pol005_observed_rule", pol005.getPolicyRuleRef());
+        mutual.put("pol011_observed_rule", pol011.getPolicyRuleRef());
+        mutual.put("pol005_f6_semantics", "NOT_YET_APPLICABLE");
+        mutual.put("pol011_f6_semantics", "PRESENT|NO_BLOCKING_OFFLINE_EVIDENCE_NEED");
+        proofs.add(mutual);
+
+        proofs.add(specialProof(
+                "POST-DDX-POL-011-EXCLUSION",
+                "POL-011-NOT_APPLICABLE",
+                "POL-011-NOT_APPLICABLE",
+                Arrays.asList("RDP-02", "RDP-05"),
+                "POST_DDX runtime profile containing current F6 no-blocking evidence resolves via D03-POL-006 rather than POL-011."));
+        proofs.get(proofs.size() - 1).put("observed_runtime_rule", postDdx.getPolicyRuleRef());
+
+        Map<String, Object> special = new LinkedHashMap<String, Object>();
+        special.put("schema", "U05_D03_SPECIAL_PROOF_EVIDENCE_V0_1");
+        special.put("proofs", proofs);
+        writeJson(evidenceRoot().resolve("u05-d03-special-proof-evidence.json"), special);
+    }
+
+    private static U05ClinicalReadinessDecision decisionFor(
+            List<U05ReadinessInput> inputs,
+            String context) {
+        U05ReadinessInputManifest manifest = manifest(context, VERSION, inputs);
+        AdmissionBundle admitted = admitBundle(
+                manifest,
+                context,
+                U05ConsumerInboundRequest.GATE_ALLOW,
+                null,
+                null,
+                VERSION,
+                authority(
+                        context,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true,
+                        VERSION,
+                        true,
+                        true,
+                        true,
+                        false,
+                        null,
+                        null));
+        Assertions.assertTrue(admitted.admission.isAdmitted());
+        return new U05ClinicalReadinessPolicy().decide(admitted.admission.getAdmittedInput());
+    }
+
+    private static Map<String, Object> specialProof(
+            String id,
+            String expected,
+            String observed,
+            List<String> authorityRefs,
+            String rationale) {
+        Map<String, Object> proof = new LinkedHashMap<String, Object>();
+        proof.put("id", id);
+        proof.put("expected", expected);
+        proof.put("observed", observed);
+        proof.put("authority_refs", authorityRefs);
+        proof.put("rationale", rationale);
+        proof.put("pass", expected.equals(observed));
+        return proof;
     }
 
     public static void verifyHarnessGapDetector() throws Exception {
