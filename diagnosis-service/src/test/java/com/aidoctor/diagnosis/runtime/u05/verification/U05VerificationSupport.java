@@ -1308,7 +1308,12 @@ public final class U05VerificationSupport {
                 f, inputs, context, gate, restrictedContext, restrictedPermission, currentReadinessRecordRef);
         StateTypes.CommitResult commit =
                 f.commitService.commitNonProduction(p.input, p.decision, p.proposal);
-        Assertions.assertEquals("COMMITTED", commit.status);
+        Assertions.assertEquals(
+                "COMMITTED",
+                commit.status,
+                "commit reason=" + commit.reasonCode
+                        + ", base=" + p.proposal.getStatePatch().baseVersion
+                        + ", operation=" + p.proposal.getMutationOperation());
         U05ClinicalReadinessCommitEvidence evidence =
                 f.commitService.verifyCommittedReadBack(p.proposal, commit);
         return new CommittedBundle(p, commit, evidence);
