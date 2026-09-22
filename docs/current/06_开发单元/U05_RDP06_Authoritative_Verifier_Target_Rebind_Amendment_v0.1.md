@@ -5,7 +5,7 @@
 > Parent authorized decision head: `c591909f81e4725d1cf0c5c32b51264ca91207fc`  
 > Prior exact target: `1dc49c4097841523a9445dab078bc5a3d1ad1259`  
 > Proposed new exact target: `261ee5525c8260e93db19173ffbde89a8af6810d`  
-> Status: **PROPOSED / INDEPENDENT_TARGET_REBIND_REVIEW_PENDING**  
+> Status: **PASS / READY_FOR_EXPLICIT_OWNER_REBIND_DECISION**  
 > This amendment changes no verifier semantics, no runtime scope and no production authorization.
 
 ---
@@ -426,13 +426,44 @@ Remediation:
 Current:
 
     BF-U05-RDP06-RB-IR-01
-    = REMEDIATED / TARGETED_RE_REVIEW_PENDING
+    = CLOSED
 
     BF-U05-RDP06-RB-IR-02
     = REMEDIATED / TARGETED_RE_REVIEW_PENDING
 
     U05 RDP-06 Verifier Exact-Target Rebind
-    = REVISED / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW
+    = PASS / READY_FOR_EXPLICIT_OWNER_REBIND_DECISION
 
     AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001
     = NOT_GRANTED
+
+
+---
+
+# 13. Targeted Independent Re-Review Provenance
+
+PR:
+
+    #208
+
+Reviewed exact semantic head:
+
+    0778a57e148bfaf3adc27e86bcaf9fdb8d8a80ae
+
+Targeted Independent Re-Review:
+
+    PASS
+    review_id = 5275342418
+
+Final:
+
+    BF-U05-RDP06-RB-IR-01 = CLOSED
+    BF-U05-RDP06-RB-IR-02 = CLOSED
+
+    U05 RDP-06 Verifier Exact-Target Rebind Amendment
+    = PASS / READY_FOR_EXPLICIT_OWNER_REBIND_DECISION
+
+    AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001
+    = NOT_GRANTED
+
+No authoritative RDP-06 execution may start until the owner explicitly authorizes this rebind.
