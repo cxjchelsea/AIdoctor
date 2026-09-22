@@ -1,6 +1,7 @@
 package com.aidoctor.diagnosis.runtime.u05;
 
 import com.aidoctor.contracts.v1.StateTypes;
+import com.aidoctor.diagnosis.runtime.effects.CanonicalEffectLedger;
 import com.aidoctor.diagnosis.runtime.effects.CanonicalEffectLedgerDecision;
 import com.aidoctor.diagnosis.runtime.effects.NonProductionFileCanonicalEffectLedger;
 import com.aidoctor.diagnosis.state.committer.StateCommitter;
@@ -696,6 +697,85 @@ class U05NonProductionClinicalReadinessTest {
         assertNull(staleDecision.getEligibility());
     }
 
+    @Test
+    void durableRouteRecoversAfterEligibilityPublicationGap(
+            @TempDir Path root) {
+        U05ReadinessInputManifest manifest = pol005Manifest(
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                VERSION);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+        U05ExecutionResult execution = fixture.application.execute(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+
+        U05RoutingCurrentness current = new U05RoutingCurrentness(
+                execution.getCommitEvidence().getCommittedClinicalStateVersion(),
+                "crash-gap-routing-context",
+                true, true, true, true, true,
+                execution.getAdmission().getAdmittedInput().getAcceptedU04GateRef(),
+                U05ConsumerInboundRequest.GATE_ALLOW,
+                null);
+
+        U05DownstreamPermissionPort permissionPort =
+                (input, evidence, currentness, consequence, targetUnitId, targetAction) -> {
+                    throw new AssertionError("ALLOW route must not ask downstream permission");
+                };
+
+        NonProductionFileCanonicalEffectLedger delegate =
+                new NonProductionFileCanonicalEffectLedger(root);
+        U05RoutingService interrupted = new U05RoutingService(
+                new U05CanonicalRouteLedger(
+                        new FailOnceEligibilityLedger(delegate)),
+                permissionPort);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> interrupted.route(
+                        execution.getAdmission().getAdmittedInput(),
+                        execution.getDecision(),
+                        execution.getCommitEvidence(),
+                        current));
+
+        U05RoutingService recovered = new U05RoutingService(
+                new U05CanonicalRouteLedger(
+                        new NonProductionFileCanonicalEffectLedger(root)),
+                permissionPort);
+
+        U05DownstreamRoutingDecision replay = recovered.route(
+                execution.getAdmission().getAdmittedInput(),
+                execution.getDecision(),
+                execution.getCommitEvidence(),
+                current);
+
+        assertEquals(
+                U05DownstreamRoutingDecision.REATTACHED,
+                replay.getReplayDisposition());
+        assertNotNull(replay.getEligibility());
+
+        String eligibilityFingerprint =
+                U05CanonicalEffectPayloadCodec.eligibilityFingerprint(
+                        replay.getEligibility());
+        CanonicalEffectLedgerDecision eligibility = delegate.inspect(
+                U05CanonicalRouteLedger.ELIGIBILITY_NAMESPACE,
+                replay.getEligibility().getEligibilityId(),
+                eligibilityFingerprint);
+
+        assertEquals(
+                CanonicalEffectLedgerDecision.Status.REATTACHED,
+                eligibility.getStatus());
+    }
+
     private static U05ReadinessInputManifest pol005Manifest(String context, int version) {
         return manifest(
                 context,
@@ -909,6 +989,48 @@ class U05NonProductionClinicalReadinessTest {
             return "U04_ORDINARY_ROUTING_AUTHORIZATION";
         }
         return "CLINICAL_CONTINUATION_ROUTING_DECISION";
+    }
+
+    private static final class FailOnceEligibilityLedger
+            implements CanonicalEffectLedger {
+        private final CanonicalEffectLedger delegate;
+        private boolean failEligibility = true;
+
+        FailOnceEligibilityLedger(CanonicalEffectLedger delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public CanonicalEffectLedgerDecision inspect(
+                String namespace,
+                String effectIdentity,
+                String expectedCanonicalFingerprint) {
+            return delegate.inspect(
+                    namespace,
+                    effectIdentity,
+                    expectedCanonicalFingerprint);
+        }
+
+        @Override
+        public CanonicalEffectLedgerDecision createIfAbsent(
+                String namespace,
+                String effectIdentity,
+                String canonicalFingerprint,
+                String recordSchemaVersion,
+                byte[] immutableRecordBytes) {
+            if (U05CanonicalRouteLedger.ELIGIBILITY_NAMESPACE.equals(namespace)
+                    && failEligibility) {
+                failEligibility = false;
+                return CanonicalEffectLedgerDecision.unavailable(
+                        "TEST_INJECTED_ELIGIBILITY_UNAVAILABLE");
+            }
+            return delegate.createIfAbsent(
+                    namespace,
+                    effectIdentity,
+                    canonicalFingerprint,
+                    recordSchemaVersion,
+                    immutableRecordBytes);
+        }
     }
 
     private static final class Fixture {
