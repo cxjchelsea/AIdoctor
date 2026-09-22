@@ -143,7 +143,10 @@ public final class U05ReadinessInputManifest {
         Set<String> exactSemanticRecords = new LinkedHashSet<String>();
         for (U05ReadinessInput input : sorted) {
             String fingerprint = input.semanticFingerprint();
-            String semanticKey = U05Ids.hash(\n                    "u05-exact-input-record",\n                    input.getReadinessInputId(),\n                    fingerprint);
+            String semanticKey = U05Ids.hash(
+                    "u05-exact-input-record",
+                    input.getReadinessInputId(),
+                    fingerprint);
             if (exactSemanticRecords.add(semanticKey)) {
                 normalized.add(input);
             }
