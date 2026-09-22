@@ -1,0 +1,469 @@
+name: U05 RDP-06 Authoritative Verification
+
+on:
+  pull_request:
+    branches:
+      - impl/u05-rdp06-targeted-remediation-v1
+      - verify/u05-rdp06-authoritative-overlay-v1
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - '.github/workflows/u05-rdp06-authoritative-verification.yml'
+      - '.github/verification/u05_rdp06/**'
+      - 'diagnosis-service/src/test/resources/u05/verification/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/**'
+
+permissions:
+  contents: read
+
+env:
+  U05_IMPLEMENTATION_SHA: 261ee5525c8260e93db19173ffbde89a8af6810d
+  U05_PARENT_AUTHORIZATION_ID: AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001
+  U05_REBIND_AUTHORIZATION_ID: AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001
+  U05_ENVIRONMENT: ci-nonprod-u05
+  U05_LIVE_UPSTREAM_CUTOVER: 'false'
+  U05_LIVE_U06_EXECUTION: 'false'
+  U05_LIVE_U08_EXECUTION: 'false'
+  U05_LIVE_U10_EXECUTION: 'false'
+  U05_LIVE_U11_EXECUTION: 'false'
+  U05_LIVE_U14_EXECUTION: 'false'
+  U05_PRODUCTION_ROUTING: 'false'
+  U05_PRODUCTION_MUTATION: 'false'
+  U05_PRODUCTION_ACTIVATION: 'false'
+  U05_REAL_PATIENT_TRAFFIC: 'false'
+  U05_EXTERNAL_DELIVERY: 'false'
+  U05_EXTERNAL_MODEL_TOOL_CALLS: 'false'
+  U05_SHARED_RUNTIME_SOURCE_CHANGE: 'false'
+
+jobs:
+  engineering-preflight:
+    name: U05_RDP06_NON_AUTHORITATIVE_OVERLAY_PREFLIGHT
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout verifier candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: verifier-src
+          fetch-depth: 0
+
+      - name: Checkout exact implementation target
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.U05_IMPLEMENTATION_SHA }}
+          path: sut
+
+      - name: G0/G1 preflight identity and exact overlay inventory
+        env:
+          U05_VERIFIER_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          test "$(git -C verifier-src rev-parse HEAD)" = "$U05_VERIFIER_SHA"
+          test "$(git -C sut rev-parse HEAD)" = "$U05_IMPLEMENTATION_SHA"
+          test -z "$(git -C sut status --porcelain)"
+          python3 - <<'PY'
+          import subprocess
+          target = "261ee5525c8260e93db19173ffbde89a8af6810d"
+          allowed = {
+              ".github/workflows/u05-rdp06-authoritative-verification.yml",
+              ".github/verification/u05_rdp06/build_contract_manifest.py",
+              ".github/verification/u05_rdp06/build_evidence.py",
+              ".github/verification/u05_rdp06/validate_evidence.py",
+              "diagnosis-service/src/test/resources/u05/verification/u05-verification-expectations.json",
+              "diagnosis-service/src/test/resources/u05/verification/u05-d03-precedence-expectations.json",
+              "diagnosis-service/src/test/resources/u05/verification/u05-verification-fixtures.json",
+              "diagnosis-service/src/test/resources/u05/verification/u05-verification-auth-profile.json",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05VerificationSupport.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05ConsumerAdmissionVerificationTest.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05D03PolicyVerificationTest.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05ReadinessMutationVerificationTest.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05DownstreamRoutingVerificationTest.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05ReplayRecoveryVerificationTest.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05EvidenceHarnessVerificationTest.java",
+          }
+          actual = set(subprocess.check_output(
+              ["git", "-C", "verifier-src", "diff", "--name-only", target + "...HEAD"],
+              text=True,
+          ).splitlines())
+          if actual != allowed:
+              raise SystemExit("verifier inventory mismatch\nmissing=%r\nextra=%r" %
+                               (sorted(allowed-actual), sorted(actual-allowed)))
+          print("U05_RDP06_OVERLAY_INVENTORY=PASS")
+          PY
+
+      - name: Apply verifier-only overlay to exact target checkout
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          roots = [
+              ".github/verification/u05_rdp06",
+              "diagnosis-service/src/test/resources/u05/verification",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification",
+          ]
+          for rel in roots:
+              src = Path("verifier-src") / rel
+              dst = Path("sut") / rel
+              if dst.exists():
+                  shutil.rmtree(dst)
+              dst.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copytree(src, dst)
+          PY
+          if git -C sut status --porcelain | grep -E 'diagnosis-service/src/main/|contracts/'; then
+            echo "verification overlay modified production/shared-contract source"
+            exit 1
+          fi
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+          cache-dependency-path: sut/diagnosis-service/pom.xml
+
+      - name: Install Shared Contracts v1 Java binding
+        run: mvn -f sut/contracts/v1/bindings/java/pom.xml install -DskipTests
+
+      - name: Compile exact target with verifier overlay
+        run: mvn -f sut/diagnosis-service/pom.xml -DskipTests test-compile
+
+      - name: Verify static oracle/fixture cardinality
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          base = Path("sut/diagnosis-service/src/test/resources/u05/verification")
+          e = json.loads((base/"u05-verification-expectations.json").read_text())
+          p = json.loads((base/"u05-d03-precedence-expectations.json").read_text())
+          f = json.loads((base/"u05-verification-fixtures.json").read_text())
+          a = json.loads((base/"u05-verification-auth-profile.json").read_text())
+          assert len(e["cases"]) == 60
+          assert len(p["pairs"]) == 28
+          assert len(p["special_proofs"]) == 4
+          assert len(f["fixtures"]) >= 82
+          assert f["synthetic"] is True
+          assert f["contains_real_phi"] is False
+          assert a["implementation_sha"] == "261ee5525c8260e93db19173ffbde89a8af6810d"
+          print("U05_RDP06_STATIC_INPUT_PREFLIGHT=PASS")
+          PY
+
+      - name: Run non-authoritative focused verifier preflight
+        working-directory: sut
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Du05.verification.evidenceDir=diagnosis-service/target/u05-rdp06-evidence
+          -Dtest=U05ConsumerAdmissionVerificationTest,U05D03PolicyVerificationTest,U05ReadinessMutationVerificationTest,U05DownstreamRoutingVerificationTest,U05ReplayRecoveryVerificationTest,U05EvidenceHarnessVerificationTest
+          test
+
+      - name: Declare preflight boundary
+        run: |
+          echo "U05_RDP06_OVERLAY_PREFLIGHT=PASS"
+          echo "U05_RDP06_AUTHORITATIVE_VERIFICATION=NOT_RUN"
+          echo "U05_IMPLEMENTATION_VERIFICATION=NOT_PASSED"
+
+  authoritative-verification:
+    name: U05_RDP06_AUTHORITATIVE_EXACT_TARGET
+    needs: engineering-preflight
+    if: contains(github.event.pull_request.body || '', 'U05_RDP06_STATIC_REVIEW=PASS')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: G0 parse and verify independent static-review authorization
+        env:
+          U05_VERIFIER_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          event = json.load(open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8"))
+          body = event["pull_request"].get("body") or ""
+          def one(name):
+              values = re.findall(r"(?m)^" + re.escape(name) + r"=([^\s]+)\s*$", body)
+              if len(values) != 1:
+                  raise SystemExit("expected exactly one " + name)
+              return values[0]
+          if one("U05_RDP06_STATIC_REVIEW") != "PASS":
+              raise SystemExit("static review marker is not PASS")
+          review_id = one("U05_RDP06_STATIC_REVIEW_ID")
+          review_head = one("U05_RDP06_STATIC_REVIEW_HEAD")
+          if not review_id.isdigit():
+              raise SystemExit("static review id must be numeric")
+          if review_head != os.environ["U05_VERIFIER_SHA"]:
+              raise SystemExit("static review head != verifier head")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as out:
+              out.write("U05_STATIC_REVIEW_ID=" + review_id + "\n")
+              out.write("U05_STATIC_REVIEW_HEAD=" + review_head + "\n")
+              out.write("U05_VERIFIER_SHA=" + os.environ["U05_VERIFIER_SHA"] + "\n")
+          print("G0_STATIC_INDEPENDENT_REVIEW=PASS")
+          PY
+
+      - name: G0 governance hard-boundary guard
+        run: |
+          test "$U05_ENVIRONMENT" = "ci-nonprod-u05"
+          test "$U05_LIVE_UPSTREAM_CUTOVER" = "false"
+          test "$U05_LIVE_U06_EXECUTION" = "false"
+          test "$U05_LIVE_U08_EXECUTION" = "false"
+          test "$U05_LIVE_U10_EXECUTION" = "false"
+          test "$U05_LIVE_U11_EXECUTION" = "false"
+          test "$U05_LIVE_U14_EXECUTION" = "false"
+          test "$U05_PRODUCTION_ROUTING" = "false"
+          test "$U05_PRODUCTION_MUTATION" = "false"
+          test "$U05_PRODUCTION_ACTIVATION" = "false"
+          test "$U05_REAL_PATIENT_TRAFFIC" = "false"
+          test "$U05_EXTERNAL_DELIVERY" = "false"
+          test "$U05_EXTERNAL_MODEL_TOOL_CALLS" = "false"
+          test "$U05_SHARED_RUNTIME_SOURCE_CHANGE" = "false"
+          test "$U05_REBIND_AUTHORIZATION_ID" = "AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001"
+
+      - name: Checkout exact reviewed verifier head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: verifier-src
+          fetch-depth: 0
+
+      - name: G1 verify verifier identity and exact authorized inventory
+        run: |
+          test "$(git -C verifier-src rev-parse HEAD)" = "$U05_VERIFIER_SHA"
+          python3 - <<'PY'
+          import subprocess
+          target = "261ee5525c8260e93db19173ffbde89a8af6810d"
+          allowed = {
+              ".github/workflows/u05-rdp06-authoritative-verification.yml",
+              ".github/verification/u05_rdp06/build_contract_manifest.py",
+              ".github/verification/u05_rdp06/build_evidence.py",
+              ".github/verification/u05_rdp06/validate_evidence.py",
+              "diagnosis-service/src/test/resources/u05/verification/u05-verification-expectations.json",
+              "diagnosis-service/src/test/resources/u05/verification/u05-d03-precedence-expectations.json",
+              "diagnosis-service/src/test/resources/u05/verification/u05-verification-fixtures.json",
+              "diagnosis-service/src/test/resources/u05/verification/u05-verification-auth-profile.json",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05VerificationSupport.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05ConsumerAdmissionVerificationTest.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05D03PolicyVerificationTest.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05ReadinessMutationVerificationTest.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05DownstreamRoutingVerificationTest.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05ReplayRecoveryVerificationTest.java",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification/U05EvidenceHarnessVerificationTest.java",
+          }
+          actual = set(subprocess.check_output(
+              ["git", "-C", "verifier-src", "diff", "--name-only", target + "...HEAD"],
+              text=True,
+          ).splitlines())
+          if actual != allowed:
+              raise SystemExit("authoritative verifier inventory mismatch")
+          PY
+
+      - name: G1 checkout exact implementation target
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.U05_IMPLEMENTATION_SHA }}
+          path: sut
+
+      - name: G1 verify exact target is clean
+        run: |
+          test "$(git -C sut rev-parse HEAD)" = "$U05_IMPLEMENTATION_SHA"
+          test -z "$(git -C sut status --porcelain)"
+
+      - name: G1A set up pinned JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+          cache-dependency-path: sut/diagnosis-service/pom.xml
+
+      - name: G1A freeze toolchain/workflow provenance
+        run: |
+          mkdir -p build/u05-rdp06
+          {
+            echo "implementation_sha=$U05_IMPLEMENTATION_SHA"
+            echo "verifier_sha=$U05_VERIFIER_SHA"
+            echo "static_review_id=$U05_STATIC_REVIEW_ID"
+            echo "static_review_head=$U05_STATIC_REVIEW_HEAD"
+            echo "repository=$GITHUB_REPOSITORY"
+            echo "ref=$GITHUB_REF"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "runner_os=$RUNNER_OS"
+            echo "runner_arch=$RUNNER_ARCH"
+            echo "image_os=${ImageOS:-unknown}"
+            echo "checkout_action=3d3c42e5aac5ba805825da76410c181273ba90b1"
+            echo "setup_java_action=b6effb05e454b25005698d916606bdc6ffcbf961"
+            echo "upload_artifact_action=ea165f8d65b6e75b540449e92b4886f43607fa02"
+            echo "workflow_sha256=$(sha256sum verifier-src/.github/workflows/u05-rdp06-authoritative-verification.yml | awk '{print $1}')"
+            echo "java_version=$(java -version 2>&1 | tr '\n' ' ')"
+            echo "maven_version=$(mvn -version 2>&1 | tr '\n' ' ')"
+            echo "python_version=$(python3 --version 2>&1)"
+          } > build/u05-rdp06/workflow-provenance.txt
+          cat build/u05-rdp06/workflow-provenance.txt
+
+      - name: G2 install Shared Contracts v1 Java binding
+        run: mvn -f sut/contracts/v1/bindings/java/pom.xml install -DskipTests
+
+      - name: G2B baseline diagnosis-service regression before overlay
+        working-directory: sut
+        run: mvn -f diagnosis-service/pom.xml test
+
+      - name: Capture baseline regression summary
+        run: |
+          python3 - <<'PY'
+          import glob, json, xml.etree.ElementTree as ET
+          totals = dict(tests=0, failures=0, errors=0, skipped=0)
+          for path in glob.glob("sut/diagnosis-service/target/surefire-reports/TEST-*.xml"):
+              root = ET.parse(path).getroot()
+              for key in totals:
+                  totals[key] += int(root.attrib.get(key, 0))
+          if totals["failures"] or totals["errors"]:
+              raise SystemExit("baseline regression is not green")
+          json.dump(totals, open("build/u05-rdp06/baseline-regression.json","w"), sort_keys=True)
+          print(totals)
+          PY
+
+      - name: Apply exact reviewed verifier-only overlay
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          roots = [
+              ".github/verification/u05_rdp06",
+              "diagnosis-service/src/test/resources/u05/verification",
+              "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/verification",
+          ]
+          for rel in roots:
+              src = Path("verifier-src") / rel
+              dst = Path("sut") / rel
+              if dst.exists():
+                  shutil.rmtree(dst)
+              dst.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copytree(src, dst)
+          PY
+          if git -C sut status --porcelain | grep -E 'diagnosis-service/src/main/|contracts/'; then
+            echo "verifier overlay changed prohibited production/shared source"
+            exit 1
+          fi
+
+      - name: G3 compile exact target plus verifier-only test overlay
+        run: mvn -f sut/diagnosis-service/pom.xml -DskipTests test-compile
+
+      - name: G4 structural authorization guards
+        run: |
+          U05_MAIN="sut/diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05"
+          if grep -R -nE '^import .*runtime\.u(06|08|10|11|14)(\.|;)' "$U05_MAIN"; then
+            echo "live downstream owner dependency detected"; exit 1
+          fi
+          if grep -R -nE '@(Component|Service|Configuration|RestController|Controller|Bean|Profile)' "$U05_MAIN"; then
+            echo "automatic Spring/runtime activation detected"; exit 1
+          fi
+          if grep -R -nE 'PythonRuntimeClient|RestTemplate|WebClient|HttpClient|OpenAI|FeignClient' "$U05_MAIN"; then
+            echo "unauthorized external/model/tool dependency detected"; exit 1
+          fi
+          if grep -R -nE 'StateRepositoryPort|attemptAtomicCommit\(' "$U05_MAIN"; then
+            echo "direct Clinical State write bypass detected"; exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          out = {
+            "no_live_downstream_execution": True,
+            "no_automatic_production_activation": True,
+            "no_external_model_tool_dependency": True,
+            "no_state_write_bypass": True,
+            "no_production_source_overlay": True,
+            "no_shared_contract_overlay": True,
+          }
+          json.dump(out, open("build/u05-rdp06/structural-guard-summary.json","w"), sort_keys=True)
+          PY
+          echo "U05-VG-001=PASS"
+          echo "U05-VG-002=PASS"
+          echo "U05-VG-003=PASS"
+          echo "U05-VG-004=PASS"
+
+      - name: G5 run all 60 governed EV cases plus D03 precedence matrix
+        working-directory: sut
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Du05.verification.evidenceDir=diagnosis-service/target/u05-rdp06-evidence
+          -Dtest=U05ConsumerAdmissionVerificationTest,U05D03PolicyVerificationTest,U05ReadinessMutationVerificationTest,U05DownstreamRoutingVerificationTest,U05ReplayRecoveryVerificationTest
+          test
+
+      - name: G6 run evidence harness self-tests
+        working-directory: sut
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Du05.verification.evidenceDir=diagnosis-service/target/u05-rdp06-evidence
+          -Dtest=U05EvidenceHarnessVerificationTest
+          test
+
+      - name: G7 run full diagnosis-service regression with verifier overlay
+        working-directory: sut
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Du05.verification.evidenceDir=diagnosis-service/target/u05-rdp06-evidence
+          test
+
+      - name: G7 build regression delta summary
+        run: |
+          python3 - <<'PY'
+          import glob, json, xml.etree.ElementTree as ET
+          baseline = json.load(open("build/u05-rdp06/baseline-regression.json"))
+          post = dict(tests=0, failures=0, errors=0, skipped=0)
+          for path in glob.glob("sut/diagnosis-service/target/surefire-reports/TEST-*.xml"):
+              root = ET.parse(path).getroot()
+              for key in post:
+                  post[key] += int(root.attrib.get(key, 0))
+          result = {
+              "baseline": baseline,
+              "post_overlay": post,
+              "tests": post["tests"],
+              "failures": post["failures"],
+              "errors": post["errors"],
+              "skipped": post["skipped"],
+              "unexpected_skips": max(0, post["skipped"] - baseline["skipped"]),
+              "pass": post["failures"] == 0 and post["errors"] == 0
+                      and post["skipped"] == baseline["skipped"],
+          }
+          json.dump(result, open("build/u05-rdp06/regression-summary.json","w"), sort_keys=True)
+          if not result["pass"]:
+              raise SystemExit("regression delta gate failed: %r" % result)
+          print(result)
+          PY
+          echo "U05-VG-006=PASS"
+
+      - name: G8 build exact frozen contract manifest
+        working-directory: sut
+        run: |
+          python3 .github/verification/u05_rdp06/build_contract_manifest.py             --repo-root .             --expectations diagnosis-service/src/test/resources/u05/verification/u05-verification-expectations.json             --precedence diagnosis-service/src/test/resources/u05/verification/u05-d03-precedence-expectations.json             --fixtures diagnosis-service/src/test/resources/u05/verification/u05-verification-fixtures.json             --output ../build/u05-rdp06/u05-contract-manifest.json
+
+      - name: G8 build durable evidence bundle
+        run: |
+          python3 sut/.github/verification/u05_rdp06/build_evidence.py             --evidence-root sut/diagnosis-service/target/u05-rdp06-evidence             --expectations sut/diagnosis-service/src/test/resources/u05/verification/u05-verification-expectations.json             --precedence-expectations sut/diagnosis-service/src/test/resources/u05/verification/u05-d03-precedence-expectations.json             --fixtures sut/diagnosis-service/src/test/resources/u05/verification/u05-verification-fixtures.json             --auth-profile sut/diagnosis-service/src/test/resources/u05/verification/u05-verification-auth-profile.json             --contract-manifest build/u05-rdp06/u05-contract-manifest.json             --structural-summary build/u05-rdp06/structural-guard-summary.json             --regression-summary build/u05-rdp06/regression-summary.json             --workflow-provenance build/u05-rdp06/workflow-provenance.txt             --focused-reports-dir sut/diagnosis-service/target/surefire-reports             --harness-report sut/diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.u05.verification.U05EvidenceHarnessVerificationTest.xml             --output-dir build/u05-rdp06/evidence
+
+      - name: G9-G12 validate completeness, expected/observed equality and hard boundaries
+        run: |
+          python3 sut/.github/verification/u05_rdp06/validate_evidence.py             --bundle-dir build/u05-rdp06/evidence
+          echo "U05-VG-005=PASS"
+
+      - name: G13 display SHA-256 evidence checksums
+        run: cat build/u05-rdp06/evidence/SHA256SUMS
+
+      - name: G14 upload retained authoritative evidence
+        id: upload-u05-rdp06
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: u05-rdp06-authoritative-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: build/u05-rdp06/evidence
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 6
+          overwrite: false
+
+      - name: G15 report retained evidence identity and bounded verdict
+        run: |
+          echo "artifact_id=${{ steps.upload-u05-rdp06.outputs.artifact-id }}"
+          echo "artifact_url=${{ steps.upload-u05-rdp06.outputs.artifact-url }}"
+          echo "artifact_digest=${{ steps.upload-u05-rdp06.outputs.artifact-digest }}"
+          echo "implementation_sha=$U05_IMPLEMENTATION_SHA"
+          echo "verifier_sha=$U05_VERIFIER_SHA"
+          echo "static_review_id=$U05_STATIC_REVIEW_ID"
+          echo "U05_RDP06_AUTHORITATIVE_VERIFICATION=PASS_PENDING_INDEPENDENT_EVIDENCE_REVIEW"
+          echo "U05_IMPLEMENTATION_VERIFICATION=NOT_PASSED_PENDING_INDEPENDENT_EVIDENCE_REVIEW"
+          echo "merge_authorization=NOT_GRANTED"
+          echo "production_authorization=BLOCKED"
