@@ -315,11 +315,21 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
             if (!safeExistingPath(directory)) {
                 throw new IOException("unsafe ledger directory");
             }
+            forceDirectory(directory);
+            Path parent = directory.getParent();
+            if (parent != null && parent.toAbsolutePath().normalize().startsWith(root)) {
+                forceDirectory(parent);
+            }
             return;
         }
         Files.createDirectory(directory);
         if (!safeExistingPath(directory)) {
             throw new IOException("unsafe ledger directory after create");
+        }
+        forceDirectory(directory);
+        Path parent = directory.getParent();
+        if (parent != null && parent.toAbsolutePath().normalize().startsWith(root)) {
+            forceDirectory(parent);
         }
     }
 
