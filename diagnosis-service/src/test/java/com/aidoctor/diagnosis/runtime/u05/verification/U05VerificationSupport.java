@@ -352,25 +352,37 @@ public final class U05VerificationSupport {
                 "POL-011-POSITIVE", "D03-POL-011", pol011.getPolicyRuleRef(),
                 Arrays.asList("RDP-02"), "runtime positive POL-011 profile"));
 
+        List<U05ReadinessInput> pol005Inputs = profilePol005(VERSION, "special-mutual-pol005");
+        List<U05ReadinessInput> pol011Inputs = profilePol011();
+        String pol005F6 = f6Semantic(pol005Inputs);
+        String pol011F6 = f6Semantic(pol011Inputs);
+        boolean mutuallyExclusive = !pol005F6.equals(pol011F6)
+                && pol005F6.startsWith("NOT_YET_APPLICABLE")
+                && pol011F6.startsWith("PRESENT|NO_BLOCKING_OFFLINE_EVIDENCE_NEED");
         Map<String, Object> mutual = specialProof(
                 "POL-005-POL-011-MUTUAL-EXCLUSION",
                 "MUTUALLY_EXCLUSIVE",
-                "MUTUALLY_EXCLUSIVE",
+                mutuallyExclusive ? "MUTUALLY_EXCLUSIVE" : "NOT_PROVEN",
                 Arrays.asList("RDP-02", "RDP-05"),
-                "POL-005 requires F6 NOT_YET_APPLICABLE while POL-011 requires PRESENT NO_BLOCKING_OFFLINE_EVIDENCE_NEED; both runtime positive branches were independently executed.");
+                "Derived from independently executed positive POL-005/POL-011 branches and their contract-governed F6 semantics.");
         mutual.put("pol005_observed_rule", pol005.getPolicyRuleRef());
         mutual.put("pol011_observed_rule", pol011.getPolicyRuleRef());
-        mutual.put("pol005_f6_semantics", "NOT_YET_APPLICABLE");
-        mutual.put("pol011_f6_semantics", "PRESENT|NO_BLOCKING_OFFLINE_EVIDENCE_NEED");
+        mutual.put("pol005_f6_semantics", pol005F6);
+        mutual.put("pol011_f6_semantics", pol011F6);
+        mutual.put("contract_predicate", mutuallyExclusive);
         proofs.add(mutual);
 
-        proofs.add(specialProof(
+        String postDdxObserved = "D03-POL-011".equals(postDdx.getPolicyRuleRef())
+                ? "POL-011-APPLIED"
+                : "POL-011-NOT_APPLICABLE";
+        Map<String, Object> postDdxProof = specialProof(
                 "POST-DDX-POL-011-EXCLUSION",
                 "POL-011-NOT_APPLICABLE",
-                "POL-011-NOT_APPLICABLE",
+                postDdxObserved,
                 Arrays.asList("RDP-02", "RDP-05"),
-                "POST_DDX runtime profile containing current F6 no-blocking evidence resolves via D03-POL-006 rather than POL-011."));
-        proofs.get(proofs.size() - 1).put("observed_runtime_rule", postDdx.getPolicyRuleRef());
+                "Derived from executed POST_DDX runtime rule; POL-011 must not be selected.");
+        postDdxProof.put("observed_runtime_rule", postDdx.getPolicyRuleRef());
+        proofs.add(postDdxProof);
 
         Map<String, Object> special = new LinkedHashMap<String, Object>();
         special.put("schema", "U05_D03_SPECIAL_PROOF_EVIDENCE_V0_1");
@@ -418,6 +430,7 @@ public final class U05VerificationSupport {
         proof.put("observed", observed);
         proof.put("authority_refs", authorityRefs);
         proof.put("rationale", rationale);
+        proof.put("proof_source", "RUNTIME_OR_CONTRACT_PREDICATE");
         proof.put("pass", expected.equals(observed));
         return proof;
     }
@@ -1812,6 +1825,16 @@ public final class U05VerificationSupport {
     private static U05ReadinessInput firstDomain(List<U05ReadinessInput> inputs, String domain) {
         for (U05ReadinessInput i : inputs) if (domain.equals(i.getSourceDomain())) return i;
         throw new IllegalStateException("missing domain " + domain);
+    }
+
+    private static String f6Semantic(List<U05ReadinessInput> inputs) {
+        for (U05ReadinessInput input : inputs) {
+            if (U05ReadinessInput.F6.equals(input.getSourceDomain())) {
+                return input.getApplicabilityStatus()
+                        + (input.getBusinessSignal() == null ? "" : "|" + input.getBusinessSignal());
+            }
+        }
+        return "MISSING";
     }
 
     private static String precedenceCode(U05ClinicalReadinessDecision d) {
