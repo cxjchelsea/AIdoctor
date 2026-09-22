@@ -119,18 +119,29 @@ Required sequence:
 
     run diagnosis-service regression suite
 
-Required scope guard:
+Required lineage and exact-diff guard:
 
-Allowed production-source change:
+    git merge-base --is-ancestor
+      5ca69deaad861e6298856fa36d583c1d660bd831
+      5e9f05f4b45d82cec4e67a6a24bc3a4d8507b02d
 
-    diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/
-      SyntheticJsonPointerApplier.java
+must PASS.
 
-Allowed tests:
+Exact:
 
-    diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/**
+    git diff --name-status
+      5ca69deaad861e6298856fa36d583c1d660bd831
+      5e9f05f4b45d82cec4e67a6a24bc3a4d8507b02d
 
-Any other changed file:
+must equal exactly:
+
+    M diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/SyntheticJsonPointerApplier.java
+
+    A diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/SyntheticJsonPointerApplierObjectValueParityTest.java
+
+    A diagnosis-service/src/test/java/com/aidoctor/diagnosis/state/committer/SyntheticStructuredObjectRepositoryIntegrationTest.java
+
+Any additional/missing/status-different file:
 
     FAIL.
 
@@ -153,16 +164,97 @@ Required sequence:
 
     run diagnosis-service regression suite
 
-Required scope guard:
+Required lineage and exact-diff guard:
 
-Allowed added files only under:
+    git merge-base --is-ancestor
+      0aa1565110b32a0a0a7ed28badac6127af29879e
+      c0315bf11d8a96a6c2426ce38c8ef02f7bef298f
 
-    diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/**
-    diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/effects/**
+must PASS.
 
-Any modified pre-existing production/shared file:
+Exact:
+
+    git diff --name-status
+      0aa1565110b32a0a0a7ed28badac6127af29879e
+      c0315bf11d8a96a6c2426ce38c8ef02f7bef298f
+
+must equal exactly:
+
+    A diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedger.java
+
+    A diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedgerDecision.java
+
+    A diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedgerRecord.java
+
+    A diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/NonProductionFileCanonicalEffectLedger.java
+
+    A diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedgerProcessProbe.java
+
+    A diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/effects/NonProductionFileCanonicalEffectLedgerTest.java
+
+Any additional/missing/status-different file:
 
     FAIL.
+
+---
+
+# 6.1 Focused Surefire evidence integrity
+
+Immediately after each focused Maven test command and before full regression,
+the runner must validate the generated Surefire XML for the exact focused classes.
+
+Required for every focused report:
+
+    report file exists
+    XML/result is readable
+    errors = 0
+    failures = 0
+    skipped = 0
+
+PBNC-02A minimum reports:
+
+    TEST-com.aidoctor.diagnosis.state.committer.SyntheticJsonPointerApplierObjectValueParityTest.xml
+
+    TEST-com.aidoctor.diagnosis.state.committer.SyntheticStructuredObjectRepositoryIntegrationTest.xml
+
+    TEST-com.aidoctor.diagnosis.state.committer.SyntheticVersionedStateRepositoryTest.xml
+
+Effect Ledger minimum report:
+
+    TEST-com.aidoctor.diagnosis.runtime.effects.NonProductionFileCanonicalEffectLedgerTest.xml
+
+If a required focused report is absent, malformed, failed, errored, or skipped:
+
+    FAIL.
+
+This check must execute before full diagnosis-service regression.
+
+---
+
+# 6.2 Runner identity evidence
+
+Before target checkout/tests, every job must log:
+
+    VERIFICATION_WORKFLOW_COMMIT = ${{ github.sha }}
+
+    VERIFICATION_WORKFLOW_REF = ${{ github.ref }}
+
+    TARGET_IMPLEMENTATION_SHA
+
+    AUTHORIZATION_BASE_SHA
+
+and assert:
+
+    github.ref_name
+    == verify/shared-capabilities-exact-head-v1
+
+The eventual workflow implementation branch must descend from the explicit:
+
+    AUTH-SHARED-CAP-VERIFICATION-RUNNER-001
+
+owner-authorized decision record.
+
+The workflow commit itself becomes part of later evidence review.
 
 ---
 
@@ -360,3 +452,50 @@ If approved:
     -> independent evidence review
     -> shared capability verification decisions
     -> only then return to U05 IR-05 / IR-06 closure work.
+
+
+---
+
+# 15. Independent Design Review Remediation
+
+Initial review:
+
+    PR #190
+    review_id = 5273388623
+    verdict = REVISE_REQUIRED
+
+Findings:
+
+    BF-SHARED-VERIFY-IR-01
+    = DIFF_SCOPE_GUARD_TOO_BROAD
+
+    BF-SHARED-VERIFY-IR-02
+    = CRITICAL_TEST_SKIP_CAN_GREEN_WORKFLOW
+
+    BF-SHARED-VERIFY-IR-03
+    = VERIFICATION_WORKFLOW_IDENTITY_NOT_FROZEN
+
+Remediation:
+
+    IR-01:
+      authorization-base ancestry + exact name-status inventory frozen
+
+    IR-02:
+      focused Surefire report existence and zero errors/failures/skips frozen
+
+    IR-03:
+      workflow commit/ref + target/auth SHAs emitted and verification branch asserted
+
+Current:
+
+    BF-SHARED-VERIFY-IR-01
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    BF-SHARED-VERIFY-IR-02
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    BF-SHARED-VERIFY-IR-03
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    Shared Capability Verification Runner Design
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
