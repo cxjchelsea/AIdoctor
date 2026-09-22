@@ -85,10 +85,23 @@ def main():
     review_id = os.environ.get("U05_STATIC_REVIEW_ID", "").strip()
     review_head = os.environ.get("U05_STATIC_REVIEW_HEAD", "").strip()
     verifier_head = os.environ.get("U05_VERIFIER_SHA", "").strip()
+    reviewed_expectation_sha = os.environ.get("U05_STATIC_EXPECTATION_SHA256", "").strip()
+    reviewed_precedence_sha = os.environ.get("U05_STATIC_PRECEDENCE_SHA256", "").strip()
+    reviewed_fixture_sha = os.environ.get("U05_STATIC_FIXTURE_SHA256", "").strip()
     if not review_id.isdigit():
         raise SystemExit("U05_STATIC_REVIEW_ID must be a numeric independent review id")
     if not review_head or review_head != verifier_head:
         raise SystemExit("static review head does not equal verifier head")
+
+    actual_expectation_sha = sha256_file(args.expectations)
+    actual_precedence_sha = sha256_file(args.precedence)
+    actual_fixture_sha = sha256_file(args.fixtures)
+    if reviewed_expectation_sha != actual_expectation_sha:
+        raise SystemExit("reviewed expectation digest mismatch")
+    if reviewed_precedence_sha != actual_precedence_sha:
+        raise SystemExit("reviewed precedence digest mismatch")
+    if reviewed_fixture_sha != actual_fixture_sha:
+        raise SystemExit("reviewed fixture digest mismatch")
 
     final_manifest = {
         "schema": "U05_CONTRACT_MANIFEST_V0_1",
@@ -96,15 +109,15 @@ def main():
         "authority_core_digest": authority_digest,
         "reviewed_inputs": {
             "expectation_oracle": {
-                "sha256": sha256_file(args.expectations),
+                "sha256": actual_expectation_sha,
                 "review_id": review_id,
             },
             "precedence_oracle": {
-                "sha256": sha256_file(args.precedence),
+                "sha256": actual_precedence_sha,
                 "review_id": review_id,
             },
             "fixture_manifest": {
-                "sha256": sha256_file(args.fixtures),
+                "sha256": actual_fixture_sha,
                 "review_id": review_id,
             },
             "reviewed_verifier_head": review_head,
