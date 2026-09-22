@@ -6,7 +6,7 @@
 > Design PR: #185  
 > Independent targeted design review: PASS / review_id `5273185469`  
 > Impact review: PR #183 / PASS / review_id `5265060541`  
-> Current status: **OWNER_DECISION_PENDING**  
+> Current status: **AUTHORIZED / OWNER_APPROVED**  
 > This package itself grants no implementation authorization.
 
 ---
@@ -425,9 +425,61 @@ Meaning:
     review_id = 5273185469
 
     AUTH-RUNTIME-EFFECT-LEDGER-NC-001
-    = NOT_GRANTED / OWNER_DECISION_PENDING
+    = AUTHORIZED / OWNER_APPROVED
 
     BF-U05-IMPL-IR-06
     = OPEN / BLOCKING
 
 No implementation or merge is authorized by this document.
+
+
+---
+
+# Owner Authorization Record
+
+Owner command:
+
+    AUTHORIZE
+
+Authorization:
+
+    AUTH-RUNTIME-EFFECT-LEDGER-NC-001
+    = AUTHORIZED
+
+Exact authorization shape:
+
+    EFFECT_LEDGER_SCOPE
+    = NON_PRODUCTION_ONLY
+    / NEW_RUNTIME_EFFECTS_PACKAGE_ONLY
+    / FOCUSED_EFFECT_LEDGER_TESTS_ONLY
+    / OPAQUE_BYTES
+    / NO_U05_BUSINESS_LOGIC
+    / NO_EXISTING_SHARED_SOURCE_MODIFICATION
+    / NO_DB_NETWORK_PRODUCTION_WIRING
+
+Reviewed decision-package basis:
+
+    design PR #185
+    exact reviewed design head = 0a275d461ac6001d6cede9e4d46fb36d6a7f50de
+    targeted design review = PASS
+    review_id = 5273185469
+
+    authorization package PR #187
+    package review = PASS
+    review_id = 5273199469
+
+Implementation lineage rule:
+
+    implementation branch MUST descend from
+    this owner-authorized decision-record commit.
+
+This authorization does NOT grant:
+
+    merge
+    production activation
+    live traffic
+    U05 verification PASS
+    release activation
+    real-patient use.
+
+Any STOP condition in this decision package remains binding.
