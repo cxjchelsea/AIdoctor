@@ -8,7 +8,7 @@
 > Targeted Independent Re-Review: **PASS** / review_id `5275342418`  
 > Status sync review: **PASS** / review_id `5275346436`  
 > Proposed exact target: `261ee5525c8260e93db19173ffbde89a8af6810d`  
-> Status: **OWNER DECISION PENDING**
+> Status: **AUTHORIZED / CONSUMED_FOR_EXACT_TARGET_REBIND**
 
 ---
 
@@ -260,10 +260,64 @@ The old parent authorization remains historical for its prior exact target only;
     = 261ee5525c8260e93db19173ffbde89a8af6810d
 
     AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001
-    = NOT_GRANTED
+    = AUTHORIZED
 
     RDP-06 authoritative verification
-    = NOT_RUN / BLOCKED_PENDING_OWNER_REBIND_DECISION
+    = NOT_RUN / AUTHORIZED_TO_RESUME_VERIFIER_OVERLAY_SEQUENCE
 
     U05 Implementation Verification
     = NOT_PASSED
+
+
+---
+
+# 10. Owner Authorization Record
+
+Repository owner explicitly selected:
+
+    AUTHORIZE
+
+against exact decision-package head:
+
+    d4e6f10bc7527219e88473bce3da97f545f2f0ed
+
+Therefore:
+
+    AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001
+    = AUTHORIZED
+
+Exact authorized implementation target:
+
+    261ee5525c8260e93db19173ffbde89a8af6810d
+
+Parent authorization:
+
+    AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001
+
+Authorized continuation:
+
+    implement the already-reviewed verification-only overlay
+    -> independent overlay/oracle/fixture/workflow review
+    -> authoritative exact-target RDP-06 CI
+    -> durable evidence generation
+    -> independent evidence-only review
+    -> combined closure review.
+
+Still not authorized:
+
+    merge
+    production activation
+    live downstream execution
+    external delivery
+    release activation
+    real-patient traffic.
+
+Any change to:
+
+    implementation target SHA
+    verifier scope
+    authority identities
+    oracle/fixture digests
+    workflow semantics
+
+invalidates this authorization and requires a new review/authorization decision.
