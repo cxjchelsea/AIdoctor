@@ -197,27 +197,113 @@ No digest is grandfathered by this rebind.
 
 ---
 
-# 8. Implementation delta bound by rebind review
+# 8. Exact implementation-target delta bound by rebind review
 
 Relative to prior implementation target:
 
     1dc49c4097841523a9445dab078bc5a3d1ad1259
 
-the new implementation candidate adds only the reviewed remediation lineage.
+the proposed new target:
 
-Production-code remediation surface:
+    261ee5525c8260e93db19173ffbde89a8af6810d
 
-    diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05/
-      U05AdmissionService.java
-      U05ReadinessInput.java
-      U05ReadinessInputManifest.java
+has exactly six changed paths.
 
-Focused test remediation surface:
+## 8.1 U05 production remediation — 3 files
 
-    diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/
-      U05NonProductionClinicalReadinessTest.java
+    diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05/U05AdmissionService.java
+    diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05/U05ReadinessInput.java
+    diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05/U05ReadinessInputManifest.java
 
-No shared production source modification is part of PR #206.
+## 8.2 U05 focused remediation tests — 1 file
+
+    diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/U05NonProductionClinicalReadinessTest.java
+
+## 8.3 Reviewed governance/design lineage — 2 files
+
+    docs/current/06_开发单元/U05_RDP06_Targeted_Remediation_Design_v0.1.md
+    docs/current/06_开发单元/U05_RDP06_Shared_Runtime_Impact_Review_v0.1.md
+
+These two documents are the reviewed PR #205 remediation/impact package and contain no runtime implementation.
+
+Therefore the exact target-delta inventory is:
+
+    6 files total
+    = 3 U05 production
+    + 1 U05 focused test
+    + 2 reviewed governance/design docs.
+
+No shared production source is modified.
+
+If comparison of the prior target and proposed target yields any seventh path, deleted path, renamed path, or different production/shared-runtime path:
+
+    TARGET_REBIND_DELTA_GUARD = FAIL
+    -> stop
+    -> new impact/rebind review required.
+
+---
+
+# 8A. Exact target-authority precedence
+
+The parent verifier design and parent authorization remain immutable historical records and still literally contain:
+
+    U05_IMPLEMENTATION_SHA
+    = 1dc49c4097841523a9445dab078bc5a3d1ad1259
+
+This rebind does not edit those historical records.
+
+For the implementation-target identity field only, authority precedence is frozen as:
+
+    latest explicitly owner-authorized
+    U05 RDP-06 verifier target-rebind record
+
+    >
+
+    parent verifier authorization target field.
+
+This override applies only to:
+
+    U05_IMPLEMENTATION_SHA
+    exact implementation target identity.
+
+It does not override:
+
+    verifier scope
+    EV/HG/VG inventory
+    frozen contract identities
+    oracle derivation rules
+    evidence schemas
+    workflow gates
+    artifact requirements
+    production/live prohibitions.
+
+Verifier implementation/workflow must fail closed unless it resolves exactly one active authorized target.
+
+Required resolution guard:
+
+    parent authorization exists
+    + parent target is historical after approved remediation
+    + exactly one active owner-authorized rebind exists
+    + rebind parent_authorization_id matches
+    + workflow-pinned U05_IMPLEMENTATION_SHA equals rebind target SHA
+    -> target identity accepted.
+
+Failure cases:
+
+    zero active authorized rebind records
+    -> FAIL
+
+    more than one active authorized rebind record
+    -> FAIL
+
+    rebind parent authorization mismatch
+    -> FAIL
+
+    workflow-pinned SHA != authorized rebind SHA
+    -> FAIL.
+
+No implicit "latest commit on branch" resolution is permitted.
+
 
 ---
 
@@ -301,3 +387,52 @@ Owner options after independent rebind review:
     REJECT.
 
 No authoritative RDP-06 run may begin against the new target until this exact rebind is explicitly authorized.
+
+
+---
+
+# 12. Independent Rebind Review Remediation
+
+Initial Independent Review:
+
+    PR #208
+    review_id = 5275336344
+    verdict = REVISE_REQUIRED
+
+Findings:
+
+    BF-U05-RDP06-RB-IR-01
+    = EXACT_TARGET_DELTA_INVENTORY_INCOMPLETE
+
+    BF-U05-RDP06-RB-IR-02
+    = TARGET_AUTHORITY_PRECEDENCE_NOT_EXPLICIT
+
+Remediation:
+
+    RB-IR-01
+    -> exact prior-target -> new-target delta frozen as six paths:
+       3 U05 production
+       1 focused U05 test
+       2 reviewed PR #205 governance/design docs
+    -> any additional path invalidates the rebind basis.
+
+    RB-IR-02
+    -> target-only authority precedence frozen:
+       latest explicit owner-authorized rebind
+       > historical parent target field
+    -> exactly-one-active-rebind resolution and workflow SHA equality
+       are mandatory fail-closed guards.
+
+Current:
+
+    BF-U05-RDP06-RB-IR-01
+    = REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+    BF-U05-RDP06-RB-IR-02
+    = REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+    U05 RDP-06 Verifier Exact-Target Rebind
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW
+
+    AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001
+    = NOT_GRANTED
