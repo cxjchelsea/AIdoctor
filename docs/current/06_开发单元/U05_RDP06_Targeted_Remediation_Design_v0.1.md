@@ -6,7 +6,7 @@
 > Existing U05 implementation authorization: `AUTH-U05-RUNTIME-IMPL-001 = AUTHORIZED`  
 > Existing verifier authorization: `AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001 = AUTHORIZED`  
 > Frozen authority: RDP-01..RDP-06 current frozen/refrozen package at the exact target lineage.  
-> Status: **REVISED / TARGETED_INDEPENDENT_RE_REVIEW_PENDING**  
+> Status: **PASS / PERMITTED_TO_IMPLEMENT_UNDER_EXISTING_U05_AUTHORIZATION**  
 > This document does not modify runtime code and grants no merge, production, live downstream, release, or real-patient authorization.
 
 ---
@@ -971,13 +971,52 @@ Remediation applied:
 Current:
 
     BF-U05-RDP06-TR-IR-01
-    = REMEDIATED / TARGETED_RE_REVIEW_PENDING
+    = CLOSED
 
     BF-U05-RDP06-TR-IR-02
-    = REMEDIATED / TARGETED_RE_REVIEW_PENDING
+    = CLOSED
 
     RQ-U05-RDP06-TR-IR-03
-    = REMEDIATED / TARGETED_RE_REVIEW_PENDING
+    = SATISFIED
 
     U05 RDP-06 Targeted Remediation Design
-    = REVISED / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW
+    = PASS / PERMITTED_TO_IMPLEMENT_UNDER_EXISTING_U05_AUTHORIZATION
+
+
+---
+
+# 20. Targeted Independent Re-Review Provenance
+
+PR:
+
+    #205
+
+Reviewed exact head:
+
+    483d831e1ce6a4fd368a0174f0039723e9b725f8
+
+Targeted Independent Re-Review:
+
+    PASS
+    review_id = 5274983415
+
+Final reviewed state:
+
+    BF-U05-RDP06-TR-IR-01 = CLOSED
+    BF-U05-RDP06-TR-IR-02 = CLOSED
+    RQ-U05-RDP06-TR-IR-03 = SATISFIED
+
+    U05 RDP-06 Targeted Remediation Design
+    = PASS
+
+    Implementation under existing AUTH-U05-RUNTIME-IMPL-001
+    = PERMITTED_TO_BEGIN
+
+Still not granted:
+
+    RDP-06 verification PASS
+    merge authorization
+    production activation
+    live downstream execution
+    release activation
+    real-patient traffic.
