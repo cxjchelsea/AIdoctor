@@ -6,7 +6,7 @@
 > Existing U05 implementation authorization: `AUTH-U05-RUNTIME-IMPL-001 = AUTHORIZED`  
 > Existing verifier authorization: `AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001 = AUTHORIZED`  
 > Frozen authority: RDP-01..RDP-06 current frozen/refrozen package at the exact target lineage.  
-> Status: **PROPOSED / INDEPENDENT_TARGETED_DESIGN_REVIEW_PENDING**  
+> Status: **REVISED / TARGETED_INDEPENDENT_RE_REVIEW_PENDING**  
 > This document does not modify runtime code and grants no merge, production, live downstream, release, or real-patient authorization.
 
 ---
@@ -172,7 +172,7 @@ Therefore a blanket pre-D03 duplicate-ID rejection must be removed.
 Required normalization rule:
 
     exact duplicate semantic record
-    -> may be deterministically collapsed as redundant transport duplication
+    -> MUST be deterministically collapsed as redundant transport duplication
 
     same readiness_input_id
     + different semantic fingerprint
@@ -202,6 +202,47 @@ before:
     authoritative record-ref list derivation.
 
 This prevents caller list order from changing `READINESS_INPUT_SET_IDENTITY`.
+
+## 4.4.1 Single canonicalization source of truth
+
+Implementation MUST define one deterministic canonicalization routine, equivalent to:
+
+    normalizeCanonicalInputs(inputs)
+
+Its required semantics are:
+
+    1. sort by:
+       source_domain
+       readiness_input_id
+       semantic_fingerprint
+
+    2. collapse only exact semantic duplicates:
+       same readiness_input_id
+       + same semantic_fingerprint
+
+    3. preserve conflicting duplicate identities:
+       same readiness_input_id
+       + different semantic_fingerprint
+
+    4. preserve distinct records from the same source_domain
+       when they are not exact semantic duplicates.
+
+The exact same normalized sequence MUST be consumed by:
+
+    constructor-stored manifest inputs
+    semanticSetIdentity(...)
+    computedSemanticIdentity()
+    authoritativeRecordRefs()
+    admission request/ref comparison.
+
+No second sorting/deduplication implementation is permitted.
+
+This is required so that:
+
+    same semantic input set
+    -> same READINESS_INPUT_SET_IDENTITY
+
+even when caller order or exact transport duplication differs.
 
 ## 4.5 D03 policy change
 
@@ -527,7 +568,77 @@ This fake/probe represents the external target-binding condition only.
 
 It does not assert or verify production P06/BindingReleaseResolver conformance.
 
+The observed failure handoff must be independently derivable from runtime facts, not from the expected oracle.
+
+Required failure observation:
+
+    failure_handoff_ref
+    = deterministic identity over at least:
+        eligibility_id
+        route_effect_id
+        target_unit_id
+        observed binding-failure reason
+        scheduler-consumption contract version
+
+    failure_handoff_count = 1
+
+    side_effect_evidence_refs[failure_handoff]
+    -> returned Scheduler-consumption observation / durable test record
+
+    downstream_unit_invocation_count = 0
+    alternate_route_effect_count = 0
+
+The fake must not create:
+
+    U14 retry decision
+    U14 degraded-safe-exit decision
+    U14 terminal decision
+    any final business outcome.
+
 ## 10.5 EV-058 exact eligibility replay
+
+The verification-only Scheduler consumer MUST freeze one test-only semantic consumption contract:
+
+    U05_TEST_SCHEDULER_CONSUMPTION_V1
+
+The Scheduler target-intent semantic identity must bind at least:
+
+    eligibility_id
+    route_effect_id
+    target_unit_id
+    current execution-governance / target-binding fixture identity
+    scheduler-consumption contract version.
+
+The route_consumption_id must deterministically bind:
+
+    eligibility_id
+    route_effect_id
+    target_unit_id
+    scheduler_target_intent_identity
+    scheduler-consumption contract version.
+
+The canonical Scheduler-intent fingerprint must bind the same governed semantic inputs required to distinguish a different lawful consumption payload.
+
+The following attempt-local metadata MUST be excluded from both identity and canonical fingerprint:
+
+    retry/attempt number
+    timestamp
+    trace-span attempt id
+    process/JVM identity
+    temporary filesystem path
+    transport/message attempt identity.
+
+Required replay semantics:
+
+    same semantic Scheduler intent identity
+    + same canonical fingerprint
+    -> CanonicalEffectLedger REATTACHED
+    -> no second authoritative test target intent
+
+    same semantic Scheduler intent identity
+    + different canonical fingerprint
+    -> fail closed as replay conflict
+    -> no second target intent.
 
 Use the existing verified:
 
@@ -811,3 +922,62 @@ If independent review confirms this package:
     = STILL_BLOCKED_UNTIL_REMEDIATION_EXACT_HEAD_REVIEW_AND_TARGET_REBIND
 
 No closure is claimed by this design alone.
+
+
+---
+
+# 19. Independent Review Remediation Provenance
+
+Initial Independent Review:
+
+    PR #205
+    review_id = 5274973422
+    verdict = REVISE_REQUIRED
+
+Findings:
+
+    BF-U05-RDP06-TR-IR-01
+    = MANIFEST_CANONICALIZATION_NOT_SINGLE_SOURCE_OF_TRUTH
+
+    BF-U05-RDP06-TR-IR-02
+    = TEST_SCHEDULER_INTENT_IDENTITY_NOT_FROZEN_ENOUGH_FOR_EV058
+
+    RQ-U05-RDP06-TR-IR-03
+    = FAILURE_HANDOFF_OBSERVATION_PROVENANCE_MUST_BE_EXPLICIT
+
+Remediation applied:
+
+    IR-01
+    -> exact semantic duplicate collapse is mandatory
+    -> one normalizeCanonicalInputs routine is the sole canonical source
+    -> constructor/set identity/computed identity/ref ordering/admission comparison
+       all consume the same normalized sequence
+    -> conflicting duplicate IDs are preserved for D03 P1
+
+    IR-02
+    -> U05_TEST_SCHEDULER_CONSUMPTION_V1 frozen
+    -> minimum Scheduler intent identity / route consumption identity /
+       canonical fingerprint inputs frozen
+    -> attempt-local exclusions frozen
+    -> exact replay reattaches through existing CanonicalEffectLedger
+    -> fingerprint mismatch fails closed
+
+    IR-03
+    -> EV-057 failure_handoff_ref derives from observed runtime facts
+    -> typed failure_handoff_count/evidence ref required
+    -> zero target invocation / zero alternate route
+    -> no U14 business/final outcome generated.
+
+Current:
+
+    BF-U05-RDP06-TR-IR-01
+    = REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+    BF-U05-RDP06-TR-IR-02
+    = REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+    RQ-U05-RDP06-TR-IR-03
+    = REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+    U05 RDP-06 Targeted Remediation Design
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW
