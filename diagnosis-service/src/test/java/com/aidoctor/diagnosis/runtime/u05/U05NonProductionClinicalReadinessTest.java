@@ -543,6 +543,58 @@ class U05NonProductionClinicalReadinessTest {
     }
 
     @Test
+    void fullU05ApplicationConsumesDurableAdmissionRoutingAndReadBackAcrossServiceReconstruction(
+            @TempDir Path root) {
+        U05ReadinessInputManifest manifest = pol005Manifest(
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                VERSION);
+        U05ConsumerInboundRequest request = request(
+                manifest,
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                U05ConsumerInboundRequest.GATE_ALLOW,
+                null,
+                null);
+        U05AdmissionAuthoritySnapshot authority = authority(
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                U05ConsumerInboundRequest.GATE_ALLOW,
+                null,
+                null,
+                true);
+
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+        U05NonProductionApplicationService firstApplication =
+                durableApplication(
+                        fixture,
+                        root,
+                        U05DownstreamPermissionDecision.PERMITTED);
+        U05ExecutionResult first =
+                firstApplication.execute(request, manifest, authority);
+
+        U05NonProductionApplicationService reconstructedApplication =
+                durableApplication(
+                        fixture,
+                        root,
+                        U05DownstreamPermissionDecision.PERMITTED);
+        U05ExecutionResult replay =
+                reconstructedApplication.execute(request, manifest, authority);
+
+        assertEquals(U05ExecutionResult.ROUTING_COMPLETE, first.getStatus());
+        assertEquals(U05ExecutionResult.ROUTING_COMPLETE, replay.getStatus());
+        assertEquals(U05AdmissionResult.ORIGINAL, first.getAdmission().getReplayDisposition());
+        assertEquals(U05AdmissionResult.REATTACHED, replay.getAdmission().getReplayDisposition());
+        assertEquals(
+                U05DownstreamRoutingDecision.ORIGINAL,
+                first.getRoutingDecision().getReplayDisposition());
+        assertEquals(
+                U05DownstreamRoutingDecision.REATTACHED,
+                replay.getRoutingDecision().getReplayDisposition());
+        assertEquals(
+                first.getCommitEvidence().getAuthoritativeReadinessRecordRef(),
+                replay.getCommitEvidence().getAuthoritativeReadinessRecordRef());
+        assertEquals(1, fixture.repository.mutationCount());
+    }
+
+    @Test
     void durableAdmissionReattachesAcrossServiceReconstructionAndStillRevalidatesAuthority(
             @TempDir Path root) {
         U05ReadinessInputManifest manifest = pol005Manifest(
@@ -989,6 +1041,69 @@ class U05NonProductionClinicalReadinessTest {
             return "U04_ORDINARY_ROUTING_AUTHORIZATION";
         }
         return "CLINICAL_CONTINUATION_ROUTING_DECISION";
+    }
+
+    private static U05NonProductionApplicationService durableApplication(
+            Fixture fixture,
+            Path root,
+            final String downstreamPermissionStatus) {
+        NonProductionFileCanonicalEffectLedger canonicalLedger =
+                new NonProductionFileCanonicalEffectLedger(root);
+
+        U05AdmissionService admissionService =
+                new U05AdmissionService(
+                        new U05CanonicalAdmissionLedger(canonicalLedger));
+        U05ClinicalReadinessPolicy policy = new U05ClinicalReadinessPolicy();
+        U05ReadinessStateProposalFactory proposalFactory =
+                new U05ReadinessStateProposalFactory();
+        U05CommitService commitService = new U05CommitService(
+                fixture.committer,
+                new U05SyntheticClinicalReadinessSnapshotAdapter(fixture.repository));
+
+        U05RoutingCurrentnessPort currentnessPort =
+                (input, decision, evidence) ->
+                        new U05RoutingCurrentness(
+                                evidence.getCommittedClinicalStateVersion(),
+                                "routing-context-" + evidence.getEffectId(),
+                                true,
+                                true,
+                                true,
+                                true,
+                                true,
+                                input.getAcceptedU04GateRef(),
+                                input.getGateValue(),
+                                input.getAcceptedRestrictedContextRef());
+
+        U05DownstreamPermissionPort permissionPort =
+                (input, evidence, currentness, consequence, targetUnitId, targetAction) ->
+                        new U05DownstreamPermissionDecision(
+                                "downstream-permission-decision-" + targetUnitId,
+                                input.getConsultationId(),
+                                input.getCdpId(),
+                                currentness.getCurrentU04GateRef(),
+                                input.getAcceptedRestrictedContextRef(),
+                                consequence,
+                                targetAction,
+                                targetUnitId,
+                                downstreamPermissionStatus,
+                                U05DownstreamPermissionDecision.PERMITTED.equals(downstreamPermissionStatus)
+                                        ? "permission-downstream-1" : null,
+                                "safety-permission-policy",
+                                "v1",
+                                "CURRENT");
+
+        U05RoutingService routingService =
+                new U05RoutingService(
+                        new U05CanonicalRouteLedger(canonicalLedger),
+                        permissionPort);
+
+        return new U05NonProductionApplicationService(
+                admissionService,
+                policy,
+                proposalFactory,
+                commitService,
+                currentnessPort,
+                routingService);
     }
 
     private static final class FailOnceEligibilityLedger
