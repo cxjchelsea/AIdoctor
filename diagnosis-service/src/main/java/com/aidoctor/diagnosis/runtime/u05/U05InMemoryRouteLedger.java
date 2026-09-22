@@ -8,19 +8,22 @@ public final class U05InMemoryRouteLedger implements U05RouteLedger {
     private final Map<String, Entry> entries = new LinkedHashMap<String, Entry>();
 
     @Override
-    public synchronized Entry find(String routingDecisionId) {
-        return entries.get(routingDecisionId);
-    }
-
-    @Override
-    public synchronized void store(
+    public synchronized Entry reconcile(
             String routingDecisionId,
             String fingerprint,
-            U05DownstreamRoutingDecision decision) {
+            U05DownstreamRoutingDecision candidate) {
         Entry existing = entries.get(routingDecisionId);
-        if (existing != null && !existing.getFingerprint().equals(fingerprint)) {
-            throw new IllegalStateException("U05_ROUTE_REPLAY_CONFLICT");
+        if (existing != null) {
+            if (!existing.getFingerprint().equals(fingerprint)) {
+                throw new IllegalStateException("U05_ROUTE_REPLAY_CONFLICT");
+            }
+            return new Entry(
+                    existing.getFingerprint(),
+                    existing.getDecision(),
+                    true);
         }
-        if (existing == null) entries.put(routingDecisionId, new Entry(fingerprint, decision));
+        Entry created = new Entry(fingerprint, candidate, false);
+        entries.put(routingDecisionId, created);
+        return created;
     }
 }
