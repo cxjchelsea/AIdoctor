@@ -122,7 +122,12 @@ Every job must assert before target checkout:
 
 and emit:
 
-    VERIFICATION_WORKFLOW_COMMIT
+    VERIFICATION_WORKFLOW_HEAD_SHA
+      = github.event.pull_request.head.sha
+
+    VERIFICATION_EVENT_SHA
+      = github.sha
+
     VERIFICATION_EVENT_NAME
     VERIFICATION_PR_NUMBER
     VERIFICATION_HEAD_REF
@@ -131,7 +136,25 @@ and emit:
     TARGET_IMPLEMENTATION_SHA
     AUTHORIZATION_BASE_SHA.
 
-The workflow definition commit from the PR head is part of later evidence review.
+These identities have distinct meanings:
+
+    github.event.pull_request.head.sha
+    = workflow-definition head commit
+
+    github.sha
+    = pull-request event / merge-ref execution SHA.
+
+Before any verification-PR diff check, the job must explicitly checkout:
+
+    github.event.pull_request.head.sha
+    with fetch-depth: 0
+
+and assert:
+
+    git rev-parse HEAD
+    == github.event.pull_request.head.sha.
+
+The workflow-definition head commit is part of later evidence review.
 
 ---
 
@@ -140,13 +163,26 @@ The workflow definition commit from the PR head is part of later evidence review
 Before target checkout, the workflow must prove the verification PR itself
 contains only the one authorized workflow modification.
 
-The eventual amendment authorization decision commit is the base.
+The eventual immutable Owner authorization decision commit is the exact base.
 
-Required:
+After Owner authorization, the v2 workflow must pin:
+
+    VERIFIER_AUTHORIZATION_BASE_SHA
+    = <exact owner-authorized PR-trigger amendment decision commit>
+
+Required lineage:
+
+    git merge-base --is-ancestor
+      $VERIFIER_AUTHORIZATION_BASE_SHA
+      $VERIFICATION_WORKFLOW_HEAD_SHA
+
+must PASS.
+
+Required exact diff:
 
     git diff --name-status
-      <PR_TRIGGER_AUTHORIZED_DECISION_HEAD>
-      <VERIFICATION_WORKFLOW_IMPLEMENTATION_HEAD>
+      $VERIFIER_AUTHORIZATION_BASE_SHA
+      $VERIFICATION_WORKFLOW_HEAD_SHA
 
 must equal exactly:
 
@@ -325,3 +361,50 @@ If approved:
     / NO_SOURCE_TEST_CHANGE
     / NO_MERGE
     / NO_PRODUCTION.
+
+
+---
+
+# 14. Independent Design Review Remediation
+
+Initial Independent Design Review:
+
+    PR #192
+    review_id = 5273504814
+    verdict = REVISE_REQUIRED
+
+Findings:
+
+    BF-SHARED-VERIFY-PR-IR-01
+    = PULL_REQUEST_SHA_IDENTITY_AMBIGUOUS
+
+    BF-SHARED-VERIFY-PR-IR-02
+    = VERIFICATION_PR_BASE_IDENTITY_NOT_EXACT
+
+Remediation:
+
+    IR-01:
+      workflow-definition identity is now explicitly
+      github.event.pull_request.head.sha;
+
+      github.sha is retained separately as event/merge-ref identity;
+
+      explicit PR-head checkout + HEAD equality is mandatory
+      before verification-PR diff inspection.
+
+    IR-02:
+      v2 workflow must pin the exact immutable Owner authorization
+      decision commit as VERIFIER_AUTHORIZATION_BASE_SHA;
+
+      ancestry + exact one-file diff are both mandatory.
+
+Current:
+
+    BF-SHARED-VERIFY-PR-IR-01
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    BF-SHARED-VERIFY-PR-IR-02
+    = REMEDIATED / TARGETED_REVIEW_PENDING
+
+    PR-Trigger Amendment Design
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_REVIEW
