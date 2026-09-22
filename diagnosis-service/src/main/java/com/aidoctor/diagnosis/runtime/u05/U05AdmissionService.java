@@ -156,25 +156,23 @@ public final class U05AdmissionService {
         }
 
         // A13-A14 — stable semantic admission identity and replay reconciliation.
+        // Current authoritative request/manifest/authority checks always run before
+        // durable replay reconciliation. A persisted record never bypasses currentness.
         String admissionId = admissionId(request);
         String fingerprint = admissionFingerprint(request, manifest, authority);
-        U05AdmissionLedger.Entry existing = ledger.find(admissionId);
-        if (existing != null) {
-            if (!fingerprint.equals(existing.getFingerprint())) {
-                return U05AdmissionResult.rejected(REPLAY_CONFLICT);
-            }
-            return U05AdmissionResult.admitted(
-                    existing.getAdmittedInput(),
-                    U05AdmissionResult.REATTACHED);
-        }
-
-        U05AdmittedInput input = new U05AdmittedInput(admissionId, request, manifest, authority);
+        U05AdmittedInput candidate =
+                new U05AdmittedInput(admissionId, request, manifest, authority);
         try {
-            ledger.store(admissionId, fingerprint, input);
-        } catch (IllegalStateException conflict) {
+            U05AdmissionLedger.Entry reconciled =
+                    ledger.reconcile(admissionId, fingerprint, candidate);
+            return U05AdmissionResult.admitted(
+                    reconciled.getAdmittedInput(),
+                    reconciled.isReattached()
+                            ? U05AdmissionResult.REATTACHED
+                            : U05AdmissionResult.ORIGINAL);
+        } catch (IllegalStateException replayFailure) {
             return U05AdmissionResult.rejected(REPLAY_CONFLICT);
         }
-        return U05AdmissionResult.admitted(input, U05AdmissionResult.ORIGINAL);
     }
 
     private static String validateContext(U05ConsumerInboundRequest request) {
