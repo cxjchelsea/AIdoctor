@@ -1149,6 +1149,9 @@ public final class U05VerificationSupport {
         Observation o = observation("ROUTING", "NO_ORDINARY_ROUTE_EFFECT");
         mutationCounts(o, 1, 1, 0);
         o.counts.put("route_decision_count", 3);
+        o.sideEffectRefs.put("route_decision_preempted", preempted.getRoutingDecisionId());
+        o.sideEffectRefs.put("route_decision_failure_required", failure.getRoutingDecisionId());
+        o.sideEffectRefs.put("route_decision_rejected_stale", stale.getRoutingDecisionId());
         o.details.put("statuses", Arrays.asList(
                 preempted.getRoutingStatus(), failure.getRoutingStatus(), stale.getRoutingStatus()));
         return o;
@@ -1498,8 +1501,14 @@ public final class U05VerificationSupport {
 
     private static U05ReadinessInputManifest manifest(
             String context, int version, List<U05ReadinessInput> inputs) {
-        return manifest(context, version, inputs, "manifest-" + context + "-" + version + "-" + sha256(
-                (context + inputs.toString()).getBytes(StandardCharsets.UTF_8)).substring(0, 12));
+        String setIdentity = U05ReadinessInputManifest.semanticSetIdentity(
+                "consult-1", "cdp-1", version, context,
+                U05ReadinessInputManifest.RDP05_CONTRACT_VERSION, inputs);
+        return manifest(
+                context,
+                version,
+                inputs,
+                "manifest-" + context + "-" + version + "-" + setIdentity.substring(0, 12));
     }
 
     private static U05ReadinessInputManifest manifest(
