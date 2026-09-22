@@ -217,7 +217,13 @@ def main():
             route_refs = [k for k in refs if k.startswith("route_decision")]
             if not route_refs:
                 fail(cid + " nonzero route_decision_count lacks evidence ref")
-        for eq in case.get("observed_provenance_equalities", []):
+        expected_eq_ids = set(case.get("expected_provenance_equalities", []))
+        observed_eqs = case.get("observed_provenance_equalities", [])
+        observed_eq_ids = {eq.get("equality") for eq in observed_eqs}
+        if observed_eq_ids != expected_eq_ids:
+            fail(cid + " provenance equality identity coverage mismatch expected=%s observed=%s" %
+                 (sorted(expected_eq_ids), sorted(observed_eq_ids)))
+        for eq in observed_eqs:
             if eq.get("equal") is not True:
                 fail(cid + " provenance equality failed: " + str(eq.get("equality")))
         if case.get("pass") is not True:
@@ -292,6 +298,20 @@ def main():
             fail(proof_id + " special-proof observed value mismatch")
         if observed.get("authority_refs") != oracle.get("authority_refs"):
             fail(proof_id + " special-proof authority refs mismatch")
+        if observed.get("proof_source") != "RUNTIME_OR_CONTRACT_PREDICATE":
+            fail(proof_id + " special-proof source is not runtime/contract-derived")
+        if proof_id == "POL-005-POL-011-MUTUAL-EXCLUSION":
+            if observed.get("pol005_observed_rule") != "D03-POL-005":
+                fail(proof_id + " POL-005 positive branch not observed")
+            if observed.get("pol011_observed_rule") != "D03-POL-011":
+                fail(proof_id + " POL-011 positive branch not observed")
+            if observed.get("contract_predicate") is not True:
+                fail(proof_id + " mutual-exclusion contract predicate not proven")
+        if proof_id == "POST-DDX-POL-011-EXCLUSION":
+            if observed.get("observed_runtime_rule") == "D03-POL-011":
+                fail(proof_id + " runtime incorrectly applied POL-011")
+            if observed.get("observed_runtime_rule") != "D03-POL-006":
+                fail(proof_id + " expected governed POST-DDX rule not observed")
         if not observed.get("rationale") or observed.get("pass") is not True:
             fail(proof_id + " special-proof failed")
 
