@@ -21,6 +21,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -828,6 +829,392 @@ class U05NonProductionClinicalReadinessTest {
                 eligibility.getStatus());
     }
 
+
+    @Test
+    void av01MultiRecordSameDomainConflictReachesD03P1() {
+        List<U05ReadinessInput> inputs = Arrays.asList(
+                present(U05ReadinessInput.F1, U05ReadinessInput.OUT_OF_SCOPE, VERSION),
+                present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                present(U05ReadinessInput.F3, U05ReadinessInput.NO_ACTIVE_ONLINE_BLOCKING_GAP, VERSION),
+                present(U05ReadinessInput.F5, U05ReadinessInput.ANALYSIS_RESULT_AVAILABLE, VERSION),
+                applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION));
+        U05ReadinessInputManifest manifest =
+                manifest(U05ConsumerInboundRequest.POST_DDX_REEVALUATION, VERSION, inputs);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+
+        U05ExecutionResult result = fixture.application.execute(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+
+        assertEquals(U05ExecutionResult.D03_INPUT_CONFLICT, result.getStatus());
+        assertEquals(U05ClinicalReadinessDecision.INPUT_CONFLICT,
+                result.getDecision().getDecisionStatus());
+        assertEquals("D03-P1", result.getDecision().getPolicyRuleRef());
+    }
+
+    @Test
+    void av01SameInputIdDifferentFingerprintReachesD03P1() {
+        U05ReadinessInput left = presentWithId(
+                "conflicting-f1",
+                U05ReadinessInput.F1,
+                U05ReadinessInput.OUT_OF_SCOPE,
+                VERSION);
+        U05ReadinessInput right = presentWithId(
+                "conflicting-f1",
+                U05ReadinessInput.F1,
+                U05ReadinessInput.FRAMED_IN_SCOPE,
+                VERSION);
+        U05ReadinessInputManifest manifest = manifest(
+                U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                VERSION,
+                Arrays.asList(
+                        left,
+                        right,
+                        present(U05ReadinessInput.F3, U05ReadinessInput.NO_ACTIVE_ONLINE_BLOCKING_GAP, VERSION),
+                        present(U05ReadinessInput.F5, U05ReadinessInput.ANALYSIS_RESULT_AVAILABLE, VERSION),
+                        applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION)));
+
+        U05AdmissionService admissionService =
+                new U05AdmissionService(new U05InMemoryAdmissionLedger());
+        U05AdmissionResult admission = admissionService.admit(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+
+        assertTrue(admission.isAdmitted());
+        U05ClinicalReadinessDecision decision =
+                new U05ClinicalReadinessPolicy().decide(admission.getAdmittedInput());
+        assertEquals(U05ClinicalReadinessDecision.INPUT_CONFLICT, decision.getDecisionStatus());
+        assertEquals("D03-P1", decision.getPolicyRuleRef());
+    }
+
+    @Test
+    void av01CanonicalManifestIdentityIgnoresCallerOrderAndExactTransportDuplicates() {
+        U05ReadinessInput f1a = presentWithId(
+                "conflicting-f1",
+                U05ReadinessInput.F1,
+                U05ReadinessInput.OUT_OF_SCOPE,
+                VERSION);
+        U05ReadinessInput f1b = presentWithId(
+                "conflicting-f1",
+                U05ReadinessInput.F1,
+                U05ReadinessInput.FRAMED_IN_SCOPE,
+                VERSION);
+        U05ReadinessInput f3 =
+                present(U05ReadinessInput.F3, U05ReadinessInput.NO_ACTIVE_ONLINE_BLOCKING_GAP, VERSION);
+        U05ReadinessInput f5 =
+                present(U05ReadinessInput.F5, U05ReadinessInput.ANALYSIS_RESULT_AVAILABLE, VERSION);
+        U05ReadinessInput f6 =
+                applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION);
+
+        List<U05ReadinessInput> firstOrder =
+                Arrays.asList(f1a, f1b, f3, f5, f6, f1a);
+        List<U05ReadinessInput> secondOrder =
+                Arrays.asList(f6, f5, f1a, f3, f1b);
+
+        String firstIdentity = U05ReadinessInputManifest.semanticSetIdentity(
+                "consult-1", "cdp-1", VERSION,
+                U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                U05ReadinessInputManifest.RDP05_CONTRACT_VERSION,
+                firstOrder);
+        String secondIdentity = U05ReadinessInputManifest.semanticSetIdentity(
+                "consult-1", "cdp-1", VERSION,
+                U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                U05ReadinessInputManifest.RDP05_CONTRACT_VERSION,
+                secondOrder);
+
+        assertEquals(firstIdentity, secondIdentity);
+
+        U05ReadinessInputManifest normalized = manifest(
+                U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                VERSION,
+                firstOrder);
+        assertEquals(5, normalized.getInputs().size());
+        assertEquals(firstIdentity, normalized.getSetIdentity());
+        assertEquals(firstIdentity, normalized.computedSemanticIdentity());
+    }
+
+    @Test
+    void av01InputConflictStopsBeforeProposalCommitAndRoute() {
+        U05ReadinessInputManifest manifest = manifest(
+                U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                VERSION,
+                Arrays.asList(
+                        present(U05ReadinessInput.F1, U05ReadinessInput.OUT_OF_SCOPE, VERSION),
+                        present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                        present(U05ReadinessInput.F3, U05ReadinessInput.CAN_ASK_MORE, VERSION),
+                        present(U05ReadinessInput.F5, U05ReadinessInput.NO_RELIABLE_DIRECTION, VERSION),
+                        applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION)));
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+
+        U05ExecutionResult result = fixture.application.execute(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+
+        assertEquals(U05ExecutionResult.D03_INPUT_CONFLICT, result.getStatus());
+        assertNull(result.getProposal());
+        assertNull(result.getCommitResult());
+        assertNull(result.getRoutingDecision());
+        assertEquals(0, fixture.repository.mutationCount());
+    }
+
+    @Test
+    void av02NonPresentMissingApplicabilityEvidenceIsRepresentableBeforeAdmission() {
+        U05ReadinessInput incomplete = applicabilityWithoutEvidence(
+                U05ReadinessInput.F5,
+                U05ReadinessInput.NOT_YET_APPLICABLE,
+                VERSION);
+
+        assertEquals(U05ReadinessInput.NOT_YET_APPLICABLE, incomplete.getApplicabilityStatus());
+        assertNull(incomplete.getApplicabilityEvidenceRef());
+    }
+
+    @Test
+    void av02AdmissionReturnsExactMissingApplicabilityEvidenceReason() {
+        U05ReadinessInputManifest manifest = manifest(
+                U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                VERSION,
+                Arrays.asList(
+                        present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                        present(U05ReadinessInput.F3, U05ReadinessInput.NO_ACTIVE_ONLINE_BLOCKING_GAP, VERSION),
+                        applicabilityWithoutEvidence(
+                                U05ReadinessInput.F5,
+                                U05ReadinessInput.NOT_YET_APPLICABLE,
+                                VERSION),
+                        applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION)));
+
+        U05AdmissionResult admission =
+                new U05AdmissionService(new U05InMemoryAdmissionLedger()).admit(
+                        request(
+                                manifest,
+                                U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                                U05ConsumerInboundRequest.GATE_ALLOW,
+                                null,
+                                null),
+                        manifest,
+                        authority(
+                                U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                                U05ConsumerInboundRequest.GATE_ALLOW,
+                                null,
+                                null,
+                                true));
+
+        assertTrue(!admission.isAdmitted());
+        assertEquals(
+                U05AdmissionService.APPLICABILITY_EVIDENCE_MISSING,
+                admission.getReasonCode());
+    }
+
+    @Test
+    void av02MissingApplicabilityEvidenceStopsBeforeD03AndEffects() {
+        U05ReadinessInputManifest manifest = manifest(
+                U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                VERSION,
+                Arrays.asList(
+                        present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                        present(U05ReadinessInput.F3, U05ReadinessInput.NO_ACTIVE_ONLINE_BLOCKING_GAP, VERSION),
+                        applicabilityWithoutEvidence(
+                                U05ReadinessInput.F5,
+                                U05ReadinessInput.NOT_YET_APPLICABLE,
+                                VERSION),
+                        applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION)));
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+
+        U05ExecutionResult result = fixture.application.execute(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+
+        assertEquals(U05ExecutionResult.ADMISSION_REJECTED, result.getStatus());
+        assertEquals(
+                U05AdmissionService.APPLICABILITY_EVIDENCE_MISSING,
+                result.getAdmission().getReasonCode());
+        assertNull(result.getDecision());
+        assertNull(result.getProposal());
+        assertNull(result.getRoutingDecision());
+        assertEquals(0, fixture.repository.mutationCount());
+    }
+
+    @Test
+    void av02LawfulUnavailableWithEvidenceStillReachesD03P0() {
+        U05ReadinessInputManifest manifest = manifest(
+                U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                VERSION,
+                Arrays.asList(
+                        present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                        present(U05ReadinessInput.F3, U05ReadinessInput.NO_ACTIVE_ONLINE_BLOCKING_GAP, VERSION),
+                        applicability(U05ReadinessInput.F5, U05ReadinessInput.UNAVAILABLE, VERSION),
+                        applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION)));
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+
+        U05ExecutionResult result = fixture.application.execute(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.POST_DDX_REEVALUATION,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+
+        assertEquals(U05ExecutionResult.D03_INPUT_FAILURE, result.getStatus());
+        assertEquals(U05ClinicalReadinessDecision.INPUT_FAILURE,
+                result.getDecision().getDecisionStatus());
+        assertEquals("D03-P0", result.getDecision().getPolicyRuleRef());
+        assertEquals(0, fixture.repository.mutationCount());
+    }
+
+    @Test
+    void av03StaleEligibilityProducesNoSchedulerTargetIntent(@TempDir Path root) {
+        U05DownstreamEligibility eligibility = eligibleU08();
+        TestSchedulerConsumer consumer =
+                new TestSchedulerConsumer(new NonProductionFileCanonicalEffectLedger(root));
+
+        SchedulerObservation observed = consumer.consume(
+                eligibility,
+                "currentness-fixture-stale",
+                false,
+                "binding-fixture-u08",
+                true);
+
+        assertEquals(SchedulerObservation.REJECTED_STALE, observed.status);
+        assertNull(observed.schedulerIntentRef);
+        assertEquals(0, observed.schedulerTargetIntentCount);
+        assertEquals(0, observed.downstreamUnitInvocationCount);
+    }
+
+    @Test
+    void av03UnavailableTargetBindingProducesFailureHandoffWithoutInvocation(@TempDir Path root) {
+        U05DownstreamEligibility eligibility = eligibleU08();
+        TestSchedulerConsumer consumer =
+                new TestSchedulerConsumer(new NonProductionFileCanonicalEffectLedger(root));
+
+        SchedulerObservation observed = consumer.consume(
+                eligibility,
+                "currentness-fixture-current",
+                true,
+                "binding-fixture-u08-unavailable",
+                false);
+
+        assertEquals(SchedulerObservation.FAILURE_REQUIRED, observed.status);
+        assertNotNull(observed.failureHandoffRef);
+        assertEquals(1, observed.failureHandoffCount);
+        assertEquals(0, observed.schedulerTargetIntentCount);
+        assertEquals(0, observed.downstreamUnitInvocationCount);
+        assertEquals(0, observed.alternateRouteEffectCount);
+    }
+
+    @Test
+    void av03ExactEligibilityReplayReattachesSingleDurableSchedulerIntent(@TempDir Path root) {
+        U05DownstreamEligibility eligibility = eligibleU08();
+
+        TestSchedulerConsumer firstConsumer =
+                new TestSchedulerConsumer(new NonProductionFileCanonicalEffectLedger(root));
+        SchedulerObservation first = firstConsumer.consume(
+                eligibility,
+                "currentness-fixture-current",
+                true,
+                "binding-fixture-u08",
+                true);
+
+        TestSchedulerConsumer reconstructed =
+                new TestSchedulerConsumer(new NonProductionFileCanonicalEffectLedger(root));
+        SchedulerObservation replay = reconstructed.consume(
+                eligibility,
+                "currentness-fixture-current",
+                true,
+                "binding-fixture-u08",
+                true);
+
+        assertEquals(SchedulerObservation.TARGET_INTENT, first.status);
+        assertEquals(SchedulerObservation.ORIGINAL, first.replayDisposition);
+        assertEquals(SchedulerObservation.REATTACHED, replay.replayDisposition);
+        assertEquals(first.schedulerIntentRef, replay.schedulerIntentRef);
+        assertEquals(first.routeConsumptionId, replay.routeConsumptionId);
+        assertEquals(1, replay.schedulerTargetIntentCount);
+        assertEquals(0, replay.downstreamUnitInvocationCount);
+    }
+
+    @Test
+    void av03BindingFailureNeverInventsAlternateClinicalRoute(@TempDir Path root) {
+        U05DownstreamEligibility eligibility = eligibleU08();
+        SchedulerObservation observed =
+                new TestSchedulerConsumer(new NonProductionFileCanonicalEffectLedger(root)).consume(
+                        eligibility,
+                        "currentness-fixture-current",
+                        true,
+                        "binding-fixture-u08-unavailable",
+                        false);
+
+        assertEquals(SchedulerObservation.FAILURE_REQUIRED, observed.status);
+        assertEquals(0, observed.alternateRouteEffectCount);
+        assertEquals("U08", eligibility.getTargetUnitId());
+    }
+
+    @Test
+    void av03NonLiveSchedulerSurfaceKeepsAllExternalEffectCountsZero(@TempDir Path root) {
+        U05DownstreamEligibility eligibility = eligibleU08();
+        SchedulerObservation observed =
+                new TestSchedulerConsumer(new NonProductionFileCanonicalEffectLedger(root)).consume(
+                        eligibility,
+                        "currentness-fixture-current",
+                        true,
+                        "binding-fixture-u08",
+                        true);
+
+        assertEquals(1, observed.schedulerTargetIntentCount);
+        assertEquals(0, observed.downstreamUnitInvocationCount);
+        assertEquals(0, observed.externalDeliveryCount);
+        assertEquals(0, observed.externalToolModelCallCount);
+    }
+
     private static U05ReadinessInputManifest pol005Manifest(String context, int version) {
         return manifest(
                 context,
@@ -859,6 +1246,81 @@ class U05NonProductionClinicalReadinessTest {
                 context,
                 U05ReadinessInputManifest.RDP05_CONTRACT_VERSION,
                 inputs);
+    }
+
+
+    private static U05ReadinessInput presentWithId(
+            String inputId,
+            String domain,
+            String signal,
+            int version) {
+        return new U05ReadinessInput(
+                inputId,
+                domain,
+                "owner-" + domain,
+                inputKind(domain),
+                U05ReadinessInput.PRESENT,
+                signal,
+                "consult-1",
+                "cdp-1",
+                version,
+                "decision-" + domain + "-" + signal,
+                "state-" + domain,
+                "app-evidence-" + domain,
+                Collections.singletonList("evidence-" + domain),
+                Collections.singletonList("rule-" + domain),
+                "2026-09-21T08:00:00Z",
+                U05ReadinessInput.CURRENT,
+                null);
+    }
+
+    private static U05ReadinessInput applicabilityWithoutEvidence(
+            String domain,
+            String status,
+            int version) {
+        return new U05ReadinessInput(
+                "app-missing-evidence-" + domain + "-" + status,
+                domain,
+                "owner-" + domain,
+                inputKind(domain),
+                status,
+                null,
+                "consult-1",
+                "cdp-1",
+                version,
+                "app-decision-" + domain + "-" + status,
+                "state-" + domain,
+                null,
+                Collections.singletonList("evidence-" + domain),
+                Collections.singletonList("rule-" + domain),
+                "2026-09-21T08:00:00Z",
+                U05ReadinessInput.CURRENT,
+                null);
+    }
+
+    private static U05DownstreamEligibility eligibleU08() {
+        U05ReadinessInputManifest manifest = pol005Manifest(
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                VERSION);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+        U05ExecutionResult execution = fixture.application.execute(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+        assertEquals(U05ExecutionResult.ROUTING_COMPLETE, execution.getStatus());
+        assertNotNull(execution.getRoutingDecision());
+        assertNotNull(execution.getRoutingDecision().getEligibility());
+        return execution.getRoutingDecision().getEligibility();
     }
 
     private static U05ReadinessInput present(String domain, String signal, int version) {
@@ -1104,6 +1566,156 @@ class U05NonProductionClinicalReadinessTest {
                 commitService,
                 currentnessPort,
                 routingService);
+    }
+
+
+    private static final class TestSchedulerConsumer {
+        private static final String CONTRACT_VERSION = "U05_TEST_SCHEDULER_CONSUMPTION_V1";
+        private static final String NAMESPACE = "U05_TEST_SCHEDULER_TARGET_INTENT";
+        private final CanonicalEffectLedger ledger;
+
+        TestSchedulerConsumer(CanonicalEffectLedger ledger) {
+            this.ledger = ledger;
+        }
+
+        SchedulerObservation consume(
+                U05DownstreamEligibility eligibility,
+                String currentnessFixtureIdentity,
+                boolean current,
+                String bindingFixtureIdentity,
+                boolean bindingAvailable) {
+            if (eligibility == null) throw new IllegalArgumentException("eligibility is required");
+            if (!current) {
+                return SchedulerObservation.stale();
+            }
+            if (!bindingAvailable) {
+                String handoff = U05Ids.hash(
+                        "u05-test-failure-handoff",
+                        eligibility.getEligibilityId(),
+                        eligibility.getRouteEffectId(),
+                        eligibility.getTargetUnitId(),
+                        "TARGET_BINDING_UNAVAILABLE",
+                        currentnessFixtureIdentity,
+                        bindingFixtureIdentity,
+                        CONTRACT_VERSION);
+                return SchedulerObservation.failure(handoff);
+            }
+
+            String governanceFixtureIdentity = U05Ids.hash(
+                    "u05-test-execution-governance-fixture",
+                    currentnessFixtureIdentity,
+                    bindingFixtureIdentity);
+            String intentIdentity = U05Ids.hash(
+                    "u05-test-scheduler-intent",
+                    eligibility.getEligibilityId(),
+                    eligibility.getRouteEffectId(),
+                    eligibility.getTargetUnitId(),
+                    governanceFixtureIdentity,
+                    CONTRACT_VERSION);
+            String routeConsumptionId = U05Ids.hash(
+                    "u05-route-consumption",
+                    eligibility.getEligibilityId(),
+                    eligibility.getRouteEffectId(),
+                    eligibility.getTargetUnitId(),
+                    intentIdentity,
+                    CONTRACT_VERSION);
+            String fingerprint = U05Ids.hash(
+                    "u05-test-scheduler-intent-payload",
+                    eligibility.getEligibilityId(),
+                    eligibility.getRouteEffectId(),
+                    eligibility.getTargetUnitId(),
+                    governanceFixtureIdentity,
+                    CONTRACT_VERSION);
+            byte[] payload = (
+                    eligibility.getEligibilityId() + "|" +
+                    eligibility.getRouteEffectId() + "|" +
+                    eligibility.getTargetUnitId() + "|" +
+                    governanceFixtureIdentity + "|" +
+                    CONTRACT_VERSION).getBytes(StandardCharsets.UTF_8);
+
+            CanonicalEffectLedgerDecision decision = ledger.createIfAbsent(
+                    NAMESPACE,
+                    intentIdentity,
+                    fingerprint,
+                    CONTRACT_VERSION,
+                    payload);
+            if (CanonicalEffectLedgerDecision.Status.CREATED.equals(decision.getStatus())) {
+                return SchedulerObservation.intent(
+                        intentIdentity, routeConsumptionId, SchedulerObservation.ORIGINAL);
+            }
+            if (CanonicalEffectLedgerDecision.Status.REATTACHED.equals(decision.getStatus())) {
+                return SchedulerObservation.intent(
+                        intentIdentity, routeConsumptionId, SchedulerObservation.REATTACHED);
+            }
+            throw new IllegalStateException(
+                    "TEST_SCHEDULER_INTENT_" + decision.getStatus()
+                            + (decision.getReasonCode() == null ? "" : "_" + decision.getReasonCode()));
+        }
+    }
+
+    private static final class SchedulerObservation {
+        static final String REJECTED_STALE = "REJECTED_STALE";
+        static final String FAILURE_REQUIRED = "FAILURE_REQUIRED";
+        static final String TARGET_INTENT = "TARGET_INTENT";
+        static final String ORIGINAL = "ORIGINAL";
+        static final String REATTACHED = "REATTACHED";
+
+        final String status;
+        final String schedulerIntentRef;
+        final String routeConsumptionId;
+        final String failureHandoffRef;
+        final String replayDisposition;
+        final int schedulerTargetIntentCount;
+        final int failureHandoffCount;
+        final int downstreamUnitInvocationCount;
+        final int alternateRouteEffectCount;
+        final int externalDeliveryCount;
+        final int externalToolModelCallCount;
+
+        private SchedulerObservation(
+                String status,
+                String schedulerIntentRef,
+                String routeConsumptionId,
+                String failureHandoffRef,
+                String replayDisposition,
+                int schedulerTargetIntentCount,
+                int failureHandoffCount) {
+            this.status = status;
+            this.schedulerIntentRef = schedulerIntentRef;
+            this.routeConsumptionId = routeConsumptionId;
+            this.failureHandoffRef = failureHandoffRef;
+            this.replayDisposition = replayDisposition;
+            this.schedulerTargetIntentCount = schedulerTargetIntentCount;
+            this.failureHandoffCount = failureHandoffCount;
+            this.downstreamUnitInvocationCount = 0;
+            this.alternateRouteEffectCount = 0;
+            this.externalDeliveryCount = 0;
+            this.externalToolModelCallCount = 0;
+        }
+
+        static SchedulerObservation stale() {
+            return new SchedulerObservation(
+                    REJECTED_STALE, null, null, null, null, 0, 0);
+        }
+
+        static SchedulerObservation failure(String failureHandoffRef) {
+            return new SchedulerObservation(
+                    FAILURE_REQUIRED, null, null, failureHandoffRef, null, 0, 1);
+        }
+
+        static SchedulerObservation intent(
+                String schedulerIntentRef,
+                String routeConsumptionId,
+                String replayDisposition) {
+            return new SchedulerObservation(
+                    TARGET_INTENT,
+                    schedulerIntentRef,
+                    routeConsumptionId,
+                    null,
+                    replayDisposition,
+                    1,
+                    0);
+        }
     }
 
     private static final class FailOnceEligibilityLedger

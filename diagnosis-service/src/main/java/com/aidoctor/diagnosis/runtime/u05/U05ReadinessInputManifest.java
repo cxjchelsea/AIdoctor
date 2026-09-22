@@ -41,15 +41,8 @@ public final class U05ReadinessInputManifest {
         }
         if (inputs == null || inputs.isEmpty()) throw new IllegalArgumentException("inputs are required");
 
-        List<U05ReadinessInput> copy = new ArrayList<U05ReadinessInput>(inputs);
-        Collections.sort(copy, new Comparator<U05ReadinessInput>() {
-            @Override
-            public int compare(U05ReadinessInput left, U05ReadinessInput right) {
-                int domain = left.getSourceDomain().compareTo(right.getSourceDomain());
-                return domain != 0 ? domain : left.getReadinessInputId().compareTo(right.getReadinessInputId());
-            }
-        });
-        this.inputs = Collections.unmodifiableList(copy);
+        List<U05ReadinessInput> normalized = normalizeCanonicalInputs(inputs);
+        this.inputs = Collections.unmodifiableList(normalized);
         this.setIdentity = semanticSetIdentity(
                 this.consultationId,
                 this.cdpId,
@@ -60,12 +53,11 @@ public final class U05ReadinessInputManifest {
         if (!this.setIdentity.equals(declaredSetIdentity)) {
             throw new IllegalArgumentException("declared readiness input set identity does not match manifest content");
         }
-        requireExactlyOneDomain(U05ReadinessInput.F1);
+        requireAtLeastOneDomain(U05ReadinessInput.F1);
         requireAtMostOneDomain(U05ReadinessInput.F2_CLARIFICATION);
-        requireExactlyOneDomain(U05ReadinessInput.F3);
-        requireExactlyOneDomain(U05ReadinessInput.F5);
-        requireExactlyOneDomain(U05ReadinessInput.F6);
-        validateNoDuplicateInputIdConflict();
+        requireAtLeastOneDomain(U05ReadinessInput.F3);
+        requireAtLeastOneDomain(U05ReadinessInput.F5);
+        requireAtLeastOneDomain(U05ReadinessInput.F6);
     }
 
     public String getManifestRef() { return manifestRef; }
@@ -120,37 +112,51 @@ public final class U05ReadinessInputManifest {
             String evaluationContext,
             String rdp05ContractVersion,
             List<U05ReadinessInput> inputs) {
-        List<U05ReadinessInput> sorted = new ArrayList<U05ReadinessInput>(inputs);
-        Collections.sort(sorted, new Comparator<U05ReadinessInput>() {
-            @Override
-            public int compare(U05ReadinessInput left, U05ReadinessInput right) {
-                int domain = left.getSourceDomain().compareTo(right.getSourceDomain());
-                return domain != 0 ? domain : left.getReadinessInputId().compareTo(right.getReadinessInputId());
-            }
-        });
+        List<U05ReadinessInput> normalized = normalizeCanonicalInputs(inputs);
         List<String> parts = new ArrayList<String>();
         parts.add(consultationId);
         parts.add(cdpId);
         parts.add(String.valueOf(clinicalStateVersion));
         parts.add(evaluationContext);
         parts.add(rdp05ContractVersion);
-        for (U05ReadinessInput input : sorted) parts.add(input.semanticFingerprint());
+        for (U05ReadinessInput input : normalized) parts.add(input.semanticFingerprint());
         return U05Ids.hash("u05-input-set", parts.toArray(new String[parts.size()]));
     }
 
-    public void validateNoDuplicateInputIdConflict() {
-        Set<String> seen = new LinkedHashSet<String>();
-        for (U05ReadinessInput input : inputs) {
-            if (!seen.add(input.getReadinessInputId())) {
-                throw new IllegalStateException("duplicate readiness_input_id in manifest");
+    private static List<U05ReadinessInput> normalizeCanonicalInputs(List<U05ReadinessInput> source) {
+        if (source == null || source.isEmpty()) {
+            throw new IllegalArgumentException("inputs are required");
+        }
+        List<U05ReadinessInput> sorted = new ArrayList<U05ReadinessInput>(source);
+        Collections.sort(sorted, new Comparator<U05ReadinessInput>() {
+            @Override
+            public int compare(U05ReadinessInput left, U05ReadinessInput right) {
+                int domain = left.getSourceDomain().compareTo(right.getSourceDomain());
+                if (domain != 0) return domain;
+                int inputId = left.getReadinessInputId().compareTo(right.getReadinessInputId());
+                if (inputId != 0) return inputId;
+                return left.semanticFingerprint().compareTo(right.semanticFingerprint());
+            }
+        });
+
+        List<U05ReadinessInput> normalized = new ArrayList<U05ReadinessInput>();
+        Set<String> exactSemanticRecords = new LinkedHashSet<String>();
+        for (U05ReadinessInput input : sorted) {
+            String fingerprint = input.semanticFingerprint();
+            String semanticKey = U05Ids.hash(
+                    "u05-exact-input-record",
+                    input.getReadinessInputId(),
+                    fingerprint);
+            if (exactSemanticRecords.add(semanticKey)) {
+                normalized.add(input);
             }
         }
+        return normalized;
     }
 
-    private void requireExactlyOneDomain(String domain) {
-        int count = getInputs(domain).size();
-        if (count != 1) {
-            throw new IllegalArgumentException("manifest requires exactly one slot for " + domain);
+    private void requireAtLeastOneDomain(String domain) {
+        if (getInputs(domain).isEmpty()) {
+            throw new IllegalArgumentException("manifest requires at least one slot for " + domain);
         }
     }
 

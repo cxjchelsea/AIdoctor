@@ -25,6 +25,7 @@ public final class U05AdmissionService {
     public static final String INPUT_MANIFEST_MISSING = "U05_ADMISSION_INPUT_MANIFEST_MISSING";
     public static final String INPUT_SET_IDENTITY_MISMATCH = "U05_ADMISSION_INPUT_SET_IDENTITY_MISMATCH";
     public static final String INPUT_REF_IDENTITY_MISMATCH = "U05_ADMISSION_INPUT_REF_IDENTITY_MISMATCH";
+    public static final String APPLICABILITY_EVIDENCE_MISSING = "U05_ADMISSION_APPLICABILITY_EVIDENCE_MISSING";
     public static final String PENDING_OWNER_RECOMPUTATION = "U05_ADMISSION_PENDING_OWNER_RECOMPUTATION";
     public static final String REPLAY_CONFLICT = "U05_ADMISSION_REPLAY_CONFLICT";
     public static final String CONTRACT_VERSION_MISMATCH = "U05_ADMISSION_CONTRACT_VERSION_MISMATCH";
@@ -216,6 +217,11 @@ public final class U05AdmissionService {
             if (!request.getConsultationId().equals(input.getConsultationId())
                     || !request.getCdpId().equals(input.getCdpId())) {
                 return INPUT_REF_IDENTITY_MISMATCH;
+            }
+        }
+        for (U05ReadinessInput input : manifest.getInputs()) {
+            if (!input.isPresent() && blank(input.getApplicabilityEvidenceRef())) {
+                return APPLICABILITY_EVIDENCE_MISSING;
             }
         }
         return null;
