@@ -8,16 +8,22 @@ public final class U05InMemoryAdmissionLedger implements U05AdmissionLedger {
     private final Map<String, Entry> entries = new LinkedHashMap<String, Entry>();
 
     @Override
-    public synchronized Entry find(String admissionId) {
-        return entries.get(admissionId);
-    }
-
-    @Override
-    public synchronized void store(String admissionId, String fingerprint, U05AdmittedInput input) {
+    public synchronized Entry reconcile(
+            String admissionId,
+            String fingerprint,
+            U05AdmittedInput candidate) {
         Entry existing = entries.get(admissionId);
-        if (existing != null && !existing.getFingerprint().equals(fingerprint)) {
-            throw new IllegalStateException("U05 admission replay conflict");
+        if (existing != null) {
+            if (!existing.getFingerprint().equals(fingerprint)) {
+                throw new IllegalStateException("U05_ADMISSION_REPLAY_CONFLICT");
+            }
+            return new Entry(
+                    existing.getFingerprint(),
+                    existing.getAdmittedInput(),
+                    true);
         }
-        if (existing == null) entries.put(admissionId, new Entry(fingerprint, input));
+        Entry created = new Entry(fingerprint, candidate, false);
+        entries.put(admissionId, created);
+        return created;
     }
 }
