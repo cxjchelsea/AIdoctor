@@ -1,6 +1,6 @@
 # U05 RDP-06 Authoritative Verifier Authorization Decision v0.1
 
-> Status: OWNER DECISION PENDING  
+> Status: OWNER AUTHORIZED  
 > Authorization ID: `AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001`  
 > Reviewed design head: `583bfb8bf5ee411e7b95a2a2a779d758bf2ec5ab`  
 > Design review: PR #203 / review `5274687058` / PASS  
@@ -118,4 +118,4 @@ REVISE
 REJECT
 ```
 
-Only an explicit owner `AUTHORIZE` against this exact reviewed package grants the verifier implementation/execution authority.
+Repository owner explicitly selected `AUTHORIZE` against this reviewed package. The authorization is therefore granted for the exact bounded verifier scope above. Any scope/target/design drift requires a new review/authorization decision.
