@@ -6,7 +6,7 @@
 > Design PR: #184  
 > Independent design review: PASS / review_id `5265120581`  
 > Impact review: PR #183 / PASS / review_id `5265060541`  
-> Current status: **OWNER_DECISION_PENDING**  
+> Current status: **AUTHORIZED / OWNER_APPROVED**  
 > This package itself grants no implementation authorization.
 
 ---
@@ -290,9 +290,60 @@ Meaning:
     review_id = 5265120581
 
     AUTH-PBNC02A-SYNTHETIC-OBJECT-VALUES-001
-    = NOT_GRANTED / OWNER_DECISION_PENDING
+    = AUTHORIZED / OWNER_APPROVED
 
     BF-U05-IMPL-IR-05
     = OPEN / BLOCKING
 
 No implementation or merge is authorized by this document.
+
+
+---
+
+# Owner Authorization Record
+
+Owner command:
+
+    AUTHORIZE
+
+Authorization:
+
+    AUTH-PBNC02A-SYNTHETIC-OBJECT-VALUES-001
+    = AUTHORIZED
+
+Exact authorization shape:
+
+    PBNC02A_SCOPE
+    = SYNTHETIC_ONLY
+    / EXACT_STATEPATCH_CONTROLLED_VALUE_PARITY
+    / SYNTHETICJSONPOINTERAPPLIER_ONLY
+    / FOCUSED_PBNC02_TESTS_ONLY
+    / NO_SHARED_CONTRACT_CHANGE
+    / NO_PRODUCTION_WIRING
+
+Reviewed decision-package basis:
+
+    design PR #184
+    exact reviewed design head = 997e8cf3dea4c18901c1609fa77b9896b33e9237
+    targeted design review = PASS
+    review_id = 5265120581
+
+    authorization package PR #186
+    package review = PASS
+    review_id = 5273199129
+
+Implementation lineage rule:
+
+    implementation branch MUST descend from
+    this owner-authorized decision-record commit.
+
+This authorization does NOT grant:
+
+    merge
+    production activation
+    live traffic
+    U05 verification PASS
+    release activation
+    real-patient use.
+
+Any STOP condition in this decision package remains binding.
