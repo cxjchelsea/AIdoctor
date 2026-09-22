@@ -2,7 +2,14 @@ package com.aidoctor.diagnosis.runtime.u05;
 
 import com.aidoctor.contracts.v1.StateTypes;
 
-/** Post-P01 commit evidence. It is not part of the pre-commit readiness state value. */
+import java.util.Map;
+
+/**
+ * Post-P01 commit evidence proven by exact synthetic-state read-back.
+ *
+ * <p>Mechanical COMMITTED alone is insufficient. Evidence exists only after
+ * the exact structured readiness payload is observed at the committed version.</p>
+ */
 public final class U05ClinicalReadinessCommitEvidence {
     private final String readinessRecordId;
     private final String effectId;
@@ -38,20 +45,44 @@ public final class U05ClinicalReadinessCommitEvidence {
         this.committedAt = committedAt;
     }
 
-    public static U05ClinicalReadinessCommitEvidence from(
+    @SuppressWarnings("unchecked")
+    public static U05ClinicalReadinessCommitEvidence fromVerifiedSnapshot(
             U05ReadinessStateProposal proposal,
-            StateTypes.CommitResult result) {
-        if (proposal == null || result == null) throw new IllegalArgumentException("commit evidence inputs are required");
+            StateTypes.CommitResult result,
+            U05ClinicalReadinessSnapshot snapshot) {
+        if (proposal == null || result == null || snapshot == null) {
+            throw new IllegalArgumentException("commit evidence inputs are required");
+        }
         if (!"COMMITTED".equals(result.status)
                 || result.previousVersion == null
                 || result.committedVersion == null) {
-            throw new IllegalStateException("authoritative readiness commit evidence requires COMMITTED result");
+            throw new IllegalStateException("readiness evidence requires COMMITTED result");
+        }
+        if (snapshot.getVersion() != result.committedVersion.intValue()) {
+            throw new IllegalStateException("U05_READBACK_COMMITTED_VERSION_MISMATCH");
         }
         if (result.auditRef == null
                 || result.auditRef.auditId == null
                 || result.auditRef.auditId.trim().isEmpty()) {
             throw new IllegalStateException("COMMITTED readiness result requires audit_ref");
         }
+
+        Object rawExpected = proposal.getStatePatch().operations.get(0).value;
+        if (!(rawExpected instanceof Map<?, ?>)) {
+            throw new IllegalStateException("U05 expected readiness payload malformed");
+        }
+        Map<String, Object> expected = (Map<String, Object>) rawExpected;
+        Map<String, Object> actual = snapshot.getReadinessPayload();
+        if (!expected.equals(actual)) {
+            throw new IllegalStateException("U05_READBACK_PAYLOAD_MISMATCH");
+        }
+
+        require(actual, "readiness_record_id", proposal.getReadinessRecordId());
+        require(actual, "effect_id", proposal.getEffectId());
+        require(actual, "proposal_ref", proposal.getProposalId());
+        require(actual, "canonical_payload_fingerprint", proposal.getCanonicalPayloadFingerprint());
+        require(actual, "state_validity", "CURRENT");
+
         String audit = result.auditRef.auditId;
         String resultRef = U05Ids.hash(
                 "u05-readiness-commit-result",
@@ -61,8 +92,12 @@ public final class U05ClinicalReadinessCommitEvidence {
                 String.valueOf(result.previousVersion),
                 String.valueOf(result.committedVersion),
                 audit);
-        String recordRef = "clinical-state:" + result.cdpId + "@"
-                + result.committedVersion + U05ReadinessStateProposalFactory.READINESS_PATH;
+
+        String recordRef = "synthetic-state:" + result.cdpId + "@"
+                + result.committedVersion
+                + U05ReadinessStateProposalFactory.READINESS_PATH
+                + "#" + proposal.getReadinessRecordId();
+
         return new U05ClinicalReadinessCommitEvidence(
                 proposal.getReadinessRecordId(),
                 proposal.getEffectId(),
@@ -74,6 +109,15 @@ public final class U05ClinicalReadinessCommitEvidence {
                 audit,
                 recordRef,
                 result.committedAt);
+    }
+
+    private static void require(
+            Map<String, Object> payload,
+            String key,
+            Object expected) {
+        if (!expected.equals(payload.get(key))) {
+            throw new IllegalStateException("U05 read-back " + key + " mismatch");
+        }
     }
 
     public String getReadinessRecordId() { return readinessRecordId; }

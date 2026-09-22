@@ -8,10 +8,15 @@ import java.util.Map;
 /** Narrow U05 adapter over the existing governed G2/P01 StateCommitter boundary. */
 public final class U05CommitService {
     private final StateCommitter stateCommitter;
+    private final U05ClinicalReadinessSnapshotPort snapshotPort;
 
-    public U05CommitService(StateCommitter stateCommitter) {
+    public U05CommitService(
+            StateCommitter stateCommitter,
+            U05ClinicalReadinessSnapshotPort snapshotPort) {
         if (stateCommitter == null) throw new IllegalArgumentException("stateCommitter is required");
+        if (snapshotPort == null) throw new IllegalArgumentException("snapshotPort is required");
         this.stateCommitter = stateCommitter;
+        this.snapshotPort = snapshotPort;
     }
 
     public StateTypes.CommitResult commitNonProduction(
@@ -24,6 +29,21 @@ public final class U05CommitService {
         requireNonProduction(input.getEnvironmentId());
         validate(input, decision, proposal);
         return stateCommitter.commit(proposal.getStatePatch());
+    }
+
+    public U05ClinicalReadinessCommitEvidence verifyCommittedReadBack(
+            U05ReadinessStateProposal proposal,
+            StateTypes.CommitResult result) {
+        if (proposal == null || result == null) {
+            throw new IllegalArgumentException("read-back verification inputs are required");
+        }
+        if (!"COMMITTED".equals(result.status) || result.committedVersion == null) {
+            throw new IllegalStateException("read-back requires COMMITTED result");
+        }
+        U05ClinicalReadinessSnapshot snapshot =
+                snapshotPort.read(result.cdpId, result.committedVersion.intValue());
+        return U05ClinicalReadinessCommitEvidence.fromVerifiedSnapshot(
+                proposal, result, snapshot);
     }
 
     private static void validate(

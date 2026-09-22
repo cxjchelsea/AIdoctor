@@ -76,7 +76,7 @@ public final class U05NonProductionApplicationService {
         }
 
         U05ClinicalReadinessCommitEvidence commitEvidence =
-                U05ClinicalReadinessCommitEvidence.from(proposal, commit);
+                commitService.verifyCommittedReadBack(proposal, commit);
         U05RoutingCurrentness currentness =
                 currentnessPort.inspect(input, decision, commitEvidence);
         U05DownstreamRoutingDecision routing =
