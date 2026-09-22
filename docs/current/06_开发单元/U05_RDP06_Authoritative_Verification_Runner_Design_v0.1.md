@@ -54,6 +54,20 @@ The runner must bind the exact contract files present at the target implementati
 
 The contract manifest builder must compare actual blob identities to these frozen identities and fail closed on any mismatch or ambiguous current-authority status.
 
+
+### 2.1 Referenced Phase authority identities
+
+RDP-06 Section 18 also requires exact identities for the frozen documents carrying referenced Phase 5 / 6 / 8 / 9 semantics.
+
+| Referenced phase | Canonical document | Target blob |
+|---|---|---|
+| Phase 5 | `docs/current/05_业务闭环/业务闭环设计_V1.md` | `0920743521d11e14831420a2cb3a8bd3054a6e65` |
+| Phase 6 | `docs/current/06_开发单元/可验证开发单元拆分_V1.md` | `b20ba9a9e28ba82db2737e8383c0c85f96f6674f` |
+| Phase 8 | `docs/current/08_契约与数据/Contract与数据语义设计.md` | `8f47d80314b5352d1dd5ee41b1ff0800b7e70362` |
+| Phase 9 | `docs/current/09_Runtime与技术架构/Runtime与技术架构设计_V1.md` | `20f4d3c7badbc373401c01a9f999d9fe568aa91f` |
+
+The contract manifest must record these identities and the exact section/rule refs actually consumed by an oracle/case. Missing or drifted referenced-phase identity is a hard verification failure.
+
 ---
 
 ## 3. Verification implementation scope
@@ -124,7 +138,78 @@ contains_real_phi = false
 
 Each fixture must have a stable semantic ID, source ref, canonical digest and contract-driven semantic summary.
 
-### 4.4 Static review gate
+
+### 4.5 Canonical digest model — non-circular and reproducible
+
+To remove digest self-reference/cycles, the verifier freezes two contract-manifest layers.
+
+#### Authority core
+
+`u05-contract-manifest.json` contains an `authority_core` object with only:
+
+- exact RDP-01..06 path/blob/current-authority-status identities;
+- exact referenced Phase 5/6/8/9 path/blob identities;
+- section/rule identities needed by verification;
+- target implementation SHA;
+- schema identity.
+
+It MUST NOT contain oracle/fixture digests or review IDs.
+
+The RDP-06 field named `contract_manifest_digest` is defined for this verifier as:
+
+```
+SHA256(canonical_json(authority_core))
+```
+
+Therefore the expectation oracle, precedence oracle and fixture manifest can bind `contract_manifest_digest` without a circular dependency.
+
+#### Final manifest
+
+The same file may additionally contain `reviewed_inputs` with:
+
+- expectation oracle digest/review id;
+- precedence oracle digest/review id;
+- fixture manifest digest/review id.
+
+The final file itself is covered by `SHA256SUMS`; no field inside the file is required to contain its own full-file digest.
+
+#### JSON canonicalization
+
+For every verification JSON digest:
+
+```
+encoding = UTF-8
+ensure_ascii = false
+keys = lexicographically sorted
+separators = (",", ":")
+line ending = LF
+terminal newline = exactly one LF
+```
+
+Equivalent reference serialization:
+
+```python
+json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+```
+
+#### Fixture digest
+
+Each fixture is represented as:
+
+```
+{
+  "fixture_id": "...",
+  "fixture_digest": "...",
+  "fixture_payload": { ... contract-driven semantic input ... }
+}
+```
+
+`fixture_digest` MUST equal SHA-256 of canonical JSON of `fixture_payload` only. It never hashes the enclosing object or its own digest field.
+
+CI and the evidence builder independently recompute all authority-core/oracle/precedence/fixture digests and fail closed on mismatch.
+
+
+### 4.6 Static review gate
 
 Before any authoritative run, the exact verifier implementation head must receive an independent review confirming:
 
@@ -509,6 +594,44 @@ U05 implementation target
 
 RDP-06 authoritative verification
 = NOT_RUN
+
+AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001
+= NOT_GRANTED
+```
+
+---
+
+## 18. Independent Design Review Remediation
+
+Initial independent design review:
+
+```
+PR #203
+review_id = 5274680007
+verdict = REVISE_REQUIRED
+reviewed head = 56b19d28413beffcf970cba44f089c6f83af09d4
+```
+
+Findings:
+
+```
+BF-U05-RDP06-VR-IR-01
+= REFERENCED_PHASE_AUTHORITY_IDENTITIES_NOT_BOUND
+
+BF-U05-RDP06-VR-IR-02
+= HASH_CANONICALIZATION_AND_DIGEST_CYCLE_UNDEFINED
+```
+
+Remediation:
+
+- IR-01: exact Phase 5 / 6 / 8 / 9 document blob identities are now frozen and must be included in the authority core and case rule refs where applicable.
+- IR-02: `contract_manifest_digest` is now explicitly the digest of a non-circular `authority_core`; full manifest metadata is checksum-covered externally. JSON canonicalization and self-excluding fixture-payload digest semantics are frozen.
+
+Current:
+
+```
+BF-U05-RDP06-VR-IR-01 = REMEDIATED / TARGETED_REVIEW_PENDING
+BF-U05-RDP06-VR-IR-02 = REMEDIATED / TARGETED_REVIEW_PENDING
 
 AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001
 = NOT_GRANTED
