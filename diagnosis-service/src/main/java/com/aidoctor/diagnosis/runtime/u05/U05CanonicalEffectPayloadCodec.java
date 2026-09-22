@@ -67,7 +67,9 @@ final class U05CanonicalEffectPayloadCodec {
         w.string("sourceReadinessValue", decision.getSourceReadinessValue());
         w.integer("sourceReadinessDerivedFromVersion", decision.getSourceReadinessDerivedFromVersion());
         w.integer("sourceReadinessCommittedVersion", decision.getSourceReadinessCommittedVersion());
-        w.integer("currentClinicalStateVersionAtRouting", decision.getCurrentClinicalStateVersionAtRouting());
+        // currentClinicalStateVersionAtRouting is attempt-local audit/currentness
+        // evidence. Unrelated version advancement must not change durable route
+        // identity or replay equality.
         w.string("sourceU04GateRef", decision.getSourceU04GateRef());
         w.string("gateValue", decision.getGateValue());
         w.string("sourceInboundRouteRef", decision.getSourceInboundRouteRef());
@@ -106,7 +108,8 @@ final class U05CanonicalEffectPayloadCodec {
         w.string("authoritativeReadinessEffectId", eligibility.getAuthoritativeReadinessEffectId());
         w.string("readinessCommitEvidenceRef", eligibility.getReadinessCommitEvidenceRef());
         w.string("readinessValue", eligibility.getReadinessValue());
-        w.integer("currentClinicalStateVersion", eligibility.getCurrentClinicalStateVersion());
+        // currentClinicalStateVersion is attempt-local eligibility audit evidence
+        // and is intentionally excluded from immutable ledger equality.
         w.string("downstreamConsequence", eligibility.getDownstreamConsequence());
         w.string("targetUnitId", eligibility.getTargetUnitId());
         w.string("currentU04GateRef", eligibility.getCurrentU04GateRef());
@@ -132,7 +135,6 @@ final class U05CanonicalEffectPayloadCodec {
                 eligibility.getAuthoritativeReadinessEffectId(),
                 eligibility.getReadinessCommitEvidenceRef(),
                 eligibility.getReadinessValue(),
-                String.valueOf(eligibility.getCurrentClinicalStateVersion()),
                 eligibility.getDownstreamConsequence(),
                 eligibility.getTargetUnitId(),
                 eligibility.getCurrentU04GateRef(),
