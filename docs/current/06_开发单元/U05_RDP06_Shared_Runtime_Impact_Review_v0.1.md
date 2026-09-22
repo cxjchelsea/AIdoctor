@@ -4,7 +4,7 @@
 > Finding source: PR #201 / review_id `5274870345`  
 > Exact reviewed implementation head: `1dc49c4097841523a9445dab078bc5a3d1ad1259`  
 > U05 implementation authorization: `AUTH-U05-RUNTIME-IMPL-001 = AUTHORIZED`  
-> Status: **PROPOSED / INDEPENDENT_IMPACT_REVIEW_PENDING**  
+> Status: **REVISED / TARGETED_INDEPENDENT_RE_REVIEW_PENDING**  
 > This document authorizes no shared-runtime implementation.
 
 ---
@@ -435,3 +435,56 @@ Proposed verdict:
       after independent review of this package.
 
 This verdict does not itself authorize implementation beyond the existing owner-approved U05 scope.
+
+
+---
+
+# 17. Independent Impact Review Remediation Provenance
+
+Initial Independent Review:
+
+    PR #205
+    review_id = 5274973422
+    verdict = REVISE_REQUIRED
+
+The review did not reject the shared-runtime impact conclusion.
+
+It required two local design precision fixes and one observation-provenance requirement:
+
+    BF-U05-RDP06-TR-IR-01
+    -> manifest canonicalization single source of truth
+
+    BF-U05-RDP06-TR-IR-02
+    -> verification-only Scheduler intent identity/fingerprint contract
+
+    RQ-U05-RDP06-TR-IR-03
+    -> explicit observed failure-handoff provenance.
+
+All three remediations remain inside:
+
+    U05-owned production code for AV-01/02
+    U05 verification/test fake/spy surfaces for AV-03
+    read-only consumption of existing CanonicalEffectLedger.
+
+They introduce no requirement to modify:
+
+    runtime/effects production source
+    runtime/foundation production source
+    runtime/governance production source
+    generic Scheduler production source.
+
+Therefore the impact conclusion remains:
+
+    AV-01 Shared Runtime Impact = NONE
+    AV-02 Shared Runtime Impact = NONE
+    AV-03 Shared Runtime Impact
+      = NO_SHARED_PRODUCTION_CHANGE_REQUIRED
+        / VERIFICATION_ONLY_CONSUMER_SURFACE_REQUIRED
+
+Current:
+
+    U05 RDP-06 Shared Runtime Impact Review
+    = REVISED / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW
+
+    New Shared Runtime Authorization
+    = NOT_REQUIRED
