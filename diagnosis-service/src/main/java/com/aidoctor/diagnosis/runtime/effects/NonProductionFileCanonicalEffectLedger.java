@@ -77,6 +77,9 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
                 return CanonicalEffectLedgerDecision.absent();
             }
             ReadResult read = readCanonical(paths.canonicalRecord);
+            if (read.unavailableReason != null) {
+                return CanonicalEffectLedgerDecision.unavailable(read.unavailableReason);
+            }
             if (read.corruptReason != null) {
                 return CanonicalEffectLedgerDecision.corrupt(read.corruptReason);
             }
@@ -196,6 +199,9 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
                 forceDirectory(paths.effectDirectory);
 
                 ReadResult published = readCanonical(paths.canonicalRecord);
+                if (published.unavailableReason != null) {
+                    return CanonicalEffectLedgerDecision.unavailable(published.unavailableReason);
+                }
                 if (published.corruptReason != null) {
                     return CanonicalEffectLedgerDecision.corrupt(published.corruptReason);
                 }
@@ -243,6 +249,9 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
             return null;
         }
         ReadResult read = readCanonical(canonicalRecord);
+        if (read.unavailableReason != null) {
+            return CanonicalEffectLedgerDecision.unavailable(read.unavailableReason);
+        }
         if (read.corruptReason != null) {
             return CanonicalEffectLedgerDecision.corrupt(read.corruptReason);
         }
@@ -484,7 +493,7 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
         } catch (IllegalArgumentException exception) {
             return ReadResult.corrupt("LEDGER_RECORD_FIELD_INVALID");
         } catch (IOException exception) {
-            return ReadResult.corrupt("LEDGER_RECORD_IO_INVALID");
+            return ReadResult.unavailable("LEDGER_RECORD_IO_UNAVAILABLE");
         }
     }
 
@@ -564,18 +573,27 @@ public final class NonProductionFileCanonicalEffectLedger implements CanonicalEf
     private static final class ReadResult {
         final CanonicalEffectLedgerRecord record;
         final String corruptReason;
+        final String unavailableReason;
 
-        private ReadResult(CanonicalEffectLedgerRecord record, String corruptReason) {
+        private ReadResult(
+                CanonicalEffectLedgerRecord record,
+                String corruptReason,
+                String unavailableReason) {
             this.record = record;
             this.corruptReason = corruptReason;
+            this.unavailableReason = unavailableReason;
         }
 
         static ReadResult record(CanonicalEffectLedgerRecord record) {
-            return new ReadResult(record, null);
+            return new ReadResult(record, null, null);
         }
 
         static ReadResult corrupt(String reason) {
-            return new ReadResult(null, reason);
+            return new ReadResult(null, reason, null);
+        }
+
+        static ReadResult unavailable(String reason) {
+            return new ReadResult(null, null, reason);
         }
     }
 }
