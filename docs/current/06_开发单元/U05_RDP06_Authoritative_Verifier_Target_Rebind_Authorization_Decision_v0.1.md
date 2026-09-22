@@ -321,3 +321,56 @@ Any change to:
     workflow semantics
 
 invalidates this authorization and requires a new review/authorization decision.
+
+
+---
+
+# 10. Repository Owner Decision
+
+The repository owner explicitly selected:
+
+    AUTHORIZE
+
+against the independently reviewed decision package at:
+
+    d4e6f10bc7527219e88473bce3da97f545f2f0ed
+
+Therefore:
+
+    AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001
+    = AUTHORIZED
+
+Exact active implementation target:
+
+    261ee5525c8260e93db19173ffbde89a8af6810d
+
+Parent verifier authorization:
+
+    AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001
+
+Target-only precedence:
+
+    this owner-authorized rebind
+    >
+    historical parent target field
+
+for U05_IMPLEMENTATION_SHA only.
+
+Authorization consumption boundary:
+
+    verifier overlay implementation
+    independent exact-head overlay/oracle/fixture/workflow review
+    authoritative exact-target CI
+    durable evidence generation
+    independent evidence-only review
+
+Still not authorized:
+
+    modification of U05 production implementation
+    modification of shared production runtime
+    merge
+    production activation
+    live downstream execution
+    external delivery
+    real-patient / PHI traffic
+    release activation.
