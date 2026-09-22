@@ -643,16 +643,28 @@ class U05NonProductionClinicalReadinessTest {
         U05RoutingService routing2 = new U05RoutingService(
                 new U05CanonicalRouteLedger(backend2),
                 permissionPort);
+        U05RoutingCurrentness unrelatedVersionAdvance = new U05RoutingCurrentness(
+                current.getCurrentClinicalStateVersion() + 1,
+                "durable-routing-context",
+                true, true, true, true, true,
+                current.getCurrentU04GateRef(),
+                current.getGateValue(),
+                null);
+
         U05DownstreamRoutingDecision replay = routing2.route(
                 execution.getAdmission().getAdmittedInput(),
                 execution.getDecision(),
                 execution.getCommitEvidence(),
-                current);
+                unrelatedVersionAdvance);
 
         assertEquals(U05DownstreamRoutingDecision.ORIGINAL, first.getReplayDisposition());
         assertEquals(U05DownstreamRoutingDecision.REATTACHED, replay.getReplayDisposition());
         assertEquals(first.getRoutingDecisionId(), replay.getRoutingDecisionId());
+        assertEquals(first.getRouteEffectId(), replay.getRouteEffectId());
         assertEquals(first.getEligibility().getEligibilityId(), replay.getEligibility().getEligibilityId());
+        assertEquals(
+                current.getCurrentClinicalStateVersion() + 1,
+                replay.getCurrentClinicalStateVersionAtRouting());
 
         String eligibilityFingerprint =
                 U05CanonicalEffectPayloadCodec.eligibilityFingerprint(first.getEligibility());
@@ -665,7 +677,7 @@ class U05NonProductionClinicalReadinessTest {
                 persistedEligibility.getStatus());
 
         U05RoutingCurrentness stale = new U05RoutingCurrentness(
-                current.getCurrentClinicalStateVersion(),
+                unrelatedVersionAdvance.getCurrentClinicalStateVersion(),
                 "durable-routing-context",
                 false, true, true, true, true,
                 current.getCurrentU04GateRef(),
