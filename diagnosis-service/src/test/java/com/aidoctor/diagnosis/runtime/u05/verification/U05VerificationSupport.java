@@ -818,7 +818,7 @@ public final class U05VerificationSupport {
         CommittedBundle second = commitProfile(f, profilePol005(v2, "basis-b"),
                 U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
                 U05ConsumerInboundRequest.GATE_ALLOW, null, null,
-                first.evidence.getAuthoritativeReadinessRecordRef());
+                readinessRecordId(first));
 
         Assertions.assertNotEquals(first.proposal.getEffectId(), second.proposal.getEffectId());
         Assertions.assertEquals(2, f.repository.mutationCount());
@@ -1317,6 +1317,13 @@ public final class U05VerificationSupport {
         U05ClinicalReadinessCommitEvidence evidence =
                 f.commitService.verifyCommittedReadBack(p.proposal, commit);
         return new CommittedBundle(p, commit, evidence);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String readinessRecordId(CommittedBundle c) {
+        Map<String, Object> payload =
+                (Map<String, Object>) c.proposal.getStatePatch().operations.get(0).value;
+        return String.valueOf(payload.get("readiness_record_id"));
     }
 
     private static U05ReadinessInvalidationEvidence invalidate(
