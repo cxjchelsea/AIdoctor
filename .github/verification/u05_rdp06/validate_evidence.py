@@ -251,7 +251,8 @@ def main():
     expected_pair_ids = {"U05-PM-%03d" % n for n in range(1, 29)}
     if {p.get("subcase_id") for p in oracle_pairs} != expected_pair_ids:
         fail("precedence oracle ID set mismatch")
-    pair_evidence = load(root / "u05-d03-precedence-evidence.json").get("pairs", [])
+    precedence_evidence_bundle = load(root / "u05-d03-precedence-evidence.json")
+    pair_evidence = precedence_evidence_bundle.get("pairs", [])
     if len(pair_evidence) != 28:
         fail("precedence evidence must contain 28 pairs")
     evidence_by_id = {p.get("subcase_id"): p for p in pair_evidence}
@@ -274,6 +275,25 @@ def main():
                 fail(sid + " NOT_CONSTRUCTIBLE pair must not execute runtime profile")
         if ev.get("pass") is not True:
             fail(sid + " precedence evidence pass=false")
+
+    oracle_special = precedence_oracle.get("special_proofs", [])
+    observed_special = precedence_evidence_bundle.get("special_proofs", [])
+    if len(oracle_special) != 4 or len(observed_special) != 4:
+        fail("D03 special-proof set must contain exactly four records")
+    oracle_special_by_id = {p.get("id"): p for p in oracle_special}
+    observed_special_by_id = {p.get("id"): p for p in observed_special}
+    if set(oracle_special_by_id) != set(observed_special_by_id):
+        fail("D03 special-proof identity mismatch")
+    for proof_id, oracle in oracle_special_by_id.items():
+        observed = observed_special_by_id[proof_id]
+        if observed.get("expected") != oracle.get("expected"):
+            fail(proof_id + " special-proof expected value mismatch")
+        if observed.get("observed") != oracle.get("expected"):
+            fail(proof_id + " special-proof observed value mismatch")
+        if observed.get("authority_refs") != oracle.get("authority_refs"):
+            fail(proof_id + " special-proof authority refs mismatch")
+        if not observed.get("rationale") or observed.get("pass") is not True:
+            fail(proof_id + " special-proof failed")
 
     harness = load(root / "u05-harness-self-test-evidence.json")
     if harness.get("harness_id") != "U05-HG-001":
