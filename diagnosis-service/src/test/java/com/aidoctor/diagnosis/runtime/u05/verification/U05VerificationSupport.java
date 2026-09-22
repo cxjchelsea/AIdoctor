@@ -798,6 +798,7 @@ public final class U05VerificationSupport {
         Assertions.assertEquals(U05ExecutionResult.D03_INPUT_CONFLICT, r.getStatus());
         Assertions.assertEquals(0, f.repository.mutationCount());
         Observation o = observation("MUTATION", "NO_EFFECT");
+        addAdmissionDetails(o, r.getAdmission(), manifest);
         addDecisionDetails(o, r.getDecision());
         return o;
     }
@@ -816,6 +817,7 @@ public final class U05VerificationSupport {
         Assertions.assertEquals(1, f.repository.mutationCount());
         Observation o = observation("MUTATION", "REATTACHED_NO_SECOND_VERSION");
         mutationCounts(o, 1, 1, 0);
+        addPreparedDetails(o, p);
         o.details.put("commit_status", replay.status);
         o.details.put("committed_version", replay.committedVersion);
         o.sideEffectRefs.put("readiness_effect", p.proposal.getEffectId());
@@ -838,6 +840,7 @@ public final class U05VerificationSupport {
         Assertions.assertEquals(2, f.repository.mutationCount());
         Observation o = observation("MUTATION", "DIFFERENT_EFFECT");
         mutationCounts(o, 2, 2, 0);
+        addCommittedDetails(o, second);
         o.sideEffectRefs.put("readiness_effect_1", first.proposal.getEffectId());
         o.sideEffectRefs.put("readiness_effect_2", second.proposal.getEffectId());
         return o;
@@ -858,6 +861,7 @@ public final class U05VerificationSupport {
                 f.commitService.commitNonProduction(target.input, target.decision, target.proposal);
         Assertions.assertEquals("CONFLICT", conflict.status);
         Observation o = observation("MUTATION", "CONFLICT");
+        addPreparedDetails(o, target);
         o.details.put("commit_status", conflict.status);
         o.details.put("proposal_base_version", target.proposal.getStatePatch().baseVersion);
         o.details.put("current_version_after_fixture_advance", f.repository.snapshot("cdp-1").version());
@@ -875,6 +879,7 @@ public final class U05VerificationSupport {
         Assertions.assertEquals("REJECTED", result.status);
         Assertions.assertEquals(0, f.repository.mutationCount());
         Observation o = observation("MUTATION", "REJECTED");
+        addPreparedDetails(o, p);
         o.details.put("commit_status", result.status);
         o.details.put("reason_code", result.reasonCode);
         return o;
@@ -969,6 +974,7 @@ public final class U05VerificationSupport {
         Assertions.assertEquals(1, f.repository.mutationCount());
         Observation o = observation("MUTATION", "REPLAY_CONFLICT");
         mutationCounts(o, 1, 1, 0);
+        addPreparedDetails(o, p);
         o.details.put("commit_status", conflict.status);
         o.sideEffectRefs.put("readiness_effect", p.proposal.getEffectId());
         return o;
@@ -992,6 +998,8 @@ public final class U05VerificationSupport {
         Assertions.assertEquals(first.getEffectId(), recovered.getEffectId());
         Assertions.assertEquals(first.getProposalId(), recovered.getProposalId());
         Observation o = observation("MUTATION", "IDENTITY_RECOVERED");
+        addAdmissionDetails(o, b.admission, b.manifest);
+        addDecisionDetails(o, d);
         o.details.put("readiness_effect_id", first.getEffectId());
         o.details.put("proposal_id", first.getProposalId());
         return o;
@@ -1013,6 +1021,7 @@ public final class U05VerificationSupport {
         Assertions.assertEquals(1, f.repository.mutationCount());
         Observation o = observation("MUTATION", "REATTACHED_NO_DUPLICATE");
         mutationCounts(o, 1, 1, 0);
+        addPreparedDetails(o, p);
         o.sideEffectRefs.put("readiness_effect", p.proposal.getEffectId());
         return o;
     }
@@ -1044,6 +1053,7 @@ public final class U05VerificationSupport {
         Assertions.assertEquals(1, f.repository.mutationCount());
         Observation o = observation("MUTATION", "AT_MOST_ONE_COMMIT");
         mutationCounts(o, 1, 1, 0);
+        addPreparedDetails(o, a);
         o.details.put("writer_a_status", ra.status);
         o.details.put("writer_b_status", rb.status);
         return o;
@@ -1266,6 +1276,7 @@ public final class U05VerificationSupport {
         }
         Observation o = observation("ROUTING", "NO_ORDINARY_ROUTE_EFFECT");
         mutationCounts(o, 1, 1, 0);
+        addCommittedDetails(o, c);
         o.counts.put("route_decision_count", 3);
         o.sideEffectRefs.put("route_decision_preempted", preempted.getRoutingDecisionId());
         o.sideEffectRefs.put("route_decision_failure_required", failure.getRoutingDecisionId());
@@ -1915,6 +1926,11 @@ public final class U05VerificationSupport {
         o.details.put("d03_restricted_permission_ref", d.getRestrictedPermissionRef());
     }
 
+    private static void addPreparedDetails(Observation o, PreparedBundle p) {
+        addAdmissionDetails(o, p.admission, p.manifest);
+        addDecisionDetails(o, p.decision);
+    }
+
     private static void addCommittedDetails(Observation o, CommittedBundle c) {
         addAdmissionDetails(o, c.admission, c.manifest);
         addDecisionDetails(o, c.decision);
@@ -2049,10 +2065,10 @@ public final class U05VerificationSupport {
                     o.details.get("d03_source_readiness_input_set_identity")));
         }
         if (o.details.get("inbound_restricted_permission_ref") != null
-                || o.details.get("admission_result_restricted_permission_ref") != null
-                || o.details.get("admitted_restricted_permission_ref") != null
-                || o.details.get("d03_restricted_permission_ref") != null
-                || o.details.get("readiness_source_restricted_permission_ref") != null) {
+                && o.details.get("admission_result_restricted_permission_ref") != null
+                && o.details.get("admitted_restricted_permission_ref") != null
+                && o.details.get("d03_restricted_permission_ref") != null
+                && o.details.get("readiness_source_restricted_permission_ref") != null) {
             out.add(chainEquality(
                     "restricted_permission_ref_chain",
                     o.details.get("inbound_restricted_permission_ref"),
