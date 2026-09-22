@@ -19,6 +19,9 @@ env:
   U05_IMPLEMENTATION_SHA: 261ee5525c8260e93db19173ffbde89a8af6810d
   U05_PARENT_AUTHORIZATION_ID: AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001
   U05_REBIND_AUTHORIZATION_ID: AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001
+  U05_REBIND_AUTHORIZATION_RECORD_SHA: c31f654779a4a3dc6316d955c7e4a5c6b5b8c094
+  U05_REBIND_AUTHORIZATION_RECORD_BLOB: 9893a016130d807ecb2f1da06af23312e898fb22
+  U05_REBIND_AUTHORIZATION_RECORD_PATH: docs/current/06_开发单元/U05_RDP06_Authoritative_Verifier_Target_Rebind_Authorization_Decision_v0.1.md
   U05_ENVIRONMENT: ci-nonprod-u05
   U05_LIVE_UPSTREAM_CUTOVER: 'false'
   U05_LIVE_U06_EXECUTION: 'false'
@@ -52,6 +55,23 @@ jobs:
         with:
           ref: ${{ env.U05_IMPLEMENTATION_SHA }}
           path: sut
+
+      - name: Checkout immutable owner rebind authorization record
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.U05_REBIND_AUTHORIZATION_RECORD_SHA }}
+          path: auth-src
+
+      - name: Verify immutable owner rebind authorization record
+        run: |
+          test "$(git -C auth-src rev-parse HEAD)" = "$U05_REBIND_AUTHORIZATION_RECORD_SHA"
+          test "$(git -C auth-src rev-parse HEAD:$U05_REBIND_AUTHORIZATION_RECORD_PATH)" = "$U05_REBIND_AUTHORIZATION_RECORD_BLOB"
+          AUTH_DOC="auth-src/$U05_REBIND_AUTHORIZATION_RECORD_PATH"
+          grep -F 'AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001' "$AUTH_DOC"
+          grep -F '= AUTHORIZED' "$AUTH_DOC"
+          grep -F 'AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001' "$AUTH_DOC"
+          grep -F '261ee5525c8260e93db19173ffbde89a8af6810d' "$AUTH_DOC"
+          echo "U05_RDP06_OWNER_REBIND_AUTHORIZATION=PASS"
 
       - name: G0/G1 preflight identity and exact overlay inventory
         env:
@@ -144,6 +164,14 @@ jobs:
           assert f["synthetic"] is True
           assert f["contains_real_phi"] is False
           assert a["implementation_sha"] == "261ee5525c8260e93db19173ffbde89a8af6810d"
+          import hashlib
+          for name in [
+              "u05-verification-expectations.json",
+              "u05-d03-precedence-expectations.json",
+              "u05-verification-fixtures.json",
+          ]:
+              digest = hashlib.sha256((base/name).read_bytes()).hexdigest()
+              print(name + "_sha256=" + digest)
           print("U05_RDP06_STATIC_INPUT_PREFLIGHT=PASS")
           PY
 
@@ -185,13 +213,26 @@ jobs:
               raise SystemExit("static review marker is not PASS")
           review_id = one("U05_RDP06_STATIC_REVIEW_ID")
           review_head = one("U05_RDP06_STATIC_REVIEW_HEAD")
+          expectation_sha = one("U05_RDP06_EXPECTATION_SHA256")
+          precedence_sha = one("U05_RDP06_PRECEDENCE_SHA256")
+          fixture_sha = one("U05_RDP06_FIXTURE_SHA256")
           if not review_id.isdigit():
               raise SystemExit("static review id must be numeric")
           if review_head != os.environ["U05_VERIFIER_SHA"]:
               raise SystemExit("static review head != verifier head")
+          for name, value in [
+              ("expectation", expectation_sha),
+              ("precedence", precedence_sha),
+              ("fixture", fixture_sha),
+          ]:
+              if not re.fullmatch(r"[0-9a-f]{64}", value):
+                  raise SystemExit(name + " reviewed digest must be lowercase SHA-256")
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as out:
               out.write("U05_STATIC_REVIEW_ID=" + review_id + "\n")
               out.write("U05_STATIC_REVIEW_HEAD=" + review_head + "\n")
+              out.write("U05_STATIC_EXPECTATION_SHA256=" + expectation_sha + "\n")
+              out.write("U05_STATIC_PRECEDENCE_SHA256=" + precedence_sha + "\n")
+              out.write("U05_STATIC_FIXTURE_SHA256=" + fixture_sha + "\n")
               out.write("U05_VERIFIER_SHA=" + os.environ["U05_VERIFIER_SHA"] + "\n")
           print("G0_STATIC_INDEPENDENT_REVIEW=PASS")
           PY
@@ -220,6 +261,23 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           path: verifier-src
           fetch-depth: 0
+
+      - name: Checkout immutable owner rebind authorization record
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.U05_REBIND_AUTHORIZATION_RECORD_SHA }}
+          path: auth-src
+
+      - name: G0 verify immutable owner rebind authorization record
+        run: |
+          test "$(git -C auth-src rev-parse HEAD)" = "$U05_REBIND_AUTHORIZATION_RECORD_SHA"
+          test "$(git -C auth-src rev-parse HEAD:$U05_REBIND_AUTHORIZATION_RECORD_PATH)" = "$U05_REBIND_AUTHORIZATION_RECORD_BLOB"
+          AUTH_DOC="auth-src/$U05_REBIND_AUTHORIZATION_RECORD_PATH"
+          grep -F 'AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001' "$AUTH_DOC"
+          grep -F '= AUTHORIZED' "$AUTH_DOC"
+          grep -F 'AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001' "$AUTH_DOC"
+          grep -F '261ee5525c8260e93db19173ffbde89a8af6810d' "$AUTH_DOC"
+          echo "G0_OWNER_REBIND_AUTHORIZATION=PASS"
 
       - name: G1 verify verifier identity and exact authorized inventory
         run: |
@@ -251,6 +309,10 @@ jobs:
           if actual != allowed:
               raise SystemExit("authoritative verifier inventory mismatch")
           PY
+          test "$(sha256sum verifier-src/diagnosis-service/src/test/resources/u05/verification/u05-verification-expectations.json | awk '{print $1}')" = "$U05_STATIC_EXPECTATION_SHA256"
+          test "$(sha256sum verifier-src/diagnosis-service/src/test/resources/u05/verification/u05-d03-precedence-expectations.json | awk '{print $1}')" = "$U05_STATIC_PRECEDENCE_SHA256"
+          test "$(sha256sum verifier-src/diagnosis-service/src/test/resources/u05/verification/u05-verification-fixtures.json | awk '{print $1}')" = "$U05_STATIC_FIXTURE_SHA256"
+          echo "G1_REVIEWED_STATIC_INPUT_DIGESTS=PASS"
 
       - name: G1 checkout exact implementation target
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -279,6 +341,11 @@ jobs:
             echo "verifier_sha=$U05_VERIFIER_SHA"
             echo "static_review_id=$U05_STATIC_REVIEW_ID"
             echo "static_review_head=$U05_STATIC_REVIEW_HEAD"
+            echo "static_expectation_sha256=$U05_STATIC_EXPECTATION_SHA256"
+            echo "static_precedence_sha256=$U05_STATIC_PRECEDENCE_SHA256"
+            echo "static_fixture_sha256=$U05_STATIC_FIXTURE_SHA256"
+            echo "rebind_authorization_record_sha=$U05_REBIND_AUTHORIZATION_RECORD_SHA"
+            echo "rebind_authorization_record_blob=$U05_REBIND_AUTHORIZATION_RECORD_BLOB"
             echo "repository=$GITHUB_REPOSITORY"
             echo "ref=$GITHUB_REF"
             echo "run_id=$GITHUB_RUN_ID"
