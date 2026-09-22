@@ -6,7 +6,7 @@
 > Exact reviewed amendment head: `3b34475a2d15c8c0089fe821eb87f766b2422250`  
 > Amendment PR: #192  
 > Targeted Independent Re-Review: PASS / review_id `5273507238`  
-> Current status: **OWNER_DECISION_PENDING**  
+> Current status: **AUTHORIZED / OWNER_APPROVED**  
 > This package itself grants no workflow amendment authorization.
 
 ---
@@ -355,7 +355,65 @@ Authorization not granted; v2 PR-trigger amendment must not proceed.
     review_id = 5273507238
 
     AUTH-SHARED-CAP-VERIFICATION-RUNNER-PR-TRIGGER-001
-    = NOT_GRANTED / OWNER_DECISION_PENDING
+    = AUTHORIZED / OWNER_APPROVED
 
 No workflow amendment, executable verification PASS,
 U05 closure, merge, production, or live authorization is granted.
+
+
+---
+
+# 16. Owner Authorization Record
+
+Owner command:
+
+    AUTHORIZE
+
+Authorization:
+
+    AUTH-SHARED-CAP-VERIFICATION-RUNNER-PR-TRIGGER-001
+    = AUTHORIZED
+
+Exact authorization shape:
+
+    PR_TRIGGER_OBSERVABILITY_ONLY
+    / SAME_PINNED_TARGETS
+    / SAME_TESTS
+    / SAME_EXACT_DIFF_GUARDS
+    / SAME_ZERO_SKIP_POLICY
+    / SAME_READ_ONLY_PERMISSIONS
+    / ONE_WORKFLOW_FILE_ONLY
+    / IMMUTABLE_VERIFIER_AUTHORIZATION_BASE_SHA
+    / NO_SOURCE_TEST_CHANGE
+    / NO_MERGE
+    / NO_PRODUCTION
+
+Reviewed basis:
+
+    amendment PR #192
+    exact reviewed amendment head
+    = 3b34475a2d15c8c0089fe821eb87f766b2422250
+
+    targeted independent review
+    = PASS
+    review_id = 5273507238
+
+    authorization package PR #193
+    package review
+    = PASS
+    review_id = 5273511978
+
+Implementation lineage rule:
+
+    verify/shared-capabilities-exact-head-v2
+    MUST descend from this owner-authorized decision-record commit.
+
+This authorization does NOT grant:
+
+    PBNC-02A verification PASS
+    Runtime Effect Ledger verification PASS
+    U05 IR-05 / IR-06 closure
+    U05 RDP-06 PASS
+    merge
+    production/live traffic
+    real-patient use.
