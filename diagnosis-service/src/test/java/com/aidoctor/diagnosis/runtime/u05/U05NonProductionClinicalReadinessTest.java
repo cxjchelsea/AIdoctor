@@ -1,6 +1,8 @@
 package com.aidoctor.diagnosis.runtime.u05;
 
 import com.aidoctor.contracts.v1.StateTypes;
+import com.aidoctor.diagnosis.runtime.effects.CanonicalEffectLedgerDecision;
+import com.aidoctor.diagnosis.runtime.effects.NonProductionFileCanonicalEffectLedger;
 import com.aidoctor.diagnosis.state.committer.StateCommitter;
 import com.aidoctor.diagnosis.state.committer.fakes.InMemoryIdempotencyFake;
 import com.aidoctor.diagnosis.state.committer.SyntheticStateSnapshot;
@@ -12,10 +14,12 @@ import com.aidoctor.diagnosis.state.committer.ports.ConsentPolicyPort;
 import com.aidoctor.diagnosis.state.committer.ports.FieldPermissionPort;
 import com.aidoctor.diagnosis.state.committer.ports.SourceValidationPort;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class U05NonProductionClinicalReadinessTest {
     private static final Clock CLOCK =
@@ -445,6 +450,22 @@ class U05NonProductionClinicalReadinessTest {
         assertEquals(prior.get("effect_id"), stale.get("effect_id"));
         assertEquals("STALE", stale.get("state_validity"));
         assertEquals(first.getInvalidationEffectId(), stale.get("invalidation_effect_ref"));
+
+        U05ReadinessInvalidationService service =
+                new U05ReadinessInvalidationService(
+                        fixture.committer,
+                        new U05SyntheticClinicalReadinessSnapshotAdapter(fixture.repository));
+        U05ReadinessInvalidationEvidence evidence =
+                service.commitAndVerifyNonProduction(request, first);
+
+        assertEquals(
+                first.getInvalidationEffectId(),
+                evidence.getInvalidationEffectId());
+        assertEquals(
+                result.getCommitEvidence().getCommittedClinicalStateVersion() + 1,
+                evidence.getCommittedClinicalStateVersion());
+        assertTrue(evidence.getAuthoritativeReadinessRecordRef()
+                .startsWith("synthetic-state:cdp-1@14/patient_state/clinical_readiness#"));
     }
 
     @Test
@@ -477,6 +498,190 @@ class U05NonProductionClinicalReadinessTest {
         assertEquals(U05ExecutionResult.ADMISSION_REJECTED, result.getStatus());
         assertEquals(U05AdmissionService.ENVIRONMENT_NOT_AUTHORIZED, result.getAdmission().getReasonCode());
         assertEquals(0, fixture.repository.mutationCount());
+    }
+
+    @Test
+    void commitEvidenceRequiresExactSyntheticReadBack() {
+        U05ReadinessInputManifest manifest = pol005Manifest(
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                VERSION);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+
+        U05ExecutionResult result = fixture.application.execute(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+
+        assertTrue(result.getCommitEvidence().getAuthoritativeReadinessRecordRef()
+                .startsWith("synthetic-state:cdp-1@13/patient_state/clinical_readiness#"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> expected =
+                (Map<String, Object>) result.getProposal().getStatePatch().operations.get(0).value;
+        Map<String, Object> mismatched = new LinkedHashMap<String, Object>(expected);
+        mismatched.put("state_validity", "STALE");
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> U05ClinicalReadinessCommitEvidence.fromVerifiedSnapshot(
+                        result.getProposal(),
+                        result.getCommitResult(),
+                        new U05ClinicalReadinessSnapshot(
+                                result.getCommitResult().committedVersion.intValue(),
+                                mismatched)));
+    }
+
+    @Test
+    void durableAdmissionReattachesAcrossServiceReconstructionAndStillRevalidatesAuthority(
+            @TempDir Path root) {
+        U05ReadinessInputManifest manifest = pol005Manifest(
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                VERSION);
+        U05ConsumerInboundRequest request = request(
+                manifest,
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                U05ConsumerInboundRequest.GATE_ALLOW,
+                null,
+                null);
+        U05AdmissionAuthoritySnapshot current = authority(
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                U05ConsumerInboundRequest.GATE_ALLOW,
+                null,
+                null,
+                true);
+
+        U05AdmissionService firstService = new U05AdmissionService(
+                new U05CanonicalAdmissionLedger(
+                        new NonProductionFileCanonicalEffectLedger(root)));
+        U05AdmissionResult first = firstService.admit(request, manifest, current);
+
+        U05AdmissionService reconstructedService = new U05AdmissionService(
+                new U05CanonicalAdmissionLedger(
+                        new NonProductionFileCanonicalEffectLedger(root)));
+        U05AdmissionResult replay =
+                reconstructedService.admit(request, manifest, current);
+
+        assertTrue(first.isAdmitted());
+        assertTrue(replay.isAdmitted());
+        assertEquals(U05AdmissionResult.ORIGINAL, first.getReplayDisposition());
+        assertEquals(U05AdmissionResult.REATTACHED, replay.getReplayDisposition());
+        assertEquals(
+                first.getAdmittedInput().getAdmissionId(),
+                replay.getAdmittedInput().getAdmissionId());
+
+        U05AdmissionAuthoritySnapshot staleGateAuthority = authority(
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                U05ConsumerInboundRequest.GATE_RESTRICTED,
+                null,
+                null,
+                false);
+        U05AdmissionResult stale =
+                reconstructedService.admit(request, manifest, staleGateAuthority);
+
+        assertTrue(!stale.isAdmitted());
+        assertEquals(U05AdmissionService.GATE_NOT_CURRENT, stale.getReasonCode());
+    }
+
+    @Test
+    void durableRoutingAndEligibilityReattachAcrossServiceReconstructionAndRevalidateCurrentness(
+            @TempDir Path root) {
+        U05ReadinessInputManifest manifest = pol005Manifest(
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                VERSION);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+        U05ExecutionResult execution = fixture.application.execute(
+                request(
+                        manifest,
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null),
+                manifest,
+                authority(
+                        U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                        U05ConsumerInboundRequest.GATE_ALLOW,
+                        null,
+                        null,
+                        true));
+
+        U05RoutingCurrentness current = new U05RoutingCurrentness(
+                execution.getCommitEvidence().getCommittedClinicalStateVersion(),
+                "durable-routing-context",
+                true, true, true, true, true,
+                execution.getAdmission().getAdmittedInput().getAcceptedU04GateRef(),
+                U05ConsumerInboundRequest.GATE_ALLOW,
+                null);
+
+        U05DownstreamPermissionPort permissionPort =
+                (input, evidence, currentness, consequence, targetUnitId, targetAction) -> {
+                    throw new AssertionError("ALLOW route must not ask downstream permission");
+                };
+
+        NonProductionFileCanonicalEffectLedger backend1 =
+                new NonProductionFileCanonicalEffectLedger(root);
+        U05RoutingService routing1 = new U05RoutingService(
+                new U05CanonicalRouteLedger(backend1),
+                permissionPort);
+        U05DownstreamRoutingDecision first = routing1.route(
+                execution.getAdmission().getAdmittedInput(),
+                execution.getDecision(),
+                execution.getCommitEvidence(),
+                current);
+
+        NonProductionFileCanonicalEffectLedger backend2 =
+                new NonProductionFileCanonicalEffectLedger(root);
+        U05RoutingService routing2 = new U05RoutingService(
+                new U05CanonicalRouteLedger(backend2),
+                permissionPort);
+        U05DownstreamRoutingDecision replay = routing2.route(
+                execution.getAdmission().getAdmittedInput(),
+                execution.getDecision(),
+                execution.getCommitEvidence(),
+                current);
+
+        assertEquals(U05DownstreamRoutingDecision.ORIGINAL, first.getReplayDisposition());
+        assertEquals(U05DownstreamRoutingDecision.REATTACHED, replay.getReplayDisposition());
+        assertEquals(first.getRoutingDecisionId(), replay.getRoutingDecisionId());
+        assertEquals(first.getEligibility().getEligibilityId(), replay.getEligibility().getEligibilityId());
+
+        String eligibilityFingerprint =
+                U05CanonicalEffectPayloadCodec.eligibilityFingerprint(first.getEligibility());
+        CanonicalEffectLedgerDecision persistedEligibility = backend2.inspect(
+                U05CanonicalRouteLedger.ELIGIBILITY_NAMESPACE,
+                first.getEligibility().getEligibilityId(),
+                eligibilityFingerprint);
+        assertEquals(
+                CanonicalEffectLedgerDecision.Status.REATTACHED,
+                persistedEligibility.getStatus());
+
+        U05RoutingCurrentness stale = new U05RoutingCurrentness(
+                current.getCurrentClinicalStateVersion(),
+                "durable-routing-context",
+                false, true, true, true, true,
+                current.getCurrentU04GateRef(),
+                current.getGateValue(),
+                null);
+
+        U05DownstreamRoutingDecision staleDecision = routing2.route(
+                execution.getAdmission().getAdmittedInput(),
+                execution.getDecision(),
+                execution.getCommitEvidence(),
+                stale);
+
+        assertEquals(
+                U05DownstreamRoutingDecision.REJECTED_STALE,
+                staleDecision.getRoutingStatus());
+        assertNull(staleDecision.getEligibility());
     }
 
     private static U05ReadinessInputManifest pol005Manifest(String context, int version) {
@@ -696,6 +901,7 @@ class U05NonProductionClinicalReadinessTest {
 
     private static final class Fixture {
         final SyntheticVersionedStateRepository repository;
+        final StateCommitter committer;
         final U05NonProductionApplicationService application;
 
         Fixture(int currentVersion, final String downstreamPermissionStatus) {
@@ -707,7 +913,7 @@ class U05NonProductionClinicalReadinessTest {
             repository = new SyntheticVersionedStateRepository(initial);
 
             List<String> order = new ArrayList<String>();
-            StateCommitter committer = new StateCommitter(
+            committer = new StateCommitter(
                     repository,
                     (capabilityId, capabilityVersion) ->
                             CapabilityPolicyPort.CapabilityDecision.authorized(),
