@@ -6,11 +6,17 @@ on:
       - verify/shared-capabilities-exact-head-v1
     paths:
       - '.github/workflows/shared-capability-exact-head-verification.yml'
+  pull_request:
+    branches:
+      - decision/shared-capability-verification-runner-pr-trigger-authorization
+    paths:
+      - '.github/workflows/shared-capability-exact-head-verification.yml'
 
 permissions:
   contents: read
 
 env:
+  VERIFIER_AUTHORIZATION_BASE_SHA: f9cb3a7a873104e541de1587bc4106827b28d862
   PBNC02A_IMPLEMENTATION_SHA: 5e9f05f4b45d82cec4e67a6a24bc3a4d8507b02d
   PBNC02A_AUTHORIZATION_BASE_SHA: 5ca69deaad861e6298856fa36d583c1d660bd831
   EFFECT_LEDGER_IMPLEMENTATION_SHA: c0315bf11d8a96a6c2426ce38c8ef02f7bef298f
@@ -21,15 +27,50 @@ jobs:
     name: PBNC02A_EXACT_HEAD_EXECUTABLE_EVIDENCE
     runs-on: ubuntu-latest
     steps:
-      - name: Record verification identity
+      - name: Record and verify PR-trigger identity
         shell: bash
+        env:
+          VERIFICATION_WORKFLOW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          VERIFICATION_EVENT_SHA: ${{ github.sha }}
+          VERIFICATION_EVENT_NAME: ${{ github.event_name }}
+          VERIFICATION_PR_NUMBER: ${{ github.event.pull_request.number }}
+          VERIFICATION_HEAD_REF: ${{ github.head_ref }}
+          VERIFICATION_BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
-          test "$GITHUB_REF_NAME" = "verify/shared-capabilities-exact-head-v1"
-          echo "VERIFICATION_WORKFLOW_COMMIT=$GITHUB_SHA"
-          echo "VERIFICATION_WORKFLOW_REF=$GITHUB_REF"
+          test "$VERIFICATION_EVENT_NAME" = "pull_request"
+          test "$VERIFICATION_HEAD_REF" = "verify/shared-capabilities-exact-head-v2"
+          test "$VERIFICATION_BASE_REF" = "decision/shared-capability-verification-runner-pr-trigger-authorization"
+          test -n "$VERIFICATION_WORKFLOW_HEAD_SHA"
+          test -n "$VERIFICATION_EVENT_SHA"
+          test -n "$VERIFICATION_PR_NUMBER"
+          echo "VERIFICATION_WORKFLOW_HEAD_SHA=$VERIFICATION_WORKFLOW_HEAD_SHA"
+          echo "VERIFICATION_EVENT_SHA=$VERIFICATION_EVENT_SHA"
+          echo "VERIFICATION_EVENT_NAME=$VERIFICATION_EVENT_NAME"
+          echo "VERIFICATION_PR_NUMBER=$VERIFICATION_PR_NUMBER"
+          echo "VERIFICATION_HEAD_REF=$VERIFICATION_HEAD_REF"
+          echo "VERIFICATION_BASE_REF=$VERIFICATION_BASE_REF"
           echo "TARGET_IMPLEMENTATION_SHA=$PBNC02A_IMPLEMENTATION_SHA"
           echo "AUTHORIZATION_BASE_SHA=$PBNC02A_AUTHORIZATION_BASE_SHA"
+          echo "VERIFIER_AUTHORIZATION_BASE_SHA=$VERIFIER_AUTHORIZATION_BASE_SHA"
+
+      - name: Checkout exact verifier workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify verifier lineage and exact one-file amendment
+        shell: bash
+        env:
+          VERIFICATION_WORKFLOW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$VERIFICATION_WORKFLOW_HEAD_SHA"
+          git merge-base --is-ancestor "$VERIFIER_AUTHORIZATION_BASE_SHA" "$VERIFICATION_WORKFLOW_HEAD_SHA"
+          git diff --name-status "$VERIFIER_AUTHORIZATION_BASE_SHA" "$VERIFICATION_WORKFLOW_HEAD_SHA" > /tmp/verifier.actual
+          printf 'M\t.github/workflows/shared-capability-exact-head-verification.yml\n' > /tmp/verifier.expected
+          diff -u /tmp/verifier.expected /tmp/verifier.actual
 
       - name: Checkout exact PBNC-02A implementation SHA
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -89,10 +130,10 @@ jobs:
               "TEST-com.aidoctor.diagnosis.state.committer.StateCommitterMechanicalCoreTest.xml",
           ]
           for name in reports:
-              path = root / name
-              if not path.is_file():
-                  raise SystemExit(f"missing focused Surefire report: {path}")
-              suite = ET.parse(path).getroot()
+              report = root / name
+              if not report.is_file():
+                  raise SystemExit(f"missing focused Surefire report: {report}")
+              suite = ET.parse(report).getroot()
               values = {k: int(suite.attrib.get(k, "0")) for k in ("errors", "failures", "skipped")}
               if any(values.values()):
                   raise SystemExit(f"focused report not clean: {name}: {values}")
@@ -104,7 +145,7 @@ jobs:
 
       - name: Declare PBNC-02A evidence boundary
         run: |
-          echo "PBNC02A_EXECUTABLE_EVIDENCE_GENERATED=YES"
+          echo "PBNC02A_AUDITABLE_EXECUTABLE_EVIDENCE_GENERATED=YES"
           echo "PBNC02A_VERIFICATION_PASS=NOT_DECIDED_BY_WORKFLOW"
           echo "U05_IR05_CLOSED=NO"
 
@@ -112,15 +153,50 @@ jobs:
     name: EFFECT_LEDGER_EXACT_HEAD_EXECUTABLE_EVIDENCE
     runs-on: ubuntu-latest
     steps:
-      - name: Record verification identity
+      - name: Record and verify PR-trigger identity
         shell: bash
+        env:
+          VERIFICATION_WORKFLOW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          VERIFICATION_EVENT_SHA: ${{ github.sha }}
+          VERIFICATION_EVENT_NAME: ${{ github.event_name }}
+          VERIFICATION_PR_NUMBER: ${{ github.event.pull_request.number }}
+          VERIFICATION_HEAD_REF: ${{ github.head_ref }}
+          VERIFICATION_BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
-          test "$GITHUB_REF_NAME" = "verify/shared-capabilities-exact-head-v1"
-          echo "VERIFICATION_WORKFLOW_COMMIT=$GITHUB_SHA"
-          echo "VERIFICATION_WORKFLOW_REF=$GITHUB_REF"
+          test "$VERIFICATION_EVENT_NAME" = "pull_request"
+          test "$VERIFICATION_HEAD_REF" = "verify/shared-capabilities-exact-head-v2"
+          test "$VERIFICATION_BASE_REF" = "decision/shared-capability-verification-runner-pr-trigger-authorization"
+          test -n "$VERIFICATION_WORKFLOW_HEAD_SHA"
+          test -n "$VERIFICATION_EVENT_SHA"
+          test -n "$VERIFICATION_PR_NUMBER"
+          echo "VERIFICATION_WORKFLOW_HEAD_SHA=$VERIFICATION_WORKFLOW_HEAD_SHA"
+          echo "VERIFICATION_EVENT_SHA=$VERIFICATION_EVENT_SHA"
+          echo "VERIFICATION_EVENT_NAME=$VERIFICATION_EVENT_NAME"
+          echo "VERIFICATION_PR_NUMBER=$VERIFICATION_PR_NUMBER"
+          echo "VERIFICATION_HEAD_REF=$VERIFICATION_HEAD_REF"
+          echo "VERIFICATION_BASE_REF=$VERIFICATION_BASE_REF"
           echo "TARGET_IMPLEMENTATION_SHA=$EFFECT_LEDGER_IMPLEMENTATION_SHA"
           echo "AUTHORIZATION_BASE_SHA=$EFFECT_LEDGER_AUTHORIZATION_BASE_SHA"
+          echo "VERIFIER_AUTHORIZATION_BASE_SHA=$VERIFIER_AUTHORIZATION_BASE_SHA"
+
+      - name: Checkout exact verifier workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify verifier lineage and exact one-file amendment
+        shell: bash
+        env:
+          VERIFICATION_WORKFLOW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$VERIFICATION_WORKFLOW_HEAD_SHA"
+          git merge-base --is-ancestor "$VERIFIER_AUTHORIZATION_BASE_SHA" "$VERIFICATION_WORKFLOW_HEAD_SHA"
+          git diff --name-status "$VERIFIER_AUTHORIZATION_BASE_SHA" "$VERIFICATION_WORKFLOW_HEAD_SHA" > /tmp/verifier.actual
+          printf 'M\t.github/workflows/shared-capability-exact-head-verification.yml\n' > /tmp/verifier.expected
+          diff -u /tmp/verifier.expected /tmp/verifier.actual
 
       - name: Checkout exact Effect Ledger implementation SHA
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -173,14 +249,14 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as ET
 
-          path = Path("diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.effects.NonProductionFileCanonicalEffectLedgerTest.xml")
-          if not path.is_file():
-              raise SystemExit(f"missing focused Surefire report: {path}")
-          suite = ET.parse(path).getroot()
+          report = Path("diagnosis-service/target/surefire-reports/TEST-com.aidoctor.diagnosis.runtime.effects.NonProductionFileCanonicalEffectLedgerTest.xml")
+          if not report.is_file():
+              raise SystemExit(f"missing focused Surefire report: {report}")
+          suite = ET.parse(report).getroot()
           values = {k: int(suite.attrib.get(k, "0")) for k in ("errors", "failures", "skipped")}
           if any(values.values()):
-              raise SystemExit(f"focused report not clean: {path.name}: {values}")
-          print(f"FOCUSED_REPORT_PASS {path.name} {values}")
+              raise SystemExit(f"focused report not clean: {report.name}: {values}")
+          print(f"FOCUSED_REPORT_PASS {report.name} {values}")
           PY
 
       - name: Run diagnosis-service regression suite
@@ -188,6 +264,6 @@ jobs:
 
       - name: Declare Effect Ledger evidence boundary
         run: |
-          echo "EFFECT_LEDGER_EXECUTABLE_EVIDENCE_GENERATED=YES"
+          echo "EFFECT_LEDGER_AUDITABLE_EXECUTABLE_EVIDENCE_GENERATED=YES"
           echo "EFFECT_LEDGER_VERIFICATION_PASS=NOT_DECIDED_BY_WORKFLOW"
           echo "U05_IR06_CLOSED=NO"
