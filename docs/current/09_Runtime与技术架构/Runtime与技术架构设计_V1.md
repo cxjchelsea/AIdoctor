@@ -1,0 +1,1663 @@
+# AIdoctor Phase 9 — Runtime 与技术架构设计 V1
+
+> 状态：A1 REFROZEN / V1（未受 A1 影响的 Runtime V1 语义继续保持 frozen baseline）  
+> 适用基线：`main` 当前真实代码 + Phase 1～8 当前权威设计  
+> 目标：在不改变既有业务语义、状态 Owner、Unit、C/P/D 与 K01–K10 契约边界的前提下，定义 V1 临床 Runtime 的执行、调度、等待、恢复、提交、失败、并发、版本绑定、知识/规则装载、回滚、外部副作用一致性与 Brownfield 迁移架构。  
+> 非目标：本文件不构成 Implementation Authorization；不冻结具体 Runtime 框架、消息队列、数据库、微服务拆分或部署厂商；不进入 Phase 10。
+
+---
+
+# 1. Phase 9 的边界
+
+Phase 1～8 已冻结：
+
+```text
+业务语义
+→ 状态与 Owner
+→ 业务闭环
+→ Unit
+→ C / P / D
+→ K01–K10 契约与数据语义
+```
+
+Phase 9 只回答：
+
+```text
+谁驱动一次执行？
+如何从 committed Clinical State 选择下一 Unit？
+何时 WAIT？如何 Resume？
+如何处理 duplicate / conflict / crash / timeout？
+如何保证 replay 不重复同一业务 effect？
+如何在调用能力前校验 CapabilityBindingRef？
+如何装载并校验 KnowledgeReleaseRef / RuleReleaseRef？
+如何保证同一 Consultation 不静默切换临床语义版本？
+如何进行 capability / knowledge / rule rollback？
+如何管理外部发送与 Clinical State 的一致性？
+如何把当前 fixed workflow 增量迁移进新 Runtime？
+```
+
+Phase 9 不重新定义 Clinical Risk、Safety Gate、Clinical Readiness、Delivery Readiness、Unit、C/P/D 或 K01–K10 语义。
+
+---
+
+# 2. 当前真实技术基线
+
+当前 `main` 的 Brownfield 主链历史上来自：
+
+```text
+Frontend
+→ DiagnosisController
+→ DiagnosisOrchestrationService
+→ CDPManager
+→ DiagnosisWorkflowOrchestrator
+→ legacy Python / Java clinical services
+```
+
+现有可复用基础包括：
+
+```text
+CDP aggregate/versioning/locking
+StateCommitter
+Python Runtime foundation
+Model Runtime
+Execution Trace
+Foundation-0 Runtime 基础
+```
+
+已经完成的 Foundation-0 / U01 实施不改变本文件的设计角色：Phase 9 仍描述目标 Runtime 语义，不把实现进度混入架构真值。
+
+---
+
+# 3. Phase 9 核心不变量
+
+```text
+RUNTIME-INV-01 Runtime != Clinical Truth Owner
+RUNTIME-INV-02 Clinical State/CDP != Runtime Checkpoint
+RUNTIME-INV-03 Trace != Clinical Truth
+RUNTIME-INV-04 Capability Result cannot bypass Business Owner/Policy/G2
+RUNTIME-INV-05 Scheduler routes from committed state, not uncommitted candidate
+RUNTIME-INV-06 Business Resume validity != Runtime Resume compatibility
+RUNTIME-INV-07 stale/missing checkpoint alone cannot invalidate a valid business event
+RUNTIME-INV-08 replay cannot apply the same intended business effect twice
+RUNTIME-INV-09 one accepted event may legitimately cause multiple distinct governed effects
+RUNTIME-INV-10 same event_id transport replay maps to the same canonical event
+RUNTIME-INV-11 Business Resume DUPLICATE itself produces zero new clinical effects
+RUNTIME-INV-12 commit conflict cannot be solved by blind stale replay
+RUNTIME-INV-13 safety-sensitive failure cannot become ordinary clinical continuation
+RUNTIME-INV-14 Runtime retry cannot bypass idempotency/version/safety policy
+RUNTIME-INV-15 one Consultation cannot have two authoritative clinical writers
+RUNTIME-INV-16 fixed 5-step workflow is migration source, not target truth
+RUNTIME-INV-17 framework choice cannot redefine frozen Unit/Capability/Contract semantics
+RUNTIME-INV-18 same Consultation cannot silently switch bound clinical semantics mid-flight
+RUNTIME-INV-19 checkpoint loss after clinical commit must be recoverable from authoritative state
+RUNTIME-INV-20 Runtime failure != business negative result
+RUNTIME-INV-21 Thread/Run completion != Consultation completion
+RUNTIME-INV-22 external send success != Clinical State commit
+RUNTIME-INV-23 Capability Exists != Capability Active
+RUNTIME-INV-24 Runtime may invoke a clinical Capability only through a valid CapabilityBindingRef
+RUNTIME-INV-25 Candidate/Withdrawn/Expired Knowledge cannot become new formal clinical basis
+RUNTIME-INV-26 safety-critical Rule must resolve to an approved RuleReleaseRef
+RUNTIME-INV-27 capability / knowledge / rule rollback cannot rewrite historical Run bindings
+RUNTIME-INV-28 new releases apply to new bindings unless an explicit auditable migration is authorized
+RUNTIME-INV-29 Checkpoint must preserve references needed to reconstruct the bound governance context
+RUNTIME-INV-30 Runtime cache cannot override authoritative registry/release semantics
+```
+
+---
+
+# 4. Runtime 总体逻辑架构
+
+```text
+API / Application Ingress
+        ↓
+Canonical Business Event / Effect Ledger
+        ↓
+Clinical Run Coordinator
+        ↓
+Binding & Release Resolver
+        ↓
+Unit Scheduler / Transition Engine
+        ├────────→ Business Owner / D01-D10 Policy Host
+        ├────────→ Capability Invocation Gateway
+        │             ├→ P06 CapabilityBindingRef validation
+        │             ├→ P04 KnowledgeReleaseRef / RuleReleaseRef resolution
+        │             ├→ P03 Model Runtime / Prompt Registry
+        │             └→ C01-C06
+        └────────→ Delivery Side-effect Coordinator
+                              ↓
+                Decision / accepted business effect
+                              ↓
+                    K09 State Change Proposal
+                              ↓
+          P01 State Governance / Clinical CDP Adapter
+                              ↓
+                   Clinical State Version n+1
+
+Cross-cutting:
+P02 Durable Clinical Resume
+P05 Trace / Audit
+P06 能力范围 / 能力包 / 版本治理
+P04 医学知识与证据治理
+Runtime persistence / Registry / Outbox / delivery receipt
+```
+
+正式业务链保持：
+
+```text
+Capability Result
+→ Business Owner / Deterministic Policy interprets
+→ Deterministic Decision / accepted business effect
+→ State Change Proposal
+→ G2/P01
+→ Commit Result
+→ New Clinical State Version
+```
+
+---
+
+# 5. 逻辑组件职责
+
+## 5.1 API / Application Ingress
+
+接收 Start / Answer / Correction / Cancel，建立 identity / consultation / correlation context，转换 K02 Business Event。
+
+禁止：
+
+```text
+前端生成“正常/低风险”临床默认值
+Controller 直接推进 fixed step
+绕过 K09/G2 写 Clinical Truth
+```
+
+## 5.2 Canonical Business Event / Effect Ledger
+
+负责 durable canonical event identity、transport replay 映射、business decision refs、effect identities、proposal/commit/no-effect refs。
+
+Ledger 不拥有 `ACCEPTED / DUPLICATE / EXPIRED / REJECTED / APPLIED` 的业务裁决。
+
+```text
+same event_id replay
+→ attach to original canonical event
+→ no second Business Decision
+```
+
+## 5.3 Clinical Run Coordinator
+
+为 canonical event 或合法 internal continuation 建立/恢复 Run，驱动 bounded execution，并协调 Scheduler、Policy、Capability、State Governance、Delivery。
+
+不拥有 Consultation Lifecycle 真值。
+
+## 5.4 Binding & Release Resolver
+
+这是 Phase 7/8 补齐后新增的显式 Runtime 逻辑职责，不要求一定独立成服务。
+
+负责在 Run / Capability 调用前解析并校验：
+
+```text
+CapabilityBindingRef
+KnowledgeReleaseRef
+RuleReleaseRef
+PromptReleaseRef
+ModelRouteRef
+Contract compatibility context
+```
+
+至少验证：
+
+```text
+能力状态允许使用
+未过 effective_until
+scope / population / region / language / channel 匹配
+knowledge release = PUBLISHED 且当前有效
+rule release = approved/current
+prompt/model/tool/skill 在 capability allowlist
+contract/schema compatible
+```
+
+任何一项不满足：
+
+```text
+不得静默 fallback 到未批准版本
+不得使用“最新版本”替代已绑定版本
+→ 进入明确 failure / D07 路由
+```
+
+## 5.5 Unit Scheduler / Transition Engine
+
+输入：
+
+```text
+committed Clinical State
++ Consultation Lifecycle
++ Clinical Risk / Safety Gate / Clinical Readiness / Delivery Readiness
++ accepted canonical event context
++ pending interaction refs
++ deterministic decision refs
++ bound governance context
+```
+
+输出：`next eligible Unit / WAIT / no-progress / terminal execution intent`。
+
+只从 committed state 路由。
+
+## 5.6 Business Owner / Policy Host
+
+承载 D01-D10、Business Owner interpretation、Deterministic Decision，以及完成业务解释后的 K09 Proposal production。
+
+Owner 保持：
+
+```text
+F4 → Clinical Risk
+G4 → Safety Gate
+F7 → Delivery Readiness
+G2 → Clinical State Version
+Runtime → Thread / Run / Checkpoint
+```
+
+## 5.7 Capability Invocation Gateway
+
+调用前必须获得有效 `CapabilityBindingRef`。
+
+调用流程：
+
+```text
+resolve CapabilityBindingRef
+↓
+validate ACTIVE / effective period / scope / population
+↓
+resolve allowed RuleReleaseRef / KnowledgeReleaseRef
+↓
+validate prompt/model/tool/skill allowlists
+↓
+invoke approved C01-C06 / P03 / P04 assets
+↓
+return K04 Capability Result with binding/release refs
+```
+
+Gateway 管理执行级 timeout/cancellation/correlation，并分离旧 ToolResult execution status 与业务 Capability Result。
+
+Capability 不得直接 commit Clinical State。
+
+## 5.8 P01 State Governance / Clinical CDP Adapter
+
+```text
+StateCommitter foundation
++
+CDP aggregate/version/locking
+→ 唯一正式 Clinical State 写入边界
+```
+
+职责：authorization、source/field/consent validation、base version validation、typed proposal validation、atomic commit、audit/evidence refs、Clinical State Version advance。
+
+## 5.9 P02 Durable Clinical Resume
+
+负责 Thread、Run、Checkpoint、interrupt/wait execution context、pending refs、runtime expiry、retry/repair metadata、resume compatibility。
+
+不拥有 Business Resume validity。
+
+## 5.10 Delivery Side-effect Coordinator
+
+负责 Question / Result 的 durable delivery intent、idempotency key、transport attempt、receipt、reconciliation。
+
+不拥有 Question lifecycle、Consultation lifecycle 或 Delivery Readiness。
+
+---
+
+# 6. Runtime 核心对象
+
+## 6.1 Consultation
+
+业务对象，不属于 Runtime ownership。
+
+## 6.2 Thread
+
+表示 Consultation 的 durable execution lineage。
+
+```text
+Thread state != Consultation state
+```
+
+同一 Consultation 只能有一个正式 Clinical State orchestration lineage。
+
+## 6.3 Run
+
+Run 是一个 canonical event 或合法 internal continuation 的有限执行区间。
+
+Run 必须绑定或引用稳定的治理上下文：
+
+```text
+clinical_state_version
+capability_binding_refs[]
+knowledge_release_refs[]
+rule_release_refs[]
+prompt_release_refs[]
+model_route_refs[]
+contract/runtime schema versions
+```
+
+Run 结束于 WAIT、terminal、controlled failure、no-progress 或当前 consequences 已收敛。
+
+## 6.4 Checkpoint
+
+Checkpoint 是执行恢复快照，不是临床事实快照。
+
+至少表达/引用：
+
+```text
+checkpoint_id
+thread_id
+run_id
+consultation_id
+based_on_clinical_state_version
+execution_cursor / next_business_intent
+pending_event_ref / pending_interaction_ref
+
+capability_binding_refs[]
+knowledge_release_refs[]
+rule_release_refs[]
+prompt_release_refs[]
+model_route_refs[]
+contract_version
+runtime_schema_version
+
+trace refs
+created_at
+integrity metadata
+```
+
+Checkpoint 不应复制完整 Knowledge/Rule/Capability 对象；保存稳定引用并由 Registry/Release Store 解析。
+
+## 6.5 Pending Interaction
+
+业务 Question 状态来自 governed Clinical State/K06。Runtime 只保存引用、expected state context、expiry 和 correlation refs。
+
+---
+
+# 7. Canonical Event 与 Effect 幂等模型
+
+```text
+Canonical Event ID
+!= Effect ID
+```
+
+同一个 accepted event 可以合法产生多个不同 intended effects。
+
+Runtime 内部允许 at-least-once execution，但临床侧要求：
+
+```text
+same intended effect
+→ at most once formal application
+```
+
+Effect identity 至少语义绑定：
+
+```text
+event_id
++ unit/owner/effect type
++ stable target
++ relevant binding/version context
+```
+
+---
+
+# 8. 标准 Run 执行协议
+
+```text
+1. Receive K02 input
+2. resolve-or-create canonical Event identity
+3. same event_id replay → attach original processing
+4. Load authoritative Clinical State
+5. Business applicability/resume validation
+6. persist Business Decision ref
+7. non-ACCEPTED event 收敛，0 新 clinical effect
+8. Resolve Consultation binding context
+9. Validate CapabilityBindingRef / KnowledgeReleaseRef / RuleReleaseRef / contract compatibility
+10. Open/resume Thread and create Run
+11. Reconcile already-applied effects
+12. Scheduler 从 committed state 选择 next eligible Unit
+13. Resolve Unit-required C/P/D dependencies
+14. Capability Gateway 调用 approved Capability，或执行 deterministic policy
+15. Business Owner/Resolver interprets
+16. 形成 Decision / intended effect
+17. 形成独立 effect idempotency identity
+18. 如需 state change → K09 Proposal → G2/P01 commit
+19. 处理 Commit Result
+20. reload authoritative Clinical State
+21. 继续下一 consequence，直到 WAIT/terminal/failure/no-progress
+22. 在 durable boundary 写 Checkpoint，包含治理绑定 refs
+23. canonical event 达到业务 completion 后记录 APPLIED/terminal outcome
+24. 全程关联 Trace/Audit refs
+```
+
+若 binding/release validation 失败，不允许把问题降级成普通“无结果”；必须进入明确 failure semantics / U14。
+
+---
+
+# 9. Unit 路由模型
+
+V1 不使用固定 `current_step=1..5` 或 completeness threshold 作为系统真源。
+
+普通事实主干：
+
+```text
+committed Facts
+→ U03 Risk
+→ U04 Safety
+→ U05 Readiness
+```
+
+Clinical Readiness 决定适用的 U06 / U08(first-entry) / U10 / U11 等 Clinical Readiness 路径；post-DDx normal-progress 可由 PostDdxRoutingDecision 进入 U08 reassessment 或 U12 delivery preparation。
+
+U14 failure routing 可抢占普通路径。
+
+---
+
+# 10. WAIT / Resume 协议
+
+Business Resume 必须先于 Runtime Resume。
+
+对新的 canonical USER_ANSWER event：
+
+```text
+USER_ANSWER
+→ Business Resume Decision
+→ ACCEPTED / DUPLICATE / EXPIRED / REJECTED
+→ 只有 ACCEPTED 才允许产生新 effects
+→ Runtime resume / rehydrate
+```
+
+Resume compatibility 至少检查：
+
+```text
+checkpoint → Clinical State Version compatibility
+checkpoint → runtime schema compatibility
+checkpoint → CapabilityBindingRef compatibility
+checkpoint → contract compatibility
+pending interaction validity
+```
+
+对于 Knowledge/Rule：
+
+- 历史 Run 重放使用历史绑定 refs；
+- 新的未开始 Unit 调用不得使用已经 WITHDRAWN/EXPIRED 的 release 生成新的临床判断；
+- 若无法在“不改变已完成历史 effect”的前提下继续安全执行，则进入 D07/U14，而不是静默换 release。
+
+stale/missing checkpoint 时，优先从 authoritative Clinical State + accepted event + ledger + bound refs 重建。
+
+---
+
+# 11. Question / Delivery 外部副作用一致性
+
+```text
+Question SELECTED commit
+→ durable delivery intent
+→ stable delivery_id/idempotency
+→ transport send
+→ durable receipt
+→ delivery confirmation
+→ G2 atomic commit:
+   Question DELIVERED_TO_USER
+   + Consultation WAITING_USER
+→ checkpoint
+```
+
+crash/replay 必须通过稳定 delivery identity reconciliation，禁止重复外发。
+
+---
+
+# 12. 并发、Conflict 与单写者
+
+同一 Consultation 任一时刻只有一个正式 Clinical State 主写路径。
+
+遇到 `CONFLICT`：
+
+```text
+reload authoritative Clinical State
+→ reconcile intended effect
+→ 判断 event/effect 与 binding context 是否仍适用
+→ 必要时重新执行 Owner/Policy interpretation
+→ 形成基于新版本的新 Proposal
+```
+
+禁止旧 Proposal 盲目重试。
+
+---
+
+# 13. Checkpoint 与 Crash Recovery
+
+Durable boundary：
+
+```text
+canonical event identity durable
+formal state commit completed
+entered WAIT
+external side-effect outcome durable
+run terminal/no-progress
+binding context resolved/changed through approved migration
+```
+
+## 13.1 crash after commit / before checkpoint
+
+从 authoritative Clinical State + event/effect ledger + commit refs 重建 cursor，不能重复 effect。
+
+## 13.2 crash after Capability / before Proposal
+
+能力结果不是 Clinical Truth；恢复后重新校验原 `CapabilityBindingRef` 和 release refs 后才可决定 retry/repair。
+
+## 13.3 binding/release changed while crashed
+
+历史已完成 effect 保留原 refs。
+
+未完成 effect：
+
+```text
+原 binding/release 仍合法 → 按原 refs 恢复
+原 release 已撤回/失效且不可继续 → D07/U14
+```
+
+禁止自动改用“最新版本”。
+
+---
+
+# 14. Failure 与 Retry
+
+分开：
+
+```text
+A. execution/tool failure
+B. capability business_status + reason_code + retryable
+C. binding/release validation failure
+D. D07 business failure routing decision
+```
+
+Retry 受：
+
+```text
+retryable
+attempt/time budget
+idempotency
+clinical-state version
+capability binding
+knowledge/rule release validity
+safety impact
+fallback policy
+D07
+```
+
+必须保持：
+
+```text
+risk service timeout != NO_HIGH_RISK_SIGNAL
+DDx failure != empty normal DDx
+Safety failure != SAFE
+invalid binding != UNSUPPORTED normal outcome
+withdrawn knowledge != NO_EVIDENCE
+Capability SUCCESS + Commit FAILED != Unit success
+```
+
+---
+
+# 15. Version / Binding / Release 运行规则
+
+Consultation 至少绑定：
+
+```text
+scope_version
+capability binding context
+contract compatibility context
+```
+
+Run 至少可追溯：
+
+```text
+runtime_version
+capability_binding_refs[]
+policy versions
+rule_release_refs[]
+knowledge_release_refs[]
+prompt_release_refs[]
+model_route_refs[]
+contract/schema version
+```
+
+## 15.1 Capability activation
+
+Runtime 不允许根据“代码存在”判断 capability 可调用。
+
+必须满足：
+
+```text
+CapabilityBindingRef.status 可用
+within effective period
+scope/population/region/language/channel compatible
+all referenced releases / routes are authorized
+contract compatible
+```
+
+## 15.2 Knowledge / Rule loading
+
+正式临床调用只能装载绑定的 release：
+
+```text
+KnowledgeReleaseRef.status = PUBLISHED / allowed active state
+RuleReleaseRef.status = approved/current active state
+```
+
+候选、撤回、过期、退役 release 不得用于新的正式 Clinical Decision。
+
+## 15.3 静默升级禁止
+
+进行中的 Consultation 默认保持已绑定临床语义版本。
+
+```text
+new capability/knowledge/rule release
+!= automatic mid-flight switch
+```
+
+只有显式、可审计 migration policy 才允许迁移。
+
+---
+
+# 16. Rollback 运行语义
+
+## 16.1 Capability rollback
+
+```text
+发现新能力版本问题
+→ stop new binding
+→ activate approved rollback capability version
+→ new Run / new Consultation use rollback version
+→ historical Run keeps original binding refs
+```
+
+## 16.2 Knowledge / Rule rollback
+
+```text
+release 出现质量/安全问题
+→ WITHDRAW / DEPRECATE / EXPIRE
+→ stop new formal use
+→ activate approved rollback target
+→ historical decisions keep original refs
+```
+
+Rollback 不能删除或改写历史 Trace / Decision / Commit。
+
+---
+
+# 17. 逻辑持久化职责
+
+```text
+Clinical State Store
+  governed CDP + version history
+
+Canonical Event / Effect Ledger
+  canonical event identity + replay mapping
+  + decision/effect/commit refs
+
+Runtime Store
+  Thread + Run + Checkpoint + retry/expiry/cursor
+
+Delivery/Outbox Store
+  intent + idempotency + transport receipt/reconciliation
+
+Trace/Audit Store
+  execution/audit refs
+
+Version/Registry Store
+  CapabilityBindingRef
+  Scope / Capability metadata
+  KnowledgeReleaseRef
+  RuleReleaseRef
+  PromptReleaseRef
+  ModelRouteRef
+  Contract / Runtime schema compatibility metadata
+  rollback targets
+```
+
+Runtime Store 不得成为第二份 Clinical Truth store。
+
+Registry cache 可以存在，但缓存失效策略不能让已撤回/过期 release 继续被新的正式调用使用。
+
+---
+
+# 18. Trace / Observability 关联
+
+至少贯穿：
+
+```text
+consultation_id
+clinical_state_version
+event_id
+effect_id
+thread_id
+run_id
+unit_id
+capability_call_id
+capability_binding_ref
+knowledge_release_refs[]
+rule_release_refs[]
+prompt_release_refs[]
+model_route_refs[]
+decision_id
+proposal_id
+commit_result_ref
+checkpoint_id
+delivery_id
+trace_id
+```
+
+```text
+Trace = what happened
+Audit = governed action evidence
+Clinical State = business truth
+```
+
+默认不复制完整 PHI。
+
+---
+
+# 19. Brownfield 资产映射
+
+| 当前资产 | Phase 9 定位 | 处置 | 关键变化 |
+|---|---|---|---|
+| DiagnosisController | Ingress | KEEP + ADAPT | 转为 Business Event/Query façade |
+| DiagnosisOrchestrationService | legacy orchestration seam | REFACTOR | 逐步让出 fixed workflow 主控 |
+| CDPManager | Clinical State aggregate adapter | KEEP + REFACTOR | 移除无治理直接写 |
+| DiagnosisWorkflowOrchestrator | legacy fixed scheduler | REPLACE incrementally | 5-step 不再是系统真源 |
+| AgentLoop | historical asset | DO NOT PROMOTE | 不恢复开放式临床主控 |
+| StateCommitter | P01 foundation | REUSE_FOUNDATION + ADAPT | 接管 authoritative Clinical CDP write |
+| Python Runtime | execution foundation | REUSE_FOUNDATION + ADAPT | 上层新增 Clinical Runtime/P02 |
+| Model Runtime | P03 | REUSE_FOUNDATION + ADAPT | 受 CapabilityBindingRef / Prompt / Model route 管理 |
+| KG/RAG/Knowledge assets | P04 | REFACTOR + ADAPT | 受 KnowledgeReleaseRef 治理 |
+| Risk/Safety Rule assets | P04/Dxx input | REFACTOR + ADAPT | 受 RuleReleaseRef 治理 |
+| Execution Trace | P05 | REUSE_FOUNDATION + ADAPT | 增加 binding/release refs |
+| Capability Package 思路 | P06 | ABSORB + ADAPT | 形成正式 binding / lifecycle / allowlist / rollback |
+| Dialog Redis/memory | cache/execution aid | REMOVE AS TRUTH | 不作为正式状态源 |
+| Frontend Zustand | UI local state | KEEP AS UI LOCAL | 不生成 Clinical Truth |
+| Legacy LLM | legacy dependency | REPLACE / REMOVE | 不重新启用为正式临床路径 |
+
+---
+
+# 20. 部署与技术选型原则
+
+V1 首先保证：
+
+```text
+one authoritative Clinical Orchestration control path
++
+one authoritative State Governance write path
++
+approved and bound Capability execution
++
+versioned Knowledge/Rule release resolution
++
+durable Runtime/Event/Delivery persistence
++
+Trace/Registry
+```
+
+本阶段不冻结 LangGraph/Temporal/Cadence、自研 scheduler、MQ、数据库产品或微服务粒度。
+
+---
+
+# 21. Brownfield 迁移策略
+
+## 21.1 Strangler，不双主控
+
+```text
+legacy-bound Consultation → old workflow
+new-runtime-bound Consultation → Clinical Runtime
+```
+
+同一 Consultation 不允许 legacy/new 双主控或双写 Clinical State。
+
+## 21.2 Shadow
+
+允许 shadow calculation / route comparison / capability output / trace；不得 commit Clinical State、不得发送给用户、不得形成第二套 business effect。
+
+## 21.3 按 Unit 增量建设
+
+Foundation 只保留首个 Unit 必需的最小跨 Unit 基础；P03/P04/P06 的后续治理能力按第一个真实消费者 Unit 增量扩展。
+
+这与 Phase 7 的：
+
+```text
+FOUNDATION_PREREQUISITE
+FIRST_CONSUMER_UNIT
+INCREMENTAL_EXTENSION
+DEFERRED
+```
+
+保持一致。
+
+---
+
+# 22. Slice A Runtime 映射
+
+```text
+U01
+→ canonical event
+→ C01 subject/problem semantics
+→ resolve minimal CapabilityBindingRef / scope binding
+→ D10 scope
+→ D01 lifecycle
+→ governed commit
+
+U02
+→ C01 parse/normalize
+→ Owner interpretation
+→ typed Proposal
+→ P01 commit
+
+U03/U04
+→ validate C02 binding + RuleReleaseRef / KnowledgeReleaseRef
+→ C02 risk evidence
+→ D09/F4 Risk commit
+→ D02/G4 Safety Gate commit
+
+Non-A1 baseline / A1 bootstrap completed path:
+
+U05
+→ D03 Readiness
+→ commit
+
+U06 QUESTION_SELECTION_DELIVERY
+→ validate C03 binding / question policy
+→ fresh C03 question/gap evaluation
+→ D04 stopping
+→ Question SELECTED commit
+→ durable delivery
+→ DELIVERED_TO_USER + WAITING_USER commit
+→ checkpoint with binding refs
+
+A1 bootstrap pre-readiness / revalidation path is defined in Section 17 and supersedes the direct U04→U05 assumption while bootstrap F3 is not current.
+
+U07
+→ Business Resume validation
+→ validate resume compatibility incl. capability binding / contract
+→ rehydrate
+→ reconcile completed effects
+→ continue remaining consequences idempotently
+
+U11/U14/U15
+→ Safe Exit / Failure / Cancel-Expire closure
+```
+
+---
+
+# 23. Runtime correctness 必测场景
+
+保留原 RTE-01～RTE-22，并新增：
+
+```text
+RTE-23 capability code exists but binding not ACTIVE → invocation blocked
+RTE-24 CapabilityBindingRef expired → no silent latest-version fallback
+RTE-25 capability allowlist excludes prompt/model/tool → invocation blocked
+RTE-26 KnowledgeReleaseRef = CANDIDATE → cannot support formal Clinical Decision
+RTE-27 KnowledgeReleaseRef = WITHDRAWN / EXPIRED → no new formal use
+RTE-28 safety-critical RuleReleaseRef missing/invalid → ordinary continuation blocked
+RTE-29 checkpoint resumes with historical valid binding refs → historical effects remain reproducible
+RTE-30 release changed after checkpoint → no silent mid-flight semantic switch
+RTE-31 capability rollback → new bindings use rollback version, historical Run refs unchanged
+RTE-32 knowledge/rule rollback → new decisions use rollback target, historical Decision refs unchanged
+RTE-33 stale registry cache cannot authorize withdrawn release
+RTE-34 Trace must identify capability/knowledge/rule/prompt/model versions used for each governed result
+```
+
+---
+
+# 24. 与后续阶段边界
+
+Phase 9 冻结：
+
+```text
+Runtime ownership
+logical component boundaries
+Thread/Run/Checkpoint semantics
+Canonical Event/Effect idempotency
+Unit scheduling
+WAIT/Resume
+Capability binding validation
+Knowledge/Rule release loading
+rollback runtime semantics
+external side-effect consistency
+State commit/conflict integration
+failure/retry control
+logical persistence
+Brownfield runtime migration
+```
+
+Phase 10：前端与交付展示。  
+Phase 11：完整安全、异常、Eval/E2E/chaos/resilience/observability acceptance。  
+Phase 12：具体部署、CI/CD、SLO、迁移执行、回滚 runbook、legacy retirement、production authorization。
+
+---
+
+# 25. Phase 9 同步审查与冻结结论
+
+原 P9-R01～P9-R07 的关闭结论继续成立，不重新打开。
+
+本次 Phase 7 / Phase 8 同步新增：
+
+```text
+P9-SYNC-01 CLOSED
+Phase 8 新增 CapabilityBindingRef
+→ Runtime 增加 Binding & Release Resolver 与调用前激活/范围/白名单校验。
+
+P9-SYNC-02 CLOSED
+P04 新增 Knowledge Release 生命周期
+→ Runtime 明确只装载已批准、当前有效的 KnowledgeReleaseRef。
+
+P9-SYNC-03 CLOSED
+Phase 8 新增 RuleReleaseRef
+→ 安全关键 Policy/Capability 输入必须解析正式 RuleReleaseRef。
+
+P9-SYNC-04 CLOSED
+Checkpoint 旧设计只记录粗粒度 version binding
+→ 补 capability/knowledge/rule/prompt/model/contract refs。
+
+P9-SYNC-05 CLOSED
+Resume 旧兼容检查不足
+→ 增加 capability binding / contract / release compatibility。
+
+P9-SYNC-06 CLOSED
+Rollback 过去仅作为版本治理概念
+→ 明确新绑定切换、历史 Run 不改写的 Runtime 语义。
+
+P9-SYNC-07 CLOSED
+Trace 过去不足以重放新的治理上下文
+→ 增加 capability/knowledge/rule/prompt/model refs。
+```
+
+冻结检查：
+
+- [x] Runtime 与 Clinical State Owner 边界无歧义；
+- [x] Thread / Run / Checkpoint / Consultation 分离；
+- [x] Scheduler 只从 committed state 路由；
+- [x] Capability → Decision → Proposal → Commit 不被绕过；
+- [x] Business Resume 与 Runtime Resume 分离；
+- [x] Event identity 与 Effect identity 分离；
+- [x] Question/Delivery 有 crash-safe reconciliation；
+- [x] 同一 Consultation 只有一个 authoritative writer；
+- [x] Capability Exists != Capability Active；
+- [x] Capability invocation 必须经过 CapabilityBindingRef；
+- [x] Knowledge/Rule 正式使用必须经过 Release Ref；
+- [x] Checkpoint 保留治理绑定引用；
+- [x] Resume 不静默切换 bound semantics；
+- [x] Rollback 不改写历史运行；
+- [x] Trace 可定位能力/知识/规则/Prompt/Model 版本；
+- [x] 未新增 K11；
+- [x] 未受 A1 影响的 Phase 1–8 frozen baseline 语义保持不变；A1 影响范围已按 AUTH-U05-A1-FROZEN-AMEND-001 受控修订并等待独立 re-review。
+
+最终状态：
+
+```text
+Phase 9 A1 affected scope = REFROZEN / V1
+Unaffected Runtime V1 semantics = FROZEN BASELINE
+Implementation Authorization = NOT IMPLIED
+Merge Authorization = NOT IMPLIED
+```
+
+
+---
+
+# 17. A1 Controlled Amendment — Scheduler / Safety Barrier Runtime
+
+> Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
+> Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
+> Status: **A1 REFROZEN / V1**
+
+## 17.1 A1 ordinary runtime chain
+
+A1 replaces the initial ordinary：
+
+```text
+Facts
+→ U03
+→ U04
+→ U05
+```
+
+with：
+
+```text
+Facts
+→ U03
+→ U04 current Gate
+→ routing projection
+→ PRE_READINESS_A1_F3_C03_ELIGIBLE
+→ U06 PRE_READINESS_GAP_ASSESSMENT
+→ validate C03 CapabilityBindingRef
+→ C03
+→ U06/F3 Owner interpretation
+→ K09 StateChangeProposal
+→ G2/P01 canonical F3 commit
+→ reload authoritative Clinical State
+→ POST_F3_SAFETY_REVALIDATION_BARRIER
+→ A1 V1 canonical F3 commit sets RISK_REEVALUATION_REQUIRED
+→ U03 post-F3 Risk reevaluation
+→ U04 current Gate from valid Risk/Safety evaluation basis
+→ U06 F3_CURRENT_VERSION_REVALIDATION
+→ deterministic F3 revalidation decision
+→ current F3 readiness input
+→ routing projection
+→ U05_ELIGIBLE
+→ U05
+→ D03
+```
+
+Scheduler 仍只从 committed authoritative state 路由。
+
+## 17.2 A1 routing authorization
+
+Current U04 Gate 只产生一个：
+
+```text
+routing_authorization_id
+```
+
+绑定：
+
+```text
+business_event_identity
+u04_gate_ref
+clinical_state_version
+BootstrapArchitectureBindingRef = A1
+restricted_context_ref when applicable
+```
+
+pre-readiness F3 commit 推进 Clinical State Version 后：
+
+```text
+old Gate / old routing_authorization_id
+= STALE / NON_ROUTABLE
+```
+
+Barrier 后新 Gate 产生新的 authorization。
+
+若相同 F3_CANONICAL_EFFECT_ID 已 current-version revalidated：
+
+```text
+new authorization
+→ U05 eligibility
+```
+
+不得再次触发同一 pre-readiness F3 effect。
+
+## 17.3 Safety barrier dependency-validity semantics
+
+Barrier 不是要求：
+
+```text
+Risk Decision version
+= Safety Gate commit version
+= final current Clinical State Version
+```
+
+Barrier 要求：
+
+```text
+Risk Decision 对 U04 evaluation basis 有效
++ U04 Gate 是当前 committed Gate
++ Gate 声明的 Risk/Safety dependencies 未被后续变化破坏
++ F3 current-version revalidation = REVALIDATED_CURRENT
++ current F3 readiness input 已形成
++ current routing authorization permits U05
+```
+
+```text
+version advancement alone
+!= dependency invalidation
+```
+
+U04 自身 downstream derived commit 不得仅因推进 version 就强迫 U03 无限重跑。
+
+## 17.4 F3 revalidation runtime consequence
+
+Trigger：
+
+```text
+POST_F3_SAFETY_BARRIER_CURRENT_GATE_READY
+```
+
+Scheduler invokes：
+
+```text
+U06 F3_CURRENT_VERSION_REVALIDATION
+```
+
+该 mode：
+
+```text
+Owner = F3
+C03 = NOT_INVOKED by default
+Clinical State mutation = NONE
+Question side effect = NONE
+```
+
+Outcome：
+
+```text
+REVALIDATED_CURRENT
+→ current F3 readiness input
+→ may continue U05
+
+REASSESSMENT_REQUIRED
+→ no U05/D03
+→ Scheduler starts fresh U06 PRE_READINESS_GAP_ASSESSMENT with current bindings
+
+FAILED
+→ no U05/D03
+→ governed retry/reload or U14 eligibility
+```
+
+Runtime 不得自己判断旧 F3 是否仍有业务效力。
+
+## 17.5 No-cycle
+
+```text
+same F3_CANONICAL_EFFECT_ID
++ only downstream Risk/Safety/routing/checkpoint changes
+→ no second canonical F3 commit
+```
+
+只有真实 F3 dependency change 才允许重新 assessment。
+
+## 17.6 Crash/replay checkpoint
+
+A1 durable checkpoint 至少保留：
+
+```text
+canonical event identity
+routing_authorization_id
+F3_CANONICAL_EFFECT_ID
+F3 commit result
+barrier stage
+Risk decision ref / evaluation basis refs
+current U04 Gate ref
+F3_REVALIDATION_ID / revalidation result ref
+CapabilityBindingRef
+KnowledgeReleaseRef
+RuleReleaseRef
+trace/audit refs
+```
+
+Crash recovery：
+
+```text
+reload authoritative Clinical State
+→ reconcile effect identity / binding context
+→ attach prior committed effect when already applied
+→ never duplicate canonical F3 effect
+```
+
+## 17.7 Question candidate lifetime
+
+MODE-1 pre-readiness 的 C03 question candidates：
+
+```text
+support/trace-only
+never reused by QUESTION_SELECTION_DELIVERY
+```
+
+后续 CAN_ASK_MORE 必须触发 MODE-2 的 fresh governed C03 invocation。
+
+## 17.8 Current amendment status
+
+```text
+Phase 9 A1 affected scope
+= REFROZEN / V1
+
+Re-freeze
+= GRANTED / COMPLETE
+
+Runtime Implementation Authorization
+= NOT_GRANTED
+```
+
+
+---
+
+# 18. Post-DDx Controlled Amendment — Runtime Routing
+
+> Authorization: `AUTH-U05-PDX-FROZEN-AMEND-001`  
+> Reviewed design source: PR #153 exact head `a5b8aa6e23e5f54a0c2e1884ed027d7f7b7cbeee`  
+> Status: **REFROZEN / V1**
+
+## 18.1 Runtime chain
+
+```text
+U08 DDx
+→ U09 F3/post-DDx reevaluation
+→ PostDdxRoutingDecision
+```
+
+Then exactly one ordinary consequence：
+
+```text
+TO_U05_CLINICAL_READINESS
+→ U05/D03
+
+TO_U08_REASSESSMENT
+→ U08
+
+TO_U12_DELIVERY_PREPARATION
+→ U12/F7
+
+FAILURE_ROUTE
+→ U14 / governed recovery
+```
+
+Safety may preempt before ordinary routing.
+
+## 18.2 Scheduler boundary
+
+Scheduler consumes the committed/current:
+
+```text
+PostDdxRoutingDecision
+```
+
+and does not infer post-DDx semantics itself.
+
+Scheduler must not:
+
+```text
+map ANALYSIS_RESULT_AVAILABLE to READY_FOR_CLINICAL_ANALYSIS
+infer Delivery Readiness from no-gap
+bypass U05/D03 when a Clinical Readiness consequence exists
+```
+
+## 18.3 U12 delivery preparation
+
+```text
+TO_U12_DELIVERY_PREPARATION
+```
+
+means only that U12 may validate its S_in and begin F7 delivery assembly/validation.
+
+It does not mean:
+
+```text
+Delivery Readiness READY
+delivery already sent
+Consultation COMPLETED
+```
+
+F7 remains the sole business interpreter of Delivery Readiness.
+
+## 18.4 Reassessment
+
+```text
+TO_U08_REASSESSMENT
+```
+
+requires current U08 binding/release context and no-progress protection.
+
+If current owner outputs expose a Clinical Readiness consequence, router must instead choose：
+
+```text
+TO_U05_CLINICAL_READINESS
+```
+
+## 18.5 Current status
+
+```text
+Phase 9 post-DDx affected scope
+= REFROZEN / V1
+
+Runtime implementation
+= NOT_AUTHORIZED
+```
+
+
+---
+
+# 19. Post-Analysis Routing Extension — Runtime
+
+> Authorization: `AUTH-U05-PA-FROZEN-AMEND-001`  
+> Reviewed design source: PR #155 exact head `7e2d4d4255d51a10f58c63dec4e2ccb53920c33f`  
+> Status: **REFROZEN / V1**
+
+## 19.1 Generalized runtime router
+
+Section 18 的 `PostDdxRoutingDecision` 被 generalized：
+
+```text
+PostAnalysisRoutingDecision
+```
+
+支持：
+
+```text
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+Scheduler 只消费 committed/current routing decision，不自行解释 F3/F5/F6 semantics。
+
+## 19.2 U10 return path
+
+```text
+U10
+F6 VALID + NOT_NEEDED
+→ U09
+→ PostAnalysisRoutingDecision(POST_OFFLINE_ASSESSMENT)
+```
+
+不是：
+
+```text
+NOT_NEEDED
+→ U12
+```
+
+## 19.3 F3 revalidation loop
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+→ U06 MODE-3
+```
+
+结果：
+
+```text
+REVALIDATED_CURRENT
+→ materialize current F3 readiness input
+→ re-enter PostAnalysisRoutingDecision
+
+REASSESSMENT_REQUIRED
+→ fresh F3 assessment path
+→ re-enter routing after current F3 exists
+
+FAILED
+→ governed failure route
+```
+
+Scheduler 不得把 `ABSENT_BY_DESIGN` 当作 no-gap。
+
+## 19.4 Routing identity
+
+Runtime checkpoint / replay 必须绑定：
+
+```text
+POST_ANALYSIS_ROUTING_ID
+evaluation_context
+input Clinical State Version
+accepted F3/F5/F6 refs
+current Gate ref
+policy version
+```
+
+POST_DDX 与 POST_OFFLINE replay 不得互相 attach。
+
+## 19.5 Current status
+
+```text
+Phase 9 post-analysis extension
+= REFROZEN / V1
+
+Runtime implementation
+= NOT_AUTHORIZED
+```
+
+
+---
+
+# 20. Clinical Continuation Routing — Runtime
+
+> Authorization: `AUTH-U05-CCR-FROZEN-AMEND-001`  
+> Reviewed design source: PR #157 exact head `4c3c7eb7e9aa9b6f9506871f7d28e033b4a6482e`  
+> Status: **REFROZEN / V1**
+
+## 20.1 Generalized runtime continuation router
+
+Section 19 的 PostAnalysis router 被 generalized：
+
+```text
+ClinicalContinuationRoutingDecision
+```
+
+contexts：
+
+```text
+POST_USER_FACT_UPDATE
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+## 20.2 POST_USER_FACT_UPDATE sequence
+
+```text
+accepted USER_ANSWER / Correction
+→ U02/G2 fact commit
+→ reload authoritative Clinical State
+→ U03/U04 current Risk/Safety
+→ ClinicalContinuationRoutingDecision
+```
+
+Scheduler 不得在 mutation-stale required inputs 尚未完成受控 continuation routing 时直接 invoke U05。
+
+## 20.3 Recompute consequences
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+→ U06 MODE-3
+
+TO_U08_REASSESSMENT
+→ U08 only with valid mutation provenance + current bindings
+
+TO_U05_CLINICAL_READINESS
+→ U05/D03 only when applicable readiness inputs meet currentness/admission rules
+```
+
+## 20.4 Stale vs failure
+
+Runtime 必须保留：
+
+```text
+invalidation provenance
+prior activation ref
+failure provenance
+```
+
+统一分类：
+
+```text
+STALE_BY_UPSTREAM_MUTATION
+= mutation-stale + valid current mutation/invalidation provenance
+
+STALE_BY_UPSTREAM_MUTATION
+!= FAILED
+!= UNAVAILABLE
+```
+
+禁止：
+
+```text
+STALE_BY_UPSTREAM_MUTATION
+→ generic D03 INPUT_FAILURE
+```
+
+也禁止：
+
+```text
+FAILED / UNAVAILABLE
+→ pretend normal reassessment
+```
+
+## 20.5 Current status
+
+```text
+Phase 9 Clinical Continuation Routing
+= REFROZEN / V1
+
+Runtime implementation
+= NOT_AUTHORIZED
+```
+
+
+---
+
+# U05 CL-04 Controlled Amendment — Runtime Scheduling / Safety / Revalidation Semantics
+
+> Authorization: `AUTH-U05-CL04-FROZEN-AMEND-001`  
+> Reviewed design: PR #160 exact head `80cd6d7d154aa3e8de093ef43328e8ee9c2733d3`  
+> Owner policy: `OD-U05-READY-02 = APPROVE_OPTION_A`  
+> Amendment status: **REVIEW_PASS / REFROZEN / V1**  
+> Re-freeze status: **REFROZEN / V1**
+
+## A. POST_USER_FACT_UPDATE F6 mutation-stale path
+
+After accepted fact/correction mutation and current U03/U04 Safety processing:
+
+```text
+ClinicalContinuationRoutingDecision
+-> TO_F6_CURRENT_VERSION_REASSESSMENT
+-> U10 mode F6_CURRENT_VERSION_REASSESSMENT
+```
+
+Admission requires mutation/invalidation/prior-F6 provenance and a complete F6 dependency-requiredness manifest.
+
+If required F3/F5 owner prerequisites are stale, their governed owner path resolves first.
+
+## B. Canonical F6 commit invalidates prior routing authorization
+
+```text
+F6 reassessment
+-> K09 StateChangeProposal
+-> G2/P01 canonical commit
+-> authoritative Clinical State Version advances
+-> prior ClinicalContinuationRoutingDecision STALE
+-> prior routing authorization NON_ROUTABLE
+```
+
+No old Gate/routing authorization may be reused merely because it appears compatible.
+
+## C. Mandatory post-F6 Safety barrier
+
+After the F6 canonical commit:
+
+```text
+reload authoritative Clinical State
+-> re-establish required U03/U04 basis
+-> new current committed U04 Gate
+-> new routing authorization
+```
+
+Safety preemption:
+
+```text
+BLOCKED
+-> no F6 current-version revalidation
+-> no ordinary continuation
+
+UNAVAILABLE
+-> governed safe/failure handling
+-> no F6 current-version revalidation
+-> no ordinary continuation
+
+ALLOW
+or RESTRICTED with explicit F6-revalidation permission
+-> U10 F6_CURRENT_VERSION_REVALIDATION
+```
+
+## D. F6 current-version revalidation
+
+```text
+U10 F6_CURRENT_VERSION_REVALIDATION
+-> deterministic F6 Owner decision
+
+REVALIDATED_CURRENT
+-> current F6 readiness-input projection
+-> no Clinical State mutation
+
+REASSESSMENT_REQUIRED
+-> no D03
+-> U10 F6_CURRENT_VERSION_REASSESSMENT on current basis
+
+FAILED
+-> no D03
+-> governed failure route
+```
+
+Successful revalidation is non-mutating and therefore cannot itself create a version-chasing loop.
+
+## E. Context-specific routing host
+
+After `REVALIDATED_CURRENT`:
+
+```text
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+-> ClinicalContinuationRoutingDecision
+-> existing typed consequence
+
+A1_POST_BARRIER_CURRENT
+-> existing A1 routing projection
+-> NOT ClinicalContinuationRoutingDecision
+```
+
+For an Owner-approved first-entry current-F6-NOT_NEEDED profile:
+
+```text
+A1_POST_BARRIER_CURRENT
+-> existing A1 routing projection
+-> U05_ELIGIBLE / U05
+-> D03-POL-011
+
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+-> ClinicalContinuationRoutingDecision
+-> TO_U05_CLINICAL_READINESS
+-> U05
+-> D03-POL-011
+```
+
+There is no direct Router -> U08 positive-readiness bypass.
+
+## F. Scheduler ownership boundary
+
+Scheduler may:
+
+```text
+consume typed routing/revalidation decisions
+sequence Unit execution
+reload authoritative state
+enforce stale/non-routable decisions
+enforce idempotency/replay
+```
+
+Scheduler must not:
+
+```text
+infer F6 clinical truth
+infer F5 NOT_YET_APPLICABLE from artifact absence
+recompute D03 policy
+interpret C05 output as Clinical Truth
+invent READY_FOR_CLINICAL_ANALYSIS
+```
+
+## G. Replay / progress
+
+```text
+TO_F6_CURRENT_VERSION_REASSESSMENT
+is eligible only while the exact prior F6 effect
+is mutation-stale for the exact current input basis.
+```
+
+Successful reassessment + barrier + `REVALIDATED_CURRENT` makes that exact stale condition false.
+
+A later reassessment requires either a new invalidation identity or `REASSESSMENT_REQUIRED` under a changed current dependency basis.
+
+This section is architecture-only and authorizes no live Clinical Runtime, production activation, merge, or real-patient traffic.
+
+### CL-04 Re-Freeze Provenance
+
+> Re-freeze decision: `AUTH-U05-CL04-REFREEZE-001 = REFREEZE`  
+> Owner decision record: PR #167  
+> Semantic reviewed baseline: `1ed229dfe1cbdf095b31dc51345863fb28bcf1ac`  
+> Targeted Independent Amendment Re-Review: **PASS** / review_id `5263265912`  
+> Re-freeze package review: **PASS** / review_id `5263272855`  
+> Current CL-04 amendment state: **REFROZEN / V1**
+
