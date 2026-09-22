@@ -1,0 +1,107 @@
+name: U05 Non-Authoritative Engineering Smoke
+
+on:
+  push:
+    branches:
+      - impl/u05-nonprod-clinical-readiness-v1
+    paths:
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/**'
+      - '.github/workflows/u05-engineering-smoke.yml'
+  pull_request:
+    branches:
+      - decision/u05-runtime-implementation-authorization
+    paths:
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05/**'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u05/**'
+      - '.github/workflows/u05-engineering-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  engineering-smoke:
+    name: U05_NON_AUTHORITATIVE_ENGINEERING_SMOKE
+    runs-on: ubuntu-latest
+
+    env:
+      U05_ENVIRONMENT: ci-nonprod-u05
+      U05_LIVE_UPSTREAM_CUTOVER: 'false'
+      U05_LIVE_U06_EXECUTION: 'false'
+      U05_LIVE_U08_EXECUTION: 'false'
+      U05_LIVE_U10_EXECUTION: 'false'
+      U05_LIVE_U11_EXECUTION: 'false'
+      U05_LIVE_U14_EXECUTION: 'false'
+      U05_PRODUCTION_MUTATION: 'false'
+      U05_PRODUCTION_ACTIVATION: 'false'
+      U05_REAL_PATIENT_TRAFFIC: 'false'
+      U05_SHARED_RUNTIME_SOURCE_CHANGE: 'false'
+      U05_IMPLEMENTATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Governance boundary guard
+        run: |
+          test "$U05_ENVIRONMENT" = "ci-nonprod-u05"
+          test "$U05_LIVE_UPSTREAM_CUTOVER" = "false"
+          test "$U05_LIVE_U06_EXECUTION" = "false"
+          test "$U05_LIVE_U08_EXECUTION" = "false"
+          test "$U05_LIVE_U10_EXECUTION" = "false"
+          test "$U05_LIVE_U11_EXECUTION" = "false"
+          test "$U05_LIVE_U14_EXECUTION" = "false"
+          test "$U05_PRODUCTION_MUTATION" = "false"
+          test "$U05_PRODUCTION_ACTIVATION" = "false"
+          test "$U05_REAL_PATIENT_TRAFFIC" = "false"
+          test "$U05_SHARED_RUNTIME_SOURCE_CHANGE" = "false"
+          test -n "$U05_IMPLEMENTATION_SHA"
+
+      - name: Checkout exact implementation SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.U05_IMPLEMENTATION_SHA }}
+
+      - name: Verify checked-out identity
+        run: test "$(git rev-parse HEAD)" = "$U05_IMPLEMENTATION_SHA"
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      - name: Install Shared Contracts v1 Java binding
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+
+      - name: Compile diagnosis-service
+        run: mvn -f diagnosis-service/pom.xml -DskipTests compile
+
+      - name: Structural authorization guards
+        run: |
+          if grep -R -nE '^import .*runtime\.u(06|08|10|11|14)(\.|;)' diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05; then
+            echo "live downstream owner dependency detected"
+            exit 1
+          fi
+          if grep -R -nE '@(Component|Service|Configuration|RestController|Controller|Bean|Profile)' diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05; then
+            echo "automatic Spring/runtime activation detected"
+            exit 1
+          fi
+          if grep -R -nE 'PythonRuntimeClient|RestTemplate|WebClient|HttpClient|OpenAI|FeignClient' diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05; then
+            echo "unauthorized external/model/tool dependency detected"
+            exit 1
+          fi
+          echo "U05_NO_LIVE_UPSTREAM_CUTOVER=PASS"
+          echo "U05_NO_LIVE_DOWNSTREAM_EXECUTION=PASS"
+          echo "U05_NO_AUTOMATIC_PRODUCTION_ACTIVATION=PASS"
+          echo "U05_NO_EXTERNAL_MODEL_TOOL_DEPENDENCY=PASS"
+
+      - name: Run focused U05 engineering tests
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest=U05NonProductionClinicalReadinessTest
+          test
+
+      - name: Declare smoke boundary
+        run: |
+          echo "U05_ENGINEERING_SMOKE=PASS"
+          echo "U05_RDP06_AUTHORITATIVE_VERIFICATION=NOT_RUN"
+          echo "U05_IMPLEMENTATION_VERIFICATION=NOT_PASSED"
