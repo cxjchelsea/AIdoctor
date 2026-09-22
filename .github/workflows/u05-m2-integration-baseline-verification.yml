@@ -89,7 +89,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git diff --name-status "$ORIGINAL_U05_SHA" "$M2_TARGET_SHA" > /tmp/m2.actual
+          git -c core.quotepath=false diff --name-status "$ORIGINAL_U05_SHA" "$M2_TARGET_SHA" > /tmp/m2.actual
           cat > /tmp/m2.expected <<'EOF'
           A	diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedger.java
           A	diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/effects/CanonicalEffectLedgerDecision.java
