@@ -6,20 +6,46 @@ import com.aidoctor.diagnosis.state.committer.StateCommitter;
 import java.util.Map;
 
 /**
- * Mechanical K09/P01 adapter for the frozen invalidation proposal.
+ * K09/P01 adapter for the frozen readiness invalidation proposal.
  *
- * <p>A COMMITTED result here is not promoted to authoritative stale readiness
- * until a governed synthetic-state read-back verifies the record.</p>
+ * <p>Mechanical COMMITTED is never promoted by itself. Authoritative
+ * non-production invalidation evidence exists only after exact synthetic-state
+ * read-back verifies the stale readiness record.</p>
  */
 public final class U05ReadinessInvalidationService {
     private final StateCommitter stateCommitter;
+    private final U05ClinicalReadinessSnapshotPort snapshotPort;
 
-    public U05ReadinessInvalidationService(StateCommitter stateCommitter) {
+    public U05ReadinessInvalidationService(
+            StateCommitter stateCommitter,
+            U05ClinicalReadinessSnapshotPort snapshotPort) {
         if (stateCommitter == null) throw new IllegalArgumentException("stateCommitter is required");
+        if (snapshotPort == null) throw new IllegalArgumentException("snapshotPort is required");
         this.stateCommitter = stateCommitter;
+        this.snapshotPort = snapshotPort;
     }
 
     public StateTypes.CommitResult commitMechanicalNonProduction(
+            U05ReadinessInvalidationRequest request,
+            U05ReadinessInvalidationProposal proposal) {
+        validate(request, proposal);
+        return stateCommitter.commit(proposal.getStatePatch());
+    }
+
+    public U05ReadinessInvalidationEvidence commitAndVerifyNonProduction(
+            U05ReadinessInvalidationRequest request,
+            U05ReadinessInvalidationProposal proposal) {
+        StateTypes.CommitResult result = commitMechanicalNonProduction(request, proposal);
+        if (!"COMMITTED".equals(result.status) || result.committedVersion == null) {
+            throw new IllegalStateException("readiness invalidation did not commit");
+        }
+        U05ClinicalReadinessSnapshot snapshot =
+                snapshotPort.read(result.cdpId, result.committedVersion.intValue());
+        return U05ReadinessInvalidationEvidence.fromVerifiedSnapshot(
+                request, proposal, result, snapshot);
+    }
+
+    private static void validate(
             U05ReadinessInvalidationRequest request,
             U05ReadinessInvalidationProposal proposal) {
         if (request == null || proposal == null) {
@@ -45,7 +71,6 @@ public final class U05ReadinessInvalidationService {
         requireValue(value, "effect_id", request.getPriorReadinessEffectId());
         requireValue(value, "state_validity", "STALE");
         requireValue(value, "invalidation_effect_ref", proposal.getInvalidationEffectId());
-        return stateCommitter.commit(patch);
     }
 
     private static void requireValue(Map<?, ?> value, String key, Object expected) {
