@@ -5,6 +5,7 @@
 > Aggregate semantic PASS head: **d4a709ee20564f123e996a572ac760797a25f593**  
 > Aggregate review: **PASS / REFROZEN_FOR_U06_AGGREGATE_BASELINE**  
 > Scope: **READINESS ONLY — NO IMPLEMENTATION AUTHORIZATION**  
+> Independent Readiness Review: **PASS / review_id 5288273483**  
 > This document grants no code implementation, shared-runtime modification, synthetic adapter implementation, direct F1 activation, real C03/D04 activation, external delivery, merge, production, or real-patient authorization.
 
 ---
@@ -897,11 +898,35 @@ real-patient traffic
 
 ---
 
-# 16. Re-evaluation verdict
+# 16. Independent Readiness Review Provenance
+
+~~~text
+PR #238
+
+reviewed semantic readiness head
+= 8d21a3e4e877c76ed00563000432739cbe972713
+
+Independent Readiness Review
+= PASS
+
+review_id
+= 5288273483
+~~~
+
+The independent review confirmed:
+- IMP-U06-AGG-01..12 classification is complete;
+- no fourth bounded PROFILE-B pre-coding design blocker exists;
+- IRR-01..03 are the complete current bounded-slice blocking set;
+- original BF-U06-RG-01..06 remain aggregate-closed;
+- AC-U06-01..10 remain closed;
+- PROFILE-A real blockers remain separate;
+- no implementation authorization is implied.
+
+# 17. Re-evaluation verdict
 
 ~~~text
 U06 Implementation Readiness Re-Evaluation
-= COMPLETE
+= COMPLETE / INDEPENDENT_REVIEW_PASS
 
 U06 Definition / Business-Semantic Readiness
 = READY
