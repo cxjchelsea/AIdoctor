@@ -118,6 +118,11 @@ public final class U06ProfileBApplicationService {
             return new U06ExecutionResult(U06ExecutionResult.FAILURE_REQUIRED,a.getAdmissionId(),effect,
                     ce.getResult().status,null,null,null,null,ce.getResult().reasonCode);
 
+        String readBackEffect=ce.getReadBack().mapString("/patient_state/f3_gap_assessment","f3_canonical_effect_id");
+        if(!effect.equals(readBackEffect))
+            return new U06ExecutionResult(U06ExecutionResult.FAILURE_REQUIRED,a.getAdmissionId(),effect,
+                    ce.getResult().status,null,null,null,null,"U06_AUTHORITATIVE_READBACK_MISMATCH");
+
         U06SyntheticPostF3SafetyBarrier.Evaluation safety=safetyBarrier.evaluate(
                 r.getConsultationId(),effect,ce.getResult().status,ce.getReadBack().getVersion(),safetyEvidence);
 
@@ -165,8 +170,16 @@ public final class U06ProfileBApplicationService {
         if(d.getGapId()!=null&&state.readCurrent().exists("/patient_state/information_gaps/"+d.getGapId()))
             ops.add(state.upsert("/patient_state/information_gaps/"+d.getGapId(),U06StateValues.gapAsked(r,d)));
 
-        if(state.readCurrent().exists("/patient_state/pending_question"))
-            throw new IllegalStateException("U06_PENDING_QUESTION_CONFLICT");
+        U06SyntheticP01Runtime.StateView pendingView=state.readCurrent();
+        if(pendingView.exists("/patient_state/pending_question")) {
+            String existingQuestion=pendingView.mapString("/patient_state/pending_question","question_id");
+            String existingParent=pendingView.mapString("/patient_state/pending_question","question_delivered_wait_effect_id");
+            String existingDelivery=pendingView.mapString("/patient_state/pending_question","delivery_id");
+            if(!d.getQuestionId().equals(existingQuestion)
+                    ||!parent.equals(existingParent)
+                    ||!conf.getDeliveryId().equals(existingDelivery))
+                throw new IllegalStateException("U06_PENDING_QUESTION_CONFLICT");
+        }
 
         ops.add(state.upsert("/patient_state/pending_question",
                 U06StateValues.pending(d,parent,conf.getDeliveryId())));
@@ -205,7 +218,10 @@ public final class U06ProfileBApplicationService {
 
     private U06ExecutionResult mode3(U06ProfileBRequest r,U06AdmissionService.Admission a,
                                      U06SyntheticDecisionBundle d) {
-        U06SyntheticRevalidationAuthority.Result x=revalidation.evaluate(r,d,state.readCurrent().getVersion());
+        U06SyntheticP01Runtime.StateView current=state.readCurrent();
+        String currentF3Effect=current.mapString("/patient_state/f3_gap_assessment","f3_canonical_effect_id");
+        U06SyntheticRevalidationAuthority.Result x=revalidation.evaluate(
+                r,d,current.getVersion(),currentF3Effect);
 
         if(x.getFailureCode()!=null)
             return new U06ExecutionResult(U06ExecutionResult.FAILURE_REQUIRED,a.getAdmissionId(),
