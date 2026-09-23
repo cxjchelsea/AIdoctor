@@ -6,7 +6,7 @@
 > Aggregate baseline: **eb8c52a4e2da1feab1297d820fef0f033ac27698**  
 > Prior readiness review: **498d8ae086c7d9fd0e33017360d07ea1ba89ee73**  
 > Scope: **READINESS ONLY — NO IMPLEMENTATION AUTHORIZATION**  
-> Status: **DRAFT / READY_FOR_INDEPENDENT_READINESS_REVIEW**  
+> Status: **PASS / PROFILE-B READY_FOR_IMPLEMENTATION_AUTHORIZATION_REVIEW**  
 > This document grants no code implementation, schema migration execution, shared-runtime modification, synthetic adapter implementation, merge, production, or real-patient authorization.
 
 ---
@@ -901,12 +901,71 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-# 19. Revised verdict
+# 19. Final Independent Readiness Review Provenance
+
+~~~text
+Initial Independent Readiness Review
+= REVISE_REQUIRED
+review_id = 5288523031
+reviewed_head = 3ccaf4f338de834e833b2a59bdda8815c5d390b9
+
+Targeted Independent Readiness Re-Review
+= PASS
+review_id = 5288532417
+reviewed_head = 8122e7c11bd069106d5e99c64331981f22cee7c9
+~~~
+
+# 20. Final verdict
 
 ~~~text
 U06 Implementation Readiness Re-Evaluation
 (post physical-design remediation)
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_READINESS_RE_REVIEW
+= PASS
+
+U06 Business-Semantic Readiness
+= READY
+
+U06 Aggregate Contract Compatibility
+= READY
+
+U06 PROFILE-B Physical Design Readiness
+= READY
+
+PROFILE-B
+Bounded Synthetic Structural Non-Production Implementation Readiness
+= READY_FOR_IMPLEMENTATION_AUTHORIZATION_REVIEW
+
+BF-U06-IRR-01
+= CLOSED_FOR_PROFILE_B_IMPLEMENTATION_READINESS
+
+BF-U06-IRR-02
+= CLOSED_FOR_PROFILE_B_IMPLEMENTATION_READINESS
+
+BF-U06-IRR-03
+= CLOSED_FOR_PROFILE_B_IMPLEMENTATION_READINESS
+
+BF-U06-POSTIRR-IR-01
+= CLOSED
+
+Implementation Authorization Review
+= PERMITTED_TO_BEGIN
+
+U06 Implementation Authorization
+= NOT_GRANTED
+
+U06 Implementation
+= NOT_STARTED / NOT_AUTHORIZED
+
+PROFILE-A
+Real Governed Clinical / Patient-Facing Implementation Readiness
+= NOT_READY
+~~~
+
+Next governance step:
+
+~~~text
+U06 Implementation Authorization Decision
+for bounded PROFILE-B only
 ~~~
 
 No code implementation, schema migration execution, shared-runtime modification, synthetic adapter implementation, merge, production, or real-patient authorization is granted.
