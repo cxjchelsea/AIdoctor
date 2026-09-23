@@ -1,0 +1,23 @@
+{
+  "authorization_id": "AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-002",
+  "environment": "ci-nonprod-u05",
+  "external_delivery_side_effects": false,
+  "implementation_sha": "2b7926afd69de9fe2224d8a5b69e91c02c2db495",
+  "live_u06_execution": false,
+  "live_u08_execution": false,
+  "live_u10_execution": false,
+  "live_u11_execution": false,
+  "live_u14_execution": false,
+  "parent_authorization_id": "AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001",
+  "production_mutation": false,
+  "production_routing": false,
+  "real_patient_traffic": false,
+  "schema": "U05_VERIFICATION_AUTH_PROFILE_V0_1",
+  "shared_runtime_source_change": false,
+  "synthetic_non_phi_only": true,
+  "u05_live_external_entry": false,
+  "unauthorized_model_tool_calls": false,
+  "authorization_record_sha": "ce83f5a2e930db08e2415012a22170df12d66b44",
+  "authorization_record_path": "docs/current/06_开发单元/U05_RDP06_Authoritative_Verifier_Target_Rebind_AV04_Authorization_Decision_v0.1.md",
+  "authorization_record_blob_sha": "b288077ea7e22bb03292cff36641564f0fb6eff6"
+}
