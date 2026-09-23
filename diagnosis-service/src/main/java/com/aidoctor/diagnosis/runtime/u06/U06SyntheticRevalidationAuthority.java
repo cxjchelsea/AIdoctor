@@ -6,13 +6,16 @@ import java.util.Map;
 public final class U06SyntheticRevalidationAuthority {
     public static final String REPLAY_CONFLICT = "REVALIDATION_REPLAY_CONFLICT";
     public static final String STALE_BEFORE_PUBLISH = "STALE_BEFORE_PUBLISH";
+    public static final String CURRENT_F3_EFFECT_MISMATCH = "CURRENT_F3_EFFECT_MISMATCH";
 
     private final Map<String, Entry> entries = new LinkedHashMap<String, Entry>();
 
     public synchronized Result evaluate(U06ProfileBRequest request, U06SyntheticDecisionBundle decision,
-                                        int currentStateVersionAtPublish) {
+                                        int currentStateVersionAtPublish, String currentF3EffectAtPublish) {
         String id = required(decision.getRevalidationRef(), "revalidationRef");
         String status = required(decision.getRevalidationStatus(), "revalidationStatus");
+        String expectedF3Effect = decision.getF3CanonicalEffectId();
+
         String fingerprint = U06Ids.hash("u06revalidationfp",
                 request.getConsultationId(),
                 request.getSourceAuthorityType(),
@@ -23,6 +26,7 @@ public final class U06SyntheticRevalidationAuthority {
                 request.getF3OwnerPolicyRef(),
                 request.getCanonicalEventRef(),
                 request.getBusinessEventIdentity(),
+                expectedF3Effect,
                 status);
 
         Entry existing = entries.get(id);
@@ -35,6 +39,13 @@ public final class U06SyntheticRevalidationAuthority {
 
         if (currentStateVersionAtPublish != request.getAuthoritativeClinicalStateVersion()) {
             return Result.failed(id, fingerprint, STALE_BEFORE_PUBLISH, false);
+        }
+
+        if (U06SyntheticDecisionBundle.REVALIDATED_CURRENT.equals(status)) {
+            if (expectedF3Effect == null || currentF3EffectAtPublish == null
+                    || !expectedF3Effect.equals(currentF3EffectAtPublish)) {
+                return Result.failed(id, fingerprint, CURRENT_F3_EFFECT_MISMATCH, false);
+            }
         }
 
         entries.put(id, new Entry(fingerprint, status));
