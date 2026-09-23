@@ -418,7 +418,33 @@ INSUFFICIENT_INFORMATION
 
 It does not automatically authorize another question.
 
-It is a capability result requiring owner/policy handling.
+Exact owner consequence is mode-specific.
+
+MODE-1:
+
+~~~text
+C03 INSUFFICIENT_INFORMATION
+→ F3AssessmentOwnerDecision = NOT_DECIDABLE
+→ canonical positive F3 truth = NONE
+→ canonical negative/no-gap F3 truth = NONE
+→ Question = NONE
+~~~
+
+MODE-2:
+
+~~~text
+C03 INSUFFICIENT_INFORMATION
+→ candidate invention = prohibited
+→ D04 CONTINUE inference = prohibited
+→ D04 STOP inference = prohibited
+→ F3QuestionSelectionDecision = NO_SELECTION
+→ reason = C03_INSUFFICIENT_FOR_SELECTION
+→ WAITING_USER = prohibited
+~~~
+
+If the approved C03 contract classifies the condition as an execution failure rather than a valid insufficient result, the owner decision becomes FAILED instead of NO_SELECTION.
+
+In neither case may INSUFFICIENT_INFORMATION become automatic permission to ask.
 
 ## 8.4 DEPENDENCY_FAILURE / TIMEOUT / INVALID_OUTPUT
 
@@ -867,26 +893,72 @@ Failure proceeds to governed failure/retry routing outside D04.
 
 # 21. Exactly-one next Question
 
-After D04 = CONTINUE, F3 must select exactly one Question.
+After D04 = CONTINUE, F3 must select exactly one Question through a canonical typed owner decision.
 
-The selected business decision binds:
+RDP-02 freezes:
 
 ~~~text
-question_id
-question_semantic_key
+F3QuestionSelectionDecision
+
+decision_id
+input_fingerprint
+candidate_set_fingerprint
+
+consultation_id
+clinical_state_version
 question_need_class
-question_purpose
+source_authority_type
 source_requirement_ref
 source_gap_ref?
-candidate_ref
-target_concepts[]
-expected_decision_value / policy evidence as applicable
-clinical_state_version
-dependency_binding_ref
+
+d04_decision_ref
 f3_owner_policy_ref
 question_policy_ref
-d04_decision_ref
+d04_policy_ref
+dependency_binding_type
+dependency_binding_ref
+execution_profile
+
+outcome
+selected_candidate_ref?
+question_semantic_key?
+question_purpose?
+target_concepts[]
+expected_decision_value_ref?
+
+reason_codes[]
+trace_refs[]
 ~~~
+
+Allowed outcomes:
+
+~~~text
+SELECTED
+NO_SELECTION
+FAILED
+~~~
+
+Semantics:
+
+~~~text
+SELECTED
+→ exactly one selected_candidate_ref
+→ exactly one question_semantic_key
+→ D04 decision must be CONTINUE
+
+NO_SELECTION
+→ no selected_candidate_ref
+→ no Question SELECTED state
+→ reason must identify a governed no-selection basis
+
+FAILED
+→ selection policy/contract could not be validly executed
+→ no Question SELECTED state
+~~~
+
+The typed decision is the only RDP-02 authority consumed by RDP-03 for Question selection.
+
+RDP-03 must not reconstruct candidate ordering or choose a different candidate.
 
 Authoritative Question status SELECTED exists only after the RDP-03 P01/G2 commit.
 
@@ -947,17 +1019,29 @@ If no lawful Question can be selected:
 F1_CLARIFICATION_NO_PROGRESS
 ~~~
 
-is emitted as a source-owner reevaluation consequence.
-
-It means:
+is emitted with the exact semantic return contract:
 
 ~~~text
-return to governed F1 owner/source handling
-no Question
-no WAITING_USER
+target_owner = F1
+target_unit = U01
+source_authority_type = F1_CLARIFICATION_ROUTING
+f1_clarification_requirement_ref = preserved
+clinical_state_version = preserved/current
+u06_admission_ref = preserved
+owner/question/D04 policy refs = preserved as applicable
+dependency_binding_ref = preserved
+question_selection_decision_ref = preserved
+trace refs = preserved
+
+Question = NONE
+WAITING_USER = NONE
+Clinical Readiness decision = NONE
+F1 resolution mutation = NONE
 ~~~
 
-It does not resolve F1 automatically.
+U01/F1 must reevaluate its own clarification requirement under its authority.
+
+U06 may not mark Subject/Problem framing resolved and may not route this no-progress result through U05/D03 as though it were an F3 readiness result.
 
 Runtime activation remains blocked pending the RDP-01 recorded controlled amendment.
 
@@ -1205,6 +1289,7 @@ C03_RESULT_STALE
 C03_RESULT_BINDING_MISMATCH
 C03_NO_RESULT
 C03_INSUFFICIENT_INFORMATION
+C03_INSUFFICIENT_FOR_SELECTION
 C03_DEPENDENCY_FAILURE
 C03_TIMEOUT
 
@@ -1291,7 +1376,7 @@ RDP-03 must consume owner outputs without reinterpretation:
 ~~~text
 F3AssessmentOwnerDecision
 D04QuestionStoppingDecision
-selected Question business decision
+F3QuestionSelectionDecision
 F1_CLARIFICATION_NO_PROGRESS
 F3_QUESTION_PATH_NO_PROGRESS
 F3CurrentVersionRevalidationDecision
@@ -1385,6 +1470,13 @@ MODE-2 F1 clarification
 → selected candidate binds exact F1 clarification requirement
 → no general F3 interrogation expansion
 
+RDP02-AC-04A
+MODE-2 F1 clarification with no lawful candidate
+→ F1_CLARIFICATION_NO_PROGRESS
+→ target owner F1 / target unit U01
+→ no F1 resolution mutation
+→ no U05/D03 readiness decision
+
 RDP02-AC-05
 MODE-2 F3 current Gap + current equivalent DELIVERED Question
 → suppress duplicate
@@ -1401,12 +1493,21 @@ UNMEASURED + policy says non-online obtainable
 
 RDP02-AC-08
 D04 CONTINUE + two candidates + approved unique ordering
-→ exactly one business selection
+→ F3QuestionSelectionDecision = SELECTED
+→ exactly one selected_candidate_ref
 
 RDP02-AC-09
 D04 CONTINUE + unresolved top tie
+→ F3QuestionSelectionDecision = FAILED
 → QUESTION_SELECTION_AMBIGUOUS
 → no Question
+
+RDP02-AC-09A
+MODE-2 C03 INSUFFICIENT_INFORMATION
+→ F3QuestionSelectionDecision = NO_SELECTION
+→ C03_INSUFFICIENT_FOR_SELECTION
+→ no inferred D04 CONTINUE/STOP
+→ no WAITING_USER
 
 RDP02-AC-10
 D04 STOP
@@ -1512,14 +1613,68 @@ real-patient traffic
 
 ---
 
-# 40. Draft verdict
+# 40. Independent Design Review Remediation
+
+Initial Independent Design Review:
 
 ~~~text
-U06-RDP-02 F3 Owner / D04 Question Policy Contract
-= DRAFT / READY_FOR_INDEPENDENT_DESIGN_REVIEW
+PR #232
+review_id = 5287560207
+verdict = REVISE_REQUIRED
+reviewed_head = e1bdf0388e94d1d1dfb24c798f133fc80bccead9
+~~~
+
+Findings:
+
+~~~text
+BF-U06-RDP02-IR-01
+= TYPED_QUESTION_SELECTION_OWNER_DECISION_MISSING
+
+BF-U06-RDP02-IR-02
+= F1_NO_PROGRESS_RETURN_TARGET_NOT_EXACT
+
+BF-U06-RDP02-IR-03
+= C03_INSUFFICIENT_INFORMATION_OUTCOME_UNDERDEFINED
+~~~
+
+Remediation applied:
+
+1. froze canonical F3QuestionSelectionDecision with:
+   - decision/input/candidate-set identity;
+   - exact policy and dependency provenance;
+   - SELECTED / NO_SELECTION / FAILED outcomes;
+   - exactly-one selected candidate semantics;
+   - RDP-03 no-reinterpretation rule;
+
+2. froze F1_CLARIFICATION_NO_PROGRESS exact semantic target:
+   - owner F1;
+   - unit U01;
+   - preserved requirement/admission/version/policy/binding/trace provenance;
+   - no F1 resolution;
+   - no U05/D03 readiness decision;
+
+3. froze C03 INSUFFICIENT_INFORMATION per mode:
+   - MODE-1 -> NOT_DECIDABLE;
+   - MODE-2 -> NO_SELECTION / C03_INSUFFICIENT_FOR_SELECTION unless the approved contract classifies it as FAILED;
+   - never inferred CONTINUE/STOP or WAITING_USER.
+
+Current:
+
+~~~text
+BF-U06-RDP02-IR-01
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP02-IR-02
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP02-IR-03
+= REMEDIATED / RE-REVIEW_PENDING
+
+U06-RDP-02
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 
 BF-U06-RG-02
-= OPEN / DESIGN_REVIEW_PENDING
+= OPEN / DESIGN_RE_REVIEW_PENDING
 
 U06 Implementation Readiness
 = NOT_READY
@@ -1528,8 +1683,11 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-Recommended next action:
+# 41. Revised verdict
 
 ~~~text
-U06-RDP-02 Independent Design Review
+U06-RDP-02 F3 Owner / D04 Question Policy Contract
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 ~~~
+
+No C03/D04 activation, medical question content, clinical stopping threshold, patient-facing question approval, implementation, delivery, merge, production, or real-patient authorization is granted.
