@@ -3,7 +3,7 @@
 > Parent package: U06 RDP-01..06 PASS design package  
 > Parent head: e4110cf0ca85f9443a19ac01a5e448369c05832a  
 > Scope: aggregate semantic compatibility + exact controlled amendment inventory  
-> Status: PROPOSED / READY_FOR_INDEPENDENT_COMPATIBILITY_REVIEW  
+> Status: PASS / READY_FOR_EXPLICIT_REFREEZE_DECISION  
 > This package does not authorize implementation, refreeze, merge, live upstream activation, external delivery, production, or real-patient traffic.
 
 ---
@@ -663,27 +663,27 @@ Independent compatibility review must answer:
 
 ~~~text
 U06 Aggregate Compatibility Review / Controlled Amendment
-= PROPOSED / READY_FOR_INDEPENDENT_COMPATIBILITY_REVIEW
+= PASS / READY_FOR_EXPLICIT_REFREEZE_DECISION
 
 U06-AGR-01
-= AMENDMENT_CANDIDATE
+= REMEDIATED / AMENDMENT_REVIEW_PASS / REF FREEZE PENDING
 
 U06-AGR-02
-= AMENDMENT_CANDIDATE
+= REMEDIATED / AMENDMENT_REVIEW_PASS / REF FREEZE PENDING
 
 U06-AGR-03
-= DEFERRED / RUNTIME_DISABLED_FOR_INITIAL_SCOPE
+= BOUNDED_SCOPE_RESOLVED / DIRECT_F1_RUNTIME_DISABLED
 
 U06-AGR-04
-= LIVE_ACTIVATION_DEFERRED / SYNTHETIC_FIXTURE_VERIFICATION_ONLY
+= LIVE_ACTIVATION_DEFERRED / SYNTHETIC_FIXTURE_VERIFICATION_ALLOWED
 
 U06-AGR-05
-= SHARED_RUNTIME_IMPACT_PACKAGE_DEFINED / NOT_AUTHORIZED
+= SHARED_RUNTIME_IMPACT_PACKAGE_DEFINED / IMPLEMENTATION_AUTHORIZATION_PENDING
 
 U06-AGR-06
-= POST_REFREEZE_REBIND_REQUIRED
+= POST_REFREEZE_AUTHORITY_REBIND_REQUIRED
 
-Aggregate re-freeze
+Aggregate Re-Freeze
 = NOT_AUTHORIZED
 
 U06 Implementation Readiness
@@ -767,3 +767,67 @@ Aggregate Re-Freeze
 U06 Implementation Readiness
 = NOT_READY
 ~~~
+
+
+---
+
+# 17. Final Compatibility Review Provenance
+
+~~~text
+Initial Independent Compatibility Review
+= REVISE_REQUIRED
+review_id = 5288060818
+reviewed_head = e24a8a79f89e866b85231cdbc13f0758985fcac6
+
+Targeted Compatibility Re-Review
+= PASS
+review_id = 5288103754
+reviewed_semantic_head = c6212703e79945199786341169772e9ce4c352ef
+
+BF-U06-AGR-IR-01 = CLOSED
+BF-U06-AGR-IR-02 = CLOSED
+BF-U06-AGR-IR-03 = CLOSED
+BF-U06-AGR-IR-04 = CLOSED
+BF-U06-AGR-IR-05 = CLOSED
+~~~
+
+The commits after the reviewed semantic head synchronize only amendment-review status/provenance in the affected frozen artifacts.
+
+They do not grant re-freeze.
+
+Current governance state:
+
+~~~text
+U06 Aggregate Compatibility Amendment
+= PASS / READY_FOR_EXPLICIT_REFREEZE_DECISION
+
+Aggregate Re-Freeze
+= NOT_AUTHORIZED
+
+U06 Implementation Readiness Re-Evaluation
+= NOT_PERMITTED_UNTIL_REFREEZE
+
+U06 Implementation Readiness
+= NOT_READY
+
+U06 Implementation Authorization
+= NOT_GRANTED
+~~~
+
+Next required Owner decision:
+
+~~~text
+U06 Aggregate Compatibility Re-Freeze Decision
+~~~
+
+Allowed Owner options:
+
+~~~text
+REFREEZE
+REVISE
+REJECT
+~~~
+
+REFREEZE, if explicitly granted, authorizes only the reviewed aggregate semantic/status baseline to become the current refrozen U06 compatibility baseline and then permits Implementation Readiness Re-Evaluation.
+
+It does not authorize runtime implementation, live routing, real C03/D04, external delivery, merge, production, or real-patient traffic.
