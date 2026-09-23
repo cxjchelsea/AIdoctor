@@ -956,11 +956,123 @@ None are authorized by this document.
 
 ---
 
-# 18. Frozen-artifact amendment inventory
+# 18. Frozen-artifact amendment inventory and precedence register
 
 The aggregate amendment does not silently edit historical documents.
 
-It overlays/refreezes these exact semantic points:
+It explicitly supersedes/refines only the claims registered below.
+
+## 18.1 Amendment precedence
+
+For U06 semantic authority, precedence is:
+
+~~~text
+1. latest independently PASSed U06 Aggregate Compatibility Amendment semantic head
+
+2. U06-RDP-01..06 semantic heads
+   as modified by the registered aggregate amendments
+
+3. U06 Unit Spec / frozen Phase clauses
+   as modified by the registered aggregate amendments
+
+4. superseded historical wording
+   = audit/history only
+   = not active authority for U06 implementation or verification
+~~~
+
+A later status/provenance-only synchronization commit:
+- may record PASS/closure provenance;
+- may not alter semantic precedence;
+- must identify the semantic PASS head it synchronizes.
+
+Any future semantic amendment requires a new independently reviewed controlled amendment.
+
+## 18.2 U06 Amendment Precedence Register
+
+~~~text
+U06_AGGREGATE_AMENDMENT_PRECEDENCE_REGISTER_V0_1
+~~~
+
+Required fields per entry:
+
+~~~text
+amendment_id
+source_artifact
+source_semantic_head
+source_clause_or_claim
+original_semantic_identity
+replacement_or_refined_claim
+disposition
+aggregate_semantic_head
+effective_scope
+downstream_consumers[]
+~~~
+
+Allowed disposition:
+
+~~~text
+SUPERSEDED_FOR_U06
+REFINED_FOR_U06
+UNCHANGED_CONFIRMED
+DEFERRED_DISABLED
+~~~
+
+Current register:
+
+| Amendment | Source artifact / claim | Disposition | Active aggregate claim | Downstream consumers |
+|---|---|---|---|---|
+| A01 | RDP-01 capability_binding_ref | REFINED_FOR_U06 | dependency_binding_type + dependency_binding_ref; legacy alias REAL only | Admission, RDP-05, RDP-06 |
+| A02 | RDP-01 partial policy refs | REFINED_FOR_U06 | mode-specific f3_owner_policy_ref / question_policy_ref / d04_policy_ref | Admission, RDP-02, RDP-06 |
+| A03 | Unit Spec / Phase-8 F3 effect C03 CapabilityBindingRef component | SUPERSEDED_FOR_U06 | normalized dependency binding identity | RDP-03, Effect identity, RDP-06 |
+| A04 | current P05 both-release-ref physical assumption for U06 | REFINED_FOR_U06 | U06 parent trace + leaf capability trace; typed applicability; no fake refs | RDP-03, P05, RDP-06 |
+| A05 | generic single-step delivered/wait impression | REFINED_FOR_U06 | parent effect + Clinical State child + Consultation child + Runtime wait | RDP-03, RDP-04, RDP-06 |
+| A06 | source contract implies producer availability | REFINED_FOR_U06 | contract legality != producer implementation; synthetic fixture only for bounded verification | RDP-01, Readiness, RDP-06 |
+| A07 | direct F1 business legality | DEFERRED_DISABLED | business legal but live/runtime activation blocked | RDP-01, RDP-02, RDP-06 |
+| A08 | one undifferentiated U06 readiness target | REFINED_FOR_U06 | bounded PROFILE-B target separate from blocked PROFILE-A | Readiness, RDP-05, RDP-06 |
+| A09 | RDP-06 authority manifest excludes aggregate amendment | REFINED_FOR_U06 | aggregate amendment digest required in contract/oracle/fixture authority | RDP-06 |
+| A10 | RDP04-AC-18 recoverable Thread wait wording | SUPERSEDED_FOR_U06 | U07 eligibility requires authoritative Thread = AWAITING_USER + compatible durable checkpoint | RDP-04 acceptance authority, RDP-06 |
+
+Any implementation/verifier must consume this register as active U06 amendment authority.
+
+## 18.3 RDP04-AC-18 explicit supersession
+
+Historical RDP04-AC-18 wording:
+
+~~~text
+delivered Question
++ pending Question
++ Consultation WAITING
++ recoverable Thread wait
+→ U07 eligibility
+~~~
+
+is superseded for U06 by:
+
+~~~text
+Question = DELIVERED_TO_USER
++ PendingQuestion = current same Question
++ Consultation = WAITING_USER for the same parent effect
++ durable compatible wait checkpoint
++ Runtime Thread = AWAITING_USER
+→ U07ResumeEligibility may be emitted/reattached
+~~~
+
+If business WAITING exists but:
+
+~~~text
+Thread != AWAITING_USER
+~~~
+
+then:
+
+~~~text
+WAIT_RUNTIME_RECONCILIATION_REQUIRED
+U07 eligibility = absent
+~~~
+
+This aggregate wording is the active oracle authority for that scenario.
+
+## 18.4 Summary inventory
 
 | Artifact | Original wording/impact | Aggregate refreeze |
 |---|---|---|
@@ -970,11 +1082,12 @@ It overlays/refreezes these exact semantic points:
 | Unit Spec / Phase 8 | F3 effect uses C03 CapabilityBindingRef | normalized dependency binding identity |
 | RDP-05 / P05 | both release refs physical mismatch | U06 parent trace + leaf capability trace; no fake refs |
 | RDP-03 | cross-store delivered/wait semantics | parent effect + Clinical State child + Consultation child + Runtime transition |
+| RDP-04 AC-18 | recoverable Thread wait can support U07 eligibility | authoritative Thread AWAITING_USER + checkpoint required |
 | RDP-01 | source contract vs producer availability | bounded synthetic source fixtures allowed only for structural verification |
 | RDP-01 | direct F1 | remains disabled pending separate upstream safety/routing amendment |
 | RDP-06 | exact frozen authority | aggregate amendment becomes required manifest authority |
 
-Any implementation must consume this overlay together with RDP-01..06.
+Any implementation must consume this aggregate semantic overlay together with RDP-01..06.
 
 ---
 
@@ -1078,47 +1191,95 @@ These are not hidden by aggregate closure.
 
 Future RDP-06 implementation verification must prove the amendment package itself.
 
-At minimum:
+This controlled amendment does not renumber or silently expand U06-EV-001..106.
+
+It freezes a separate mandatory namespace:
 
 ~~~text
-AGG-V-01
-synthetic binding does not populate legacy real capability_binding_ref
-
-AGG-V-02
-real binding compatibility alias maps exactly to REAL_CAPABILITY_BINDING
-
-AGG-V-03
-mode-specific policy refs enforced
-
-AGG-V-04
-F3 effect identity changes when normalized binding identity changes
-
-AGG-V-05
-synthetic F3 effect never claims real P06 binding
-
-AGG-V-06
-NOT_APPLICABLE release family has no fake P05 ref
-
-AGG-V-07
-U06 parent trace links leaf capability trace without becoming Clinical State
-
-AGG-V-08
-delivery parent/child effect identities remain cross-store consistent
-
-AGG-V-09
-direct F1 live source remains disabled in bounded profile
-
-AGG-V-10
-missing real upstream producer cannot be relabeled as implemented because fixture exists
-
-AGG-V-11
-PROFILE-A cannot fall back to PROFILE-B
-
-AGG-V-12
-RDP-06 contract manifest includes this aggregate amendment digest
+U06-AGG-V-001 .. U06-AGG-V-012
 ~~~
 
-These may be mapped into existing EV/VG cases or explicit aggregate subcases; required evidence must remain machine-readable.
+All 12 are required aggregate verification subcases.
+
+~~~text
+U06-AGG-V-001
+synthetic binding does not populate legacy real capability_binding_ref
+
+U06-AGG-V-002
+real binding compatibility alias maps exactly to REAL_CAPABILITY_BINDING
+
+U06-AGG-V-003
+mode-specific policy refs enforced
+
+U06-AGG-V-004
+F3 effect identity changes when normalized binding identity changes
+
+U06-AGG-V-005
+synthetic F3 effect never claims real P06 binding
+
+U06-AGG-V-006
+NOT_APPLICABLE release family has no fake P05 ref
+
+U06-AGG-V-007
+U06 parent trace links leaf capability trace without becoming Clinical State
+
+U06-AGG-V-008
+delivery parent/child effect identities remain cross-store consistent
+
+U06-AGG-V-009
+direct F1 live source remains disabled in bounded profile
+
+U06-AGG-V-010
+missing real upstream producer cannot be relabeled as implemented because fixture exists
+
+U06-AGG-V-011
+PROFILE-A cannot fall back to PROFILE-B
+
+U06-AGG-V-012
+RDP-06 contract manifest includes this aggregate amendment digest
+and applies A10 U07 eligibility supersession
+~~~
+
+Aggregate evidence schema:
+
+~~~text
+U06_AGGREGATE_VERIFICATION_EVIDENCE_V0_1
+
+aggregate_case_id
+aggregate_amendment_digest
+source_contract_refs[]
+expected_claim
+observed_claim
+evidence_refs[]
+pass
+~~~
+
+Acceptance overlay:
+
+~~~text
+existing RDP-06:
+106 / 106 EV PASS
+9 / 9 CW PASS
+3 / 3 HG PASS
+10 / 10 VG PASS
+
+plus:
+12 / 12 U06-AGG-V PASS
+~~~
+
+The RDP-06 expectation/oracle/fixture review package must bind:
+- this aggregate amendment semantic digest;
+- the Amendment Precedence Register digest;
+- all 12 aggregate verification subcases.
+
+A missing aggregate subcase:
+
+~~~text
+= INCOMPLETE
+!= PASS
+~~~
+
+This does not alter the semantic identity of EV-001..106 and therefore does not require repurposing an existing EV ID.
 
 ---
 
@@ -1201,14 +1362,58 @@ real-patient traffic
 
 ---
 
-# 27. Draft aggregate verdict
+# 27. Independent Aggregate Review Remediation
+
+Initial Independent Aggregate Review:
 
 ~~~text
-U06 Aggregate Compatibility Review / Controlled Amendment
-= DRAFT / READY_FOR_INDEPENDENT_AGGREGATE_REVIEW
+PR #237
+review_id = 5288111493
+verdict = REVISE_REQUIRED
+reviewed_head = 34d62909827dfe5a274b7c13e36e2e68661742e2
+~~~
+
+Findings:
+
+~~~text
+BF-U06-AGG-IR-01
+= AMENDMENT_PRECEDENCE_AND_EXACT_SUPERSESSION_RULE_MISSING
+
+BF-U06-AGG-IR-02
+= RDP04_U07_ELIGIBILITY_STALE_ACCEPTANCE_WORDING_NOT_RECONCILED
+
+BF-U06-AGG-IR-03
+= AGGREGATE_VERIFICATION_OBLIGATIONS_NOT_MAPPED_TO_FROZEN_RDP06_IDENTITIES
+~~~
+
+Remediation:
+
+1. added U06_AGGREGATE_AMENDMENT_PRECEDENCE_REGISTER_V0_1 and explicit authority precedence;
+
+2. added A10 and explicitly superseded RDP04-AC-18 recoverable-wait wording with authoritative Thread = AWAITING_USER + compatible checkpoint;
+
+3. froze mandatory U06-AGG-V-001..012 namespace and acceptance overlay requiring 12/12 PASS in addition to existing RDP-06 thresholds.
+
+Current:
+
+~~~text
+BF-U06-AGG-IR-01
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-AGG-IR-02
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-AGG-IR-03
+= REMEDIATED / RE-REVIEW_PENDING
 
 AC-U06-01..09
 = PROPOSED_RESOLUTION
+
+A10
+= PROPOSED_SUPERSESSION
+
+U06 Aggregate Compatibility Review / Controlled Amendment
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_AGGREGATE_RE_REVIEW
 
 U06 Implementation Readiness
 = NOT_READY
@@ -1217,8 +1422,11 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-Recommended next action:
+# 28. Revised aggregate verdict
 
 ~~~text
-Independent Aggregate Compatibility Review
+U06 Aggregate Compatibility Review / Controlled Amendment
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_AGGREGATE_RE_REVIEW
 ~~~
+
+No implementation, shared-runtime modification, direct F1 activation, real C03/D04 activation, external delivery, merge, production, or real-patient authorization is granted.
