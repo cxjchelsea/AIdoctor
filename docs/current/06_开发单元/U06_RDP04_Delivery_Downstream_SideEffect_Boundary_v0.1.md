@@ -200,6 +200,58 @@ Synthetic confirmation may drive structural business-state transitions only for 
 
 It may not be interpreted as proof that a real user saw a Question.
 
+### 4.2.1 SyntheticDeliveryScopeAuthorization
+
+PROFILE-B requires a machine-checkable authorization before intent creation:
+
+~~~text
+SyntheticDeliveryScopeAuthorization
+
+scope_authorization_id
+
+consultation_id
+u06_admission_ref
+
+execution_profile = SYNTHETIC_STRUCTURAL_NONPROD
+synthetic_fixture_scope_ref
+synthetic_state_store_ref
+environment_ref
+
+authorization_ref
+validity
+expires_at?
+
+external_side_effect_allowed = false
+real_recipient_allowed = false
+production_store_allowed = false
+
+trace_refs[]
+~~~
+
+Required equality:
+
+~~~text
+authorization consultation_id
+= U06 admitted consultation_id
+
+authorization execution_profile
+= admitted execution profile
+
+synthetic_state_store_ref / environment_ref
+= current non-production fixture boundary
+~~~
+
+Fail closed when:
+- authorization missing/stale;
+- target Consultation is not synthetic-scoped;
+- target Clinical State store is production/live;
+- any real recipient endpoint is present;
+- external_side_effect_allowed is not false.
+
+Synthetic confirmation may authorize RDP-03 delivered/wait child effects only inside the same authorized synthetic fixture boundary.
+
+It may never mutate a real/live Consultation or production Clinical State store.
+
 ---
 
 # 5. Delivery entry precondition
@@ -414,9 +466,11 @@ Allowed authority_status:
 ~~~text
 NO_ACTIVE_DELIVERY
 ACTIVE_PENDING
+RETRYABLE_NOT_CONFIRMED
+RECONCILIATION_BLOCKED
 CONFIRMED_TERMINAL
-TERMINAL_NOT_DELIVERED
-BLOCKED_RECONCILIATION
+NOT_CONFIRMED_TERMINAL
+CANCELLED_TERMINAL
 ~~~
 
 Rules:
@@ -425,30 +479,80 @@ Rules:
 no prior delivery effect
 → one new effect may become ACTIVE_PENDING
 
-before first transport attempt:
-changed content / endpoint / channel / policy
-→ old READY intent may be governed CANCELLED_BEFORE_SEND
-→ authority may replace it with one new delivery effect
-→ old effect remains auditable
+transient definitive non-delivery
++ retry policy permits same-effect retry
+→ RETRYABLE_NOT_CONFIRMED
+→ retry may use same delivery effect + same idempotency key
 
-after any transport attempt with ambiguous outcome:
-→ new delivery effect for same selection prohibited
-→ authority = BLOCKED_RECONCILIATION
-→ old effect must reconcile first
+ambiguous transport outcome
+→ RECONCILIATION_BLOCKED
+→ no new delivery effect
+→ no non-idempotent blind resend
 
-old effect definitively NOT_DELIVERED
-→ authority may become TERMINAL_NOT_DELIVERED
-→ retry policy may allow another attempt under same effect
-→ a distinct new delivery effect requires an explicit governed rebinding decision
+retry exhausted or policy declares terminal non-delivery
+→ NOT_CONFIRMED_TERMINAL
+→ no further send under same delivery effect
 
 old effect CONFIRMED
-→ authority = CONFIRMED_TERMINAL
+→ CONFIRMED_TERMINAL
 → no second delivery effect for same Question selection
 
-redelivery / re-ask after a confirmed delivery
-→ requires a new lawful Question selection/re-ask effect
-→ not ad hoc delivery rebinding
+cancelled before any send
+→ CANCELLED_TERMINAL
 ~~~
+
+Before the first transport attempt, changed content / endpoint / channel / policy may only replace an existing READY intent through:
+
+~~~text
+DeliveryRebindingDecision
+~~~
+
+Logical:
+
+~~~text
+DeliveryRebindingDecision
+
+rebinding_decision_id
+question_selection_effect_id
+
+old_delivery_effect_id
+old_delivery_id
+
+rebinding_reason
+
+new_rendered_content_fingerprint?
+new_recipient_endpoint_ref?
+new_channel?
+new_channel_binding_ref?
+new_delivery_policy_ref?
+
+decision
+policy_ref
+trace_refs[]
+~~~
+
+Allowed decision:
+
+~~~text
+REBIND_ALLOWED
+REBIND_DENIED
+~~~
+
+REBIND_ALLOWED requires:
+
+~~~text
+old intent exists
+old intent has no STARTED transport attempt
+old effect not CONFIRMED
+old effect not ambiguous
+policy explicitly permits rebinding
+old intent becomes CANCELLED_BEFORE_SEND / CANCELLED_TERMINAL
+then exactly one new delivery effect may become ACTIVE_PENDING
+~~~
+
+After any ambiguous/confirmed send, DeliveryRebindingDecision cannot authorize a new delivery effect.
+
+A later redelivery/re-ask after CONFIRMED requires a new lawful Question selection/re-ask effect.
 
 This authority is non-clinical delivery governance state.
 
@@ -2029,7 +2133,71 @@ FAILURE_REQUIRED
 
 Only WAIT_ESTABLISHED is the normal successful terminal output of U06 MODE-2.
 
-Outcome identity is stable for the exact U06 delivery terminal evaluation and is trace/routing evidence, not Clinical State.
+Define:
+
+~~~text
+U06_DELIVERY_OUTCOME_ID
+=
+u06_admission_id
++ question_selection_effect_id
++ question_delivery_effect_id when present
++ status
++ outcome_contract_version
+~~~
+
+Define:
+
+~~~text
+U06_DELIVERY_OUTCOME_CANONICAL_FINGERPRINT
+~~~
+
+covering as applicable:
+
+~~~text
+consultation_id
+question_id
+u06 admission ref
+question selection effect
+delivery effect / delivery_id
+
+latest authoritative confirmation evaluation
+parent delivered-wait effect
+clinical-state child effect/result
+consultation-wait effect/result
+checkpoint
+Thread wait state ref
+U07 eligibility ref
+failure handoff ref
+
+status
+reason_code
+outcome contract version
+~~~
+
+Replay rules:
+
+~~~text
+same U06_DELIVERY_OUTCOME_ID
++ same canonical fingerprint
+→ exact replay / reattach
+
+same outcome id
++ different fingerprint
+→ U06_DELIVERY_OUTCOME_REPLAY_CONFLICT
+→ fail closed
+
+RECONCILIATION_REQUIRED
+→ non-terminal/outstanding outcome
+→ may be superseded by a later distinct outcome identity
+  when new authoritative evidence/sub-effects complete
+
+WAIT_ESTABLISHED
+→ terminal success for this U06 execution
+→ exact replay reattaches same U07 eligibility
+→ no new delivery / no new resume window
+~~~
+
+Outcome is trace/routing evidence, not Clinical State.
 
 ---
 
@@ -2237,6 +2405,18 @@ Need immutable/versioned confirmation evaluation storage supporting:
 
 Need typed U06QuestionDeliveryOutcome for Scheduler/governance handoff.
 
+## U06-RDP04-IMP-13 — Synthetic delivery scope guard
+
+Need durable/current SyntheticDeliveryScopeAuthorization and hard separation from real/live Consultation and production Clinical State stores.
+
+## U06-RDP04-IMP-14 — Delivery rebinding decision
+
+Need typed pre-send-only DeliveryRebindingDecision if content/endpoint/channel/policy changes after intent creation.
+
+## U06-RDP04-IMP-15 — Delivery outcome replay evidence
+
+Need stable U06_DELIVERY_OUTCOME_ID/fingerprint and non-terminal supersession evidence.
+
 ---
 
 # 66. Design acceptance scenarios
@@ -2372,6 +2552,48 @@ U06QuestionDeliveryOutcome WAIT_ESTABLISHED
 RDP04-AC-27
 any non-WAIT_ESTABLISHED terminal/outstanding outcome
 → no U07 eligibility
+
+RDP04-AC-28
+PROFILE-B with missing/mismatched SyntheticDeliveryScopeAuthorization
+→ no synthetic intent
+→ no synthetic confirmation
+→ no business-state mutation
+
+RDP04-AC-29
+PROFILE-B targets production/live store or real recipient
+→ fail closed
+
+RDP04-AC-30
+definitive transient non-delivery + retry allowed
+→ RETRYABLE_NOT_CONFIRMED
+→ same effect/idempotency retry only
+
+RDP04-AC-31
+retry exhausted
+→ NOT_CONFIRMED_TERMINAL
+→ no send under same effect
+
+RDP04-AC-32
+changed endpoint before first attempt
++ valid DeliveryRebindingDecision REBIND_ALLOWED
+→ old intent CANCELLED_BEFORE_SEND
+→ exactly one new effect
+
+RDP04-AC-33
+changed endpoint after ambiguous attempt
+→ rebinding denied
+→ reconciliation required
+
+RDP04-AC-34
+exact WAIT_ESTABLISHED outcome replay
+→ same outcome id/fingerprint
+→ same U07 eligibility
+→ no new resume window
+
+RDP04-AC-35
+RECONCILIATION_REQUIRED gains authoritative completion evidence
+→ later distinct outcome may supersede it
+→ historical prior outcome preserved
 ~~~
 
 ---
@@ -2455,6 +2677,37 @@ Remediation applied:
 
 4. added typed U06QuestionDeliveryOutcome with WAIT_ESTABLISHED / RECONCILIATION_REQUIRED / NOT_CONFIRMED / CANCELLED / FAILURE_REQUIRED.
 
+Targeted Independent Design Re-Review:
+
+~~~text
+review_id = 5287775286
+verdict = REVISE_REQUIRED
+reviewed_head = c68f9cc17d45d2d8378d29041e5b75ed68d5efc5
+~~~
+
+Additional findings:
+
+~~~text
+BF-U06-RDP04-TR-01
+= SYNTHETIC_DELIVERY_SCOPE_GUARD_UNDERDEFINED
+
+BF-U06-RDP04-TR-02
+= TERMINAL_NOT_DELIVERED_VS_RETRY_SEMANTICS_CONFLICT
+
+BF-U06-RDP04-TR-03
+= DELIVERY_OUTCOME_IDENTITY_REPLAY_CONTRACT_UNDERDEFINED
+~~~
+
+Additional remediation:
+
+5. froze machine-checkable SyntheticDeliveryScopeAuthorization and prohibited PROFILE-B effects against real/live Consultation, real recipient, or production Clinical State stores;
+
+6. split delivery authority lifecycle into ACTIVE_PENDING / RETRYABLE_NOT_CONFIRMED / RECONCILIATION_BLOCKED / CONFIRMED_TERMINAL / NOT_CONFIRMED_TERMINAL / CANCELLED_TERMINAL;
+
+7. added pre-send-only DeliveryRebindingDecision and prohibited rebinding after ambiguous/confirmed transport;
+
+8. froze U06_DELIVERY_OUTCOME_ID, canonical outcome fingerprint, exact replay, non-terminal reconciliation supersession, and WAIT_ESTABLISHED terminal-success reattachment.
+
 Current:
 
 ~~~text
@@ -2470,8 +2723,17 @@ BF-U06-RDP04-IR-03
 BF-U06-RDP04-IR-04
 = REMEDIATED / RE-REVIEW_PENDING
 
+BF-U06-RDP04-TR-01
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP04-TR-02
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP04-TR-03
+= REMEDIATED / RE-REVIEW_PENDING
+
 U06-RDP-04
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 
 BF-U06-RG-04
 = OPEN / DESIGN_RE_REVIEW_PENDING
@@ -2487,7 +2749,7 @@ U06 Implementation Authorization
 
 ~~~text
 U06-RDP-04
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 ~~~
 
 No real patient delivery, external transport activation, U06/U07 implementation, merge, production, or real-patient authorization is granted.
