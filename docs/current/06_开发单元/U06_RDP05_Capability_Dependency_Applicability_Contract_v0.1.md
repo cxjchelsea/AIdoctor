@@ -1816,3 +1816,29 @@ Current disposition until explicit re-freeze:
 RDP05 aggregate compatibility impact
 = REMEDIATED / REVIEW_PENDING / REF FREEZE PENDING
 ~~~
+
+
+## U06-AGR-01 C03 Result Binding Provenance
+
+Aggregate compatibility requires each governed C03 result consumed by U06 to match the admitted dependency binding view.
+
+Required equality:
+
+~~~text
+result.dependency_binding_type
+= admitted.dependency_binding_type
+
+result.dependency_binding_ref
+= admitted.dependency_binding_ref
+~~~
+
+For REAL_CAPABILITY_BINDING, capability_binding_ref carries the resolved governed P06 C03 binding.
+
+For SYNTHETIC_VERIFICATION_BINDING, capability_binding_ref is absent and the synthetic dependency binding identity remains explicitly non-production.
+
+Current disposition:
+
+~~~text
+U06-AGR-01 C03 result provenance
+= REMEDIATED / COMPATIBILITY_REVIEW_PENDING / NOT_REFROZEN
+~~~
