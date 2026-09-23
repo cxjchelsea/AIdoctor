@@ -4,7 +4,7 @@
 > Design lineage: `U06 Entry Gate Assessment v0.1` / reviewed head `16f10008d256a2d5f4436148a7410ef38bfb21e2`  
 > Design basis: current `main@7b37c03026cb17e89e3d7769df2b1bb1f03a9ca8` + frozen/refrozen Phase 5/6/7/8/9 + U05 RDP-04  
 > Scope: **UNIT DEFINITION / READINESS INPUT ONLY**  
-> Status: **DRAFT_FOR_INDEPENDENT_DESIGN_REVIEW**  
+> Status: **PASS / SUFFICIENT_FOR_INITIAL_IMPLEMENTATION_READINESS_GAP_REVIEW**  
 > This document grants no implementation, merge, production, live delivery, release activation, or real-patient authorization.
 
 ---
@@ -1663,7 +1663,7 @@ At this stage:
 
 ```
 U06 Unit Spec v0.1
-= DRAFT_FOR_INDEPENDENT_DESIGN_REVIEW
+= PASS / SUFFICIENT_FOR_INITIAL_IMPLEMENTATION_READINESS_GAP_REVIEW
 
 U06 Business-Semantic Baseline
 = AVAILABLE / A1 REFROZEN V1
@@ -1733,8 +1733,61 @@ Current:
 
 ```
 BF-U06-US-IR-01
-= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+= CLOSED
 
 RQ-U06-US-IR-02
-= SATISFIED / TARGETED_RE_REVIEW_PENDING
+= SATISFIED
+
+Targeted Independent Design Re-Review
+= PASS
+review_id = 5287044358
+reviewed_head = 1b3ac2573f0bf6529c1fc88b7707d78e5d7eb361
+```
+
+
+---
+
+# 24. Final Design Review Provenance
+
+```
+Initial Independent Design Review
+= REVISE_REQUIRED
+review_id = 5287035179
+
+Targeted Independent Design Re-Review
+= PASS
+review_id = 5287044358
+
+Reviewed semantic head
+= 1b3ac2573f0bf6529c1fc88b7707d78e5d7eb361
+
+BF-U06-US-IR-01
+= CLOSED
+
+RQ-U06-US-IR-02
+= SATISFIED
+
+U06 Unit Spec v0.1
+= PASS / SUFFICIENT_FOR_INITIAL_IMPLEMENTATION_READINESS_GAP_REVIEW
+```
+
+This status synchronization changes no Unit semantic, contract, capability, state ownership, routing, failure, verification or authorization rule.
+
+Next permitted formal review:
+
+```
+U06 Initial Implementation Readiness / Gap Review
+```
+
+Still:
+
+```
+U06 Implementation Readiness
+= NOT_READY / NOT_YET_EVALUATED_AGAINST_THE_APPROVED_UNIT_SPEC
+
+U06 Implementation Authorization
+= NOT_GRANTED
+
+U06 code implementation
+= NOT_STARTED
 ```
