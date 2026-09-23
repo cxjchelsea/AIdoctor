@@ -55,7 +55,7 @@ class U06ProfileBStructuralTest {
         when(consultations.findByIdForUpdate("consult-1")).thenReturn(Optional.of(consultation));
         when(consultation.getLifecycleStatus()).thenReturn(ConsultationRecord.ACTIVE);
         when(consultation.getCurrentWaitEffectId()).thenReturn(null);
-        when(consultation.getRowVersion()).thenReturn(Long.valueOf(0),Long.valueOf(1));
+        when(consultation.getRowVersion()).thenReturn(Long.valueOf(0),Long.valueOf(0),Long.valueOf(1));
         when(consultations.saveAndFlush(consultation)).thenReturn(consultation);
         when(waitEffects.findById(anyString())).thenReturn(Optional.empty());
         when(waitEffects.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
