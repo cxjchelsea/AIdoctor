@@ -1707,7 +1707,7 @@ This section is architecture-only and authorizes no live Clinical Runtime, produ
 # U06 Aggregate Compatibility Amendment — Runtime Activation Scope
 
 > Amendment ID: U06-AGR-03  
-> Status: REVIEW_PENDING / NOT_REFROZEN
+> Status: AMENDMENT_REVIEW_PASS / REF FREEZE PENDING
 
 This amendment records that the direct-F1 business edge is runtime-gated and disabled in the initial bounded U06 implementation scope.
 
