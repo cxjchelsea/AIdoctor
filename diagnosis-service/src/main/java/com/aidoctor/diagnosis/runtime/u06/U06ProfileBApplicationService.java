@@ -106,7 +106,7 @@ public final class U06ProfileBApplicationService {
                         r.getF3OwnerPolicyRef(),r.getBusinessEventIdentity());
 
         List<U06SyntheticP01Runtime.OperationIntent>ops=new ArrayList<U06SyntheticP01Runtime.OperationIntent>();
-        ops.add(state.upsert("/patient_state/f3_gap_assessment",U06StateValues.f3Assessment(r,d)));
+        ops.add(state.upsert("/patient_state/f3_gap_assessment",U06StateValues.f3Assessment(r,d,effect)));
         if(U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED.equals(d.getF3OwnerStatus()))
             ops.add(state.upsert("/patient_state/information_gaps/"+d.getGapId(),
                     U06StateValues.gap(r,d,"QUESTIONABLE_ONLINE")));
