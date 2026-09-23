@@ -2005,7 +2005,7 @@ Until explicit aggregate re-freeze:
 
 ```text
 U06-AGR-01
-= AMENDMENT_REVIEW_PENDING
+= REMEDIATED / AMENDMENT_REVIEW_PASS / REF FREEZE PENDING
 ```
 
 No implementation or activation is authorized.
