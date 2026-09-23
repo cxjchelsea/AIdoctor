@@ -1815,7 +1815,8 @@ F3_CANONICAL_EFFECT_ID
 consultation_id
 + fact/framing basis identity
 + source Clinical State Version
-+ C03 CapabilityBindingRef
++ dependency_binding_type
++ dependency_binding_ref
 + F3 assessment policy/version
 + assessment trigger/event identity
 ```
@@ -1828,8 +1829,10 @@ A1 canonical F3 proposal 在统一 StateChangeProposal 基础上必须附带：
 source_clinical_state_version
 F3_CANONICAL_EFFECT_ID
 source C03 result ref
-C03 CapabilityBindingRef
-RuleReleaseRef / KnowledgeReleaseRef as applicable
+dependency_binding_type
+dependency_binding_ref
+resolved real C03 CapabilityBindingRef when applicable
+RuleReleaseRef / KnowledgeReleaseRef / PromptReleaseRef / ModelRouteRef as applicable
 F3 policy/version
 effect idempotency key
 expected current version
@@ -1937,7 +1940,9 @@ policy_id = F3_CURRENT_VERSION_REVALIDATION
 policy_version
 rule_release_refs[]
 knowledge_release_refs[]
-historical_capability_binding_ref
+historical_dependency_binding_type
+historical_dependency_binding_ref
+historical_capability_binding_ref?  // only when historical binding is REAL_CAPABILITY_BINDING
 created_at
 validity
 trace_refs[]
@@ -2608,3 +2613,64 @@ This amendment changes contracts only; it does not authorize runtime implementat
 > Re-freeze package review: **PASS** / review_id `5263272855`  
 > Current CL-04 amendment state: **REFROZEN / V1**
 
+
+
+---
+
+# U06 Aggregate Compatibility Controlled Amendment — Phase 8 Binding Normalization
+
+> Amendment ID: U06-AGR-02  
+> Amendment status: REVIEW_PENDING / NOT_REFROZEN  
+> Review package: U06 Aggregate Compatibility Review / Controlled Amendment v0.1
+
+This controlled amendment refines only the binding-identity component of the previously refrozen A1 F3 contracts.
+
+Normalized identity:
+
+```text
+dependency_binding_type
+dependency_binding_ref
+```
+
+Allowed interpretations:
+
+```text
+REAL_CAPABILITY_BINDING
+→ dependency_binding_ref resolves to the real governed P06 C03 CapabilityBindingRef
+
+SYNTHETIC_VERIFICATION_BINDING
+→ dependency_binding_ref is a stable synthetic verification identity
+→ allowed only for explicitly authorized structural non-production verification
+→ never claims production/live C03 equivalence
+```
+
+Therefore the canonical effect identity is now:
+
+```text
+F3_CANONICAL_EFFECT_ID
+=
+consultation_id
++ fact/framing basis identity
++ source Clinical State Version
++ dependency_binding_type
++ dependency_binding_ref
++ F3 assessment policy/version
++ assessment trigger/event identity
+```
+
+Historical real CapabilityBindingRef provenance remains preserved as a resolved detail; it is not erased or rewritten.
+
+This amendment does not change:
+- F3 ownership;
+- C03 candidate-only role;
+- K09/P01 mutation boundary;
+- F3 revalidation outcomes;
+- Clinical Readiness ownership;
+- production authorization.
+
+Until explicit aggregate re-freeze:
+
+```text
+Phase 8 U06-AGR-02 amendment
+= REVIEW_PENDING / NOT_CURRENT_FROZEN_BASELINE
+```
