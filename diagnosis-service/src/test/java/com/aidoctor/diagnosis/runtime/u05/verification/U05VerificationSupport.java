@@ -810,6 +810,8 @@ public final class U05VerificationSupport {
                 U05ConsumerInboundRequest.GATE_ALLOW, null, null, null);
         StateTypes.CommitResult first =
                 f.commitService.commitNonProduction(p.input, p.decision, p.proposal);
+        U05ClinicalReadinessCommitEvidence evidence =
+                f.commitService.verifyCommittedReadBack(p.proposal, first);
         StateTypes.CommitResult replay =
                 f.commitService.commitNonProduction(p.input, p.decision, p.proposal);
         Assertions.assertEquals("COMMITTED", first.status);
@@ -820,7 +822,10 @@ public final class U05VerificationSupport {
         addPreparedDetails(o, p);
         o.details.put("commit_status", replay.status);
         o.details.put("committed_version", replay.committedVersion);
+        o.details.put("commit_result_ref", evidence.getCommitResultRef());
+        o.details.put("audit_ref", evidence.getAuditRef());
         o.sideEffectRefs.put("readiness_effect", p.proposal.getEffectId());
+        o.sideEffectRefs.put("state_commit", evidence.getCommitResultRef());
         return o;
     }
 
