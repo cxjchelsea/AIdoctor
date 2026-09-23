@@ -1777,3 +1777,39 @@ U06 Implementation Readiness
 U06 Implementation Authorization
 = NOT_GRANTED
 ```
+
+
+---
+
+# Aggregate Compatibility Amendment Resolution — U06-AGR-01
+
+> Aggregate amendment status: REVIEW_PENDING / NOT_REFROZEN
+
+The previously recorded RDP-01 compatibility impact is now resolved by the aggregate amendment candidate as:
+
+~~~text
+source-neutral admission identity
+= dependency_binding_type + dependency_binding_ref
+
+PROFILE-A
+= REAL_CAPABILITY_BINDING + real governed P06 C03 CapabilityBindingRef
+
+PROFILE-B
+= SYNTHETIC_VERIFICATION_BINDING + stable synthetic verification identity
+~~~
+
+The invariant remains:
+
+~~~text
+every MODE-1 / MODE-2 admission
+must carry one stable governed dependency-binding identity
+~~~
+
+No applicability, C03 role, PROFILE-A/PROFILE-B, Quality Gate, P03/P04, or release semantics change.
+
+Current disposition until explicit re-freeze:
+
+~~~text
+RDP05 aggregate compatibility impact
+= REMEDIATED / REVIEW_PENDING / REF FREEZE PENDING
+~~~
