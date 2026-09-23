@@ -309,27 +309,61 @@ Reason:
 
 ---
 
-# 11. Transaction boundary
+# 11. Transaction boundary and concurrency replay protocol
 
 The following occur in one local database transaction:
 
 ~~~text
-1. inspect companion effect by wait_effect_id / idempotency_key
-2. exact replay reconciliation if existing
-3. lock ConsultationRecord
-4. verify consultation_id
-5. verify row_version = expected_prior_row_version
-6. verify lifecycle = ACTIVE
-7. verify current_wait_effect_id = null
+1. optional fast-path inspect companion effect by wait_effect_id / idempotency_key
+
+2. acquire ConsultationRecord PESSIMISTIC_WRITE lock
+
+3. AFTER THE LOCK, re-read:
+   - wait_effect_id
+   - idempotency_key
+   - current Consultation lifecycle/current_wait_effect_id
+
+4. if a COMMITTED same effect already exists:
+   verify exact fingerprint / consultation / question / delivery / parent effect
+   verify Consultation = WAITING_USER + same current_wait_effect_id
+   → exact replay return
+
+5. if same effect/idempotency exists with changed payload
+   → replay conflict
+
+6. if Consultation is WAITING_USER for another effect
+   → conflict
+
+7. otherwise verify:
+   consultation_id
+   row_version = expected_prior_row_version
+   lifecycle = ACTIVE
+   current_wait_effect_id = null
+
 8. set lifecycle_status = WAITING_USER
 9. set current_wait_effect_id = CONSULTATION_WAITING_EFFECT_ID
-10. save ConsultationRecord
-11. flush / obtain committed row_version
+
+10. save + flush ConsultationRecord
+11. capture the JPA-incremented committed row_version
+
 12. insert COMMITTED ConsultationWaitEffectRecord
-13. commit transaction
+    with expected_prior_row_version
+    and the captured committed_row_version
+
+13. flush companion insert
+14. commit transaction
 ~~~
 
-Because Consultation row and companion effect table are in the same database, they form one local atomic transaction.
+The post-lock re-read is normative. The pre-lock fast path is only an optimization.
+
+If a unique-constraint race occurs on:
+- wait_effect_id;
+- parent_delivered_wait_effect_id;
+- idempotency_key;
+
+the transaction must not guess success. It must reload authoritative effect/Consultation state and apply the same exact replay equality rules.
+
+Because Consultation row and companion effect table are in the same database transaction, they form one local atomic transition.
 
 This does not create atomicity with Clinical State/P01 or Runtime tables.
 
@@ -337,7 +371,9 @@ This does not create atomicity with Clinical State/P01 or Runtime tables.
 
 # 12. Exact replay path
 
-Before attempting a new transition, inspect by:
+Replay equality is evaluated authoritatively after the Consultation lock is acquired.
+
+Inspect/reconcile by:
 
 ~~~text
 wait_effect_id
@@ -596,6 +632,10 @@ IRR02-V09 crash-after-commit replay returns original result
 IRR02-V10 ledger/record inconsistency fails closed
 IRR02-V11 synthetic test DB only / production writes zero
 IRR02-V12 U01 start remains ACTIVE/null pointer
+IRR02-V13 two concurrent identical commands result in one mutation + one exact replay
+IRR02-V14 post-lock re-read detects first committer
+IRR02-V15 committed_row_version equals flushed JPA row version
+IRR02-V16 unique-key race reloads and applies exact equality rather than assuming success
 ~~~
 
 ---
@@ -621,8 +661,11 @@ This design grants no migration execution, code implementation, production Consu
 
 ~~~text
 CA-U06-IRR-02
-= DRAFT / READY_FOR_INDEPENDENT_PHYSICAL_DESIGN_REVIEW
+= REVISED / READY_FOR_TARGETED_PHYSICAL_DESIGN_RE_REVIEW
+
+BF-U06-CA-IRR02-IR-01
+= REMEDIATED / RE_REVIEW_PENDING
 
 BF-U06-IRR-02
-= OPEN / DESIGN_REVIEW_PENDING
+= OPEN / DESIGN_RE_REVIEW_PENDING
 ~~~
