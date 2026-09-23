@@ -6,7 +6,7 @@
 > Parent design head: `a7fc37a17f488670915faf517dc7ea7f4cd18680`  
 > Runtime repository basis: `main@7b37c03026cb17e89e3d7769df2b1bb1f03a9ca8`  
 > Scope: **CAPABILITY / DEPENDENCY / APPLICABILITY DESIGN ONLY**  
-> Status: **DRAFT_FOR_INDEPENDENT_DESIGN_REVIEW**  
+> Status: **PASS / CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE**  
 > This contract grants no C03/D04 activation, clinical-content approval, model invocation, knowledge release, implementation, merge, live delivery, production, or real-patient authorization.
 
 ---
@@ -1633,10 +1633,10 @@ real-patient traffic
 
 ```
 U06-RDP-05 Capability / Dependency / Applicability Contract
-= DRAFT_FOR_INDEPENDENT_DESIGN_REVIEW
+= PASS
 
 BF-U06-RG-05
-= OPEN / DESIGN_PROPOSED
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
 
 U06 Implementation Readiness
 = NOT_READY
@@ -1709,11 +1709,71 @@ Current:
 
 ```
 BF-U06-RDP05-IR-01
-= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP05-IR-02
-= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+= CLOSED
+
+Targeted Independent Design Re-Review
+= PASS
+review_id = 5287380299
+reviewed_head = a7fd974faeddd063ba5a178116efc422c94723f5
 
 U06-RDP-05
-= REVISED / TARGETED_RE_REVIEW_PENDING
+= PASS
+```
+
+
+---
+
+# 38. Final Design Review Provenance
+
+```
+Initial Independent Design Review
+= REVISE_REQUIRED
+review_id = 5287371485
+
+Targeted Independent Design Re-Review
+= PASS
+review_id = 5287380299
+
+Reviewed semantic head
+= a7fd974faeddd063ba5a178116efc422c94723f5
+
+BF-U06-RDP05-IR-01
+= CLOSED
+
+BF-U06-RDP05-IR-02
+= CLOSED
+
+U06-RDP-05
+= PASS
+
+BF-U06-RG-05
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
+```
+
+This status synchronization changes no dependency applicability, binding identity, capability-role rule, Quality Gate, P03/P04 conditionality, PROFILE-A/PROFILE-B boundary, shared-runtime impact inventory, or authorization scope.
+
+Next recommended design:
+
+```
+U06-RDP-02
+F3 Owner / D04 Question Policy Contract
+```
+
+Still:
+
+```
+PROFILE-A REAL_GOVERNED_C03
+= BLOCKED
+
+PROFILE-B SYNTHETIC_STRUCTURAL_NONPROD
+= DESIGN-ELIGIBLE / NOT_IMPLEMENTATION_AUTHORIZED
+
+U06 Implementation Readiness
+= NOT_READY
+
+U06 Implementation Authorization
+= NOT_GRANTED
 ```
