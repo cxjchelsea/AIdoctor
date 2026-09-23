@@ -691,7 +691,9 @@ provenance
 ```text
 result_id
 
-capability_binding_ref
+dependency_binding_type?
+dependency_binding_ref?
+capability_binding_ref?
 input_clinical_state_version
 
 business_status
@@ -970,7 +972,11 @@ candidate_text / rendered_text
 expected_decision_value
 target_concepts[]
 clinical_state_version
-capability_binding_ref
+
+dependency_binding_type?
+dependency_binding_ref?
+capability_binding_ref?
+
 question_policy_ref
 status
 ```
@@ -987,6 +993,23 @@ SUPERSEDED
 ```
 
 只有 `DELIVERED_TO_USER` 成功后，业务生命周期才能进入 `WAITING_USER`。
+
+
+U06 normalized binding rule:
+
+~~~text
+Question candidate / selected Question provenance
+uses dependency_binding_type + dependency_binding_ref
+as the source-neutral governing dependency identity.
+
+REAL_CAPABILITY_BINDING
+→ capability_binding_ref carries the resolved real P06 binding.
+
+SYNTHETIC_VERIFICATION_BINDING
+→ capability_binding_ref is absent.
+→ synthetic identity cannot be treated as production capability authority.
+~~~
+
 
 ---
 
