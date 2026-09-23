@@ -6,7 +6,7 @@
 > Reviewed amendment head: `d71e750b07ee8edd8c951aea888c6f9667e030ee`  
 > Independent review: **PASS** / review_id `5285630593`  
 > Proposed exact target: `2b7926afd69de9fe2224d8a5b69e91c02c2db495`  
-> Status: **OWNER DECISION PENDING**
+> Status: **AUTHORIZED / CONSUMED_FOR_EXACT_TARGET_REBIND**
 
 ## 1. Decision question
 
@@ -148,10 +148,62 @@ This authorization does not permit:
 Current:
 
     AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-002
-    = NOT_GRANTED
+    = AUTHORIZED
 
     RDP-06 authoritative verification
-    = BLOCKED_PENDING_OWNER_REBIND_002_DECISION
+    = AUTHORIZED_TO_RESUME_AFTER_BOUNDED_OVERLAY_TARGET_BINDING_REVIEW
 
     U05 Implementation Verification
     = NOT_PASSED
+
+
+## 9. Repository Owner Decision
+
+The repository owner explicitly selected:
+
+    AUTHORIZE
+
+against exact reviewed decision-package head:
+
+    712327ca8295b2229e60df004228e0cd63ee99b8
+
+Therefore:
+
+    AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-002
+    = AUTHORIZED
+
+Exact active implementation target:
+
+    2b7926afd69de9fe2224d8a5b69e91c02c2db495
+
+Target-only precedence:
+
+    REBIND-002
+    >
+    REBIND-001
+    >
+    parent verifier target
+
+for U05_IMPLEMENTATION_SHA only.
+
+Authorized continuation:
+
+    bounded PR #210 verifier target/provenance binding amendment
+    -> independent exact-head overlay re-review
+    -> authoritative exact-target RDP-06 CI
+    -> durable evidence generation
+    -> independent evidence-only review
+    -> combined closure review.
+
+Still not authorized:
+
+    U05 production semantic modification
+    shared runtime semantic modification
+    merge
+    production activation
+    live downstream execution
+    external delivery
+    real-patient / PHI traffic
+    release activation.
+
+Any further implementation-target drift or verifier semantic drift invalidates this authorization.
