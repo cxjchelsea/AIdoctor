@@ -4,7 +4,7 @@
 > Readiness baseline: **498d8ae086c7d9fd0e33017360d07ea1ba89ee73**  
 > Aggregate authority: **eb8c52a4e2da1feab1297d820fef0f033ac27698**  
 > Scope: **PROFILE-B bounded synthetic structural implementation only**  
-> Status: **DRAFT / READY_FOR_INDEPENDENT_PHYSICAL_DESIGN_REVIEW**  
+> Status: **PASS / PHYSICAL_DESIGN_COMPLETE / PENDING_COMBINED_READINESS_REEVALUATION**  
 > This document does not authorize implementation or any production/live Clinical State mutation.
 
 ---
@@ -549,12 +549,22 @@ This design authorizes no code, shared-runtime modification, production state wr
 # 25. Draft verdict
 
 ~~~text
+Independent Combined Review:
+review_id = 5288434120
+verdict = REVISE_REQUIRED
+reviewed_head = 0533fa05a896b8588983371038218902a274d208
+
+Targeted Independent Combined Re-Review:
+review_id = 5288454931
+verdict = PASS
+reviewed_head = 9c0893a2892a8b08a9c03ce3a8f214397d893df4
+
 CA-U06-IRR-01
-= REVISED / READY_FOR_TARGETED_PHYSICAL_DESIGN_RE_REVIEW
+= PASS
 
 BF-U06-CA-IRR01-IR-01
-= REMEDIATED / RE_REVIEW_PENDING
+= CLOSED
 
 BF-U06-IRR-01
-= OPEN / DESIGN_RE_REVIEW_PENDING
+= PHYSICAL_DESIGN_COMPLETE / PENDING_COMBINED_READINESS_REEVALUATION
 ~~~
