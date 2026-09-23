@@ -2879,3 +2879,41 @@ Delivery / Downstream / Side-effect Boundary
 ~~~
 
 No Shared Contracts/P01/P05 modification, C03/D04 activation, runtime implementation, delivery, WAITING_USER activation, merge, production, or real-patient authorization is granted.
+
+
+---
+
+# Aggregate Compatibility Amendment Resolution — U06-AGR-02
+
+> Aggregate amendment status: REVIEW_PENDING / NOT_REFROZEN
+
+RDP03-COMPAT-F3-ID-01 is addressed by the aggregate amendment candidate to Phase 8.
+
+The frozen candidate normalization is:
+
+~~~text
+F3_CANONICAL_EFFECT_ID binding component
+=
+dependency_binding_type
++ dependency_binding_ref
+~~~
+
+with:
+
+~~~text
+REAL_CAPABILITY_BINDING
+→ real governed P06 C03 CapabilityBindingRef
+
+SYNTHETIC_VERIFICATION_BINDING
+→ stable synthetic non-production verification identity
+→ no production/live equivalence
+~~~
+
+No RDP-03 state ownership, K09/P01 mutation, replay, delivery/wait decomposition, or trace semantics change.
+
+Current disposition until explicit re-freeze:
+
+~~~text
+RDP03-COMPAT-F3-ID-01
+= REMEDIATED / REVIEW_PENDING / REF FREEZE PENDING
+~~~
