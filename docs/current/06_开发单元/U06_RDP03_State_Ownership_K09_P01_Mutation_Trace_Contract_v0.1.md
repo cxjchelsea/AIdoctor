@@ -527,6 +527,41 @@ dependency_binding_type
 
 not necessarily a production CapabilityBindingRef.
 
+This creates an explicit aggregate compatibility amendment impact:
+
+~~~text
+RDP03-COMPAT-F3-ID-01
+~~~
+
+Frozen Phase 8 wording currently uses:
+
+~~~text
+C03 CapabilityBindingRef
+~~~
+
+as one F3_CANONICAL_EFFECT_ID component.
+
+At U06 aggregate closure that component must be normalized to:
+
+~~~text
+dependency_binding_type
++ dependency_binding_ref
+~~~
+
+with:
+
+~~~text
+REAL_CAPABILITY_BINDING
+→ dependency_binding_ref resolves to the real governed P06 C03 CapabilityBindingRef
+
+SYNTHETIC_VERIFICATION_BINDING
+→ dependency_binding_ref is a stable synthetic verification binding identity
+→ allowed only for explicitly authorized structural non-production verification
+→ never claims production/live C03 equivalence
+~~~
+
+RDP-03 does not silently rewrite Phase 8; it records this exact compatibility amendment for aggregate review/re-freeze.
+
 For PROFILE-A:
 
 ~~~text
@@ -641,7 +676,7 @@ consultation_id
 cdp_id
 base_clinical_state_version
 
-producer = U06
+logical_unit_id = U06
 business_owner = F3
 
 source_admission_ref
@@ -769,36 +804,58 @@ Any future richer source taxonomy requires a Shared Contracts amendment.
 
 ---
 
-# 15. P01 commit-authorization identity vs C03 dependency identity
+# 15. Logical Unit identity vs physical StatePatch authorization identity
 
-Current StatePatch envelope requires a capability id/version for mechanical authorization.
+Current StatePatchBoundaryValidator requires physical producer fields to use the lower-case service-name contract.
 
-RDP-03 freezes:
+Therefore RDP-03 explicitly separates:
 
 ~~~text
-StatePatch envelope capability identity
-= P01 state-write authorization identity for the U06 producer path
+logical K09 unit identity
+= U06
 
-dependency_binding_ref
+physical StatePatch.producer
+= approved lower-case runtime service identity
+
+physical StatePatch.envelope.producer
+= approved lower-case runtime service identity
+
+StatePatch.envelope.capability_id/version
+= P01 state-write authorization identity for the U06 mutation path
+
+dependency_binding_type/ref
 = C03/U06 dependency identity from RDP-05
 ~~~
 
-These are not the same concept.
+These are four different concerns.
+
+Literal U06 is not a legal current physical StatePatch producer value and must not be written into the physical producer field.
 
 Forbidden:
 
 ~~~text
+logical_unit_id = U06
+→ copy literal U06 into StatePatch.producer
+
 copy C03 CapabilityBindingRef into StatePatch capability_id
-and treat that as state-write authority
+and treat it as state-write authority
+
+use SYNTHETIC_C03 identity as production state-write capability
+
+use physical service producer identity
+as proof of F3 business ownership
 ~~~
 
-or:
+Logical proposals preserve:
 
 ~~~text
-use SYNTHETIC_C03 identity as production state-write capability
+logical_unit_id = U06
+business_owner = F3
 ~~~
 
-The exact P01 authorized producer identity is an implementation-readiness impact and must be registered without claiming C03 owns state mutation.
+The physical mapper must independently supply the approved service producer and P01 state-write authorization identity.
+
+The exact approved physical identity values are implementation-readiness inputs; they must satisfy current StatePatch contracts without changing business ownership.
 
 ---
 
@@ -1092,7 +1149,7 @@ consultation_id
 cdp_id
 base_clinical_state_version
 
-producer = U06
+logical_unit_id = U06
 business_owner = F3
 
 source_admission_ref
@@ -1194,20 +1251,36 @@ This resolves the deferred Unit Spec question.
 
 # 27. Selected Question vs Pending Question authority
 
+RDP-03 freezes the logical pending-question path:
+
+~~~text
+/patient_state/pending_question
+~~~
+
 Before successful delivery:
 
 ~~~text
 Question = SELECTED
-pending_question = absent
+/patient_state/pending_question = absent for this Question
 Consultation != WAITING_USER because of this Question
 Thread != AWAITING_USER because of this Question
+~~~
+
+Question selection does not mutate the source Gap question_refs list.
+
+At selection time the authoritative linkage is:
+
+~~~text
+Question.source_gap_ref
++ selection decision/effect provenance
 ~~~
 
 After successful authoritative delivery transition:
 
 ~~~text
 Question = DELIVERED_TO_USER
-pending_question = current delivered Question
+/patient_state/pending_question = current delivered Question
+source Gap question_refs may add this delivered Question ref when F3 need
 Consultation = WAITING_USER
 Runtime may then enter AWAITING_USER
 ~~~
@@ -1216,57 +1289,165 @@ A SELECTED question is not a pending user answer.
 
 ---
 
-# 28. Delivery-confirmed business mutation contract
+# 28. Delivery-confirmed business mutation decomposition
 
-RDP-04 owns transport/reconciliation, but RDP-03 freezes the business-state mutation that RDP-04 may request after delivery confirmation.
+RDP-04 owns transport/reconciliation, but RDP-03 freezes the exact authoritative mutation objects that may follow delivery confirmation.
 
-Define logical:
+All delivery-confirmed mutations share one parent:
 
 ~~~text
-U06QuestionDeliveredWaitProposal
+QUESTION_DELIVERED_WAIT_EFFECT_ID
 ~~~
 
-Eligibility requires:
-- authoritative current Question SELECTED record;
-- exact selection effect/decision;
-- durable delivery intent identity;
-- authoritative delivery confirmation/receipt reconciliation;
-- same question content identity;
-- currentness not superseded/expired;
-- current Safety/permission requirements from RDP-04.
+and are decomposed into separate authoritative storage-owner sub-effects.
 
-For F3 need, business mutation set is semantically all-or-nothing:
+## 28.1 P01 Clinical State sub-effect
+
+Define:
 
 ~~~text
-Question status
-SELECTED → DELIVERED_TO_USER
-
-source Gap
-→ ASKED
-
-pending_question
-→ delivered Question ref
-
-Consultation lifecycle
-→ WAITING_USER
+QUESTION_DELIVERED_CLINICAL_STATE_EFFECT_ID
+=
+QUESTION_DELIVERED_WAIT_EFFECT_ID
++ clinical-state-sub-effect contract version
 ~~~
 
-For F1 need:
+and logical K09 proposal:
 
 ~~~text
-Question status
-SELECTED → DELIVERED_TO_USER
+U06QuestionDeliveredClinicalStateProposal
 
-pending_question
-→ delivered Question ref
+proposal_id
+consultation_id
+cdp_id
+base_clinical_state_version
 
-Consultation lifecycle
-→ WAITING_USER
+logical_unit_id = U06
+business_owner = F3
+
+parent_delivered_wait_effect_id
+clinical_state_sub_effect_id
+
+question_id
+question_selection_effect_id
+delivery_id
+delivery_confirmation_ref
+
+source_gap_ref?
+question_need_class
+
+operations[]
+idempotency_key
+
+correlation_id
+trace_id
+created_at
+~~~
+
+Logical Clinical State paths are exactly:
+
+~~~text
+/patient_state/questions/{question_id}
+/patient_state/information_gaps/{gap_id}     when F3 need
+/patient_state/pending_question
+~~~
+
+For F3_INFORMATION_GAP, the P01 sub-effect is one atomic StatePatch:
+
+~~~text
+REPLACE Question SELECTED -> DELIVERED_TO_USER
+
+REPLACE source Gap
+→ status = ASKED
+→ add delivered Question ref to question_refs as governed
+
+ADD or REPLACE /patient_state/pending_question
+→ current delivered Question
+~~~
+
+For F1_MINIMAL_CLARIFICATION:
+
+~~~text
+REPLACE Question SELECTED -> DELIVERED_TO_USER
+
+ADD or REPLACE /patient_state/pending_question
 
 no F3 Gap mutation
 ~~~
 
-Thread AWAITING_USER is not part of Clinical State mutation.
+The P01 sub-effect does not mutate Consultation lifecycle.
+
+## 28.2 Consultation lifecycle sub-effect
+
+Define:
+
+~~~text
+CONSULTATION_WAITING_EFFECT_ID
+=
+QUESTION_DELIVERED_WAIT_EFFECT_ID
++ consultation-wait-sub-effect contract version
+~~~
+
+and logical command:
+
+~~~text
+ConsultationWaitingTransitionCommand
+
+transition_id
+parent_delivered_wait_effect_id
+consultation_waiting_effect_id
+
+consultation_id
+expected_consultation_row_version
+expected_prior_lifecycle = ACTIVE
+target_lifecycle = WAITING_USER
+
+question_id
+delivery_id
+delivery_confirmation_ref
+
+idempotency_key
+correlation_id
+trace_id
+created_at
+~~~
+
+This command is owned by the Consultation lifecycle persistence boundary, not P01 StatePatch.
+
+Exact replay:
+
+~~~text
+same CONSULTATION_WAITING_EFFECT_ID
+→ reattach same authoritative WAITING transition
+→ no second lifecycle mutation
+~~~
+
+Version/currentness conflict:
+
+~~~text
+do not overwrite lifecycle blindly
+→ reconcile parent delivered-wait effect
+→ RDP-04 recovery/failure policy
+~~~
+
+## 28.3 Runtime wait transition
+
+Runtime may form:
+
+~~~text
+Thread -> AWAITING_USER
+~~~
+
+only after the parent delivered-wait effect has authoritative evidence that:
+- delivered Clinical State sub-effect is committed/current;
+- Consultation WAITING sub-effect is committed/current.
+
+Runtime transition:
+- is not K09;
+- is not Clinical State;
+- cannot repair missing business-state sub-effects by inference.
+
+RDP-04 will freeze exact durable ordering/crash reconciliation.
 
 ---
 
@@ -1313,33 +1494,49 @@ and call the sequence atomic
 
 # 30. Delivery effect identity handoff
 
-RDP-03 reserves a semantic identity family for RDP-04:
+RDP-03 freezes the parent semantic identity:
 
 ~~~text
 QUESTION_DELIVERED_WAIT_EFFECT_ID
 ~~~
 
-At minimum it must bind:
+Minimum derivation:
 
 ~~~text
 consultation_id
-question_id
-QUESTION_SELECTION_EFFECT_ID
-delivery_id
-delivery payload/content fingerprint
-delivery confirmation evidence identity
-source Clinical State Version / selected Question version
-delivery contract version
++ question_id
++ QUESTION_SELECTION_EFFECT_ID
++ delivery_id
++ delivery payload/content fingerprint
++ delivery confirmation evidence identity
++ authoritative selected-Question Clinical State Version
++ delivery business-transition contract version
 ~~~
 
-RDP-04 will freeze exact transport fields and crash windows.
+Stable child identities:
+
+~~~text
+QUESTION_DELIVERED_CLINICAL_STATE_EFFECT_ID
+= parent effect + clinical-state-sub-effect contract version
+
+CONSULTATION_WAITING_EFFECT_ID
+= parent effect + consultation-wait-sub-effect contract version
+~~~
+
+RDP-04 will freeze exact transport attempt/receipt/crash-window fields.
 
 RDP-03 requires:
 
 ~~~text
-same delivery effect
-→ same delivered/wait business mutation identity
+same parent delivery effect
+→ same child business mutation identities
+→ same child idempotency identities
+
+different delivery_id or different confirmed content fingerprint
+→ different parent effect or conflict
 ~~~
+
+Transport attempt identity is not the parent business effect identity.
 
 ---
 
@@ -1455,6 +1652,44 @@ RDP-03 selects the P05 compatibility strategy:
 
 > **Add a U06 governed parent trace companion instead of overloading the existing one-call CapabilityCallTraceRecord.**
 
+Define stable parent trace identity:
+
+~~~text
+U06_TRACE_ID
+=
+consultation_id
++ admission_id
++ u06_mode
++ source_authority_type
++ source_authority_ref
++ input_clinical_state_version
++ execution_profile
++ U06 trace contract version
+~~~
+
+Rules:
+
+~~~text
+same admitted logical U06 execution / exact replay
+→ same U06_TRACE_ID
+
+retry attempt / span / transport attempt
+→ child attempt evidence
+→ not a new parent trace identity
+
+new admission
+or mode
+or source authority
+or input state version
+or execution profile
+→ different U06_TRACE_ID
+
+U06_TRACE_ID
+!= effect identity
+!= proposal identity
+!= permission to mutate state
+~~~
+
 Logical record:
 
 ~~~text
@@ -1517,6 +1752,32 @@ finished_at?
 ~~~
 
 The record must be PHI-minimal and prefer refs/fingerprints over raw question/user content.
+
+Parent trace lifecycle is evidence-oriented:
+
+~~~text
+STARTED
+OWNER_DECISION_RECORDED
+MUTATION_PENDING
+MUTATION_RECONCILED
+DELIVERY_PENDING
+NO_MUTATION_TERMINAL
+FAILED
+~~~
+
+Implementation may use append-only stage events plus a materialized current view, or another durable equivalent.
+
+It must preserve:
+
+~~~text
+historical terminal stage evidence is not destructively overwritten
+
+exact replay attaches prior effect/proposal/commit refs
+
+attempt-local retry evidence remains distinguishable from parent business trace
+
+a trace update cannot change Clinical State truth
+~~~
 
 ---
 
@@ -2077,9 +2338,13 @@ Authorize U06 owner path only for exact F3/Question logical fields.
 
 No broad /patient_state/** write authority.
 
-## U06-RDP03-IMP-03 — P01 producer/state-write capability identity
+## U06-RDP03-IMP-03 — physical producer + P01 state-write capability identity
 
-Register a U06 state-write authorization identity distinct from C03 dependency binding.
+Register:
+- an approved lower-case physical service producer identity accepted by StatePatch contracts;
+- a U06 state-write authorization capability identity/version distinct from C03 dependency binding.
+
+Logical unit identity remains U06 and business owner remains F3.
 
 ## U06-RDP03-IMP-04 — stable proposal/effect adapter
 
@@ -2105,12 +2370,23 @@ Do not force synthetic PROFILE-B through an untyped real capability binding fiel
 
 ## U06-RDP03-IMP-07 — delivered/wait cross-store seam
 
-RDP-04 must choose physical reconciliation across:
-- Clinical State;
-- Consultation lifecycle table;
-- Runtime Thread/checkpoint.
+RDP-04 must implement/reconcile the frozen parent/child mutation model:
+- QUESTION_DELIVERED_WAIT_EFFECT_ID;
+- QUESTION_DELIVERED_CLINICAL_STATE_EFFECT_ID through P01;
+- CONSULTATION_WAITING_EFFECT_ID through Consultation lifecycle persistence;
+- Runtime Thread/checkpoint transition after business-state reconciliation.
+
+Current ConsultationRecord exposes ACTIVE but no U06 WAITING transition implementation, so this is a real implementation impact.
 
 No cross-store atomicity may be claimed before this is designed/verified.
+
+## U06-RDP03-IMP-08 — Phase-8 F3 binding identity aggregate amendment
+
+At aggregate closure reconcile RDP03-COMPAT-F3-ID-01:
+- old Phase-8 C03 CapabilityBindingRef wording;
+- normalized dependency_binding_type + dependency_binding_ref;
+- PROFILE-A real P06 ref;
+- PROFILE-B synthetic verification identity without production equivalence.
 
 ---
 
@@ -2168,11 +2444,11 @@ exact Question selection replay
 
 RDP03-AC-10
 delivery confirmation for F3 question
-→ delivered mutation may set Question DELIVERED
-+ Gap ASKED
-+ pending question
-+ Consultation WAITING
-subject to RDP-04 cross-store protocol
+→ same QUESTION_DELIVERED_WAIT_EFFECT_ID
+→ P01 child effect commits Question DELIVERED + Gap ASKED + pending question
+→ Consultation child effect commits WAITING_USER
+→ Runtime AWAITING only after both business sub-effects reconcile
+→ RDP-04 owns durable choreography
 
 RDP03-AC-11
 delivery confirmation for F1 clarification
@@ -2209,6 +2485,23 @@ RDP03-AC-17
 same business effect retry uses new wall-clock time
 → proposal/patch created_at remains first-assigned stable value
 → no P01 idempotency mismatch
+
+RDP03-AC-18
+logical_unit_id = U06
+→ physical StatePatch producer is approved lower-case service identity
+→ C03 binding is not copied into StatePatch capability_id
+
+RDP03-AC-19
+exact U06 execution retry
+→ same U06_TRACE_ID
+→ new attempt evidence may append
+→ no new parent trace truth
+
+RDP03-AC-20
+PROFILE-B canonical F3 effect
+→ effect identity uses SYNTHETIC_VERIFICATION_BINDING + synthetic ref
+→ no fabricated real C03 CapabilityBindingRef
+→ aggregate compatibility finding remains explicit
 ~~~
 
 ---
@@ -2253,15 +2546,67 @@ real-patient traffic
 
 ---
 
-# 57. Draft verdict
+# 57. Independent Design Review Remediation
+
+Initial Independent Design Review:
 
 ~~~text
+PR #233
+review_id = 5287657930
+verdict = REVISE_REQUIRED
+reviewed_head = 46542fee7b4d84baaa9a500dcecbc761cf056b4f
+~~~
+
+Findings:
+
+~~~text
+BF-U06-RDP03-IR-01
+= LOGICAL_UNIT_PRODUCER_VS_PHYSICAL_STATEPATCH_PRODUCER_UNDERDEFINED
+
+BF-U06-RDP03-IR-02
+= DELIVERED_WAIT_MUTATION_DECOMPOSITION_UNDERDEFINED
+
+BF-U06-RDP03-IR-03
+= PHASE8_F3_EFFECT_ID_BINDING_COMPATIBILITY_NOT_RECORDED
+
+BF-U06-RDP03-IR-04
+= U06_PARENT_TRACE_IDENTITY_AND_REPLAY_LIFECYCLE_UNDERDEFINED
+~~~
+
+Remediation applied:
+
+1. separated logical U06/F3 producer ownership from physical lower-case StatePatch producer and P01 state-write authorization identity;
+
+2. froze the delivered/wait parent effect into:
+   - P01 Clinical State child effect/proposal;
+   - Consultation WAITING child effect/command;
+   - Runtime AWAITING only after both business-state sub-effects reconcile;
+   - exact pending-question path and no Gap.question_refs mutation at selection;
+
+3. recorded RDP03-COMPAT-F3-ID-01 for Phase-8 F3_CANONICAL_EFFECT_ID binding normalization;
+
+4. froze U06_TRACE_ID derivation, exact replay identity, child attempt evidence, and non-authoritative trace lifecycle.
+
+Current:
+
+~~~text
+BF-U06-RDP03-IR-01
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP03-IR-02
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP03-IR-03
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP03-IR-04
+= REMEDIATED / RE-REVIEW_PENDING
+
 U06-RDP-03
-State Ownership / K09-P01 Mutation / Trace Contract
-= DRAFT / READY_FOR_INDEPENDENT_DESIGN_REVIEW
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 
 BF-U06-RG-03
-= OPEN / DESIGN_REVIEW_PENDING
+= OPEN / DESIGN_RE_REVIEW_PENDING
 
 U06 Implementation Readiness
 = NOT_READY
@@ -2270,8 +2615,11 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-Recommended next action:
+# 58. Revised verdict
 
 ~~~text
-U06-RDP-03 Independent Design Review
+U06-RDP-03
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 ~~~
+
+No Shared Contracts/P01/P05 modification, C03/D04 activation, runtime implementation, delivery, WAITING_USER activation, merge, production, or real-patient authorization is granted.
