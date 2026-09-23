@@ -533,7 +533,7 @@ This creates an explicit aggregate compatibility amendment impact:
 RDP03-COMPAT-F3-ID-01
 ~~~
 
-Frozen Phase 8 wording currently uses:
+The pre-aggregate Phase 8 wording used:
 
 ~~~text
 C03 CapabilityBindingRef
@@ -541,12 +541,14 @@ C03 CapabilityBindingRef
 
 as one F3_CANONICAL_EFFECT_ID component.
 
-At U06 aggregate closure that component must be normalized to:
+The current aggregate amendment candidate normalizes that component to:
 
 ~~~text
 dependency_binding_type
 + dependency_binding_ref
 ~~~
+
+Explicit aggregate refreeze remains pending.
 
 with:
 
@@ -560,7 +562,7 @@ SYNTHETIC_VERIFICATION_BINDING
 → never claims production/live C03 equivalence
 ~~~
 
-RDP-03 does not silently rewrite Phase 8; it records this exact compatibility amendment for aggregate review/re-freeze.
+RDP-03 does not independently rewrite Phase 8. The aggregate amendment candidate now carries the corresponding Phase-8 semantic diff and remains pending explicit refreeze.
 
 For PROFILE-A:
 
@@ -2510,11 +2512,12 @@ No cross-store atomicity may be claimed before this is designed/verified.
 
 ## U06-RDP03-IMP-08 — Phase-8 F3 binding identity aggregate amendment
 
-At aggregate closure reconcile RDP03-COMPAT-F3-ID-01:
-- old Phase-8 C03 CapabilityBindingRef wording;
-- normalized dependency_binding_type + dependency_binding_ref;
-- PROFILE-A real P06 ref;
-- PROFILE-B synthetic verification identity without production equivalence.
+Aggregate amendment candidate disposition for RDP03-COMPAT-F3-ID-01:
+- pre-aggregate Phase-8 C03 CapabilityBindingRef wording is replaced;
+- normalized dependency_binding_type + dependency_binding_ref is used;
+- PROFILE-A resolves the real P06 ref;
+- PROFILE-B uses a synthetic verification identity without production equivalence;
+- explicit aggregate refreeze is still pending.
 
 ## U06-RDP03-IMP-09 — Consultation WAITING provenance/idempotency storage
 
