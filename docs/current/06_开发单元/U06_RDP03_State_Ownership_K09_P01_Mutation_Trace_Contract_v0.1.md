@@ -2516,6 +2516,30 @@ At aggregate closure reconcile RDP03-COMPAT-F3-ID-01:
 - PROFILE-A real P06 ref;
 - PROFILE-B synthetic verification identity without production equivalence.
 
+## U06-RDP03-IMP-09 — Consultation WAITING provenance/idempotency storage
+
+Current ConsultationRecord persists lifecycle_status and row_version but no delivered-wait effect/question/delivery provenance.
+
+Exact replay cannot be proven from lifecycle_status = WAITING_USER alone.
+
+Implementation must add a durable mechanism, for example:
+- reviewed ConsultationRecord provenance fields; or
+- a companion Consultation lifecycle effect/idempotency record.
+
+It must durably associate at least:
+
+~~~text
+CONSULTATION_WAITING_EFFECT_ID
+QUESTION_DELIVERED_WAIT_EFFECT_ID
+question_id
+delivery_id
+canonical payload fingerprint
+idempotency identity
+consultation row-version transition/result
+~~~
+
+This storage is business lifecycle evidence, not Clinical State and not Runtime Thread state.
+
 ---
 
 # 54. Design acceptance scenarios
@@ -2657,6 +2681,12 @@ RDP03-AC-25
 Consultation WAITING_USER for different Question/effect
 → U06_CONSULTATION_WAITING_CONFLICT
 → no overwrite
+
+RDP03-AC-26
+Consultation lifecycle value = WAITING_USER
+but no durable matching wait-effect/question/delivery provenance
+→ exact replay success prohibited
+→ reconciliation/failure required
 ~~~
 
 ---
