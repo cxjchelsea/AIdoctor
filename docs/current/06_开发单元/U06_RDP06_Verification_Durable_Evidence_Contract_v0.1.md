@@ -280,7 +280,10 @@ live_u07_execution = false
 live_u14_final_routing = false
 
 synthetic_delivery_scope_required = true
-shared_runtime_source_change_allowed = false
+
+authorized_shared_runtime_change_refs[]
+authorized_shared_runtime_paths[]
+unreviewed_shared_runtime_change_count = 0
 ~~~
 
 Any hard boundary violation:
@@ -288,6 +291,19 @@ Any hard boundary violation:
 ~~~text
 verification verdict = FAIL
 ~~~
+
+Shared-runtime scope rule:
+
+~~~text
+reviewed aggregate/amendment package
+→ may authorize exact shared-runtime changes
+
+change outside authorized_shared_runtime_change_refs / paths
+→ unreviewed_shared_runtime_change_count > 0
+→ verification FAIL
+~~~
+
+RDP-06 does not itself authorize any shared-runtime change.
 
 ---
 
@@ -373,7 +389,7 @@ are allowed only as structural labels.
 Required governed cases:
 
 ~~~text
-U06-EV-001 .. U06-EV-100
+U06-EV-001 .. U06-EV-106
 ~~~
 
 Required harness self-tests:
@@ -872,6 +888,44 @@ MODE-3 historical compatibility path
 → no new C03 invocation by default
 → historical applicable refs retained
 → semantic compatibility required for REVALIDATED_CURRENT
+
+U06-EV-101
+MODE-1 canonical F3 commit + authoritative read-back
+→ post-F3 Safety barrier evaluation occurs after commit/read-back
+→ barrier binds exact F3 effect/commit/current state
+→ no Question / no delivery / no WAITING directly from MODE-1
+
+U06-EV-102
+post-F3 current Safety = BLOCKED
+→ ordinary continuation prohibited
+→ no MODE-2 Question path
+→ no WAITING
+
+U06-EV-103
+post-F3 current Safety = UNAVAILABLE
+→ ordinary continuation prohibited
+→ typed failure-governance consequence
+→ no Question / delivery / WAITING
+
+U06-EV-104
+MODE-3 exact same F3_REVALIDATION_ID + same canonical evidence
+→ exact replay / reattach
+→ C03 = 0
+→ D04 = 0
+→ StatePatch = 0
+
+U06-EV-105
+MODE-3 same revalidation identity + changed canonical evidence
+→ replay conflict
+→ no projection / mutation
+
+U06-EV-106
+MODE-3 decision formed but target state/binding/policy currentness changes before publish
+→ STALE_BEFORE_PUBLISH
+→ no current projection published
+→ C03 = 0
+→ D04 = 0
+→ P01 commit = 0
 ~~~
 
 ---
@@ -967,9 +1021,11 @@ HG cases are harness verification, not Clinical Runtime outcomes.
 ~~~text
 U06-VG-001
 exact implementation-target / verifier / contract-package SHA binding
++ independently reviewed oracle digest binding
++ authorized shared-runtime change allowlist enforcement
 
 U06-VG-002
-all U06-EV-001..100 present and PASS
+all U06-EV-001..106 present and PASS
 
 U06-VG-003
 all U06-CW-01..09 present and PASS
@@ -982,6 +1038,7 @@ zero real PHI / production recipient evidence
 
 U06-VG-006
 zero real external delivery / model / tool / knowledge side effects
++ isolated verification environment / denied-by-default egress proof
 
 U06-VG-007
 PROFILE-A remains blocked under current repository package
@@ -1006,7 +1063,7 @@ All ten gates are mandatory for current RDP-06 acceptance.
 Current required set:
 
 ~~~text
-100 EV cases
+106 EV cases
 9 crash-window subcases
 3 harness self-tests
 10 verification gates
@@ -1092,6 +1149,54 @@ Oracle must be:
 - hashed into evidence.
 
 Production code must not generate it.
+
+## 19.1 Independent Oracle Review Gate
+
+Future authoritative verification requires:
+
+~~~text
+U06_ORACLE_REVIEW_GATE_V0_1
+
+oracle_review_id
+reviewed_oracle_digest
+reviewed_contract_manifest_digest
+
+reviewer_role
+independence_marker
+
+verdict
+reviewed_at
+finding_refs[]
+~~~
+
+Allowed verdict:
+
+~~~text
+PASS
+REVISE_REQUIRED
+INVALID
+~~~
+
+Authoritative CI must verify:
+
+~~~text
+oracle_digest_used_by_run
+= reviewed_oracle_digest
+
+contract_manifest_digest_used_by_run
+= reviewed_contract_manifest_digest
+
+oracle review verdict
+= PASS
+~~~
+
+Otherwise:
+
+~~~text
+verification = INVALID_EVIDENCE
+~~~
+
+The implementation/runtime under test must not be the sole authority approving the oracle.
 
 ---
 
@@ -1556,7 +1661,59 @@ conflicting distinct effect fails closed
 
 ---
 
-# 34. Structural authorization guards
+# 34. Verification environment isolation
+
+For the current PROFILE-B authoritative run, zero-external-effect proof must not depend only on implementation counters.
+
+Verification environment must provide, where technically available:
+
+~~~text
+network egress = denied by default
+production credentials/secrets = absent
+real recipient endpoints = absent
+production database/store credentials = absent
+
+synthetic adapters = explicit allowlist only
+external-call boundary spy/interceptor = enabled
+~~~
+
+Define:
+
+~~~text
+U06_VERIFICATION_ENVIRONMENT_ISOLATION_V0_1
+
+environment_id
+network_egress_policy
+allowed_endpoint_set
+credential_inventory_digest
+synthetic_adapter_allowlist_digest
+
+external_call_spy_enabled
+external_call_spy_observed_count
+
+production_secret_count
+real_recipient_endpoint_count
+
+verdict
+evidence_refs[]
+~~~
+
+A network/spy/environment violation is authoritative even if runtime self-reported external counters are zero.
+
+Acceptance requires:
+
+~~~text
+environment isolation verdict = PASS
+production_secret_count = 0
+real_recipient_endpoint_count = 0
+external_call_spy_observed_count = 0
+~~~
+
+for current PROFILE-B.
+
+---
+
+# 35. Structural authorization guards
 
 Static/runtime guard evidence must prove:
 
@@ -1576,7 +1733,7 @@ no live U14 final business routing
 
 ---
 
-# 35. PROFILE-A blocked proof
+# 36. PROFILE-A blocked proof
 
 Current verification must positively test that repository state cannot execute PROFILE-A.
 
@@ -1593,7 +1750,7 @@ It is not evidence that PROFILE-A is implemented.
 
 ---
 
-# 36. PROFILE-B zero-side-effect proof
+# 37. PROFILE-B zero-side-effect proof
 
 Authoritative run hard totals:
 
@@ -1610,7 +1767,7 @@ Synthetic adapter activity is recorded separately and must never increment real 
 
 ---
 
-# 37. Regression acceptance
+# 38. Regression acceptance
 
 Authoritative run must execute:
 - focused U06 verification;
@@ -1636,7 +1793,7 @@ Test-count decreases from the bound baseline require explanation and independent
 
 ---
 
-# 38. Skip policy
+# 39. Skip policy
 
 Required EV/CW/HG/VG identities:
 
@@ -1651,7 +1808,7 @@ A conditionally inapplicable external dependency branch may be structurally veri
 
 ---
 
-# 39. Durable evidence bundle
+# 40. Durable evidence bundle
 
 Future CI artifact:
 
@@ -1668,6 +1825,9 @@ u06-rdp06-evidence/
   verification-expectations.json
   fixture-manifest.json
   verification-auth-profile.json
+  oracle-review-gate.json
+  environment-isolation.json
+  authorized-shared-runtime-change-manifest.json
 
   trace-evidence.jsonl
   effect-evidence.jsonl
@@ -1684,7 +1844,7 @@ Exact filenames may be versioned but semantic contents are required.
 
 ---
 
-# 40. Evidence summary schema
+# 41. Evidence summary schema
 
 Define:
 
@@ -1706,8 +1866,12 @@ contract_manifest_digest
 oracle_digest
 fixture_manifest_digest
 auth_profile_digest
+oracle_review_id
+reviewed_oracle_digest
+environment_isolation_digest
+authorized_shared_runtime_change_manifest_digest
 
-required_ev_count = 100
+required_ev_count = 106
 passed_ev_count
 
 required_crash_window_count = 9
@@ -1727,6 +1891,10 @@ real_model_call_count
 real_tool_call_count
 real_knowledge_call_count
 production_store_write_count
+unreviewed_shared_runtime_change_count
+
+environment_isolation_verdict
+external_call_spy_observed_count
 
 regression
 workflow
@@ -1738,7 +1906,7 @@ generated_at
 
 ---
 
-# 41. Evidence builder fail-closed rules
+# 42. Evidence builder fail-closed rules
 
 Evidence builder must fail if:
 - any required case missing;
@@ -1748,6 +1916,10 @@ Evidence builder must fail if:
 - oracle/fixture/contract digest mismatch;
 - contract expectation gap > 0;
 - any hard boundary counter > 0;
+- oracle review missing/non-PASS/digest mismatch;
+- environment isolation missing/non-PASS;
+- external-call spy observed count > 0;
+- unreviewed shared-runtime change count > 0;
 - any required regression failure;
 - any required trace/effect ref missing;
 - any crash-window identity missing;
@@ -1757,7 +1929,7 @@ Builder must not normalize failure into PASS.
 
 ---
 
-# 42. Artifact integrity
+# 43. Artifact integrity
 
 Artifact manifest must hash every retained evidence file.
 
@@ -1776,7 +1948,7 @@ GitHub artifact metadata alone is not sufficient if bundle internal hashes are a
 
 ---
 
-# 43. Retention
+# 44. Retention
 
 Minimum policy for the future authoritative run:
 
@@ -1798,7 +1970,7 @@ No raw PHI should require retention because PHI is prohibited from this verifica
 
 ---
 
-# 44. Independent review sequence after implementation
+# 45. Independent review sequence after implementation
 
 Future implementation verification sequence:
 
@@ -1832,19 +2004,24 @@ Implementation test author and evidence reviewer must not collapse into one unre
 
 ---
 
-# 45. Independent evidence review minimum checks
+# 46. Independent evidence review minimum checks
 
 Independent reviewer must verify:
 - exact implementation SHA;
 - exact verifier SHA;
 - RDP contract heads/digests;
 - oracle independent of implementation outputs;
-- all 100 EV;
+- all 106 EV;
+- EV-101..103 post-F3 Safety barrier evidence;
+- EV-104..106 MODE-3 replay/stale-before-publish evidence;
 - all 9 CW;
 - all 3 HG;
 - all 10 VG;
 - expectation gap = 0;
 - hard external counters = 0;
+- environment isolation and external-call spy evidence pass;
+- oracle review digest is exact and independently accepted;
+- shared-runtime target changes are within reviewed allowlist;
 - PROFILE-A guard works;
 - PROFILE-B scope isolation works;
 - replay identities;
@@ -1856,7 +2033,7 @@ Independent reviewer must verify:
 
 ---
 
-# 46. Contract change invalidation
+# 47. Contract change invalidation
 
 Any semantic change to RDP-01..06, Unit Spec, or relevant Phase contract after accepted verification:
 
@@ -1876,7 +2053,7 @@ Status/provenance-only edits may be handled only through an independently review
 
 ---
 
-# 47. Implementation change invalidation
+# 48. Implementation change invalidation
 
 Any implementation change touching U06 execution semantics after authoritative run requires re-verification unless independently proven non-semantic.
 
@@ -1895,7 +2072,7 @@ Always re-run for changes to:
 
 ---
 
-# 48. Final verification verdict vocabulary
+# 49. Final verification verdict vocabulary
 
 Only:
 
@@ -1930,12 +2107,12 @@ No READY/PRODUCTION status is produced by RDP-06 verification.
 
 ---
 
-# 49. Acceptance thresholds
+# 50. Acceptance thresholds
 
 Future U06 implementation verification may PASS only if:
 
 ~~~text
-100 / 100 EV PASS
+106 / 106 EV PASS
 9 / 9 crash windows PASS
 3 / 3 harness self-tests PASS
 10 / 10 verification gates PASS
@@ -1948,6 +2125,11 @@ real_model_call_count = 0
 real_tool_call_count = 0
 real_knowledge_call_count = 0
 production_store_write_count = 0
+unreviewed_shared_runtime_change_count = 0
+external_call_spy_observed_count = 0
+
+oracle review = PASS
+environment isolation = PASS
 
 regression failures = 0
 regression errors = 0
@@ -1959,7 +2141,7 @@ independent evidence review = PASS
 
 ---
 
-# 50. Coverage traceability matrix
+# 51. Coverage traceability matrix
 
 ~~~text
 RDP-01
@@ -1973,11 +2155,13 @@ RDP-02
 
 RDP-03
 → EV-042..061
+→ EV-101..106 where state/barrier/revalidation interaction applies
 → VG-008
 → CW-05..09
 
 RDP-04
 → EV-062..096
+→ EV-101..103 post-F3 no-delivery/wait boundary
 → CW-01..09
 → HG-002/003
 → VG-003/004/005/006/009
@@ -1986,15 +2170,21 @@ RDP-05
 → EV-097..100
 → VG-004/005/006/007
 
+RDP-01 / Phase-9 post-F3 barrier
+→ EV-101..103
+
+RDP-02 / MODE-3 revalidation
+→ EV-104..106
+
 global regression/integrity
-→ VG-001/010
+→ VG-001/006/010
 ~~~
 
 Every RDP has executable evidence obligations.
 
 ---
 
-# 51. Current implementation posture
+# 52. Current implementation posture
 
 Current repository still has no authorized U06 implementation.
 
@@ -2009,7 +2199,7 @@ It only freezes what those future verification assets must prove.
 
 ---
 
-# 52. Readiness blocker disposition
+# 53. Readiness blocker disposition
 
 If Independent Design Review passes:
 
@@ -2038,7 +2228,7 @@ Because RDP-01/RDP-05 and RDP-03/Phase-8 plus RDP-03/RDP-04 shared impacts still
 
 ---
 
-# 53. Required next governance step after RDP-06 PASS
+# 54. Required next governance step after RDP-06 PASS
 
 After RDP-06 design PASS, the next step is:
 
@@ -2059,7 +2249,7 @@ Only after aggregate compatibility is refrozen may U06 Implementation Readiness 
 
 ---
 
-# 54. Authorization boundary
+# 55. Authorization boundary
 
 RDP-06 does not authorize:
 
@@ -2081,15 +2271,71 @@ real-patient traffic
 
 ---
 
-# 55. Draft verdict
+# 56. Independent Design Review Remediation
+
+Initial Independent Design Review:
 
 ~~~text
+PR #235
+review_id = 5287844164
+verdict = REVISE_REQUIRED
+reviewed_head = c6724b010918f728099299309e27ea9b402d27bb
+~~~
+
+Findings:
+
+~~~text
+BF-U06-RDP06-IR-01
+= RG06_MODE1_POST_F3_SAFETY_BARRIER_COVERAGE_MISSING
+
+BF-U06-RDP06-IR-02
+= MODE3_REPLAY_AND_STALE_BEFORE_PUBLISH_COVERAGE_MISSING
+
+BF-U06-RDP06-IR-03
+= INDEPENDENT_ORACLE_REVIEW_PROVENANCE_UNDERDEFINED
+
+BF-U06-RDP06-IR-04
+= ZERO_EXTERNAL_SIDE_EFFECT_PROOF_TOO_SELF_REPORTED
+
+BF-U06-RDP06-IR-05
+= SHARED_RUNTIME_AUTH_PROFILE_OVERCONSTRAINED
+~~~
+
+Remediation applied:
+
+1. expanded required EV set to 106 and added EV-101..103 for post-F3 Safety barrier ordering/block/preemption;
+
+2. added EV-104..106 for MODE-3 exact replay, changed-evidence replay conflict, and STALE_BEFORE_PUBLISH;
+
+3. added U06_ORACLE_REVIEW_GATE_V0_1 with exact reviewed oracle/contract digests and independence marker;
+
+4. added externally constrained verification environment evidence: denied-by-default egress, no production secrets/endpoints, synthetic-adapter allowlist and external-call spy/interceptor;
+
+5. replaced blanket shared-runtime-change prohibition with reviewed allowlist refs/paths and unreviewed_shared_runtime_change_count = 0.
+
+Current:
+
+~~~text
+BF-U06-RDP06-IR-01
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP06-IR-02
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP06-IR-03
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP06-IR-04
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP06-IR-05
+= REMEDIATED / RE-REVIEW_PENDING
+
 U06-RDP-06
-Verification / Durable Evidence Contract
-= DRAFT / READY_FOR_INDEPENDENT_DESIGN_REVIEW
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 
 BF-U06-RG-06
-= OPEN / DESIGN_REVIEW_PENDING
+= OPEN / DESIGN_RE_REVIEW_PENDING
 
 U06 Implementation Readiness
 = NOT_READY
@@ -2098,8 +2344,11 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-Recommended next action:
+# 57. Revised verdict
 
 ~~~text
-U06-RDP-06 Independent Design Review
+U06-RDP-06
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 ~~~
+
+No implementation, synthetic adapter implementation, real C03/D04 activation, external delivery, merge, production, or real-patient authorization is granted.
