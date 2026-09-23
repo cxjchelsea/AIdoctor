@@ -418,12 +418,78 @@ IRR03-V01..V17
 = 17
 ~~~
 
-Total supplemental physical-design cases:
+Canonical physical verification identity is not a second case namespace.
+
+The exact required case identities remain:
 
 ~~~text
-U06-PHY-V required count
+CA-U06-IRR-01:
+IRR01-V01 .. IRR01-V16
+
+CA-U06-IRR-02:
+IRR02-V01 .. IRR02-V16
+
+CA-U06-IRR-03:
+IRR03-V01 .. IRR03-V17
+~~~
+
+Define only a grouping manifest name:
+
+~~~text
+U06-PHY-V
+= physical verification manifest/group
+= not an individual case-id namespace
+~~~
+
+Total unique required physical case identities:
+
+~~~text
+16 + 16 + 17
 = 49
 ~~~
+
+Each physical evidence record must contain:
+
+~~~text
+physical_case_id
+= exact IRR01-Vxx / IRR02-Vxx / IRR03-Vxx identity
+
+source_ca_ref
+source_ca_semantic_digest
+
+expected_claim
+observed_claim
+evidence_refs[]
+pass
+~~~
+
+Required authority digests:
+
+~~~text
+CA-U06-IRR-01 semantic authority
+= reviewed PASS semantic head/digest
+
+CA-U06-IRR-02 semantic authority
+= reviewed PASS semantic head/digest
+
+CA-U06-IRR-03 semantic authority
+= reviewed PASS semantic head/digest
+~~~
+
+The future Implementation Authorization package must bind these exact semantic authorities, not only the later status/provenance synchronization head.
+
+Acceptance requires:
+
+~~~text
+exact required physical_case_id count = 49
+unique physical_case_id count = 49
+missing physical_case_id count = 0
+duplicate physical_case_id count = 0
+all source CA semantic digests match reviewed PASS authority
+49 / 49 physical cases PASS
+~~~
+
+A runner may not satisfy the gate by reporting an anonymous count of 49.
 
 For future implementation verification, acceptance authority therefore includes:
 
@@ -433,7 +499,7 @@ For future implementation verification, acceptance authority therefore includes:
 3 / 3 U06-HG PASS
 10 / 10 U06-VG PASS
 12 / 12 U06-AGG-V PASS
-49 / 49 U06-PHY-V PASS
+49 / 49 exact IRR physical cases PASS
 ~~~
 
 The 49 cases are not a replacement for RDP-06.
@@ -624,7 +690,10 @@ required evidence thresholds:
 3 HG
 10 VG
 12 AGG-V
-49 PHY-V
+49 exact physical cases:
+  IRR01-V01..V16
+  IRR02-V01..V16
+  IRR03-V01..V17
 
 required regression scope
 
@@ -777,24 +846,53 @@ This readiness decision does not authorize:
 
 ---
 
-# 18. Draft verdict
+# 18. Independent Readiness Review Remediation
+
+Initial Independent Readiness Review:
 
 ~~~text
+PR #240
+review_id = 5288523031
+verdict = REVISE_REQUIRED
+reviewed_head = 3ccaf4f338de834e833b2a59bdda8815c5d390b9
+~~~
+
+Finding:
+
+~~~text
+BF-U06-POSTIRR-IR-01
+= PHYSICAL_VERIFICATION_OVERLAY_IDENTITY_MAPPING_UNDERDEFINED
+~~~
+
+Remediation:
+
+~~~text
+U06-PHY-V
+= grouping manifest only
+
+canonical physical case IDs remain exactly:
+IRR01-V01..V16
+IRR02-V01..V16
+IRR03-V01..V17
+
+required unique physical cases
+= 49
+~~~
+
+Future evidence must bind each exact case to its source CA semantic digest.
+
+Current:
+
+~~~text
+BF-U06-POSTIRR-IR-01
+= REMEDIATED / RE_REVIEW_PENDING
+
 U06 Implementation Readiness Re-Evaluation
 (post physical-design remediation)
-= DRAFT / READY_FOR_INDEPENDENT_READINESS_REVIEW
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_READINESS_RE_REVIEW
 
 PROFILE-B
 = PROPOSED_READY_FOR_IMPLEMENTATION_AUTHORIZATION_REVIEW
-
-BF-U06-IRR-01
-= PROPOSED_CLOSED_FOR_PROFILE_B
-
-BF-U06-IRR-02
-= PROPOSED_CLOSED_FOR_PROFILE_B
-
-BF-U06-IRR-03
-= PROPOSED_CLOSED_FOR_PROFILE_B
 
 PROFILE-A
 = NOT_READY
@@ -803,8 +901,12 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-Recommended next action:
+# 19. Revised verdict
 
 ~~~text
-Independent Post-Physical-Design Readiness Review
+U06 Implementation Readiness Re-Evaluation
+(post physical-design remediation)
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_READINESS_RE_REVIEW
 ~~~
+
+No code implementation, schema migration execution, shared-runtime modification, synthetic adapter implementation, merge, production, or real-patient authorization is granted.
