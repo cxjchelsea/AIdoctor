@@ -8,7 +8,7 @@
 > Artifact SHA-256: `b04617f622be51c5ea838aab637474bc25de3c2e4f0345b3427650d1e3dc6dfd`  
 > Independent Evidence-Only Review: **PASS** / review_id `5286106435`  
 > Repository accepted-evidence snapshot: `U05_Accepted_Verification_Evidence_v0.1.json`  
-> Status: **COMBINED_IMPLEMENTATION_EVIDENCE_REVIEW_PENDING**
+> Status: **PASS / VERIFICATION_CLOSED_FOR_AUTHORIZED_NON_PRODUCTION_SCOPE**
 
 ## 1. Closure basis
 
@@ -104,14 +104,27 @@ Before final closure, an independent combined review must confirm that:
 - the repository snapshot faithfully summarizes the accepted evidence;
 - the final verdict remains bounded to authorized non-production U05 Clinical Readiness.
 
-Until that review is recorded:
+Combined Implementation / Evidence Review:
+
+```
+review_id = 5286165180
+verdict = PASS
+```
+
+Final:
 
 ```
 U05 Implementation Verification
-= NOT_PASSED_PENDING_COMBINED_REVIEW
+= PASS
 
 RDP-06 Authoritative Verification
-= EVIDENCE_ACCEPTED_PENDING_COMBINED_REVIEW
+= PASS
+
+Exact verified implementation
+= 2b7926afd69de9fe2224d8a5b69e91c02c2db495
+
+Exact accepted verifier
+= c334ea8ec6b75020c3bba12d02f48140a28b8318
 ```
 
 ## 6. Boundary after final PASS
@@ -139,3 +152,52 @@ Real-patient traffic
 ```
 
 No merge is performed by this closure record.
+
+
+## 7. Final closure provenance
+
+Combined Implementation / Evidence Review:
+
+`5286165180 = PASS`
+
+Repository snapshot final fields:
+
+```
+combined_review_id = 5286165180
+final_verification_verdict = PASS
+```
+
+Final bounded status:
+
+```
+U05 RDP-06 Authoritative Verification
+= PASS
+
+U05 Implementation Verification
+= PASS
+
+U05 authorized non-production verification scope
+= CLOSED / VERIFIED
+```
+
+Unchanged external gates:
+
+```
+Merge Authorization
+= NOT_GRANTED
+
+Production Authorization
+= BLOCKED
+
+Production Clinical Runtime
+= NOT_ENABLED
+
+Live downstream execution
+= NOT_AUTHORIZED
+
+Release activation
+= NOT_AUTHORIZED
+
+Real-patient traffic
+= NOT_AUTHORIZED
+```
