@@ -8,7 +8,7 @@
 > Exact target: `main@39e658eb6d86c2c0dfc5d1199837553b7faa2934`  
 > Test merge: `fe660ff0e886c1206a1811ccdf087dffa73f6ea2`  
 > Required method: **STANDARD MERGE COMMIT ONLY**  
-> Status: **OWNER DECISION PENDING**
+> Status: **AUTHORIZED / CONSUMED_FOR_M2_STANDARD_MERGE**
 
 ## 1. Decision question
 
@@ -166,6 +166,54 @@ Current:
 
 ```
 AUTH-U05-M2-ACCEPTED-VERIFIER-MERGE-001
-= ELIGIBLE_FOR_EXPLICIT_OWNER_DECISION
-= NOT_GRANTED
+= AUTHORIZED
 ```
+
+
+## 10. Repository Owner Decision
+
+The repository owner explicitly selected:
+
+```
+AUTHORIZE
+```
+
+against exact reviewed authorization-package head:
+
+```
+51059060cb64c9ff9b6615d3f28dd5590e09a5d9
+```
+
+Therefore:
+
+```
+AUTH-U05-M2-ACCEPTED-VERIFIER-MERGE-001
+= AUTHORIZED
+```
+
+Authorized exact merge:
+
+```
+PR = #223
+source = c334ea8ec6b75020c3bba12d02f48140a28b8318
+target = main@39e658eb6d86c2c0dfc5d1199837553b7faa2934
+method = STANDARD MERGE COMMIT ONLY
+```
+
+Pre-consumption drift check immediately before authorization consumption:
+
+```
+PR #223 head = c334ea8ec6b75020c3bba12d02f48140a28b8318
+main = 39e658eb6d86c2c0dfc5d1199837553b7faa2934
+mergeable = true
+source drift = none
+target drift = none
+```
+
+Mandatory next action after merge:
+
+```
+M2 Post-Merge Verification
+```
+
+M3 remains not authorized until M2 post-merge verification passes.
