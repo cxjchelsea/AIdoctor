@@ -44,9 +44,9 @@ import java.util.concurrent.Future;
  */
 public final class U05VerificationSupport {
     public static final String IMPLEMENTATION_SHA =
-            "261ee5525c8260e93db19173ffbde89a8af6810d";
+            "2b7926afd69de9fe2224d8a5b69e91c02c2db495";
     public static final String CONTRACT_MANIFEST_DIGEST =
-            "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7";
+            "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5";
     public static final String ENV = "ci-nonprod-u05";
     public static final int VERSION = 12;
     private static final Clock CLOCK =

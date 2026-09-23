@@ -1,8 +1,8 @@
 {
-  "authorization_id": "AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001",
+  "authorization_id": "AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-002",
   "environment": "ci-nonprod-u05",
   "external_delivery_side_effects": false,
-  "implementation_sha": "261ee5525c8260e93db19173ffbde89a8af6810d",
+  "implementation_sha": "2b7926afd69de9fe2224d8a5b69e91c02c2db495",
   "live_u06_execution": false,
   "live_u08_execution": false,
   "live_u10_execution": false,
@@ -17,7 +17,7 @@
   "synthetic_non_phi_only": true,
   "u05_live_external_entry": false,
   "unauthorized_model_tool_calls": false,
-  "authorization_record_sha": "c31f654779a4a3dc6316d955c7e4a5c6b5b8c094",
-  "authorization_record_path": "docs/current/06_开发单元/U05_RDP06_Authoritative_Verifier_Target_Rebind_Authorization_Decision_v0.1.md",
-  "authorization_record_blob_sha": "9893a016130d807ecb2f1da06af23312e898fb22"
+  "authorization_record_sha": "ce83f5a2e930db08e2415012a22170df12d66b44",
+  "authorization_record_path": "docs/current/06_开发单元/U05_RDP06_Authoritative_Verifier_Target_Rebind_AV04_Authorization_Decision_v0.1.md",
+  "authorization_record_blob_sha": "b288077ea7e22bb03292cff36641564f0fb6eff6"
 }

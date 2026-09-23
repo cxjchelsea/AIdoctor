@@ -16,12 +16,12 @@ permissions:
   contents: read
 
 env:
-  U05_IMPLEMENTATION_SHA: 261ee5525c8260e93db19173ffbde89a8af6810d
+  U05_IMPLEMENTATION_SHA: 2b7926afd69de9fe2224d8a5b69e91c02c2db495
   U05_PARENT_AUTHORIZATION_ID: AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001
-  U05_REBIND_AUTHORIZATION_ID: AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001
-  U05_REBIND_AUTHORIZATION_RECORD_SHA: c31f654779a4a3dc6316d955c7e4a5c6b5b8c094
-  U05_REBIND_AUTHORIZATION_RECORD_BLOB: 9893a016130d807ecb2f1da06af23312e898fb22
-  U05_REBIND_AUTHORIZATION_RECORD_PATH: docs/current/06_开发单元/U05_RDP06_Authoritative_Verifier_Target_Rebind_Authorization_Decision_v0.1.md
+  U05_REBIND_AUTHORIZATION_ID: AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-002
+  U05_REBIND_AUTHORIZATION_RECORD_SHA: ce83f5a2e930db08e2415012a22170df12d66b44
+  U05_REBIND_AUTHORIZATION_RECORD_BLOB: b288077ea7e22bb03292cff36641564f0fb6eff6
+  U05_REBIND_AUTHORIZATION_RECORD_PATH: docs/current/06_开发单元/U05_RDP06_Authoritative_Verifier_Target_Rebind_AV04_Authorization_Decision_v0.1.md
   U05_ENVIRONMENT: ci-nonprod-u05
   U05_LIVE_UPSTREAM_CUTOVER: 'false'
   U05_LIVE_U06_EXECUTION: 'false'
@@ -67,10 +67,10 @@ jobs:
           test "$(git -C auth-src rev-parse HEAD)" = "$U05_REBIND_AUTHORIZATION_RECORD_SHA"
           test "$(git -C auth-src rev-parse HEAD:$U05_REBIND_AUTHORIZATION_RECORD_PATH)" = "$U05_REBIND_AUTHORIZATION_RECORD_BLOB"
           AUTH_DOC="auth-src/$U05_REBIND_AUTHORIZATION_RECORD_PATH"
-          grep -F 'AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001' "$AUTH_DOC"
+          grep -F 'AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-002' "$AUTH_DOC"
           grep -F '= AUTHORIZED' "$AUTH_DOC"
           grep -F 'AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001' "$AUTH_DOC"
-          grep -F '261ee5525c8260e93db19173ffbde89a8af6810d' "$AUTH_DOC"
+          grep -F '2b7926afd69de9fe2224d8a5b69e91c02c2db495' "$AUTH_DOC"
           echo "U05_RDP06_OWNER_REBIND_AUTHORIZATION=PASS"
 
       - name: G0/G1 preflight identity and exact overlay inventory
@@ -82,7 +82,7 @@ jobs:
           test -z "$(git -C sut status --porcelain)"
           python3 - <<'PY'
           import subprocess
-          target = "261ee5525c8260e93db19173ffbde89a8af6810d"
+          target = "2b7926afd69de9fe2224d8a5b69e91c02c2db495"
           allowed = {
               ".github/workflows/u05-rdp06-authoritative-verification.yml",
               ".github/verification/u05_rdp06/build_contract_manifest.py",
@@ -163,7 +163,7 @@ jobs:
           assert len(f["fixtures"]) >= 82
           assert f["synthetic"] is True
           assert f["contains_real_phi"] is False
-          assert a["implementation_sha"] == "261ee5525c8260e93db19173ffbde89a8af6810d"
+          assert a["implementation_sha"] == "2b7926afd69de9fe2224d8a5b69e91c02c2db495"
           import hashlib
           for name in [
               "u05-verification-expectations.json",
@@ -253,7 +253,7 @@ jobs:
           test "$U05_EXTERNAL_DELIVERY" = "false"
           test "$U05_EXTERNAL_MODEL_TOOL_CALLS" = "false"
           test "$U05_SHARED_RUNTIME_SOURCE_CHANGE" = "false"
-          test "$U05_REBIND_AUTHORIZATION_ID" = "AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001"
+          test "$U05_REBIND_AUTHORIZATION_ID" = "AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-002"
 
       - name: Checkout exact reviewed verifier head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -273,10 +273,10 @@ jobs:
           test "$(git -C auth-src rev-parse HEAD)" = "$U05_REBIND_AUTHORIZATION_RECORD_SHA"
           test "$(git -C auth-src rev-parse HEAD:$U05_REBIND_AUTHORIZATION_RECORD_PATH)" = "$U05_REBIND_AUTHORIZATION_RECORD_BLOB"
           AUTH_DOC="auth-src/$U05_REBIND_AUTHORIZATION_RECORD_PATH"
-          grep -F 'AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001' "$AUTH_DOC"
+          grep -F 'AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-002' "$AUTH_DOC"
           grep -F '= AUTHORIZED' "$AUTH_DOC"
           grep -F 'AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001' "$AUTH_DOC"
-          grep -F '261ee5525c8260e93db19173ffbde89a8af6810d' "$AUTH_DOC"
+          grep -F '2b7926afd69de9fe2224d8a5b69e91c02c2db495' "$AUTH_DOC"
           echo "G0_OWNER_REBIND_AUTHORIZATION=PASS"
 
       - name: G1 verify verifier identity and exact authorized inventory
@@ -284,7 +284,7 @@ jobs:
           test "$(git -C verifier-src rev-parse HEAD)" = "$U05_VERIFIER_SHA"
           python3 - <<'PY'
           import subprocess
-          target = "261ee5525c8260e93db19173ffbde89a8af6810d"
+          target = "2b7926afd69de9fe2224d8a5b69e91c02c2db495"
           allowed = {
               ".github/workflows/u05-rdp06-authoritative-verification.yml",
               ".github/verification/u05_rdp06/build_contract_manifest.py",

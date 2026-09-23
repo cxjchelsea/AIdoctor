@@ -7,7 +7,7 @@ import pathlib
 import subprocess
 import sys
 
-TARGET = "261ee5525c8260e93db19173ffbde89a8af6810d"
+TARGET = "2b7926afd69de9fe2224d8a5b69e91c02c2db495"
 EXPECTED = {
     "RDP-01": ("docs/current/06_开发单元/U05_RDP01_Consumer_Inbound_Contract_v0.1.md", "b59430861b153a04773ac7d151b03f22e3d6b296"),
     "RDP-02": ("docs/current/06_开发单元/U05_RDP02_D03_Policy_Owner_Decision_Contract_v0.1.md", "20ca8b707e003e5265f5976999577541bf80543e"),

@@ -6,8 +6,8 @@ import pathlib
 import re
 import sys
 
-TARGET = "261ee5525c8260e93db19173ffbde89a8af6810d"
-AUTHORITY_DIGEST = "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7"
+TARGET = "2b7926afd69de9fe2224d8a5b69e91c02c2db495"
+AUTHORITY_DIGEST = "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5"
 EFFECT_KEYS = [
     "state_commit_count",
     "readiness_effect_count",
@@ -89,7 +89,7 @@ def main():
         fail("top-level schema mismatch")
     if top.get("implementation_sha") != TARGET:
         fail("implementation SHA mismatch")
-    if top.get("authorization_id") != "AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-001":
+    if top.get("authorization_id") != "AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-002":
         fail("authorization id mismatch")
     if top.get("parent_authorization_id") != "AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-001":
         fail("parent authorization id mismatch")
@@ -107,11 +107,11 @@ def main():
     auth = load(root / "auth-profile.json")
     if auth.get("implementation_sha") != TARGET:
         fail("auth-profile target mismatch")
-    if auth.get("authorization_record_sha") != "c31f654779a4a3dc6316d955c7e4a5c6b5b8c094":
+    if auth.get("authorization_record_sha") != "ce83f5a2e930db08e2415012a22170df12d66b44":
         fail("auth-profile authorization record SHA mismatch")
-    if auth.get("authorization_record_blob_sha") != "9893a016130d807ecb2f1da06af23312e898fb22":
+    if auth.get("authorization_record_blob_sha") != "b288077ea7e22bb03292cff36641564f0fb6eff6":
         fail("auth-profile authorization record blob mismatch")
-    if auth.get("authorization_record_path") != "docs/current/06_开发单元/U05_RDP06_Authoritative_Verifier_Target_Rebind_Authorization_Decision_v0.1.md":
+    if auth.get("authorization_record_path") != "docs/current/06_开发单元/U05_RDP06_Authoritative_Verifier_Target_Rebind_AV04_Authorization_Decision_v0.1.md":
         fail("auth-profile authorization record path mismatch")
     if auth.get("environment") != "ci-nonprod-u05":
         fail("auth-profile environment mismatch")

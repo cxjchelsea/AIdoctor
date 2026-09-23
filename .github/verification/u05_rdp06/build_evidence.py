@@ -6,7 +6,7 @@ import pathlib
 import shutil
 import xml.etree.ElementTree as ET
 
-TARGET = "261ee5525c8260e93db19173ffbde89a8af6810d"
+TARGET = "2b7926afd69de9fe2224d8a5b69e91c02c2db495"
 CASE_SCHEMA = "U05_CASE_EVIDENCE_V0_1"
 BUNDLE_SCHEMA = "U05_NONPROD_VERIFICATION_EVIDENCE_V0_1"
 

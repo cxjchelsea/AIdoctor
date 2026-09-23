@@ -6,7 +6,7 @@
       ],
       "case_id": "U05-EV-001",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -38,7 +38,7 @@
       ],
       "case_id": "U05-EV-002",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -70,7 +70,7 @@
       ],
       "case_id": "U05-EV-003",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -102,7 +102,7 @@
       ],
       "case_id": "U05-EV-004",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -134,7 +134,7 @@
       ],
       "case_id": "U05-EV-005",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -166,7 +166,7 @@
       ],
       "case_id": "U05-EV-006",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -198,7 +198,7 @@
       ],
       "case_id": "U05-EV-007",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -230,7 +230,7 @@
       ],
       "case_id": "U05-EV-008",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -262,7 +262,7 @@
       ],
       "case_id": "U05-EV-009",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -294,7 +294,7 @@
       ],
       "case_id": "U05-EV-010",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -326,7 +326,7 @@
       ],
       "case_id": "U05-EV-011",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -358,7 +358,7 @@
       ],
       "case_id": "U05-EV-012",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -393,7 +393,7 @@
       ],
       "case_id": "U05-EV-013",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -425,7 +425,7 @@
       ],
       "case_id": "U05-EV-014",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -457,7 +457,7 @@
       ],
       "case_id": "U05-EV-015",
       "category": "admission",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-01",
@@ -489,7 +489,7 @@
       ],
       "case_id": "U05-EV-016",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -524,7 +524,7 @@
       ],
       "case_id": "U05-EV-017",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -559,7 +559,7 @@
       ],
       "case_id": "U05-EV-018",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -594,7 +594,7 @@
       ],
       "case_id": "U05-EV-019",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -629,7 +629,7 @@
       ],
       "case_id": "U05-EV-020",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -664,7 +664,7 @@
       ],
       "case_id": "U05-EV-021",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -699,7 +699,7 @@
       ],
       "case_id": "U05-EV-022",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -734,7 +734,7 @@
       ],
       "case_id": "U05-EV-023",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -769,7 +769,7 @@
       ],
       "case_id": "U05-EV-024",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -804,7 +804,7 @@
       ],
       "case_id": "U05-EV-025",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -839,7 +839,7 @@
       ],
       "case_id": "U05-EV-026",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -871,7 +871,7 @@
       ],
       "case_id": "U05-EV-027",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -906,7 +906,7 @@
       ],
       "case_id": "U05-EV-028",
       "category": "d03",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-02",
@@ -941,7 +941,7 @@
       ],
       "case_id": "U05-EV-029",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -977,7 +977,7 @@
       ],
       "case_id": "U05-EV-030",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1013,7 +1013,7 @@
       ],
       "case_id": "U05-EV-031",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1049,7 +1049,7 @@
       ],
       "case_id": "U05-EV-032",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1085,7 +1085,7 @@
       ],
       "case_id": "U05-EV-033",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1121,7 +1121,7 @@
       ],
       "case_id": "U05-EV-034",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1157,7 +1157,7 @@
       ],
       "case_id": "U05-EV-035",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1193,7 +1193,7 @@
       ],
       "case_id": "U05-EV-036",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1230,7 +1230,7 @@
       ],
       "case_id": "U05-EV-037",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1266,7 +1266,7 @@
       ],
       "case_id": "U05-EV-038",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1302,7 +1302,7 @@
       ],
       "case_id": "U05-EV-039",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1338,7 +1338,7 @@
       ],
       "case_id": "U05-EV-040",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1374,7 +1374,7 @@
       ],
       "case_id": "U05-EV-041",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1410,7 +1410,7 @@
       ],
       "case_id": "U05-EV-042",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1446,7 +1446,7 @@
       ],
       "case_id": "U05-EV-043",
       "category": "mutation",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-03",
@@ -1482,7 +1482,7 @@
       ],
       "case_id": "U05-EV-044",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1518,7 +1518,7 @@
       ],
       "case_id": "U05-EV-045",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1554,7 +1554,7 @@
       ],
       "case_id": "U05-EV-046",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1590,7 +1590,7 @@
       ],
       "case_id": "U05-EV-047",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1626,7 +1626,7 @@
       ],
       "case_id": "U05-EV-048",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1662,7 +1662,7 @@
       ],
       "case_id": "U05-EV-049",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1698,7 +1698,7 @@
       ],
       "case_id": "U05-EV-050",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1735,7 +1735,7 @@
       ],
       "case_id": "U05-EV-051",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1772,7 +1772,7 @@
       ],
       "case_id": "U05-EV-052",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1808,7 +1808,7 @@
       ],
       "case_id": "U05-EV-053",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1844,7 +1844,7 @@
       ],
       "case_id": "U05-EV-054",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1880,7 +1880,7 @@
       ],
       "case_id": "U05-EV-055",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1916,7 +1916,7 @@
       ],
       "case_id": "U05-EV-056",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1952,7 +1952,7 @@
       ],
       "case_id": "U05-EV-057",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -1988,7 +1988,7 @@
       ],
       "case_id": "U05-EV-058",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -2024,7 +2024,7 @@
       ],
       "case_id": "U05-EV-059",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -2060,7 +2060,7 @@
       ],
       "case_id": "U05-EV-060",
       "category": "routing",
-      "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+      "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
       "expected_authority_refs": [
         "RDP-06",
         "RDP-04",
@@ -2091,6 +2091,6 @@
       "scenario": "route creation/consumption no downstream side effects"
     }
   ],
-  "contract_manifest_digest": "d5d272963066dccb14a6c0f124cfd5128bbacd363e84e96279800dd3b6e08ef7",
+  "contract_manifest_digest": "570ca5303f601df2caf672bfb7c9e61fe2c5a5add86e288cf782c8e6030712e5",
   "schema": "U05_VERIFICATION_EXPECTATIONS_V0_1"
 }
