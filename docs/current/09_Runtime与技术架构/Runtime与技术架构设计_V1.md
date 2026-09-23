@@ -1001,6 +1001,43 @@ Merge Authorization = NOT IMPLIED
 
 ---
 
+
+
+## 17.0 Direct F1 clarification runtime boundary
+
+The business loop may target U06 when:
+
+~~~text
+F1 Problem Framing = CLARIFICATION_REQUIRED
+~~~
+
+but Runtime execution is legal only with an authoritative:
+
+~~~text
+F1ClarificationRoutingEligibility
++ governed safety_clearance_ref
++ route_authorization_ref
+~~~
+
+Scheduler must not synthesize that authority from raw F1 state.
+
+Current bounded U06 implementation scope freezes:
+
+~~~text
+F1_CLARIFICATION_ROUTING
+= RUNTIME_DISABLED
+~~~
+
+until a separate upstream controlled amendment defines and refreezes the exact safety-clearance producer and runtime activation.
+
+Synthetic authoritative fixtures used by U06 verification:
+
+~~~text
+!= live U01/F1 producer
+!= Scheduler activation
+!= patient-facing clarification authorization
+~~~
+
 # 17. A1 Controlled Amendment — Scheduler / Safety Barrier Runtime
 
 > Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
@@ -1027,7 +1064,9 @@ Facts
 → routing projection
 → PRE_READINESS_A1_F3_C03_ELIGIBLE
 → U06 PRE_READINESS_GAP_ASSESSMENT
-→ validate C03 CapabilityBindingRef
+→ validate dependency_binding_type + dependency_binding_ref
+→ resolve real C03 CapabilityBindingRef only for REAL_CAPABILITY_BINDING
+→ validate REQUIRED dependency/release families
 → C03
 → U06/F3 Owner interpretation
 → K09 StateChangeProposal
@@ -1661,3 +1700,31 @@ This section is architecture-only and authorizes no live Clinical Runtime, produ
 > Re-freeze package review: **PASS** / review_id `5263272855`  
 > Current CL-04 amendment state: **REFROZEN / V1**
 
+
+
+---
+
+# U06 Aggregate Compatibility Amendment — Runtime Activation Scope
+
+> Amendment ID: U06-AGR-03  
+> Status: AMENDMENT_REVIEW_PASS / REF FREEZE PENDING
+
+This amendment records that the direct-F1 business edge is runtime-gated and disabled in the initial bounded U06 implementation scope.
+
+No new Safety authority, Scheduler edge activation, or patient-facing delivery is authorized.
+
+
+## U06-AGR-01 Runtime Dependency Identity Normalization
+
+For U06 MODE-1 / MODE-2, Runtime consumes the normalized dependency identity:
+
+~~~text
+dependency_binding_type
+dependency_binding_ref
+~~~
+
+It must not require a production P06 CapabilityBindingRef when the explicitly authorized profile is SYNTHETIC_VERIFICATION_BINDING.
+
+For REAL_CAPABILITY_BINDING, Runtime resolves and validates the actual governed P06 C03 binding.
+
+No synthetic binding may be promoted into production capability authority.

@@ -1629,7 +1629,9 @@ Scheduler → C03 bypassing U06 Owner
 
 ```text
 U06 MODE-1
-→ validate current C03 CapabilityBindingRef
+→ validate current dependency_binding_type + dependency_binding_ref
+→ resolve/validate real C03 CapabilityBindingRef only for REAL_CAPABILITY_BINDING
+→ validate exact applicable dependency/release profile
 → C03 Gap Detection / Decision Impact
 → U06/F3 Owner interpretation
 → canonical F3 intended effect
@@ -1823,3 +1825,24 @@ This amendment authorizes no capability activation, runtime implementation, prod
 > Re-freeze package review: **PASS** / review_id `5263272855`  
 > Current CL-04 amendment state: **REFROZEN / V1**
 
+
+
+---
+
+# U06 Aggregate Compatibility Amendment — C03 Binding Consumption
+
+> Amendment ID: U06-AGR-01  
+> Status: AMENDMENT_REVIEW_PASS / REF FREEZE PENDING
+
+U06 consumes C03 through the source-neutral dependency binding identity:
+
+~~~text
+dependency_binding_type
+dependency_binding_ref
+~~~
+
+REAL_CAPABILITY_BINDING resolves to a governed P06 C03 CapabilityBindingRef.
+
+SYNTHETIC_VERIFICATION_BINDING is permitted only in explicitly authorized structural non-production verification and is not a production capability activation.
+
+C03 remains the same capability role; this amendment changes binding identity representation, not capability ownership.

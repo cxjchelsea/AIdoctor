@@ -131,7 +131,9 @@ source_clinical_continuation_routing_ref?
 
 bootstrap_architecture_binding_ref?
 
-capability_binding_ref?
+dependency_binding_type?
+dependency_binding_ref?
+capability_binding_ref?  // real-binding resolved detail only
 question_policy_ref?
 rule_release_ref?
 knowledge_release_ref?
@@ -339,10 +341,25 @@ canonical_event_ref / business_event_identity
 correlation_id
 trace_id
 
-capability_binding_ref
+dependency_binding_type
+dependency_binding_ref
 ```
 
-Rule/Knowledge/Prompt/Model refs 是否必需由 RDP-05 按实际 C03 binding 冻结。
+Binding rules:
+
+```text
+PROFILE-A
+→ dependency_binding_type = REAL_CAPABILITY_BINDING
+→ dependency_binding_ref = real governed P06 C03 CapabilityBindingRef
+
+PROFILE-B
+→ dependency_binding_type = SYNTHETIC_VERIFICATION_BINDING
+→ dependency_binding_ref = stable synthetic verification binding identity
+```
+
+capability_binding_ref may be additionally resolved only for REAL_CAPABILITY_BINDING; it is not the source-neutral admission identity.
+
+Rule/Knowledge/Prompt/Model refs 是否必需由 RDP-05 按实际 dependency profile 冻结。
 
 RDP-01 只允许：
 - ref absent because RDP-05 says NOT_APPLICABLE；
@@ -761,7 +778,9 @@ current routing_authorization_ref
 Risk reevaluation / Safety evaluation basis refs
 dependency fingerprint before/current
 
-historical capability_binding_ref
+historical_dependency_binding_type
+historical_dependency_binding_ref
+historical capability_binding_ref when the historical binding was REAL_CAPABILITY_BINDING
 historical release refs as applicable
 
 bootstrap_architecture_binding_ref = A1
@@ -998,11 +1017,22 @@ RDP-01 冻结 presence/currentness responsibility boundary，不替代 RDP-05。
 
 必须有：
 
-```
-capability_binding_ref
+```text
+dependency_binding_type
+dependency_binding_ref
 ```
 
-用于 C03。
+用于解析当前受治理 C03 dependency identity。
+
+```text
+PROFILE-A
+→ REAL_CAPABILITY_BINDING + real P06 C03 CapabilityBindingRef
+
+PROFILE-B
+→ SYNTHETIC_VERIFICATION_BINDING + stable synthetic verification identity
+```
+
+capability_binding_ref 仅在 REAL_CAPABILITY_BINDING 下作为 resolved detail 出现，不是 source-neutral mandatory field。
 
 release/prompt/model refs：
 - 由 RDP-05 判定 applicability；
@@ -1014,10 +1044,13 @@ release/prompt/model refs：
 
 必须有：
 
-```
-capability_binding_ref
+```text
+dependency_binding_type
+dependency_binding_ref
 question_policy_ref
 ```
+
+真实/合成 binding 的解释与 MODE-1 相同。
 
 D04 policy ref/version 的 exact contract 由 RDP-02/RDP-05 冻结。
 
@@ -1032,8 +1065,10 @@ current C03 invocation binding
 
 但必须保存/加载：
 
-```
-historical governing capability_binding_ref
+```text
+historical_dependency_binding_type
+historical_dependency_binding_ref
+historical capability_binding_ref when applicable
 historical release refs as applicable
 semantic binding compatibility evidence
 ```
@@ -1066,7 +1101,7 @@ C = conditional
 | canonical F3 effect | - | R | C | - | R | R |
 | prior F3 revalidation decision | - | R | - | - | - | C |
 | continuation routing ref | - | C | - | - | - | R |
-| C03 current binding | R | R | R | R | - | - |
+| current dependency binding identity | R | R | R | R | - | - |
 | question policy ref | - | - | R | R | - | - |
 | historical F3 binding refs | - | C | - | - | R | R |
 | A1 bootstrap binding | R | C | - | - | R | C |
@@ -1124,7 +1159,9 @@ accepted_f3_state_ref?
 accepted_f3_revalidation_ref?
 accepted_continuation_routing_ref?
 
-accepted_capability_binding_ref?
+accepted_dependency_binding_type?
+accepted_dependency_binding_ref?
+accepted_capability_binding_ref?  // real-binding resolved detail only
 accepted_question_policy_ref?
 accepted_rule_release_ref?
 accepted_knowledge_release_ref?
@@ -1172,6 +1209,13 @@ mode-specific business basis:
   F1 clarification requirement
   or U05 readiness/eligibility
   or F3 canonical effect/revalidation/continuation refs
+
+normalized dependency binding identity when applicable:
+  dependency_binding_type
+  + dependency_binding_ref
+
+historical normalized dependency binding identity
+when MODE-3 compatibility semantics require it
 
 admission contract version
 ```
@@ -1918,3 +1962,72 @@ U06 Implementation Authorization
 direct F1 admission activation
 = BLOCKED_PENDING_CONTROLLED_AMENDMENT
 ```
+
+
+---
+
+# Aggregate Compatibility Amendment — U06-AGR-01
+
+> Amendment package: U06 Aggregate Compatibility Review / Controlled Amendment v0.1  
+> Amendment status: REVIEW_PENDING / NOT_REFROZEN
+
+This amendment normalizes U06 admission dependency identity to:
+
+```text
+dependency_binding_type
+dependency_binding_ref
+```
+
+and resolves the prior source-neutral ambiguity around capability_binding_ref.
+
+Invariant preserved:
+
+```text
+every MODE-1 / MODE-2 admission
+must carry one stable governed dependency-binding identity
+```
+
+Profile mapping:
+
+```text
+REAL_CAPABILITY_BINDING
+→ real P06 C03 CapabilityBindingRef
+
+SYNTHETIC_VERIFICATION_BINDING
+→ stable synthetic verification identity
+→ non-production only
+→ never accepted as real ACTIVE P06 binding
+```
+
+MODE-3 historical provenance uses the same normalized identity family and does not require a new/current C03 invocation binding by default.
+
+Until explicit aggregate re-freeze:
+
+```text
+U06-AGR-01
+= REMEDIATED / AMENDMENT_REVIEW_PASS / REF FREEZE PENDING
+```
+
+No implementation or activation is authorized.
+
+
+## U06-AGR-01 Admission Identity Clarification
+
+The aggregate amendment additionally freezes:
+
+~~~text
+U06_ADMISSION_ID
+must bind the normalized dependency binding identity
+whenever MODE-1 / MODE-2 execution depends on it.
+~~~
+
+Therefore a lawful governing binding change does not reuse the prior admission identity.
+
+For MODE-3, historical normalized dependency identity participates when it is part of the revalidation compatibility basis.
+
+This preserves:
+
+~~~text
+changed governing binding
+!= exact replay
+~~~
