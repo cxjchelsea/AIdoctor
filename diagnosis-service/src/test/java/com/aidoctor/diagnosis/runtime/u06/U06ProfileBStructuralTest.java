@@ -84,7 +84,11 @@ class U06ProfileBStructuralTest {
         U06SyntheticDecisionBundle gap=new U06SyntheticDecisionBundle(
                 U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,"f3-effect-1","gap-1","DECISION_MATERIAL",true,
                 null,null,null,null,null,null,null,null,null);
-        U06ExecutionResult m1=app.execute(request(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null),gap,null);
+        U06ExecutionResult m1=app.execute(
+                request(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null),
+                gap,
+                null,
+                new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.ALLOWED,"synthetic-safety-allowed-1"));
         assertEquals(U06ExecutionResult.MODE1_COMMITTED,m1.getStatus());assertEquals(1,state.readCurrent().getVersion());
 
         U06SyntheticDecisionBundle selected=new U06SyntheticDecisionBundle(
@@ -104,6 +108,72 @@ class U06ProfileBStructuralTest {
         verify(consultation).enterWaitingUser(anyString());
     }
 
+
+    @Test
+    void mode1BlockedSafetyStopsAfterCanonicalCommitWithoutQuestionOrWait(){
+        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06ProfileBApplicationService app=minimalApp(state);
+        U06SyntheticDecisionBundle gap=new U06SyntheticDecisionBundle(
+                U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,"f3-effect-blocked","gap-blocked","DECISION_MATERIAL",true,
+                null,null,null,null,null,null,null,null,null);
+        U06ExecutionResult result=app.execute(
+                request(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null),
+                gap,
+                null,
+                new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.BLOCKED,"synthetic-safety-blocked-1"));
+        assertEquals(U06ExecutionResult.MODE1_SAFETY_BLOCKED,result.getStatus());
+        assertNotNull(result.getSafetyEvaluationId());
+        assertEquals(1,state.getMutationCount());
+        assertFalse(state.readCurrent().exists("/patient_state/pending_question"));
+    }
+
+    @Test
+    void selectedMode2MissingRuntimeInputsFailsBeforeAnyMutationOrDelivery(){
+        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        InMemoryDeliveryStore deliveryStore=new InMemoryDeliveryStore();
+        U06ProfileBApplicationService app=minimalApp(state,deliveryStore);
+        U06SyntheticDecisionBundle selected=new U06SyntheticDecisionBundle(
+                U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,"f3-effect-1","gap-1","DECISION_MATERIAL",true,
+                U06SyntheticDecisionBundle.CONTINUE,U06SyntheticDecisionBundle.SELECTED,"select-effect-missing-runtime",
+                "question-1","semantic-1","synthetic-content-ref-1","content-fingerprint-1",null,null);
+        U06SyntheticDeliveryService.ScopeAuthorization scope=new U06SyntheticDeliveryService.ScopeAuthorization(
+                "consult-1",U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,"fixture-scope-1","synthetic-store-1",
+                "ci-nonprod-u06","synthetic-endpoint-1",false,false,false);
+
+        U06ExecutionResult result=app.execute(
+                request(U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,0,null,null),
+                selected,scope);
+
+        assertEquals(U06ExecutionResult.ADMISSION_REJECTED,result.getStatus());
+        assertEquals("U06_RUNTIME_WAIT_INPUT_REQUIRED",result.getReasonCode());
+        assertEquals(0,state.getMutationCount());
+        assertEquals(0,deliveryStore.physicalSends);
+    }
+
+    @Test
+    void mode3SameIdentityChangedEvidenceConflictsAndNeverMutates(){
+        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06ProfileBApplicationService app=minimalApp(state);
+        U06SyntheticDecisionBundle first=new U06SyntheticDecisionBundle(
+                U06SyntheticDecisionBundle.NOT_DECIDABLE,null,null,null,false,null,null,null,null,null,null,null,
+                U06SyntheticDecisionBundle.REVALIDATED_CURRENT,"revalidation-1");
+        U06ExecutionResult r1=app.execute(
+                request(U06ProfileBRequest.F3_CURRENT_VERSION_REVALIDATION,U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,0,null,null),
+                first,null);
+        assertEquals(U06ExecutionResult.REVALIDATED_CURRENT,r1.getStatus());
+
+        U06ProfileBRequest changed=new U06ProfileBRequest(
+                "req-mode3-changed","consult-1","cdp-1",U06ProfileBRequest.F3_CURRENT_VERSION_REVALIDATION,
+                U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,"synthetic-source-CHANGED",0,0,
+                U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
+                "synthetic-binding-1","f3-policy-1",null,null,"event-ref-1","business-event-1",null,null,0L,
+                "corr-1","trace-1",AT);
+        U06ExecutionResult r2=app.execute(changed,first,null);
+        assertEquals(U06ExecutionResult.FAILURE_REQUIRED,r2.getStatus());
+        assertEquals(U06SyntheticRevalidationAuthority.REPLAY_CONFLICT,r2.getReasonCode());
+        assertEquals(0,state.getMutationCount());
+    }
+
     @Test
     void mode3NeverMutatesClinicalState(){
         U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
@@ -114,9 +184,13 @@ class U06ProfileBStructuralTest {
     }
 
     private U06ProfileBApplicationService minimalApp(U06SyntheticP01Runtime state){
+        return minimalApp(state,new InMemoryDeliveryStore());
+    }
+
+    private U06ProfileBApplicationService minimalApp(U06SyntheticP01Runtime state,InMemoryDeliveryStore deliveryStore){
         ConsultationRepository c=mock(ConsultationRepository.class);ConsultationWaitEffectRepository e=mock(ConsultationWaitEffectRepository.class);
         RuntimeThreadStateRepository tr=mock(RuntimeThreadStateRepository.class);RuntimeWaitCheckpointRepository cp=mock(RuntimeWaitCheckpointRepository.class);
-        return new U06ProfileBApplicationService(new U06AdmissionService(),state,new U06SyntheticDeliveryService(new InMemoryDeliveryStore()),
+        return new U06ProfileBApplicationService(new U06AdmissionService(),state,new U06SyntheticDeliveryService(deliveryStore),
                 new ConsultationWaitTransitionService(c,e),new U06WaitCoordinator(new RuntimeWaitCheckpointService(tr,cp),new RuntimeThreadWaitTransitionService(tr,cp)),
                 new U06GovernedExecutionTraceStore(){public void start(String a,String b,String c,String d,String e,String f,String g){}public void complete(String a,String b,String c,String d){}});
     }
