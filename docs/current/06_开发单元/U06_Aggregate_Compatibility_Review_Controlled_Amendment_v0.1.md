@@ -5,7 +5,7 @@
 > Parent head: **e4110cf0ca85f9443a19ac01a5e448369c05832a**  
 > Runtime repository basis: **main@7b37c03026cb17e89e3d7769df2b1bb1f03a9ca8**  
 > Scope: **AGGREGATE COMPATIBILITY / CONTROLLED AMENDMENT DESIGN ONLY**  
-> Status: **DRAFT / READY_FOR_INDEPENDENT_AGGREGATE_REVIEW**  
+> Status: **PASS / REFROZEN_FOR_U06_AGGREGATE_BASELINE**  
 > This document does not authorize implementation, merge, production, live routing, real C03/D04 activation, or real-patient delivery.
 
 ---
@@ -1290,7 +1290,7 @@ This does not alter the semantic identity of EV-001..106 and therefore does not 
 
 # 24. Aggregate readiness disposition
 
-If independent aggregate review passes, the intended disposition is:
+Second Targeted Independent Aggregate Re-Review has passed. Final disposition:
 
 ~~~text
 BF-U06-RG-01
@@ -1566,11 +1566,78 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-# 28. Revised aggregate verdict
+# 28. Final Aggregate Review Provenance
+
+~~~text
+Initial Independent Aggregate Review
+= REVISE_REQUIRED
+review_id = 5288111493
+reviewed_head = 34d62909827dfe5a274b7c13e36e2e68661742e2
+
+Targeted Independent Aggregate Re-Review
+= REVISE_REQUIRED
+review_id = 5288123097
+reviewed_head = 394d4ac8350775d457f99008e3998a54392f58e0
+
+Second Targeted Independent Aggregate Re-Review
+= PASS
+review_id = 5288132548
+reviewed_head = d4a709ee20564f123e996a572ac760797a25f593
+~~~
+
+Final:
 
 ~~~text
 U06 Aggregate Compatibility Review / Controlled Amendment
-= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_AGGREGATE_RE_REVIEW
+= PASS / REFROZEN_FOR_U06_AGGREGATE_BASELINE
+
+AC-U06-01..10
+= CLOSED
+
+BF-U06-AGG-IR-01
+= CLOSED
+
+BF-U06-AGG-IR-02
+= CLOSED
+
+BF-U06-AGG-IR-03
+= CLOSED
+
+BF-U06-AGG-TR-01
+= CLOSED
+
+BF-U06-AGG-TR-02
+= CLOSED
+
+BF-U06-RG-01
+= CONTRACT_DESIGNED / AGGREGATE_COMPATIBILITY_CLOSED
+
+BF-U06-RG-02
+= CONTRACT_DESIGNED / AGGREGATE_COMPATIBILITY_CLOSED
+
+BF-U06-RG-03
+= CONTRACT_DESIGNED / AGGREGATE_COMPATIBILITY_CLOSED
+
+BF-U06-RG-04
+= CONTRACT_DESIGNED / AGGREGATE_COMPATIBILITY_CLOSED
+
+BF-U06-RG-05
+= CONTRACT_DESIGNED / AGGREGATE_COMPATIBILITY_CLOSED
+
+BF-U06-RG-06
+= CONTRACT_DESIGNED / AGGREGATE_COMPATIBILITY_CLOSED
+
+U06 Implementation Readiness
+= NOT_YET_REEVALUATED
+
+U06 Implementation Authorization
+= NOT_GRANTED
 ~~~
 
-No implementation, shared-runtime modification, direct F1 activation, real C03/D04 activation, external delivery, merge, production, or real-patient authorization is granted.
+Next governance step:
+
+~~~text
+U06 Implementation Readiness Re-Evaluation
+~~~
+
+No implementation, shared-runtime modification, synthetic adapter implementation, direct F1 activation, real C03/D04 activation, external delivery, merge, production, or real-patient authorization is granted.
