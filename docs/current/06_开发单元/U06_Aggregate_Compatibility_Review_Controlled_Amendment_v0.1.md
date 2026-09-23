@@ -487,42 +487,61 @@ This is a post-refreeze provenance synchronization step, not permission to alter
 
 # 11. Exact controlled-amendment file inventory
 
-Semantic amendment candidate scope:
+Semantic controlled amendment scope:
 
 1. docs/current/06_开发单元/U06_RDP01_Consumer_Inbound_Admission_Contract_v0.1.md
    - normalized dependency binding identity
+   - admission identity includes normalized dependency binding
    - MODE-3 historical normalized binding identity
 
-2. docs/current/08_契约与数据/Contract与数据语义设计.md
+2. docs/current/06_开发单元/U06_RDP05_Capability_Dependency_Applicability_Contract_v0.1.md
+   - C03 result provenance normalized to dependency_binding_type/ref
+   - real capability_binding_ref remains conditional resolved detail
+   - no applicability/profile/Quality-Gate change
+
+3. docs/current/08_契约与数据/Contract与数据语义设计.md
    - Phase-8 F3_CANONICAL_EFFECT_ID binding component
    - A1 F3 proposal binding provenance
    - MODE-3 historical binding provenance
+   - U06-compatible Capability Result conditional normalized binding
+   - U06-compatible Question provenance conditional normalized binding
 
-Compatibility-status synchronization candidate scope:
+4. docs/current/06_开发单元/可验证开发单元拆分_V1.md
+   - MODE-1 dependency binding normalization
+   - direct F1 -> U06 clarified as business destination + runtime-gated edge
+   - current initial bounded scope keeps F1_CLARIFICATION_ROUTING disabled
 
-3. docs/current/06_开发单元/U06_RDP05_Capability_Dependency_Applicability_Contract_v0.1.md
-   - AGR-01 resolution provenance only
-   - no applicability/profile semantic change
+5. docs/current/07_能力设计/按开发单元的Capability设计.md
+   - U06 C03 consumption normalized to dependency binding identity
+   - real P06 C03 binding resolved only for REAL_CAPABILITY_BINDING
 
-4. docs/current/06_开发单元/U06_RDP03_State_Ownership_K09_P01_Mutation_Trace_Contract_v0.1.md
+6. docs/current/09_Runtime与技术架构/Runtime与技术架构设计_V1.md
+   - U06 runtime dependency resolution normalized
+   - direct F1 invocation requires authoritative eligibility/safety/route proof
+   - current initial bounded scope keeps direct F1 runtime disabled
+
+Compatibility/provenance synchronization scope:
+
+7. docs/current/06_开发单元/U06_RDP03_State_Ownership_K09_P01_Mutation_Trace_Contract_v0.1.md
    - RDP03-COMPAT-F3-ID-01 resolution provenance only
    - no mutation/ownership semantic change
 
 Post-refreeze-only authority synchronization:
 
-5. docs/current/06_开发单元/U06_RDP06_Verification_Durable_Evidence_Contract_v0.1.md
+8. docs/current/06_开发单元/U06_RDP06_Verification_Durable_Evidence_Contract_v0.1.md
    - exact authority-head/digest rebind only after explicit refreeze decision
 
 Review package:
 
-6. docs/current/06_开发单元/U06_Aggregate_Compatibility_Review_Controlled_Amendment_v0.1.md
+9. docs/current/06_开发单元/U06_Aggregate_Compatibility_Review_Controlled_Amendment_v0.1.md
 
 Not amended in this package:
 - RDP-02;
 - RDP-04;
-- Phase 4/5/6/7/9;
+- Phase 4;
+- Phase 5;
 - U04 contracts;
-- U01 implementation;
+- U01 implementation/source code;
 - runtime/source code.
 
 If review proves any of those must change semantically:
@@ -634,8 +653,9 @@ Independent compatibility review must answer:
 6. Are RDP-03/RDP-04 semantic owners unchanged?
 7. Is every shared-runtime physical impact enumerable and reviewable?
 8. Can RDP-06 compute shared-runtime diff and bind post-refreeze contract heads?
-9. Is any hidden Phase 4/5/6/7/9 semantic amendment actually required?
-10. Does the package avoid authorizing implementation/refreeze itself?
+9. Are Phase 6/7/8/9 now mutually consistent about normalized dependency binding and direct-F1 runtime gating?
+10. Is Phase 4/5 left unchanged because no additional semantic change is required there?
+11. Does the package avoid authorizing implementation/refreeze itself?
 
 ---
 
@@ -671,4 +691,79 @@ U06 Implementation Readiness
 
 U06 Implementation Authorization
 = NOT_GRANTED
+~~~
+
+
+---
+
+# 16. Independent Compatibility Review Remediation
+
+Initial Independent Compatibility Review:
+
+~~~text
+PR #236
+review_id = 5288060818
+verdict = REVISE_REQUIRED
+reviewed_head = e24a8a79f89e866b85231cdbc13f0758985fcac6
+~~~
+
+Findings:
+
+~~~text
+BF-U06-AGR-IR-01
+= ADMISSION_ID_DOES_NOT_BIND_NORMALIZED_DEPENDENCY_IDENTITY
+
+BF-U06-AGR-IR-02
+= PHASE8_QUESTION_AND_CAPABILITY_RESULT_STILL_ASSUME_REAL_CAPABILITY_BINDING
+
+BF-U06-AGR-IR-03
+= RDP05_C03_RESULT_CONTRACT_NOT_NORMALIZED
+
+BF-U06-AGR-IR-04
+= DIRECT_F1_DEFERRED_SCOPE_CONFLICT_WITH_PHASE6_EXECUTABLE_EDGE
+
+BF-U06-AGR-IR-05
+= EXACT_AMENDMENT_INVENTORY_INCOMPLETE_AFTER_REQUIRED_SCOPE_EXPANSION
+~~~
+
+Remediation applied:
+
+1. added normalized dependency binding identity to U06_ADMISSION_ID where applicable;
+
+2. extended Phase-8 Capability Result and Question provenance so PROFILE-B can carry typed synthetic dependency identity without a real CapabilityBindingRef;
+
+3. normalized RDP-05 C03 result provenance and required equality with admitted dependency binding;
+
+4. amended Phase 6 and Phase 9 so direct F1 remains a business-legal destination but executable invocation requires authoritative F1ClarificationRoutingEligibility + governed safety clearance + route authorization; current bounded scope keeps it disabled;
+
+5. amended Phase 6/7/9 U06 C03 consumption to use dependency_binding_type/ref and resolve a real CapabilityBindingRef only for REAL_CAPABILITY_BINDING;
+
+6. expanded the exact amendment inventory accordingly.
+
+Current:
+
+~~~text
+BF-U06-AGR-IR-01
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+BF-U06-AGR-IR-02
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+BF-U06-AGR-IR-03
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+BF-U06-AGR-IR-04
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+BF-U06-AGR-IR-05
+= REMEDIATED / TARGETED_REVIEW_PENDING
+
+U06 Aggregate Compatibility Amendment
+= REVISED / READY_FOR_TARGETED_COMPATIBILITY_RE_REVIEW
+
+Aggregate Re-Freeze
+= NOT_AUTHORIZED
+
+U06 Implementation Readiness
+= NOT_READY
 ~~~
