@@ -230,6 +230,47 @@ D04 is first consumed by U06 and decides whether a candidate question path may c
 
 D04 does not create Question truth or WAITING_USER itself.
 
+## 4.6 Conditional P03 Model Runtime dependency
+
+The frozen U06 dependency row remains:
+
+```
+C03
++ P01 / P05 / P06
++ D04
+```
+
+This Unit Spec does not add P03 as an unconditional U06 dependency.
+
+However Phase 7 also freezes the cross-cutting rule:
+
+```
+if the approved C03 implementation performs a formal model call
+→ that call must use the governed P03 Model Runtime / Prompt Registry path
+```
+
+Therefore:
+
+```
+C03 deterministic/tool-only implementation
+→ P03 may be NOT_APPLICABLE
+
+C03 model/mixed implementation
+→ P03 becomes a conditional implementation dependency
+→ PromptReleaseRef / ModelRouteRef must be approved by P06 binding
+→ direct legacy/common LLM invocation remains prohibited
+```
+
+This conditional rule:
+
+```
+does not change the frozen U06 dependency row
+does not authorize a model implementation
+does not pre-select C03 architecture
+```
+
+The U06 Initial Implementation Readiness / Gap Review must inspect the actual proposed C03 implementation/binding before deciding P03 applicability.
+
 ---
 
 # 5. U06 controlled mode model
@@ -807,7 +848,190 @@ STALE_BEFORE_PUBLISH
 
 ---
 
-# 9. State ownership matrix
+# 9. StateChangeProposal / mutation boundary by mode
+
+U06 must explicitly separate:
+
+```
+Candidate
+Decision / Owner interpretation
+StateChangeProposal
+Commit
+External delivery side effect
+Runtime state
+Non-mutating projection
+```
+
+These are not interchangeable.
+
+## 9.1 MODE-1 mutation boundary
+
+MODE-1 may form a governed proposal for the canonical F3 business effect only after:
+
+```
+C03 structured result
+→ U06/F3 Owner interpretation
+```
+
+Minimum Phase-8 binding remains:
+
+```
+source_clinical_state_version
+F3_CANONICAL_EFFECT_ID
+source C03 result ref
+C03 CapabilityBindingRef
+RuleReleaseRef / KnowledgeReleaseRef as applicable
+F3 policy/version
+effect idempotency key
+expected current version
+trace/audit refs
+```
+
+Then:
+
+```
+U06/F3 Owner
+→ K09 StateChangeProposal
+→ P01/G2
+→ CommitResult
+```
+
+MODE-1 may not use a Question candidate as a shortcut to mutate Question/WAITING state.
+
+## 9.2 MODE-2 mutation and side-effect boundary
+
+MODE-2 contains multiple distinct semantic stages.
+
+### A. Question selection state
+
+A governed authoritative Question selection may require:
+
+```
+candidate
+→ D04 / U06 owner decision
+→ Question SELECTED proposal
+→ P01/G2 commit
+```
+
+The exact physical proposal shape and whether related Gap updates share or separate the same proposal are deferred to U06-RDP-03.
+
+### B. External delivery side effect
+
+After authoritative selection:
+
+```
+durable delivery intent
+→ stable delivery identity
+→ transport
+→ durable receipt/reconciliation
+```
+
+This is an external/runtime side-effect process.
+
+It is not itself a Clinical StateChangeProposal.
+
+### C. Delivered/wait business state
+
+Only after delivery is authoritatively confirmed may U06 cause governed business-state mutation such as:
+
+```
+Question DELIVERED_TO_USER
+Consultation WAITING_USER
+relevant Pending Question state
+```
+
+through the approved P01/G2 lifecycle boundary.
+
+The corresponding:
+
+```
+Thread AWAITING_USER
+checkpoint
+```
+
+belong to Runtime state and are not Clinical State truth.
+
+The exact cross-store sequencing/atomicity protocol is deferred to U06-RDP-03/RDP-04, but the semantic invariant is already frozen:
+
+```
+no authoritative delivered Question
+→ no WAITING_USER
+```
+
+## 9.3 MODE-3 non-mutation boundary
+
+MODE-3 forms:
+
+```
+F3CurrentVersionRevalidationDecision
+```
+
+When outcome is:
+
+```
+REVALIDATED_CURRENT
+```
+
+U06 may materialize the frozen current-version F3 readiness input projection.
+
+That projection is explicitly:
+
+```
+NOT a StateChangeProposal
+NOT a canonical F3 mutation
+NOT a Clinical State Version advance
+```
+
+Therefore MODE-3 default mutation profile is:
+
+```
+Clinical StateChangeProposal = NONE
+canonical F3 commit = NONE
+Question mutation = NONE
+external delivery = NONE
+Runtime WAIT transition = NONE
+```
+
+If outcome is:
+
+```
+REASSESSMENT_REQUIRED
+```
+
+the next fresh MODE-1 execution owns any later canonical F3 mutation.
+
+If outcome is:
+
+```
+FAILED
+```
+
+no U06 Clinical State mutation may be fabricated to represent the failure.
+
+## 9.4 Cross-mode mutation prohibition
+
+Forbidden:
+
+```
+MODE-1
+→ Question/WAITING mutation
+
+MODE-2
+→ silently overwrite canonical F3 assessment as if it were MODE-1
+
+MODE-3
+→ StateChangeProposal for revalidation projection
+
+Runtime checkpoint
+→ treated as Clinical State commit
+
+delivery receipt
+→ treated as Question DELIVERED truth without governed commit
+```
+
+---
+
+# 10. State ownership matrix
 
 | Object / state | Owner | U06 authority |
 |---|---|---|
@@ -829,7 +1053,7 @@ STALE_BEFORE_PUBLISH
 
 ---
 
-# 10. Clinical State vs Runtime State
+# 11. Clinical State vs Runtime State
 
 U06 must preserve:
 
@@ -865,7 +1089,7 @@ A Runtime checkpoint may reference authoritative Clinical State; it must not bec
 
 ---
 
-# 11. Failure policy
+# 12. Failure policy
 
 U06 failure is not a business-negative shortcut.
 
@@ -919,9 +1143,9 @@ The final retry/repair/degraded-safe-exit/terminal decision remains governed by 
 
 ---
 
-# 12. Idempotency / replay / concurrency expectations
+# 13. Idempotency / replay / concurrency expectations
 
-## 12.1 MODE-1
+## 13.1 MODE-1
 
 Same authoritative assessment identity:
 
@@ -944,7 +1168,7 @@ Only downstream Risk/Safety/routing/checkpoint changes:
 → must not create a second canonical F3 effect
 ```
 
-## 12.2 MODE-2
+## 13.2 MODE-2
 
 Question effect and delivery must use stable identities.
 
@@ -969,7 +1193,7 @@ after WAITING commit / before checkpoint
 
 The exact Question effect identity and delivery identity derivation are deferred to RDP-03/RDP-04.
 
-## 12.3 MODE-3
+## 13.3 MODE-3
 
 Same F3_REVALIDATION_ID replay:
 
@@ -979,7 +1203,7 @@ Same F3_REVALIDATION_ID replay:
 → no canonical F3 mutation
 ```
 
-## 12.4 Concurrency
+## 13.4 Concurrency
 
 Same Consultation:
 
@@ -1005,7 +1229,7 @@ blind retry of stale proposal
 
 ---
 
-# 13. Observability requirements
+# 14. Observability requirements
 
 Every U06 execution must be able to trace at least:
 
@@ -1042,11 +1266,11 @@ Trace/Audit should store refs/digests/typed summaries rather than unrestricted P
 
 ---
 
-# 14. Acceptance cases — Unit-level minimum
+# 15. Acceptance cases — Unit-level minimum
 
 These are Unit Spec acceptance scenarios, not the final RDP-06 evidence IDs.
 
-## 14.1 MODE-1
+## 15.1 MODE-1
 
 ```
 U06-US-001
@@ -1078,7 +1302,7 @@ MODE-1 candidate material exists
 → later MODE-2 cannot reuse it
 ```
 
-## 14.2 MODE-2
+## 15.2 MODE-2
 
 ```
 U06-US-006
@@ -1133,7 +1357,7 @@ two concurrent U06 question attempts
 → at most one authoritative current next-question effect
 ```
 
-## 14.3 MODE-3
+## 15.3 MODE-3
 
 ```
 U06-US-015
@@ -1167,7 +1391,7 @@ target state/Gate changes before projection publish
 
 ---
 
-# 15. Regression cases
+# 16. Regression cases
 
 U06 verification must prove no regression to already integrated units/foundation.
 
@@ -1208,7 +1432,7 @@ Legacy fixed five-step workflow / Dialog private state is not restored as author
 
 ---
 
-# 16. Legacy Asset Mapping
+# 17. Legacy Asset Mapping
 
 Current frozen legacy disposition:
 
@@ -1245,7 +1469,7 @@ A legacy asset may be reused only if it preserves this Unit Spec's owner, state,
 
 ---
 
-# 17. Out of Scope
+# 18. Out of Scope
 
 This U06 Unit Spec does not authorize or define:
 
@@ -1284,7 +1508,7 @@ Those belong to U06 RDP and subsequent implementation design/review.
 
 ---
 
-# 18. Required downstream RDP design questions
+# 19. Required downstream RDP design questions
 
 This Unit Spec intentionally leaves the following for the Initial Implementation Readiness / Gap Review and U06 RDP package.
 
@@ -1372,7 +1596,7 @@ Must freeze exact executable case matrix, oracle independence, synthetic fixture
 
 ---
 
-# 19. Initial Readiness inputs established by this Unit Spec
+# 20. Initial Readiness inputs established by this Unit Spec
 
 After this Unit Spec passes design review, the next formal gate should consume:
 
@@ -1398,7 +1622,7 @@ U06 Initial Implementation Readiness / Gap Review
 
 ---
 
-# 20. Unit completion definition
+# 21. Unit completion definition
 
 U06 cannot be called complete merely because C03 returns a question.
 
@@ -1433,7 +1657,7 @@ U06 verified
 
 ---
 
-# 21. Design verdict
+# 22. Design verdict
 
 At this stage:
 
@@ -1461,3 +1685,56 @@ U06 Initial Implementation Readiness / Gap Review
 ```
 
 No code implementation is authorized by this document.
+
+
+---
+
+# 23. Independent Design Review Remediation
+
+Initial Independent Design Review:
+
+```
+PR #228
+review_id = 5287035179
+verdict = REVISE_REQUIRED
+```
+
+Findings:
+
+```
+BF-U06-US-IR-01
+= MODE_SPECIFIC_STATE_CHANGE_PROPOSAL_BOUNDARY_NOT_EXPLICIT
+
+RQ-U06-US-IR-02
+= CONDITIONAL_P03_MODEL_RUNTIME_DEPENDENCY_MUST_BE_EXPLICIT
+```
+
+Remediation:
+
+1. added a dedicated mode-specific StateChangeProposal/mutation section separating:
+   - MODE-1 canonical F3 proposal/commit;
+   - MODE-2 Question selection, external delivery, delivered/wait governed state and Runtime wait;
+   - MODE-3 non-mutating readiness projection;
+
+2. explicitly froze:
+
+```
+MODE-3 REVALIDATED_CURRENT
+→ NO StateChangeProposal
+→ NO canonical F3 mutation
+→ NO Clinical State Version advance
+```
+
+3. added P03 as a **conditional implementation dependency only** if the approved C03 implementation actually performs formal model calls;
+
+4. preserved the frozen U06 dependency row and did not authorize any model/runtime implementation.
+
+Current:
+
+```
+BF-U06-US-IR-01
+= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+RQ-U06-US-IR-02
+= SATISFIED / TARGETED_RE_REVIEW_PENDING
+```
