@@ -74,7 +74,72 @@ The same binding ref is consumed by admission/profile guard, state read, state w
 
 ---
 
-# 5. Initial synthetic state shape
+# 5. Synthetic P01 execution context
+
+Define one executable binding object:
+
+~~~text
+U06SyntheticP01ExecutionContext
+
+synthetic_state_store_ref
+consultation_id
+cdp_id
+execution_profile
+
+state_repository_instance
+state_read_port
+state_committer
+
+capability_policy_port
+field_permission_port
+source_validation_port
+consent_policy_port
+
+context_fingerprint
+~~~
+
+Construction rule:
+
+~~~text
+state_repository_instance
+= the exact SyntheticVersionedStateRepository instance
+
+state_read_port
+= adapter over that exact repository instance
+
+state_committer.StateRepositoryPort
+= that exact repository instance
+~~~
+
+The context factory must reject:
+- a read adapter backed by a different repository instance;
+- a StateCommitter backed by a different StateRepositoryPort;
+- a store ref that does not identify this exact context binding;
+- consultation/cdp/profile mismatch with admission.
+
+Required invariant:
+
+~~~text
+state_read_store_ref
+=
+state_commit_store_ref
+=
+admitted synthetic_state_store_ref
+~~~
+
+A PROFILE-B U06 execution may receive State read and State commit services only through this execution context.
+
+This prevents read-store A / write-store B split-brain even when both stores are synthetic.
+
+RDP-06 evidence must capture:
+- synthetic_state_store_ref;
+- read adapter store ref;
+- StateCommitter repository store ref;
+- equality result.
+
+---
+
+# 6. Initial synthetic state shape
 
 The reviewed fixture must pre-materialize only structural containers:
 
@@ -98,7 +163,7 @@ They are created by fixture/state-store bootstrap, not by StatePatch business mu
 
 ---
 
-# 6. Generic parent auto-materialization is rejected for PROFILE-B
+# 7. Generic parent auto-materialization is rejected for PROFILE-B
 
 This CA does not modify ClinicalCdpStateRepositoryAdapter to auto-create missing intermediate maps.
 
@@ -113,7 +178,7 @@ Malformed PROFILE-B fixture with missing required structural parent:
 
 ---
 
-# 7. U06 state read authority
+# 8. U06 state read authority
 
 Define:
 
@@ -145,7 +210,7 @@ All ADD-vs-REPLACE and currentness decisions use this read-back.
 
 ---
 
-# 8. Physical producer identity
+# 9. Physical producer identity
 
 PROFILE-B StatePatch identities are frozen as:
 
@@ -165,7 +230,7 @@ Neither is a C03 dependency binding, Question capability identity or logical own
 
 ---
 
-# 9. Pre-P01 state-write guard
+# 10. Pre-P01 state-write guard
 
 Define U06StateWriteAuthorityGuard.
 
@@ -198,7 +263,7 @@ Failure means no StatePatch and no P01 call.
 
 ---
 
-# 10. Exact field-permission allowlist
+# 11. Exact field-permission allowlist
 
 The bounded U06 FieldPermissionPort may authorize only:
 
@@ -217,7 +282,7 @@ Explicitly denied include triage, ddx, evidence_graph, workup_plan, management_p
 
 ---
 
-# 11. Operation matrix
+# 12. Operation matrix
 
 | Logical state | ADD | REPLACE | REMOVE |
 |---|---:|---:|---:|
@@ -232,7 +297,7 @@ Existence comes from authoritative pre-read.
 
 ---
 
-# 12. Pending-question replacement authorization
+# 13. Pending-question replacement authorization
 
 Define:
 
@@ -269,7 +334,7 @@ pending_question absent
 
 ---
 
-# 13. Source and sensitivity
+# 14. Source and sensitivity
 
 All U06 owner-derived StatePatch operations use:
 
@@ -289,7 +354,7 @@ PROFILE-A sensitivity is deferred.
 
 ---
 
-# 14. Controlled-value encoding
+# 15. Controlled-value encoding
 
 Define U06StateValueCodec.
 
@@ -313,7 +378,7 @@ JSON-stringifying nested business objects to bypass the boundary is prohibited.
 
 ---
 
-# 15. Patch factory
+# 16. Patch factory
 
 Define U06StatePatchFactory.
 
@@ -334,7 +399,7 @@ It may not recompute F3/D04/selection, infer new truth, rewrite base_version or 
 
 ---
 
-# 16. Synthetic P01 policy adapters
+# 17. Synthetic P01 policy adapters
 
 For PROFILE-B only:
 
@@ -356,7 +421,7 @@ All must be non-production-only, fail closed on unknown inputs and expose eviden
 
 ---
 
-# 17. Replay and conflict
+# 18. Replay and conflict
 
 Order:
 
@@ -380,7 +445,7 @@ no new patch identity for same effect
 
 ---
 
-# 18. PROFILE-B storage boundary
+# 19. PROFILE-B storage boundary
 
 Allowed:
 
@@ -402,7 +467,7 @@ RDP-06 must prove production_store_write_count = 0.
 
 ---
 
-# 19. Future PROFILE-A impact
+# 20. Future PROFILE-A impact
 
 Before PROFILE-A can become READY, a separate real-profile design must decide:
 - structural parent materialization for real CDPs;
@@ -415,7 +480,7 @@ Synthetic adapters may not be copied into real wiring.
 
 ---
 
-# 20. Candidate implementation surface
+# 21. Candidate implementation surface
 
 Future authorization may permit a bounded U06-local surface:
 
@@ -441,7 +506,7 @@ StateCommitter core, StatePatchBoundaryValidator and ClinicalCdpStateRepositoryA
 
 ---
 
-# 21. Verification obligations
+# 22. Verification obligations
 
 ~~~text
 IRR01-V01 structural containers exist, business truth absent
@@ -458,11 +523,13 @@ IRR01-V11 different pending Question conflicts
 IRR01-V12 nested value cannot be stringified to bypass boundary
 IRR01-V13 version conflict does not refresh blindly
 IRR01-V14 exact replay causes zero second mutation
+IRR01-V15 read-store ref = commit-store ref = admitted store ref
+IRR01-V16 mismatched synthetic read/write repositories fail context construction
 ~~~
 
 ---
 
-# 22. Readiness finding disposition
+# 23. Readiness finding disposition
 
 If independent review passes:
 
@@ -473,18 +540,21 @@ BF-U06-IRR-01
 
 ---
 
-# 23. Authorization boundary
+# 24. Authorization boundary
 
 This design authorizes no code, shared-runtime modification, production state write, merge or real-patient traffic.
 
 ---
 
-# 24. Draft verdict
+# 25. Draft verdict
 
 ~~~text
 CA-U06-IRR-01
-= DRAFT / READY_FOR_INDEPENDENT_PHYSICAL_DESIGN_REVIEW
+= REVISED / READY_FOR_TARGETED_PHYSICAL_DESIGN_RE_REVIEW
+
+BF-U06-CA-IRR01-IR-01
+= REMEDIATED / RE_REVIEW_PENDING
 
 BF-U06-IRR-01
-= OPEN / DESIGN_REVIEW_PENDING
+= OPEN / DESIGN_RE_REVIEW_PENDING
 ~~~
