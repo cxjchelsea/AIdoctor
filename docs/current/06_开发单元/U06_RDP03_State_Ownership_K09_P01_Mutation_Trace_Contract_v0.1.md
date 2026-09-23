@@ -1310,6 +1310,35 @@ QUESTION_DELIVERED_CLINICAL_STATE_EFFECT_ID
 =
 QUESTION_DELIVERED_WAIT_EFFECT_ID
 + clinical-state-sub-effect contract version
+
+QUESTION_DELIVERED_CLINICAL_STATE_PAYLOAD_FINGERPRINT
+=
+canonical semantic fingerprint of
+Question DELIVERED transition
++ Gap ASKED transition when applicable
++ pending-question pointer
++ delivery confirmation/content identity
++ parent effect identity
+
+U06_DELIVERED_CLINICAL_STATE_IDEMPOTENCY_KEY
+=
+QUESTION_DELIVERED_CLINICAL_STATE_EFFECT_ID
++ proposal_contract_version
+~~~
+
+Stable identity rules:
+
+~~~text
+same clinical-state child effect
+→ same proposal_id
+→ same patch_id
+→ same idempotency key
+→ same canonical child payload fingerprint
+
+same child effect id
++ different child payload fingerprint
+→ U06_DELIVERED_CLINICAL_STATE_REPLAY_CONFLICT
+→ fail closed
 ~~~
 
 and logical K09 proposal:
@@ -1318,6 +1347,8 @@ and logical K09 proposal:
 U06QuestionDeliveredClinicalStateProposal
 
 proposal_id
+patch_id
+proposal_contract_version
 consultation_id
 cdp_id
 base_clinical_state_version
@@ -1337,6 +1368,7 @@ source_gap_ref?
 question_need_class
 
 operations[]
+canonical_payload_fingerprint
 idempotency_key
 
 correlation_id
@@ -1361,8 +1393,8 @@ REPLACE source Gap
 → status = ASKED
 → add delivered Question ref to question_refs as governed
 
-ADD or REPLACE /patient_state/pending_question
-→ current delivered Question
+ADD /patient_state/pending_question
+when no current pending pointer exists
 ~~~
 
 For F1_MINIMAL_CLARIFICATION:
@@ -1370,10 +1402,46 @@ For F1_MINIMAL_CLARIFICATION:
 ~~~text
 REPLACE Question SELECTED -> DELIVERED_TO_USER
 
-ADD or REPLACE /patient_state/pending_question
+ADD /patient_state/pending_question
+when no current pending pointer exists
 
 no F3 Gap mutation
 ~~~
+
+Pending-question replacement safety is frozen:
+
+~~~text
+pending_question absent
+→ ADD is legal
+
+pending_question references the exact same question
++ same QUESTION_DELIVERED_WAIT_EFFECT_ID
+→ exact replay / reattach
+→ no new semantic REPLACE
+
+pending_question references a different current Question
+→ U06_PENDING_QUESTION_CONFLICT
+→ fail closed
+→ no delivered child commit
+
+pending pointer is stale/superseded
+→ replacement allowed only after authoritative lifecycle/owner evidence proves it is no longer current
+→ same Clinical State base_version must still be current
+~~~
+
+Current P01 has no expected_current_value CAS.
+
+Therefore this safety rule is enforced by:
+
+~~~text
+authoritative pre-read
++ exact selected/pending identity validation
++ base_version
++ P01 idempotency
++ RDP-04 reconciliation
+~~~
+
+not by inventing unsupported compare-and-set semantics.
 
 The P01 sub-effect does not mutate Consultation lifecycle.
 
@@ -1386,6 +1454,36 @@ CONSULTATION_WAITING_EFFECT_ID
 =
 QUESTION_DELIVERED_WAIT_EFFECT_ID
 + consultation-wait-sub-effect contract version
+
+CONSULTATION_WAITING_PAYLOAD_FINGERPRINT
+=
+canonical semantic fingerprint of
+consultation_id
++ expected prior lifecycle
++ target WAITING_USER
++ question_id
++ delivery_id
++ delivery confirmation identity
++ parent delivered-wait effect
+
+CONSULTATION_WAITING_IDEMPOTENCY_KEY
+=
+CONSULTATION_WAITING_EFFECT_ID
++ transition_contract_version
+~~~
+
+Stable identity rules:
+
+~~~text
+same Consultation child effect
+→ same transition_id
+→ same idempotency key
+→ same canonical child payload fingerprint
+
+same Consultation child effect id
++ different canonical child payload
+→ U06_CONSULTATION_WAITING_REPLAY_CONFLICT
+→ fail closed
 ~~~
 
 and logical command:
@@ -1394,8 +1492,10 @@ and logical command:
 ConsultationWaitingTransitionCommand
 
 transition_id
+transition_contract_version
 parent_delivered_wait_effect_id
 consultation_waiting_effect_id
+canonical_payload_fingerprint
 
 consultation_id
 expected_consultation_row_version
@@ -1414,21 +1514,41 @@ created_at
 
 This command is owned by the Consultation lifecycle persistence boundary, not P01 StatePatch.
 
+First transition eligibility:
+
+~~~text
+current lifecycle = ACTIVE
++ expected_consultation_row_version matches
++ no different current pending/wait Question
+→ WAITING_USER transition eligible
+~~~
+
 Exact replay:
 
 ~~~text
-same CONSULTATION_WAITING_EFFECT_ID
+current lifecycle = WAITING_USER
++ authoritative wait provenance references the exact same
+  QUESTION_DELIVERED_WAIT_EFFECT_ID / question_id / delivery_id
 → reattach same authoritative WAITING transition
 → no second lifecycle mutation
 ~~~
 
-Version/currentness conflict:
+Conflict:
 
 ~~~text
-do not overwrite lifecycle blindly
+current lifecycle = WAITING_USER
+for a different question/effect
+→ U06_CONSULTATION_WAITING_CONFLICT
+→ fail closed
+
+row_version mismatch
+or incompatible lifecycle
+→ do not overwrite blindly
 → reconcile parent delivered-wait effect
 → RDP-04 recovery/failure policy
 ~~~
+
+A plain lifecycle value WAITING_USER without matching effect/question provenance is insufficient to declare exact replay success.
 
 ## 28.3 Runtime wait transition
 
@@ -1519,8 +1639,16 @@ Stable child identities:
 QUESTION_DELIVERED_CLINICAL_STATE_EFFECT_ID
 = parent effect + clinical-state-sub-effect contract version
 
+U06_DELIVERED_CLINICAL_STATE_IDEMPOTENCY_KEY
+= QUESTION_DELIVERED_CLINICAL_STATE_EFFECT_ID
+  + proposal_contract_version
+
 CONSULTATION_WAITING_EFFECT_ID
 = parent effect + consultation-wait-sub-effect contract version
+
+CONSULTATION_WAITING_IDEMPOTENCY_KEY
+= CONSULTATION_WAITING_EFFECT_ID
+  + transition_contract_version
 ~~~
 
 RDP-04 will freeze exact transport attempt/receipt/crash-window fields.
@@ -2502,6 +2630,33 @@ PROFILE-B canonical F3 effect
 → effect identity uses SYNTHETIC_VERIFICATION_BINDING + synthetic ref
 → no fabricated real C03 CapabilityBindingRef
 → aggregate compatibility finding remains explicit
+
+RDP03-AC-21
+delivery child exact replay
+→ same child effect ids
+→ same proposal/transition ids
+→ same child idempotency keys
+→ same child payload fingerprints
+→ no second child mutation
+
+RDP03-AC-22
+same delivered Clinical State child effect id + changed payload
+→ fail closed replay conflict
+
+RDP03-AC-23
+different active pending_question exists
+→ no REPLACE
+→ U06_PENDING_QUESTION_CONFLICT
+→ no delivered child commit
+
+RDP03-AC-24
+Consultation already WAITING_USER for exact same parent effect/question/delivery
+→ exact replay reattach
+
+RDP03-AC-25
+Consultation WAITING_USER for different Question/effect
+→ U06_CONSULTATION_WAITING_CONFLICT
+→ no overwrite
 ~~~
 
 ---
@@ -2587,6 +2742,38 @@ Remediation applied:
 
 4. froze U06_TRACE_ID derivation, exact replay identity, child attempt evidence, and non-authoritative trace lifecycle.
 
+Targeted Independent Design Re-Review:
+
+~~~text
+review_id = 5287675433
+verdict = REVISE_REQUIRED
+reviewed_head = 907dd78aa40f1557a51aa256d902c2ed92c9ffc0
+~~~
+
+Additional findings:
+
+~~~text
+BF-U06-RDP03-TR-01
+= DELIVERED_CHILD_EFFECT_IDEMPOTENCY_CONTRACT_UNDERDEFINED
+
+BF-U06-RDP03-TR-02
+= PENDING_QUESTION_REPLACE_SAFETY_UNDERDEFINED
+~~~
+
+Additional remediation:
+
+5. froze stable delivered Clinical State child proposal_id / patch_id / idempotency / canonical payload fingerprint and exact replay conflict semantics;
+
+6. froze stable Consultation WAITING transition_id / idempotency / canonical payload fingerprint and exact replay conflict semantics;
+
+7. prohibited blind pending_question REPLACE:
+   - absent -> ADD;
+   - same exact parent effect -> replay/reattach;
+   - different current pending Question -> conflict;
+   - stale pointer replacement requires authoritative stale/superseded proof plus current base version;
+
+8. froze Consultation exact replay to require matching parent effect/question/delivery provenance, not merely lifecycle = WAITING_USER.
+
 Current:
 
 ~~~text
@@ -2602,8 +2789,14 @@ BF-U06-RDP03-IR-03
 BF-U06-RDP03-IR-04
 = REMEDIATED / RE-REVIEW_PENDING
 
+BF-U06-RDP03-TR-01
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP03-TR-02
+= REMEDIATED / RE-REVIEW_PENDING
+
 U06-RDP-03
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 
 BF-U06-RG-03
 = OPEN / DESIGN_RE_REVIEW_PENDING
@@ -2619,7 +2812,7 @@ U06 Implementation Authorization
 
 ~~~text
 U06-RDP-03
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 ~~~
 
 No Shared Contracts/P01/P05 modification, C03/D04 activation, runtime implementation, delivery, WAITING_USER activation, merge, production, or real-patient authorization is granted.
