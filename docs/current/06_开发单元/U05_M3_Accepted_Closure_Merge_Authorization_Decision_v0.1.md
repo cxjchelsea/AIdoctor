@@ -9,7 +9,7 @@
 > Exact target: `main@dd561a506376f022eed4730751f23d0603703729`  
 > Test merge: `9d1ae0bb9f9c8e392094cdc677a1af3b5de7ae5e`  
 > Required method: **STANDARD MERGE COMMIT ONLY**  
-> Status: **OWNER DECISION PENDING**
+> Status: **AUTHORIZED / CONSUMED_FOR_M3_STANDARD_MERGE**
 
 ## 1. Decision question
 
@@ -174,6 +174,54 @@ Current:
 
 ```
 AUTH-U05-M3-ACCEPTED-CLOSURE-MERGE-001
-= ELIGIBLE_FOR_EXPLICIT_OWNER_DECISION
-= NOT_GRANTED
+= AUTHORIZED
 ```
+
+
+## 10. Repository Owner Decision
+
+The repository owner explicitly selected:
+
+```
+AUTHORIZE
+```
+
+against exact reviewed authorization-package head:
+
+```
+6235c929a0591bbc52d72bb31a99ad270862debf
+```
+
+Therefore:
+
+```
+AUTH-U05-M3-ACCEPTED-CLOSURE-MERGE-001
+= AUTHORIZED
+```
+
+Authorized exact merge:
+
+```
+PR = #225
+source = 90c6ab379d625102ea7c78ae9289d0b7d7812b78
+target = main@dd561a506376f022eed4730751f23d0603703729
+method = STANDARD MERGE COMMIT ONLY
+```
+
+Pre-consumption drift check:
+
+```
+PR #225 head = 90c6ab379d625102ea7c78ae9289d0b7d7812b78
+main = dd561a506376f022eed4730751f23d0603703729
+mergeable = true
+source drift = none
+target drift = none
+```
+
+Mandatory next action after merge:
+
+```
+M3 Post-Merge Verification
+```
+
+No production/live/release/real-patient authorization is implied.
