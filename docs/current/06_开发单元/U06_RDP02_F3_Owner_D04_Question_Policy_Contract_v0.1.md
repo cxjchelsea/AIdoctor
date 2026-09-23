@@ -6,7 +6,7 @@
 > Parent head: **0e9b7be67c349cf4056cc144d4039efe17017241**  
 > Runtime repository basis: **main@7b37c03026cb17e89e3d7769df2b1bb1f03a9ca8**  
 > Scope: **F3 OWNER / D04 / QUESTION POLICY DESIGN ONLY**  
-> Status: **DRAFT / READY_FOR_INDEPENDENT_DESIGN_REVIEW**  
+> Status: **PASS / CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE**  
 > This document grants no C03/D04 activation, clinical policy approval, patient-facing question approval, implementation, merge, live delivery, production, or real-patient authorization.
 
 ---
@@ -1572,7 +1572,7 @@ PROFILE-B fixture encodes clinical threshold/patient wording claim
 
 # 37. Readiness blocker disposition
 
-If independent design review passes:
+Targeted Independent Design Re-Review has passed.
 
 ~~~text
 BF-U06-RG-02
@@ -1695,19 +1695,24 @@ Current:
 
 ~~~text
 BF-U06-RDP02-IR-01
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP02-IR-02
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP02-IR-03
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
+
+Targeted Independent Design Re-Review
+= PASS
+review_id = 5287571811
+reviewed_head = e537b58230812f85966a404b3f2805f42c692b97
 
 U06-RDP-02
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= PASS
 
 BF-U06-RG-02
-= OPEN / DESIGN_RE_REVIEW_PENDING
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
 
 U06 Implementation Readiness
 = NOT_READY
@@ -1716,11 +1721,46 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-# 41. Revised verdict
+# 41. Final Design Review Provenance
 
 ~~~text
-U06-RDP-02 F3 Owner / D04 Question Policy Contract
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+Initial Independent Design Review
+= REVISE_REQUIRED
+review_id = 5287560207
+reviewed_head = e1bdf0388e94d1d1dfb24c798f133fc80bccead9
+
+Targeted Independent Design Re-Review
+= PASS
+review_id = 5287571811
+reviewed_head = e537b58230812f85966a404b3f2805f42c692b97
+
+BF-U06-RDP02-IR-01
+= CLOSED
+
+BF-U06-RDP02-IR-02
+= CLOSED
+
+BF-U06-RDP02-IR-03
+= CLOSED
+
+U06-RDP-02
+= PASS
+
+BF-U06-RG-02
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
+
+U06 Implementation Readiness
+= NOT_READY
+
+U06 Implementation Authorization
+= NOT_GRANTED
+~~~
+
+Next recommended design:
+
+~~~text
+U06-RDP-03
+State Ownership / K09-P01 Mutation / Trace Contract
 ~~~
 
 No C03/D04 activation, medical question content, clinical stopping threshold, patient-facing question approval, implementation, delivery, merge, production, or real-patient authorization is granted.
