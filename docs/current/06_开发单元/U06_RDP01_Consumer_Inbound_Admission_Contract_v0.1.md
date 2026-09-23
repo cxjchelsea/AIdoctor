@@ -222,16 +222,24 @@ U06 admission authority categories
 
 ---
 
-# 6. Mode/source compatibility matrix
+# 6. Mode/source business-legality matrix
+
+本矩阵回答：
+
+```
+这个 source 在业务语义上是否允许请求这个 U06 mode？
+```
+
+它不等于当前 producer/activation 已可执行。
 
 | Source authority | MODE-1 | MODE-2 | MODE-3 |
 |---|---:|---:|---:|
-| A1_PRE_READINESS_ROUTING | ALLOW | DENY | DENY |
-| F1_CLARIFICATION_ROUTING | DENY | ALLOW | DENY |
-| U05_QUESTION_ROUTING | DENY | ALLOW | DENY |
-| POST_F3_SAFETY_BARRIER_ROUTING | DENY | DENY | ALLOW |
-| CLINICAL_CONTINUATION_ROUTING | DENY | DENY | ALLOW |
-| F3_REASSESSMENT_ROUTING | ALLOW | DENY | DENY |
+| A1_PRE_READINESS_ROUTING | BUSINESS_LEGAL | DENY | DENY |
+| F1_CLARIFICATION_ROUTING | DENY | BUSINESS_LEGAL | DENY |
+| U05_QUESTION_ROUTING | DENY | BUSINESS_LEGAL | DENY |
+| POST_F3_SAFETY_BARRIER_ROUTING | DENY | DENY | BUSINESS_LEGAL |
+| CLINICAL_CONTINUATION_ROUTING | DENY | DENY | BUSINESS_LEGAL |
+| F3_REASSESSMENT_ROUTING | BUSINESS_LEGAL | DENY | DENY |
 
 任何不在矩阵中的组合：
 
@@ -240,6 +248,50 @@ U06 admission = REJECTED_MODE_SOURCE_MISMATCH
 ```
 
 Scheduler 不得把 source consequence 重标成另一个 Mode。
+
+## 6.1 Current activation state
+
+必须另行区分：
+
+```
+BUSINESS_LEGAL
+!= ADMISSION_ACTIVATED
+!= SOURCE_PRODUCER_IMPLEMENTED
+```
+
+当前设计基线：
+
+| Source authority | Consumer contract | Current activation / producer state |
+|---|---|---|
+| U05_QUESTION_ROUTING | DEFINED | producer AVAILABLE in current U05 |
+| A1_PRE_READINESS_ROUTING | DEFINED | producer NOT_IMPLEMENTED |
+| POST_F3_SAFETY_BARRIER_ROUTING | DEFINED | producer NOT_IMPLEMENTED |
+| CLINICAL_CONTINUATION_ROUTING | DEFINED | producer NOT_IMPLEMENTED |
+| F3_REASSESSMENT_ROUTING | DEFINED | projection producer NOT_IMPLEMENTED |
+| F1_CLARIFICATION_ROUTING | DEFINED | **ACTIVATION_BLOCKED_PENDING_CONTROLLED_AMENDMENT** |
+
+其中 direct F1 特别要求：
+
+```
+frozen business path exists
+but exact runtime safety/routing authority is not yet refrozen
+```
+
+因此当前任何 implementation authorization 若未先关闭该 controlled amendment：
+
+```
+F1_CLARIFICATION_ROUTING
+= MUST_REMAIN_DISABLED
+```
+
+Synthetic authoritative fixture 可以验证 consumer schema/currentness/fail-closed 行为，但：
+
+```
+synthetic fixture
+!= activation
+!= upstream implementation
+!= authority to deliver a patient-facing clarification
+```
 
 ---
 
@@ -332,7 +384,7 @@ fresh U06 MODE-1
 + current bindings
 ```
 
-因此 RDP-01 允许第二种 MODE-1 source：
+因此 RDP-01 允许第二种 MODE-1 source-neutral projection：
 
 ```
 source_authority_type
@@ -345,10 +397,38 @@ u06_mode
 = PRE_READINESS_GAP_ASSESSMENT
 ```
 
+必须保持：
+
+```
+F3_REASSESSMENT_ROUTING
+!= new F3 business decision
+!= new revalidation outcome
+!= new Clinical Truth
+
+business authority
+= prior authoritative F3CurrentVersionRevalidationDecision
+  with outcome REASSESSMENT_REQUIRED
++ current Safety/routing authority
+```
+
+该 projection 只回答：
+
+```
+the already-authoritative REASSESSMENT_REQUIRED consequence
+may now be considered for this exact fresh MODE-1 execution
+```
+
+它不得：
+- 从 `REVALIDATED_CURRENT` 改成 reassessment；
+- 从 `FAILED` 改成 reassessment；
+- 在不存在 authoritative revalidation decision 时创造 reassessment；
+- 改写 prior F3 effect/history。
+
 该 source 必须绑定：
 
 ```
-prior F3CurrentVersionRevalidationDecision
+prior F3CurrentVersionRevalidationDecision identity
+prior F3CurrentVersionRevalidationDecision outcome
 = REASSESSMENT_REQUIRED
 
 prior f3_canonical_effect_id
@@ -368,7 +448,7 @@ revalidation/reassessment context identity
 
 直接启动 MODE-1。
 
-## 8.1 Context preservation
+## 8.2 Context preservation
 
 F3_REASSESSMENT_ROUTING 必须保留原 evaluation/continuation context，例如：
 
@@ -560,8 +640,17 @@ UPSTREAM CONTROLLED AMENDMENT REQUIRED
 ```
 direct F1 source
 = CONTRACTUALLY_DEFINED
-= NOT_EXECUTABLE
+= BUSINESS_LEGAL
+= ACTIVATION_BLOCKED_PENDING_CONTROLLED_AMENDMENT
 ```
+
+任何 U06 implementation authorization package 若 direct-F1 amendment 尚未关闭，必须显式配置：
+
+```
+F1_CLARIFICATION_ROUTING = DISABLED
+```
+
+不得把“consumer contract 已定义”解释成“direct F1 已可运行”。
 
 非生产 U06 admission verification 可使用 synthetic authoritative fixture 验证 consumer behavior，但：
 
@@ -1314,7 +1403,7 @@ SOURCE CONTRACT DEFINED
 | POST_F3_SAFETY_BARRIER_ROUTING | frozen Phase 6/8/9 | NOT_IMPLEMENTED |
 | CLINICAL_CONTINUATION_ROUTING | frozen Phase 8/9 | NOT_IMPLEMENTED |
 | F3_REASSESSMENT_ROUTING | frozen consequence semantics | NOT_IMPLEMENTED |
-| F1_CLARIFICATION_ROUTING | business semantics frozen; projection defined by this RDP | NOT_IMPLEMENTED / CONTROLLED AMENDMENT REQUIRED |
+| F1_CLARIFICATION_ROUTING | business semantics frozen; projection defined by this RDP | ACTIVATION_BLOCKED_PENDING_CONTROLLED_AMENDMENT |
 
 因此 future U06 non-production component verification 可以：
 
@@ -1362,15 +1451,22 @@ mode/target intent provenance
 
 需要后续 controlled amendment / implementation authorization。
 
-## U06-RDP01-IMP-02 — F1 clarification routing projection
+## U06-RDP01-IMP-02 — F1 clarification routing projection / activation gate
 
-需要实现经过独立治理的：
+需要实现并独立 refreeze：
 
 ```
 F1ClarificationRoutingEligibility
 ```
 
-及 safety clearance semantics。
+及 exact safety authority/clearance semantics。
+
+在该 amendment closure 之前：
+
+```
+F1_CLARIFICATION_ROUTING
+= disabled for executable admission
+```
 
 不得直接将 raw F1 state 暴露为 U06 execution authorization。
 
@@ -1389,9 +1485,16 @@ F1ClarificationRoutingEligibility
 
 U06 consumer 可先定义/验证 contract；producer implementation 需独立治理。
 
-## U06-RDP01-IMP-05 — F3 REASSESSMENT_REQUIRED → MODE-1 routing
+## U06-RDP01-IMP-05 — F3 REASSESSMENT_REQUIRED → MODE-1 admission projection
 
-需要 typed reassessment execution authority，不能让 Scheduler 仅看到枚举后直接调用 MODE-1。
+需要 typed reassessment execution/admission projection。
+
+该 projection：
+- only projects an already-authoritative `REASSESSMENT_REQUIRED`;
+- binds the exact source revalidation decision/context/current Safety authority;
+- does not own or recompute the reassessment decision.
+
+不能让 Scheduler 仅看到枚举后直接调用 MODE-1。
 
 ## U06-RDP01-IMP-06 — Scheduler target-intent surface
 
@@ -1674,3 +1777,50 @@ U06-RDP-05 Capability / Dependency / Applicability Contract
 ```
 
 in the recommended construction order.
+
+
+---
+
+# 32. Independent Design Review Remediation
+
+Initial Independent Design Review:
+
+```
+PR #230
+review_id = 5287226930
+verdict = REVISE_REQUIRED
+```
+
+Findings:
+
+```
+BF-U06-RDP01-IR-01
+= DIRECT_F1_SOURCE_ACTIVATION_OVERSTATED
+
+BF-U06-RDP01-IR-02
+= REASSESSMENT_PROJECTION_OWNER_AMBIGUITY
+```
+
+Remediation:
+
+1. split source/mode **business legality** from current **admission activation / producer implementation**;
+2. retained direct F1 clarification as frozen business-legal U06 MODE-2 path;
+3. froze direct F1 current activation as:
+   `ACTIVATION_BLOCKED_PENDING_CONTROLLED_AMENDMENT`;
+4. prohibited any implementation package from enabling direct F1 until exact routing + safety authority is independently reviewed/refrozen;
+5. froze `F3_REASSESSMENT_ROUTING` as an execution/admission projection only;
+6. bound its authority to the prior authoritative `F3CurrentVersionRevalidationDecision(REASSESSMENT_REQUIRED)` plus current Safety/routing authority;
+7. added stable reassessment projection identity and cross-context replay isolation.
+
+Current:
+
+```
+BF-U06-RDP01-IR-01
+= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+BF-U06-RDP01-IR-02
+= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+U06-RDP-01
+= REVISED / TARGETED_RE_REVIEW_PENDING
+```
