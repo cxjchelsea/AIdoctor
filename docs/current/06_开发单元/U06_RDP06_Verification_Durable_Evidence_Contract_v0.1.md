@@ -303,6 +303,70 @@ change outside authorized_shared_runtime_change_refs / paths
 → verification FAIL
 ~~~
 
+The count must not be self-reported by runtime/implementation code.
+
+Future authoritative verification must build:
+
+~~~text
+U06_AUTHORIZED_SHARED_RUNTIME_CHANGE_MANIFEST
+
+manifest_id
+
+implementation_base_sha
+implementation_target_sha
+
+authorized_amendment_refs[]
+authorized_review_refs[]
+
+authorized_exact_files[]
+authorized_path_patterns[]
+
+observed_changed_files[]
+unexpected_changed_files[]
+
+observed_git_diff_digest
+manifest_digest
+verdict
+~~~
+
+The verifier must compute:
+
+~~~text
+observed_changed_files
+=
+git diff --name-only implementation_base_sha..implementation_target_sha
+~~~
+
+or an equivalent repository-native exact diff bound to those SHAs.
+
+Then:
+
+~~~text
+unexpected_changed_files
+=
+observed shared-runtime files
+- files covered by reviewed authorized_exact_files / authorized_path_patterns
+~~~
+
+and:
+
+~~~text
+unreviewed_shared_runtime_change_count
+=
+count(unexpected_changed_files)
+~~~
+
+Acceptance requires:
+
+~~~text
+manifest verdict = PASS
+unexpected_changed_files = []
+unreviewed_shared_runtime_change_count = 0
+observed_git_diff_digest = durable evidence value
+~~~
+
+The manifest must itself be included in the evidence bundle and checksum coverage.
+
 RDP-06 does not itself authorize any shared-runtime change.
 
 ---
@@ -1236,6 +1300,68 @@ review_status
 
 No fixture may embed an unreviewed medical expectation.
 
+## 20.1 Independent Fixture Review Gate
+
+Future authoritative verification requires:
+
+~~~text
+U06_FIXTURE_REVIEW_GATE_V0_1
+
+fixture_review_id
+reviewed_fixture_manifest_digest
+reviewed_contract_manifest_digest
+
+reviewer_role
+independence_marker
+
+verdict
+reviewed_at
+finding_refs[]
+~~~
+
+Allowed verdict:
+
+~~~text
+PASS
+REVISE_REQUIRED
+INVALID
+~~~
+
+The independent fixture review must verify at least:
+
+~~~text
+fixtures contain only branch stimuli / structural inputs
+fixtures do not copy observed SUT outputs into expected fields
+fixtures do not hide real medical policy or patient-facing wording claims
+fixtures are synthetic / non-patient / non-identifiable
+fixtures contain no real recipient endpoint / production secret
+fixtures cannot enable external side effects
+fixture semantic identity matches the contract authority it claims to exercise
+~~~
+
+Authoritative CI must verify:
+
+~~~text
+fixture_manifest_digest_used_by_run
+= reviewed_fixture_manifest_digest
+
+contract_manifest_digest_used_by_run
+= reviewed_contract_manifest_digest
+
+fixture review verdict
+= PASS
+~~~
+
+Otherwise:
+
+~~~text
+verification = INVALID_EVIDENCE
+~~~
+
+Oracle and fixture reviews are independent gates.
+
+A reviewed oracle cannot compensate for an unreviewed fixture, and a reviewed fixture cannot compensate for an unreviewed oracle.
+
 ---
 
 # 21. Contract manifest
@@ -1665,16 +1791,32 @@ conflicting distinct effect fails closed
 
 For the current PROFILE-B authoritative run, zero-external-effect proof must not depend only on implementation counters.
 
-Verification environment must provide, where technically available:
+For the authoritative PROFILE-B run, verification environment isolation is mandatory, not best-effort.
+
+It must provide a verifiable:
 
 ~~~text
-network egress = denied by default
+network egress = DENY_BY_DEFAULT
+or an independently provable equivalent isolated network boundary
+
 production credentials/secrets = absent
 real recipient endpoints = absent
 production database/store credentials = absent
 
 synthetic adapters = explicit allowlist only
-external-call boundary spy/interceptor = enabled
+external-call boundary spy/interceptor = enabled as defense-in-depth
+~~~
+
+The external-call spy does not replace network/environment isolation.
+
+If the CI platform cannot prove deny-by-default or equivalent isolation:
+
+~~~text
+verification verdict
+= INVALID_EVIDENCE
+or INCOMPLETE
+
+PASS = prohibited
 ~~~
 
 Define:
@@ -1699,6 +1841,8 @@ evidence_refs[]
 ~~~
 
 A network/spy/environment violation is authoritative even if runtime self-reported external counters are zero.
+
+Environment evidence must be produced outside the U06 SUT itself or by CI/platform controls that the SUT cannot redefine.
 
 Acceptance requires:
 
@@ -2129,7 +2273,9 @@ unreviewed_shared_runtime_change_count = 0
 external_call_spy_observed_count = 0
 
 oracle review = PASS
+fixture review = PASS
 environment isolation = PASS
+shared-runtime change manifest = PASS
 
 regression failures = 0
 regression errors = 0
@@ -2313,6 +2459,35 @@ Remediation applied:
 
 5. replaced blanket shared-runtime-change prohibition with reviewed allowlist refs/paths and unreviewed_shared_runtime_change_count = 0.
 
+Targeted Independent Design Re-Review:
+
+~~~text
+review_id = 5287857225
+verdict = REVISE_REQUIRED
+reviewed_head = 1ddf342ce43de8ac94943ec1afe295e2aa29a7ee
+~~~
+
+Additional findings:
+
+~~~text
+BF-U06-RDP06-TR-01
+= SYNTHETIC_FIXTURE_INDEPENDENT_REVIEW_GATE_MISSING
+
+BF-U06-RDP06-TR-02
+= ENVIRONMENT_ISOLATION_REQUIREMENT_SOFTENED_BY_WHERE_AVAILABLE
+
+BF-U06-RDP06-TR-03
+= SHARED_RUNTIME_ALLOWLIST_DIFF_PROVENANCE_UNDERDEFINED
+~~~
+
+Additional remediation:
+
+6. added U06_FIXTURE_REVIEW_GATE_V0_1 with exact fixture/contract digests and independent review requirements;
+
+7. made authoritative PROFILE-B network isolation mandatory; inability to prove deny-by-default/equivalent isolation now makes PASS impossible;
+
+8. added U06_AUTHORIZED_SHARED_RUNTIME_CHANGE_MANIFEST and required changed-file computation from exact bound Git diff rather than SUT self-report.
+
 Current:
 
 ~~~text
@@ -2331,8 +2506,17 @@ BF-U06-RDP06-IR-04
 BF-U06-RDP06-IR-05
 = REMEDIATED / RE-REVIEW_PENDING
 
+BF-U06-RDP06-TR-01
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP06-TR-02
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP06-TR-03
+= REMEDIATED / RE-REVIEW_PENDING
+
 U06-RDP-06
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 
 BF-U06-RG-06
 = OPEN / DESIGN_RE_REVIEW_PENDING
@@ -2348,7 +2532,7 @@ U06 Implementation Authorization
 
 ~~~text
 U06-RDP-06
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 ~~~
 
 No implementation, synthetic adapter implementation, real C03/D04 activation, external delivery, merge, production, or real-patient authorization is granted.
