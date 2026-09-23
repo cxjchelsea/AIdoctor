@@ -1817,7 +1817,7 @@ Current disposition until explicit re-freeze:
 
 ~~~text
 RDP05 aggregate compatibility impact
-= REMEDIATED / REVIEW_PENDING / REF FREEZE PENDING
+= REMEDIATED / AMENDMENT_REVIEW_PASS / REF FREEZE PENDING
 ~~~
 
 
@@ -1843,5 +1843,5 @@ Current disposition:
 
 ~~~text
 U06-AGR-01 C03 result provenance
-= REMEDIATED / COMPATIBILITY_REVIEW_PENDING / NOT_REFROZEN
+= REMEDIATED / AMENDMENT_REVIEW_PASS / REF FREEZE PENDING
 ~~~
