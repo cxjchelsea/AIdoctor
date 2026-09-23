@@ -85,7 +85,7 @@ public final class U06SyntheticDecisionEngine {
             if(c.getDeterministicRank()==best){bestCount++;selected=c;}
         }
         if(bestCount!=1)
-            return failedSelection(r,"DETERMINISTIC_TIE_UNRESOLVED");
+            return selectionFailedAfterContinue(r,"DETERMINISTIC_TIE_UNRESOLVED");
 
         String selection=U06Ids.hash("u06selection",r.getConsultationId(),
                 selected.getCandidateId(),selected.getSemanticKey(),
@@ -126,7 +126,7 @@ public final class U06SyntheticDecisionEngine {
         if(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT.equals(r.getMode()))
             return new U06SyntheticDecisionBundle(U06SyntheticDecisionBundle.FAILED,null,null,reason,false,
                     null,null,null,null,null,null,null,null,null);
-        return failedSelection(r,reason);
+        return capabilityFailedSelection(r,reason);
     }
 
     private U06SyntheticDecisionBundle noSelection(U06ProfileBRequest r,String d04,String reason) {
@@ -137,6 +137,16 @@ public final class U06SyntheticDecisionEngine {
     private U06SyntheticDecisionBundle failedSelection(U06ProfileBRequest r,String reason) {
         return new U06SyntheticDecisionBundle(U06SyntheticDecisionBundle.NOT_DECIDABLE,null,null,reason,false,
                 U06SyntheticDecisionBundle.FAILED,U06SyntheticDecisionBundle.FAILED,null,null,null,null,null,null,null);
+    }
+
+    private U06SyntheticDecisionBundle capabilityFailedSelection(U06ProfileBRequest r,String reason) {
+        return new U06SyntheticDecisionBundle(U06SyntheticDecisionBundle.NOT_DECIDABLE,null,null,reason,false,
+                null,U06SyntheticDecisionBundle.FAILED,null,null,null,null,null,null,null);
+    }
+
+    private U06SyntheticDecisionBundle selectionFailedAfterContinue(U06ProfileBRequest r,String reason) {
+        return new U06SyntheticDecisionBundle(U06SyntheticDecisionBundle.NOT_DECIDABLE,null,null,reason,false,
+                U06SyntheticDecisionBundle.CONTINUE,U06SyntheticDecisionBundle.FAILED,null,null,null,null,null,null,null);
     }
 
     private static String req(String v,String n){
