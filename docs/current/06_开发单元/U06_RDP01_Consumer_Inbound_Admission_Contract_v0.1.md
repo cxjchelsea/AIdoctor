@@ -6,7 +6,7 @@
 > Parent readiness head: `aac25a0f7fa597b4a2c6ebf2201e606a8c58857e`  
 > Runtime repository basis: `main@7b37c03026cb17e89e3d7769df2b1bb1f03a9ca8`  
 > Scope: **CONSUMER CONTRACT / ADMISSION DESIGN ONLY**  
-> Status: **DRAFT_FOR_INDEPENDENT_DESIGN_REVIEW**  
+> Status: **PASS / CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE**  
 > This contract grants no implementation, upstream wiring, Scheduler activation, C03/D04 execution, delivery, merge, production, or real-patient authorization.
 
 ---
@@ -1795,10 +1795,10 @@ real-patient traffic
 
 ```
 U06-RDP-01 Consumer Inbound / Admission Contract
-= DRAFT_FOR_INDEPENDENT_DESIGN_REVIEW
+= PASS
 
 BF-U06-RG-01
-= OPEN / DESIGN_PROPOSED
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
 
 U06 Implementation Readiness
 = NOT_READY
@@ -1853,11 +1853,68 @@ Current:
 
 ```
 BF-U06-RDP01-IR-01
-= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP01-IR-02
-= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+= CLOSED
+
+Targeted Independent Design Re-Review
+= PASS
+review_id = 5287235527
+reviewed_head = 5f22aaea8a6f8b22e2bfc2c2660dff2333a6ea7f
 
 U06-RDP-01
-= REVISED / TARGETED_RE_REVIEW_PENDING
+= PASS
+```
+
+
+---
+
+# 33. Final Design Review Provenance
+
+```
+Initial Independent Design Review
+= REVISE_REQUIRED
+review_id = 5287226930
+
+Targeted Independent Design Re-Review
+= PASS
+review_id = 5287235527
+
+Reviewed semantic head
+= 5f22aaea8a6f8b22e2bfc2c2660dff2333a6ea7f
+
+BF-U06-RDP01-IR-01
+= CLOSED
+
+BF-U06-RDP01-IR-02
+= CLOSED
+
+U06-RDP-01
+= PASS
+
+BF-U06-RG-01
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
+```
+
+This status synchronization changes no source/mode legality, admission rule, currentness rule, Safety rule, replay identity, producer-availability boundary, upstream amendment inventory, or authorization scope.
+
+Next recommended design in the approved construction order:
+
+```
+U06-RDP-05
+Capability / Dependency / Applicability Contract
+```
+
+Still:
+
+```
+U06 Implementation Readiness
+= NOT_READY
+
+U06 Implementation Authorization
+= NOT_GRANTED
+
+direct F1 admission activation
+= BLOCKED_PENDING_CONTROLLED_AMENDMENT
 ```
