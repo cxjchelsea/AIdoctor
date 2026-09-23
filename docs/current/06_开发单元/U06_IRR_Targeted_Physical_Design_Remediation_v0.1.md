@@ -3,7 +3,7 @@
 > Parent: **U06 Implementation Readiness Re-Evaluation / PR #238**  
 > Readiness baseline: **498d8ae086c7d9fd0e33017360d07ea1ba89ee73**  
 > Scope: **CA-U06-IRR-01..03 / PHYSICAL DESIGN ONLY**  
-> Status: **DRAFT / READY_FOR_INDEPENDENT_COMBINED_REVIEW**  
+> Status: **PASS / PHYSICAL_DESIGN_REMEDIATION_COMPLETE**  
 > No implementation authorization is granted.
 
 ---
@@ -326,15 +326,56 @@ No code implementation, schema migration execution, synthetic adapter implementa
 
 ---
 
-# 13. Draft verdict
+# 13. Independent Combined Review Provenance
 
 ~~~text
-CA-U06-IRR-01..03 Targeted Physical Design Remediation
-= DRAFT / READY_FOR_INDEPENDENT_COMBINED_REVIEW
+Initial Independent Combined Review
+= REVISE_REQUIRED
+review_id = 5288434120
+reviewed_head = 0533fa05a896b8588983371038218902a274d208
 
-U06 Implementation Readiness
-= NOT_READY
+Targeted Independent Combined Re-Review
+= PASS
+review_id = 5288454931
+reviewed_head = 9c0893a2892a8b08a9c03ce3a8f214397d893df4
+~~~
+
+# 14. Final physical-design verdict
+
+~~~text
+CA-U06-IRR-01
+= PASS
+
+CA-U06-IRR-02
+= PASS
+
+CA-U06-IRR-03
+= PASS
+
+CA-U06-IRR-01..03 Targeted Physical Design Remediation
+= PASS
+
+BF-U06-IRR-01
+= PHYSICAL_DESIGN_COMPLETE / PENDING_COMBINED_READINESS_REEVALUATION
+
+BF-U06-IRR-02
+= PHYSICAL_DESIGN_COMPLETE / PENDING_COMBINED_READINESS_REEVALUATION
+
+BF-U06-IRR-03
+= PHYSICAL_DESIGN_COMPLETE / PENDING_COMBINED_READINESS_REEVALUATION
+
+U06 PROFILE-B Implementation Readiness
+= NOT_YET_REEVALUATED_AFTER_PHYSICAL_DESIGN
 
 U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
+
+Next governance step:
+
+~~~text
+U06 Implementation Readiness Re-Evaluation
+(post physical-design remediation)
+~~~
+
+No code implementation, schema migration execution, shared-runtime modification, synthetic adapter implementation, merge, production, or real-patient authorization is granted.
