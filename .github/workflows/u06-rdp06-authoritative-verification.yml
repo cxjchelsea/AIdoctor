@@ -1,0 +1,84 @@
+name: U06 Profile-B Engineering Verification Candidate
+on:
+  push:
+    branches: [ impl/u06-profileb-synthetic-structural-v1 ]
+  pull_request:
+    branches: [ decision/u06-profileb-implementation-authorization-v1 ]
+permissions:
+  contents: read
+jobs:
+  u06-engineering:
+    runs-on: ubuntu-latest
+    env:
+      U06_IMPLEMENTATION_BASE: f78bd9192d0603cfa3cc878644088f908dcb2fb8
+      U06_PROFILE: SYNTHETIC_STRUCTURAL_NONPROD
+      U06_REAL_PHI: 'false'
+      U06_EXTERNAL_IO: 'false'
+      U06_PRODUCTION_STORE_WRITE: 'false'
+      U06_REAL_C03_D04: 'false'
+      U06_DIRECT_F1: 'false'
+      U06_LIVE_U07: 'false'
+      U06_PRODUCTION_SCHEDULER: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: { fetch-depth: 0 }
+      - name: Authorization boundary
+        shell: bash
+        run: |
+          test "$U06_PROFILE" = "SYNTHETIC_STRUCTURAL_NONPROD"
+          test "$U06_REAL_PHI" = "false"
+          test "$U06_EXTERNAL_IO" = "false"
+          test "$U06_PRODUCTION_STORE_WRITE" = "false"
+          test "$U06_REAL_C03_D04" = "false"
+          test "$U06_DIRECT_F1" = "false"
+          test "$U06_LIVE_U07" = "false"
+          test "$U06_PRODUCTION_SCHEDULER" = "false"
+      - name: Exact allowed-change diff guard
+        shell: bash
+        run: |
+          git diff --name-only "$U06_IMPLEMENTATION_BASE"...HEAD > /tmp/u06_changed.txt
+          while IFS= read -r f; do
+            case "$f" in
+              diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/*) ;;
+              diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/ConsultationRecord.java) ;;
+              diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/ConsultationRepository.java) ;;
+              diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeThreadStateRecord.java) ;;
+              diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeThreadStateRepository.java) ;;
+              diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeWaitCheckpointRecord.java) ;;
+              diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeWaitCheckpointRepository.java) ;;
+              diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeWaitCheckpointService.java) ;;
+              diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeThreadWaitTransitionService.java) ;;
+              diagnosis-service/src/main/resources/db/migration/V6__add_u06_wait_runtime.sql) ;;
+              diagnosis-service/src/main/resources/db/migration-oracle/V6__add_u06_wait_runtime.sql) ;;
+              diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u06/*) ;;
+              diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/u06/*) ;;
+              diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u01/U01ConsultationServiceTest.java) ;;
+              diagnosis-service/src/test/resources/u06/*) ;;
+              tools/u06_nonprod_verification/*) ;;
+              .github/workflows/u06-rdp06-authoritative-verification.yml) ;;
+              docs/current/06_开发单元/u06_implementation/*) ;;
+              *) echo "UNAUTHORIZED_CHANGE=$f"; exit 1 ;;
+            esac
+          done < /tmp/u06_changed.txt
+      - name: Structural no-live guard
+        shell: bash
+        run: |
+          if grep -R -nE '@(Service|Component|Configuration|RestController|Controller|Bean|Profile)' diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06; then exit 1; fi
+          if grep -R -nE 'RestTemplate|WebClient|HttpClient|FeignClient|OpenAI|PythonRuntimeClient' diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06; then exit 1; fi
+          if grep -R -n 'ClinicalCdpStateRepositoryAdapter' diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06; then exit 1; fi
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Install contracts
+        run: mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Compile
+        run: mvn -f diagnosis-service/pom.xml -DskipTests compile
+      - name: Focused U06 structural tests
+        run: mvn -f diagnosis-service/pom.xml -Dtest=U06ProfileBStructuralTest test
+      - name: Declare boundary
+        run: |
+          echo "U06_PROFILEB_ENGINEERING=PASS"
+          echo "U06_RDP06_AUTHORITATIVE_VERIFICATION=NOT_RUN"
+          echo "U06_IMPLEMENTATION_VERIFICATION_CLOSURE=NOT_PASSED"
