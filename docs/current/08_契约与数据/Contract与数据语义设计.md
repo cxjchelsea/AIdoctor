@@ -1744,5 +1744,867 @@ Production Authorization
 
 ```text
 SOP Phase 8 — Contract & Data Design
-= V1 synchronized with completed Phase 7 governance design
+= A1 REFROZEN / V1
+Unaffected V1 contract semantics remain the baseline
 ```
+
+
+---
+
+# 25. A1 Controlled Amendment — Eligibility / F3 / Barrier Contracts
+
+> Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
+> Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
+> Status: **A1 REFROZEN / V1**
+
+本节不新增 K11，不改变既有：
+
+```text
+Capability Result
+!= Deterministic Decision
+!= StateChangeProposal
+!= Committed State
+```
+
+## 25.1 A1 pre-readiness eligibility
+
+新增受控契约：
+
+```text
+A1PreReadinessEligibility
+```
+
+最小字段：
+
+```text
+eligibility_id
+eligibility_type = PRE_READINESS_A1_F3_C03_ELIGIBLE
+routing_authorization_id
+consultation_id
+cdp_id
+clinical_state_version
+u04_gate_ref
+gate_value
+bootstrap_architecture_binding_ref = A1
+restricted_context_ref?
+routing_policy_id / routing_policy_version
+validity
+created_at
+trace_refs[]
+```
+
+该对象：
+
+```text
+!= Clinical State
+!= Clinical Readiness
+!= Unit invocation
+```
+
+## 25.2 F3 canonical effect identity
+
+新增：
+
+```text
+F3_CANONICAL_EFFECT_ID
+```
+
+最小 derivation：
+
+```text
+consultation_id
++ fact/framing basis identity
++ source Clinical State Version
++ C03 CapabilityBindingRef
++ F3 assessment policy/version
++ assessment trigger/event identity
+```
+
+## 25.3 A1 F3 StateChangeProposal requirements
+
+A1 canonical F3 proposal 在统一 StateChangeProposal 基础上必须附带：
+
+```text
+source_clinical_state_version
+F3_CANONICAL_EFFECT_ID
+source C03 result ref
+C03 CapabilityBindingRef
+RuleReleaseRef / KnowledgeReleaseRef as applicable
+F3 policy/version
+effect idempotency key
+expected current version
+trace/audit refs
+```
+
+依旧保持：
+
+```text
+C03 Capability Result
+!= StateChangeProposal
+```
+
+## 25.4 POST_F3_SAFETY_REVALIDATION_BARRIER metadata
+
+Runtime/checkpoint 可记录：
+
+```text
+barrier_id
+consultation_id
+F3_CANONICAL_EFFECT_ID
+F3 commit result ref
+authoritative state ref/version after F3 commit
+risk dependency status
+risk decision ref
+u04_gate_ref
+F3 revalidation status/ref
+routing_authorization_ref
+barrier_stage
+failure_ref?
+trace_refs[]
+```
+
+该 barrier：
+
+```text
+= Runtime execution/checkpoint metadata
+!= Clinical Truth
+```
+
+## 25.5 Risk/Safety dependency binding
+
+A1 不要求 Risk Decision 与最终 Safety Gate commit 共享一个 literal final version number。
+
+优先复用既有 Phase 8 语义：
+
+```text
+input_clinical_state_version
+derived_from_clinical_state_version
+decision_ref
+basis_refs
+validity / staleness
+```
+
+表达：
+
+```text
+Risk Decision 对 U04 evaluation basis 有效
+U04 Gate 是当前 committed Gate
+其声明依赖未被后续变化破坏
+```
+
+若实现阶段确实需要新增物理字段，例如：
+
+```text
+risk_basis_state_version
+gate_commit_state_version
+```
+
+必须作为 Phase 8 单独 schema diff 再接受 review，不得从本节自动推导为已冻结物理字段。
+
+## 25.6 F3CurrentVersionRevalidationDecision
+
+新增 F3 Owner scoped deterministic decision：
+
+```text
+F3CurrentVersionRevalidationDecision
+```
+
+复用统一 DeterministicDecision contract：
+
+```text
+!= D11
+!= new D01-D10 system-level policy family
+```
+
+最小字段：
+
+```text
+revalidation_decision_id
+consultation_id
+cdp_id
+F3_CANONICAL_EFFECT_ID
+source_f3_state_ref
+source_f3_decision_ref
+source_clinical_state_version
+target_clinical_state_version
+current_u04_gate_ref
+dependency_fingerprint_before
+dependency_fingerprint_current
+semantic_binding_compatibility_ref
+outcome
+reason_codes[]
+policy_id = F3_CURRENT_VERSION_REVALIDATION
+policy_version
+rule_release_refs[]
+knowledge_release_refs[]
+historical_capability_binding_ref
+created_at
+validity
+trace_refs[]
+```
+
+Allowed outcomes：
+
+```text
+REVALIDATED_CURRENT
+REASSESSMENT_REQUIRED
+FAILED
+```
+
+这些 outcome：
+
+```text
+!= Clinical Readiness
+!= D03 decision_status
+!= canonical F3 lifecycle state
+```
+
+## 25.7 F3 current-version readiness input
+
+当 outcome = REVALIDATED_CURRENT 时，可形成：
+
+```text
+readiness_input_id
+source_domain = F3
+source_owner = F3
+input_kind = ONLINE_INFORMATION_GAP
+applicability_status = PRESENT
+business_signal
+consultation_id
+cdp_id
+clinical_state_version = target authoritative version
+source_decision_ref = F3CurrentVersionRevalidationDecision ref
+source_state_ref = canonical F3 state ref
+current_version_revalidation_ref
+u04_gate_ref = current Gate
+evidence_refs[]
+policy_or_rule_refs[]
+produced_at
+validity = CURRENT
+```
+
+该 projection：
+
+```text
+DOES NOT duplicate canonical F3 state
+DOES NOT create StateChangeProposal
+DOES NOT advance Clinical State Version
+```
+
+## 25.8 Revalidation idempotency
+
+```text
+F3_REVALIDATION_ID
+=
+consultation_id
++ F3_CANONICAL_EFFECT_ID
++ target Clinical State Version
++ current U04 Gate ref
++ revalidation policy version
++ semantic binding compatibility ref
+```
+
+同一 replay 返回/附着 authoritative prior decision/input，不重复业务 effect。
+
+若 target version / Gate 在发布前变化：
+
+```text
+STALE_BEFORE_PUBLISH
+→ do not publish CURRENT readiness input
+→ reload authoritative state
+```
+
+## 25.9 Current amendment status
+
+```text
+Phase 8 A1 affected scope
+= REFROZEN / V1
+
+Re-freeze
+= GRANTED / COMPLETE
+
+Implementation / Merge / Production Authorization
+= NOT IMPLIED
+```
+
+
+---
+
+# 26. Post-DDx Controlled Amendment — Routing Decision Contract
+
+> Authorization: `AUTH-U05-PDX-FROZEN-AMEND-001`  
+> Reviewed design source: PR #153 exact head `a5b8aa6e23e5f54a0c2e1884ed027d7f7b7cbeee`  
+> Status: **REFROZEN / V1**
+
+## 26.1 Contract type
+
+新增 scoped deterministic routing decision：
+
+```text
+PostDdxRoutingDecision
+```
+
+复用统一：
+
+```text
+DeterministicDecision
+```
+
+结构，但：
+
+```text
+!= D11
+!= new D01-D10 system-level decision family
+!= Clinical Readiness
+!= Delivery Readiness
+!= Clinical State truth category
+```
+
+## 26.2 Minimum fields
+
+```text
+decision_id
+decision_type = POST_DDX_ROUTING
+consultation_id
+input_clinical_state_version
+evaluation_context = POST_DDX_REEVALUATION
+
+f1_input_ref
+f3_input_ref
+f5_input_ref
+f6_input_ref?
+current_u04_gate_ref
+
+decision
+reason_codes[]
+basis_refs[]
+
+policy_id = POST_DDX_ROUTING
+policy_version
+rule_release_refs[]
+knowledge_release_refs[]
+created_at
+validity / staleness
+trace_refs[]
+```
+
+## 26.3 Allowed decision vocabulary
+
+```text
+TO_U05_CLINICAL_READINESS
+TO_U08_REASSESSMENT
+TO_U12_DELIVERY_PREPARATION
+FAILURE_ROUTE
+```
+
+禁止直接输出：
+
+```text
+OUT_OF_SCOPE
+NEEDS_OFFLINE_EVIDENCE
+NEEDS_CLARIFICATION
+CAN_ASK_MORE
+READY_FOR_CLINICAL_ANALYSIS
+NO_RELIABLE_DIRECTION
+```
+
+这些不是 PostDdxRoutingDecision vocabulary。
+
+## 26.4 Ownership
+
+```text
+F3 owner -> Gap semantics
+F5 owner -> DDx/Must-Exclude semantics
+F6 owner -> offline-evidence semantics
+F7 owner -> Delivery Readiness
+U05/D03 -> Clinical Readiness
+U09 -> scoped routing policy host only
+```
+
+## 26.5 Idempotency
+
+```text
+POST_DDX_ROUTING_ID
+=
+consultation_id
++ input Clinical State Version
++ accepted F3/F5/F6 refs
++ current U04 Gate ref
++ routing policy version
+```
+
+Same replay：
+
+```text
+→ attach authoritative prior routing decision
+→ no duplicate U08/U12 side effect
+```
+
+## 26.6 Current status
+
+```text
+Phase 8 PostDdxRoutingDecision
+= REFROZEN / V1
+```
+
+
+---
+
+# 27. Post-Analysis Routing Extension Contract
+
+> Authorization: `AUTH-U05-PA-FROZEN-AMEND-001`  
+> Reviewed design source: PR #155 exact head `7e2d4d4255d51a10f58c63dec4e2ccb53920c33f`  
+> Status: **REFROZEN / V1**
+
+## 27.1 Superseded contract
+
+Section 26 的：
+
+```text
+PostDdxRoutingDecision
+decision_type = POST_DDX_ROUTING
+```
+
+在任何 Runtime implementation 前被 generalized contract 取代：
+
+```text
+PostAnalysisRoutingDecision
+decision_type = POST_ANALYSIS_ROUTING
+```
+
+无需 runtime migration。
+
+## 27.2 Evaluation context
+
+Mandatory：
+
+```text
+evaluation_context
+```
+
+Allowed V1 values：
+
+```text
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+## 27.3 Allowed decisions
+
+```text
+TO_U05_CLINICAL_READINESS
+TO_F3_CURRENT_VERSION_REVALIDATION
+TO_U08_REASSESSMENT
+TO_U12_DELIVERY_PREPARATION
+FAILURE_ROUTE
+```
+
+这些仍然是 Unit-level routing consequences：
+
+```text
+!= Clinical Readiness
+!= Delivery Readiness
+!= D11
+!= new Clinical State truth category
+```
+
+## 27.4 Identity / idempotency
+
+```text
+POST_ANALYSIS_ROUTING_ID
+=
+consultation_id
++ input_clinical_state_version
++ evaluation_context
++ accepted F3/F5/F6 refs
++ current U04 Gate ref
++ routing policy version
+```
+
+`evaluation_context` 为 mandatory identity component。
+
+## 27.5 F3 revalidation consequence
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+```
+
+只能在：
+
+```text
+canonical F3 source/effect exists
++ current routing requires materialized current F3 input
++ F3 input is lawfully ABSENT_BY_DESIGN
+```
+
+等受控情形形成。
+
+该 decision 不等于 F3 revalidation outcome；真正 revalidation 仍由 U06 MODE-3 / F3 Owner 执行。
+
+## 27.6 Current status
+
+```text
+Phase 8 PostAnalysisRoutingDecision
+= REFROZEN / V1
+```
+
+
+---
+
+# 28. Clinical Continuation Routing Contract
+
+> Authorization: `AUTH-U05-CCR-FROZEN-AMEND-001`  
+> Reviewed design source: PR #157 exact head `4c3c7eb7e9aa9b6f9506871f7d28e033b4a6482e`  
+> Status: **REFROZEN / V1**
+
+## 28.1 Superseded generalized contract
+
+Section 27 的：
+
+```text
+PostAnalysisRoutingDecision
+decision_type = POST_ANALYSIS_ROUTING
+```
+
+在 Runtime implementation 前进一步 generalized 为：
+
+```text
+ClinicalContinuationRoutingDecision
+decision_type = CLINICAL_CONTINUATION_ROUTING
+```
+
+No runtime migration is required.
+
+## 28.2 Evaluation contexts
+
+Mandatory：
+
+```text
+POST_USER_FACT_UPDATE
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+## 28.3 Allowed consequences
+
+```text
+TO_U05_CLINICAL_READINESS
+TO_F3_CURRENT_VERSION_REVALIDATION
+TO_U08_REASSESSMENT
+TO_U12_DELIVERY_PREPARATION
+FAILURE_ROUTE
+```
+
+该 decision：
+
+```text
+!= D11
+!= Clinical Readiness
+!= Delivery Readiness
+!= Clinical State truth category
+```
+
+## 28.4 Mutation provenance
+
+POST_USER_FACT_UPDATE 至少额外绑定：
+
+```text
+invalidation_refs[]
+prior_activation_refs[]
+accepted_fact_or_correction_event_ref
+```
+
+用于区分：
+
+```text
+STALE_BY_UPSTREAM_MUTATION
+vs
+FAILED / UNAVAILABLE
+```
+
+## 28.5 Idempotency
+
+```text
+CLINICAL_CONTINUATION_ROUTING_ID
+=
+consultation_id
++ input Clinical State Version
++ evaluation_context
++ accepted owner input refs
++ invalidation refs
++ current U04 Gate ref
++ routing policy version
+```
+
+## 28.6 Current status
+
+```text
+Phase 8 ClinicalContinuationRoutingDecision
+= REFROZEN / V1
+```
+
+
+---
+
+# U05 CL-04 Controlled Amendment — F6 Reassessment/Revalidation + D03-POL-011 Contract
+
+> Authorization: `AUTH-U05-CL04-FROZEN-AMEND-001`  
+> Reviewed design: PR #160 exact head `80cd6d7d154aa3e8de093ef43328e8ee9c2733d3`  
+> Owner policy: `OD-U05-READY-02 = APPROVE_OPTION_A`  
+> Amendment status: **REVIEW_PASS / REFROZEN / V1**  
+> Re-freeze status: **REFROZEN / V1**
+
+## A. ClinicalContinuationRoutingDecision vocabulary extension
+
+Add one Unit-level consequence:
+
+```text
+TO_F6_CURRENT_VERSION_REASSESSMENT
+```
+
+The consequence vocabulary becomes:
+
+```text
+TO_U05_CLINICAL_READINESS
+TO_F3_CURRENT_VERSION_REVALIDATION
+TO_F6_CURRENT_VERSION_REASSESSMENT
+TO_U08_REASSESSMENT
+TO_U12_DELIVERY_PREPARATION
+FAILURE_ROUTE
+```
+
+The existing context set remains unchanged:
+
+```text
+POST_USER_FACT_UPDATE
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+`A1_POST_BARRIER_CURRENT` is not a new ClinicalContinuationRoutingDecision context.
+
+These consequences remain:
+
+```text
+!= Clinical Readiness
+!= Delivery Readiness
+!= new Clinical State truth category
+```
+
+## B. F6 dependency-requiredness manifest
+
+F6 reassessment must carry an explicit manifest sufficient to prove owner-prerequisite ordering:
+
+```text
+dependency_domain
+dependency_ref
+dependency_role
+required_for_current_assessment
+currentness
+compatibility_status
+lawful_not_applicable_reason when applicable
+```
+
+Router/Scheduler must not infer F3/F5 requiredness ad hoc.
+
+The manifest participates in:
+
+```text
+admission
+reassessment identity
+stale-before-commit detection
+replay/idempotency
+audit
+```
+
+## C. F6 reassessment effect envelope
+
+Minimum bound semantics:
+
+```text
+consultation_id
+cdp_id
+mode = F6_CURRENT_VERSION_REASSESSMENT
+input_clinical_state_version
+accepted_mutation_or_correction_ref
+f6_invalidation_ref
+prior_f6_assessment_ref
+dependency_manifest_ref / identity
+current_u04_gate_ref
+routing_authorization_id
+C05 CapabilityBindingRef
+KnowledgeReleaseRef
+RuleReleaseRef
+restricted_context_ref when applicable
+policy/contract version
+trace/correlation refs
+```
+
+Proposed deterministic effect identity:
+
+```text
+F6_CURRENT_VERSION_REASSESSMENT_ID
+=
+consultation_id
++ input Clinical State Version
++ accepted mutation ref
++ F6 invalidation ref
++ prior F6 assessment ref
++ dependency manifest identity
++ capability/release binding refs
++ restricted_context_ref when applicable
++ reassessment policy version
+```
+
+Same exact replay must attach/return the authoritative prior effect and must not duplicate C05-owned clinical effect or K09/P01 state commit.
+
+## D. F6 current-version revalidation decision
+
+Add a deterministic F6 Owner decision envelope:
+
+```text
+decision_type = F6_CURRENT_VERSION_REVALIDATION
+
+consultation_id
+cdp_id
+canonical_f6_effect_ref
+canonical_f6_effect_identity
+source_clinical_state_version
+target_clinical_state_version
+current_u04_gate_ref
+routing_authorization_id
+dependency_manifest_ref / identity
+current_dependency_refs[]
+CapabilityBindingRef
+KnowledgeReleaseRef
+RuleReleaseRef
+restricted_context_ref when applicable
+revalidation_policy_version
+
+outcome:
+  REVALIDATED_CURRENT
+  REASSESSMENT_REQUIRED
+  FAILED
+
+reason_codes[]
+basis_refs[]
+created_at
+```
+
+Revalidation identity:
+
+```text
+F6_CURRENT_VERSION_REVALIDATION_ID
+=
+consultation_id
++ canonical F6 effect identity
++ target Clinical State Version
++ current U04 Gate ref
++ routing_authorization_id
++ dependency manifest identity
++ current dependency refs
++ capability/release compatibility refs
++ restricted_context_ref when applicable
++ revalidation policy version
+```
+
+`REVALIDATED_CURRENT` creates an auditable current F6 readiness-input projection but:
+
+```text
+does not invoke C05
+does not create a second canonical F6 effect
+does not advance Clinical State
+does not create Clinical Readiness
+```
+
+Projection mapping uses existing F6 business vocabulary only:
+
+```text
+canonical F6 VALID + justified need
+-> NEEDS_OFFLINE_EVIDENCE
+
+canonical F6 VALID + not needed
+-> NO_BLOCKING_OFFLINE_EVIDENCE_NEED
+```
+
+## E. D03-POL-011 evidence contract
+
+Add rule identity:
+
+```text
+D03-POL-011
+policy_scope = FIRST_CLINICAL_ANALYSIS_ENTRY_AFTER_CURRENT_F6_NOT_NEEDED
+```
+
+D03-POL-011 must consume authoritative readiness inputs. In particular, the F5 first-entry guard must be proven by an RDP-05 readiness applicability input:
+
+```text
+source_domain = F5
+applicability_status = NOT_YET_APPLICABLE
+consultation_id
+cdp_id
+clinical_state_version / currentness semantics as governed
+source_decision_ref
+source_state_ref when applicable
+evidence_refs[]
+policy_or_rule_refs[]
+```
+
+Meaning:
+
+```text
+NOT_YET_APPLICABLE
+= F5 has never lawfully activated in this Consultation path
+```
+
+The following are never sufficient to prove the guard:
+
+```text
+missing F5 artifact
+null F5 ref
+empty lookup result
+```
+
+D03 decision evidence must bind:
+
+```text
+policy_rule_ref = D03-POL-011
+evaluation_context
+first_entry_eligibility evidence
+accepted F1 ref
+accepted F3 ref
+authoritative F5 applicability input ref
+accepted F6 current readiness input ref
+current U04 Gate / restricted context
+basis/evidence refs
+```
+
+No new Clinical Readiness enum is introduced.
+
+## F. Restricted-context propagation
+
+When current Safety is `RESTRICTED`, `restricted_context_ref` must survive:
+
+```text
+routing decision
+-> U10 reassessment envelope
+-> C05 invocation
+-> F6 proposal/commit trace
+-> post-F6 Safety barrier
+-> F6 revalidation
+-> subsequent U05 routing/admission
+```
+
+No restricted path may widen itself into generic ALLOW, suggestion delivery, U11, or U12.
+
+This amendment changes contracts only; it does not authorize runtime implementation.
+
+### CL-04 Re-Freeze Provenance
+
+> Re-freeze decision: `AUTH-U05-CL04-REFREEZE-001 = REFREEZE`  
+> Owner decision record: PR #167  
+> Semantic reviewed baseline: `1ed229dfe1cbdf095b31dc51345863fb28bcf1ac`  
+> Targeted Independent Amendment Re-Review: **PASS** / review_id `5263265912`  
+> Re-freeze package review: **PASS** / review_id `5263272855`  
+> Current CL-04 amendment state: **REFROZEN / V1**
+

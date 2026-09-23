@@ -1,6 +1,6 @@
 # AIdoctor Phase 9 — Runtime 与技术架构设计 V1
 
-> 状态：FROZEN / V1（已同步 Phase 7 / Phase 8 最新治理语义）  
+> 状态：A1 REFROZEN / V1（未受 A1 影响的 Runtime V1 语义继续保持 frozen baseline）  
 > 适用基线：`main` 当前真实代码 + Phase 1～8 当前权威设计  
 > 目标：在不改变既有业务语义、状态 Owner、Unit、C/P/D 与 K01–K10 契约边界的前提下，定义 V1 临床 Runtime 的执行、调度、等待、恢复、提交、失败、并发、版本绑定、知识/规则装载、回滚、外部副作用一致性与 Brownfield 迁移架构。  
 > 非目标：本文件不构成 Implementation Authorization；不冻结具体 Runtime 框架、消息队列、数据库、微服务拆分或部署厂商；不进入 Phase 10。
@@ -446,7 +446,7 @@ committed Facts
 → U05 Readiness
 ```
 
-Readiness 再决定 U06 / U08 / U10 / U11 / U12 等合法路径。
+Clinical Readiness 决定适用的 U06 / U08(first-entry) / U10 / U11 等 Clinical Readiness 路径；post-DDx normal-progress 可由 PostDdxRoutingDecision 进入 U08 reassessment 或 U12 delivery preparation。
 
 U14 failure routing 可抢占普通路径。
 
@@ -855,18 +855,22 @@ U03/U04
 → D09/F4 Risk commit
 → D02/G4 Safety Gate commit
 
+Non-A1 baseline / A1 bootstrap completed path:
+
 U05
 → D03 Readiness
 → commit
 
-U06
+U06 QUESTION_SELECTION_DELIVERY
 → validate C03 binding / question policy
-→ C03 question/gap
+→ fresh C03 question/gap evaluation
 → D04 stopping
 → Question SELECTED commit
 → durable delivery
 → DELIVERED_TO_USER + WAITING_USER commit
 → checkpoint with binding refs
+
+A1 bootstrap pre-readiness / revalidation path is defined in Section 17 and supersedes the direct U04→U05 assumption while bootstrap F3 is not current.
 
 U07
 → Business Resume validation
@@ -983,13 +987,677 @@ Trace 过去不足以重放新的治理上下文
 - [x] Rollback 不改写历史运行；
 - [x] Trace 可定位能力/知识/规则/Prompt/Model 版本；
 - [x] 未新增 K11；
-- [x] 未改变 Phase 1–8 已冻结业务语义。
+- [x] 未受 A1 影响的 Phase 1–8 frozen baseline 语义保持不变；A1 影响范围已按 AUTH-U05-A1-FROZEN-AMEND-001 受控修订并等待独立 re-review。
 
 最终状态：
 
 ```text
-Phase 9 = FROZEN / V1
-Synchronized with current Phase 7 / Phase 8 authority
+Phase 9 A1 affected scope = REFROZEN / V1
+Unaffected Runtime V1 semantics = FROZEN BASELINE
 Implementation Authorization = NOT IMPLIED
 Merge Authorization = NOT IMPLIED
 ```
+
+
+---
+
+# 17. A1 Controlled Amendment — Scheduler / Safety Barrier Runtime
+
+> Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
+> Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
+> Status: **A1 REFROZEN / V1**
+
+## 17.1 A1 ordinary runtime chain
+
+A1 replaces the initial ordinary：
+
+```text
+Facts
+→ U03
+→ U04
+→ U05
+```
+
+with：
+
+```text
+Facts
+→ U03
+→ U04 current Gate
+→ routing projection
+→ PRE_READINESS_A1_F3_C03_ELIGIBLE
+→ U06 PRE_READINESS_GAP_ASSESSMENT
+→ validate C03 CapabilityBindingRef
+→ C03
+→ U06/F3 Owner interpretation
+→ K09 StateChangeProposal
+→ G2/P01 canonical F3 commit
+→ reload authoritative Clinical State
+→ POST_F3_SAFETY_REVALIDATION_BARRIER
+→ A1 V1 canonical F3 commit sets RISK_REEVALUATION_REQUIRED
+→ U03 post-F3 Risk reevaluation
+→ U04 current Gate from valid Risk/Safety evaluation basis
+→ U06 F3_CURRENT_VERSION_REVALIDATION
+→ deterministic F3 revalidation decision
+→ current F3 readiness input
+→ routing projection
+→ U05_ELIGIBLE
+→ U05
+→ D03
+```
+
+Scheduler 仍只从 committed authoritative state 路由。
+
+## 17.2 A1 routing authorization
+
+Current U04 Gate 只产生一个：
+
+```text
+routing_authorization_id
+```
+
+绑定：
+
+```text
+business_event_identity
+u04_gate_ref
+clinical_state_version
+BootstrapArchitectureBindingRef = A1
+restricted_context_ref when applicable
+```
+
+pre-readiness F3 commit 推进 Clinical State Version 后：
+
+```text
+old Gate / old routing_authorization_id
+= STALE / NON_ROUTABLE
+```
+
+Barrier 后新 Gate 产生新的 authorization。
+
+若相同 F3_CANONICAL_EFFECT_ID 已 current-version revalidated：
+
+```text
+new authorization
+→ U05 eligibility
+```
+
+不得再次触发同一 pre-readiness F3 effect。
+
+## 17.3 Safety barrier dependency-validity semantics
+
+Barrier 不是要求：
+
+```text
+Risk Decision version
+= Safety Gate commit version
+= final current Clinical State Version
+```
+
+Barrier 要求：
+
+```text
+Risk Decision 对 U04 evaluation basis 有效
++ U04 Gate 是当前 committed Gate
++ Gate 声明的 Risk/Safety dependencies 未被后续变化破坏
++ F3 current-version revalidation = REVALIDATED_CURRENT
++ current F3 readiness input 已形成
++ current routing authorization permits U05
+```
+
+```text
+version advancement alone
+!= dependency invalidation
+```
+
+U04 自身 downstream derived commit 不得仅因推进 version 就强迫 U03 无限重跑。
+
+## 17.4 F3 revalidation runtime consequence
+
+Trigger：
+
+```text
+POST_F3_SAFETY_BARRIER_CURRENT_GATE_READY
+```
+
+Scheduler invokes：
+
+```text
+U06 F3_CURRENT_VERSION_REVALIDATION
+```
+
+该 mode：
+
+```text
+Owner = F3
+C03 = NOT_INVOKED by default
+Clinical State mutation = NONE
+Question side effect = NONE
+```
+
+Outcome：
+
+```text
+REVALIDATED_CURRENT
+→ current F3 readiness input
+→ may continue U05
+
+REASSESSMENT_REQUIRED
+→ no U05/D03
+→ Scheduler starts fresh U06 PRE_READINESS_GAP_ASSESSMENT with current bindings
+
+FAILED
+→ no U05/D03
+→ governed retry/reload or U14 eligibility
+```
+
+Runtime 不得自己判断旧 F3 是否仍有业务效力。
+
+## 17.5 No-cycle
+
+```text
+same F3_CANONICAL_EFFECT_ID
++ only downstream Risk/Safety/routing/checkpoint changes
+→ no second canonical F3 commit
+```
+
+只有真实 F3 dependency change 才允许重新 assessment。
+
+## 17.6 Crash/replay checkpoint
+
+A1 durable checkpoint 至少保留：
+
+```text
+canonical event identity
+routing_authorization_id
+F3_CANONICAL_EFFECT_ID
+F3 commit result
+barrier stage
+Risk decision ref / evaluation basis refs
+current U04 Gate ref
+F3_REVALIDATION_ID / revalidation result ref
+CapabilityBindingRef
+KnowledgeReleaseRef
+RuleReleaseRef
+trace/audit refs
+```
+
+Crash recovery：
+
+```text
+reload authoritative Clinical State
+→ reconcile effect identity / binding context
+→ attach prior committed effect when already applied
+→ never duplicate canonical F3 effect
+```
+
+## 17.7 Question candidate lifetime
+
+MODE-1 pre-readiness 的 C03 question candidates：
+
+```text
+support/trace-only
+never reused by QUESTION_SELECTION_DELIVERY
+```
+
+后续 CAN_ASK_MORE 必须触发 MODE-2 的 fresh governed C03 invocation。
+
+## 17.8 Current amendment status
+
+```text
+Phase 9 A1 affected scope
+= REFROZEN / V1
+
+Re-freeze
+= GRANTED / COMPLETE
+
+Runtime Implementation Authorization
+= NOT_GRANTED
+```
+
+
+---
+
+# 18. Post-DDx Controlled Amendment — Runtime Routing
+
+> Authorization: `AUTH-U05-PDX-FROZEN-AMEND-001`  
+> Reviewed design source: PR #153 exact head `a5b8aa6e23e5f54a0c2e1884ed027d7f7b7cbeee`  
+> Status: **REFROZEN / V1**
+
+## 18.1 Runtime chain
+
+```text
+U08 DDx
+→ U09 F3/post-DDx reevaluation
+→ PostDdxRoutingDecision
+```
+
+Then exactly one ordinary consequence：
+
+```text
+TO_U05_CLINICAL_READINESS
+→ U05/D03
+
+TO_U08_REASSESSMENT
+→ U08
+
+TO_U12_DELIVERY_PREPARATION
+→ U12/F7
+
+FAILURE_ROUTE
+→ U14 / governed recovery
+```
+
+Safety may preempt before ordinary routing.
+
+## 18.2 Scheduler boundary
+
+Scheduler consumes the committed/current:
+
+```text
+PostDdxRoutingDecision
+```
+
+and does not infer post-DDx semantics itself.
+
+Scheduler must not:
+
+```text
+map ANALYSIS_RESULT_AVAILABLE to READY_FOR_CLINICAL_ANALYSIS
+infer Delivery Readiness from no-gap
+bypass U05/D03 when a Clinical Readiness consequence exists
+```
+
+## 18.3 U12 delivery preparation
+
+```text
+TO_U12_DELIVERY_PREPARATION
+```
+
+means only that U12 may validate its S_in and begin F7 delivery assembly/validation.
+
+It does not mean:
+
+```text
+Delivery Readiness READY
+delivery already sent
+Consultation COMPLETED
+```
+
+F7 remains the sole business interpreter of Delivery Readiness.
+
+## 18.4 Reassessment
+
+```text
+TO_U08_REASSESSMENT
+```
+
+requires current U08 binding/release context and no-progress protection.
+
+If current owner outputs expose a Clinical Readiness consequence, router must instead choose：
+
+```text
+TO_U05_CLINICAL_READINESS
+```
+
+## 18.5 Current status
+
+```text
+Phase 9 post-DDx affected scope
+= REFROZEN / V1
+
+Runtime implementation
+= NOT_AUTHORIZED
+```
+
+
+---
+
+# 19. Post-Analysis Routing Extension — Runtime
+
+> Authorization: `AUTH-U05-PA-FROZEN-AMEND-001`  
+> Reviewed design source: PR #155 exact head `7e2d4d4255d51a10f58c63dec4e2ccb53920c33f`  
+> Status: **REFROZEN / V1**
+
+## 19.1 Generalized runtime router
+
+Section 18 的 `PostDdxRoutingDecision` 被 generalized：
+
+```text
+PostAnalysisRoutingDecision
+```
+
+支持：
+
+```text
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+Scheduler 只消费 committed/current routing decision，不自行解释 F3/F5/F6 semantics。
+
+## 19.2 U10 return path
+
+```text
+U10
+F6 VALID + NOT_NEEDED
+→ U09
+→ PostAnalysisRoutingDecision(POST_OFFLINE_ASSESSMENT)
+```
+
+不是：
+
+```text
+NOT_NEEDED
+→ U12
+```
+
+## 19.3 F3 revalidation loop
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+→ U06 MODE-3
+```
+
+结果：
+
+```text
+REVALIDATED_CURRENT
+→ materialize current F3 readiness input
+→ re-enter PostAnalysisRoutingDecision
+
+REASSESSMENT_REQUIRED
+→ fresh F3 assessment path
+→ re-enter routing after current F3 exists
+
+FAILED
+→ governed failure route
+```
+
+Scheduler 不得把 `ABSENT_BY_DESIGN` 当作 no-gap。
+
+## 19.4 Routing identity
+
+Runtime checkpoint / replay 必须绑定：
+
+```text
+POST_ANALYSIS_ROUTING_ID
+evaluation_context
+input Clinical State Version
+accepted F3/F5/F6 refs
+current Gate ref
+policy version
+```
+
+POST_DDX 与 POST_OFFLINE replay 不得互相 attach。
+
+## 19.5 Current status
+
+```text
+Phase 9 post-analysis extension
+= REFROZEN / V1
+
+Runtime implementation
+= NOT_AUTHORIZED
+```
+
+
+---
+
+# 20. Clinical Continuation Routing — Runtime
+
+> Authorization: `AUTH-U05-CCR-FROZEN-AMEND-001`  
+> Reviewed design source: PR #157 exact head `4c3c7eb7e9aa9b6f9506871f7d28e033b4a6482e`  
+> Status: **REFROZEN / V1**
+
+## 20.1 Generalized runtime continuation router
+
+Section 19 的 PostAnalysis router 被 generalized：
+
+```text
+ClinicalContinuationRoutingDecision
+```
+
+contexts：
+
+```text
+POST_USER_FACT_UPDATE
+POST_DDX_REEVALUATION
+POST_OFFLINE_ASSESSMENT
+```
+
+## 20.2 POST_USER_FACT_UPDATE sequence
+
+```text
+accepted USER_ANSWER / Correction
+→ U02/G2 fact commit
+→ reload authoritative Clinical State
+→ U03/U04 current Risk/Safety
+→ ClinicalContinuationRoutingDecision
+```
+
+Scheduler 不得在 mutation-stale required inputs 尚未完成受控 continuation routing 时直接 invoke U05。
+
+## 20.3 Recompute consequences
+
+```text
+TO_F3_CURRENT_VERSION_REVALIDATION
+→ U06 MODE-3
+
+TO_U08_REASSESSMENT
+→ U08 only with valid mutation provenance + current bindings
+
+TO_U05_CLINICAL_READINESS
+→ U05/D03 only when applicable readiness inputs meet currentness/admission rules
+```
+
+## 20.4 Stale vs failure
+
+Runtime 必须保留：
+
+```text
+invalidation provenance
+prior activation ref
+failure provenance
+```
+
+统一分类：
+
+```text
+STALE_BY_UPSTREAM_MUTATION
+= mutation-stale + valid current mutation/invalidation provenance
+
+STALE_BY_UPSTREAM_MUTATION
+!= FAILED
+!= UNAVAILABLE
+```
+
+禁止：
+
+```text
+STALE_BY_UPSTREAM_MUTATION
+→ generic D03 INPUT_FAILURE
+```
+
+也禁止：
+
+```text
+FAILED / UNAVAILABLE
+→ pretend normal reassessment
+```
+
+## 20.5 Current status
+
+```text
+Phase 9 Clinical Continuation Routing
+= REFROZEN / V1
+
+Runtime implementation
+= NOT_AUTHORIZED
+```
+
+
+---
+
+# U05 CL-04 Controlled Amendment — Runtime Scheduling / Safety / Revalidation Semantics
+
+> Authorization: `AUTH-U05-CL04-FROZEN-AMEND-001`  
+> Reviewed design: PR #160 exact head `80cd6d7d154aa3e8de093ef43328e8ee9c2733d3`  
+> Owner policy: `OD-U05-READY-02 = APPROVE_OPTION_A`  
+> Amendment status: **REVIEW_PASS / REFROZEN / V1**  
+> Re-freeze status: **REFROZEN / V1**
+
+## A. POST_USER_FACT_UPDATE F6 mutation-stale path
+
+After accepted fact/correction mutation and current U03/U04 Safety processing:
+
+```text
+ClinicalContinuationRoutingDecision
+-> TO_F6_CURRENT_VERSION_REASSESSMENT
+-> U10 mode F6_CURRENT_VERSION_REASSESSMENT
+```
+
+Admission requires mutation/invalidation/prior-F6 provenance and a complete F6 dependency-requiredness manifest.
+
+If required F3/F5 owner prerequisites are stale, their governed owner path resolves first.
+
+## B. Canonical F6 commit invalidates prior routing authorization
+
+```text
+F6 reassessment
+-> K09 StateChangeProposal
+-> G2/P01 canonical commit
+-> authoritative Clinical State Version advances
+-> prior ClinicalContinuationRoutingDecision STALE
+-> prior routing authorization NON_ROUTABLE
+```
+
+No old Gate/routing authorization may be reused merely because it appears compatible.
+
+## C. Mandatory post-F6 Safety barrier
+
+After the F6 canonical commit:
+
+```text
+reload authoritative Clinical State
+-> re-establish required U03/U04 basis
+-> new current committed U04 Gate
+-> new routing authorization
+```
+
+Safety preemption:
+
+```text
+BLOCKED
+-> no F6 current-version revalidation
+-> no ordinary continuation
+
+UNAVAILABLE
+-> governed safe/failure handling
+-> no F6 current-version revalidation
+-> no ordinary continuation
+
+ALLOW
+or RESTRICTED with explicit F6-revalidation permission
+-> U10 F6_CURRENT_VERSION_REVALIDATION
+```
+
+## D. F6 current-version revalidation
+
+```text
+U10 F6_CURRENT_VERSION_REVALIDATION
+-> deterministic F6 Owner decision
+
+REVALIDATED_CURRENT
+-> current F6 readiness-input projection
+-> no Clinical State mutation
+
+REASSESSMENT_REQUIRED
+-> no D03
+-> U10 F6_CURRENT_VERSION_REASSESSMENT on current basis
+
+FAILED
+-> no D03
+-> governed failure route
+```
+
+Successful revalidation is non-mutating and therefore cannot itself create a version-chasing loop.
+
+## E. Context-specific routing host
+
+After `REVALIDATED_CURRENT`:
+
+```text
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+-> ClinicalContinuationRoutingDecision
+-> existing typed consequence
+
+A1_POST_BARRIER_CURRENT
+-> existing A1 routing projection
+-> NOT ClinicalContinuationRoutingDecision
+```
+
+For an Owner-approved first-entry current-F6-NOT_NEEDED profile:
+
+```text
+A1_POST_BARRIER_CURRENT
+-> existing A1 routing projection
+-> U05_ELIGIBLE / U05
+-> D03-POL-011
+
+POST_USER_FACT_UPDATE
+POST_OFFLINE_ASSESSMENT
+-> ClinicalContinuationRoutingDecision
+-> TO_U05_CLINICAL_READINESS
+-> U05
+-> D03-POL-011
+```
+
+There is no direct Router -> U08 positive-readiness bypass.
+
+## F. Scheduler ownership boundary
+
+Scheduler may:
+
+```text
+consume typed routing/revalidation decisions
+sequence Unit execution
+reload authoritative state
+enforce stale/non-routable decisions
+enforce idempotency/replay
+```
+
+Scheduler must not:
+
+```text
+infer F6 clinical truth
+infer F5 NOT_YET_APPLICABLE from artifact absence
+recompute D03 policy
+interpret C05 output as Clinical Truth
+invent READY_FOR_CLINICAL_ANALYSIS
+```
+
+## G. Replay / progress
+
+```text
+TO_F6_CURRENT_VERSION_REASSESSMENT
+is eligible only while the exact prior F6 effect
+is mutation-stale for the exact current input basis.
+```
+
+Successful reassessment + barrier + `REVALIDATED_CURRENT` makes that exact stale condition false.
+
+A later reassessment requires either a new invalidation identity or `REASSESSMENT_REQUIRED` under a changed current dependency basis.
+
+This section is architecture-only and authorizes no live Clinical Runtime, production activation, merge, or real-patient traffic.
+
+### CL-04 Re-Freeze Provenance
+
+> Re-freeze decision: `AUTH-U05-CL04-REFREEZE-001 = REFREEZE`  
+> Owner decision record: PR #167  
+> Semantic reviewed baseline: `1ed229dfe1cbdf095b31dc51345863fb28bcf1ac`  
+> Targeted Independent Amendment Re-Review: **PASS** / review_id `5263265912`  
+> Re-freeze package review: **PASS** / review_id `5263272855`  
+> Current CL-04 amendment state: **REFROZEN / V1**
+

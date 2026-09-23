@@ -1563,7 +1563,8 @@ U01–U15 依赖矩阵
 
 ```text
 SOP Phase 7 — Capability Design
-= FROZEN / V1 semantic baseline
+= A1 REFROZEN / V1
+Unaffected capability semantics = FROZEN V1 BASELINE
 ```
 
 ---
@@ -1596,3 +1597,229 @@ Capability exists
 Phase 7 Design
 != Implementation Status
 ```
+
+
+---
+
+# 20. A1 Controlled Amendment — U06/C03 Usage Timing
+
+> Authorization: `AUTH-U05-A1-FROZEN-AMEND-001`  
+> Reviewed design source: PR #138 exact head `7a62cc6f3b0cd9d803590594394bbed433351fab`  
+> Status: **A1 REFROZEN / V1**
+
+## 20.1 C03 first consumer remains U06
+
+A1 明确保留：
+
+```text
+C03 FIRST_CONSUMER_UNIT = U06
+```
+
+A1 不允许：
+
+```text
+U05 → C03
+U04 → C03
+Scheduler → C03 bypassing U06 Owner
+```
+
+## 20.2 U06 mode-aware C03 usage
+
+### PRE_READINESS_GAP_ASSESSMENT
+
+```text
+U06 MODE-1
+→ validate current C03 CapabilityBindingRef
+→ C03 Gap Detection / Decision Impact
+→ U06/F3 Owner interpretation
+→ canonical F3 intended effect
+```
+
+该 mode 不允许 Question delivery side effect。
+
+C03 可能产生 question candidate material，但 V1 冻结：
+
+```text
+pre-readiness question candidates
+= support/trace-only ephemeral artifacts
+= never reusable by QUESTION_SELECTION_DELIVERY
+```
+
+### QUESTION_SELECTION_DELIVERY
+
+```text
+U06 MODE-2
+→ validate current CapabilityBindingRef / question policy
+→ fresh C03 invocation / fresh candidate evaluation
+→ D04 stopping
+→ Question SELECTED
+→ delivery
+```
+
+即使 MODE-1 与 MODE-2 恰好处于同一 Clinical State Version，也不复用 MODE-1 candidate。
+
+### F3_CURRENT_VERSION_REVALIDATION
+
+```text
+U06 MODE-3
+→ deterministic F3 Owner revalidation decision
+```
+
+默认：
+
+```text
+C03 = NOT_INVOKED
+```
+
+若结果：
+
+```text
+REASSESSMENT_REQUIRED
+```
+
+则 Scheduler 必须显式回到 MODE-1，并重新解析当前批准的 C03 binding；不得在 MODE-3 中静默换 binding 后继续复用旧 F3。
+
+## 20.3 F3 revalidation decision is not a new system-level D-policy
+
+A1 引入：
+
+```text
+F3CurrentVersionRevalidationDecision
+```
+
+它复用 Phase 8 的统一 DeterministicDecision contract，但：
+
+```text
+!= D11
+!= new D01-D10 policy family
+!= Clinical Readiness
+```
+
+它只是 F3 Owner 为 current-version readiness-input projection 做出的 scoped deterministic decision。
+
+## 20.4 Capability/Owner boundary
+
+始终保持：
+
+```text
+C03 output
+!= canonical F3 truth
+!= Clinical Readiness
+
+C03 output
+→ U06/F3 Owner interpretation
+→ governed state effect / decision
+```
+
+## 20.5 Binding and release compatibility
+
+MODE-3 必须检查历史：
+
+```text
+CapabilityBindingRef
+RuleReleaseRef
+KnowledgeReleaseRef
+F3 policy/version
+```
+
+是否仍可根据明确 compatibility rule 合法解释。
+
+若历史 binding：
+
+```text
+WITHDRAWN
+EXPIRED
+INCOMPATIBLE
+or compatibility cannot be proven
+```
+
+则：
+
+```text
+REASSESSMENT_REQUIRED
+→ fresh MODE-1 / fresh current binding
+```
+
+不得静默把旧 F3 effect 改绑到新语义版本。
+
+## 20.6 Current amendment status
+
+```text
+Phase 7 A1 affected scope
+= REFROZEN / V1
+
+Re-freeze
+= GRANTED / COMPLETE
+
+Capability activation / production use
+= NOT_AUTHORIZED
+```
+
+
+---
+
+# U05 CL-04 Controlled Amendment — U10/C05 Mode-Aware Capability Timing
+
+> Authorization: `AUTH-U05-CL04-FROZEN-AMEND-001`  
+> Reviewed design: PR #160 exact head `80cd6d7d154aa3e8de093ef43328e8ee9c2733d3`  
+> Amendment status: **REVIEW_PASS / REFROZEN / V1**  
+> Re-freeze status: **REFROZEN / V1**
+
+U10 remains the first/only Unit consumer of C05 for the governed F6/Workup capability family.
+
+The Unit-level dependency row `U10 | C05` remains an aggregate dependency declaration. Invocation is mode-aware:
+
+```text
+U10 STANDARD_OFFLINE_EVIDENCE_ACTION
+-> C05 as required by existing frozen behavior
+
+U10 F6_CURRENT_VERSION_REASSESSMENT
+-> C05 required
+
+U10 F6_CURRENT_VERSION_REVALIDATION
+-> C05 MUST NOT be invoked
+-> deterministic F6 Owner decision only
+```
+
+The revalidation mode consumes the already-committed canonical F6 effect plus current dependency/release/Safety bindings to determine whether the effect may be projected as current for the target authoritative state version.
+
+Capability ownership boundaries remain unchanged:
+
+```text
+C05 result
+!= Offline Evidence truth
+!= Clinical Readiness
+!= Delivery Readiness
+!= Clinical State commit
+```
+
+C05 cannot directly own:
+
+```text
+F6 canonical semantic interpretation
+U05/D03 readiness
+F7 delivery readiness
+K09/P01 state mutation
+```
+
+For `RESTRICTED` Safety:
+
+```text
+C05 reassessment invocation
+requires explicit action-specific permission
+and restricted_context_ref propagation
+```
+
+No new Capability family is introduced.
+
+This amendment authorizes no capability activation, runtime implementation, production release, or real-patient execution.
+
+### CL-04 Re-Freeze Provenance
+
+> Re-freeze decision: `AUTH-U05-CL04-REFREEZE-001 = REFREEZE`  
+> Owner decision record: PR #167  
+> Semantic reviewed baseline: `1ed229dfe1cbdf095b31dc51345863fb28bcf1ac`  
+> Targeted Independent Amendment Re-Review: **PASS** / review_id `5263265912`  
+> Re-freeze package review: **PASS** / review_id `5263272855`  
+> Current CL-04 amendment state: **REFROZEN / V1**
+
