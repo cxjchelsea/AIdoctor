@@ -35,13 +35,19 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ```
 
-Therefore the next formal gate is:
+Therefore the next concrete deliverable and formal review gate are:
 
 ```
-U06 UNIT ENTRY / DEFINITION-DEPENDENCY-CONTRACT READINESS
+NEXT CONCRETE DELIVERABLE
+= U06 Unit Spec v0.1
+
+NEXT FORMAL REVIEW GATE
+= U06 Initial Implementation Readiness / Gap Review
 ```
 
-The next permitted work is to create the U06 Unit Spec and U06 RDP-01..06 package, then perform U06 Implementation Readiness Review.
+That initial readiness review consumes the Unit Spec together with the already-frozen Phase 6/7/8/9 semantics and current repository archaeology. Its purpose is to identify the exact missing implementation-governance contracts/dependencies and turn them into explicit blockers/tasks.
+
+The expected blocker-resolution structure is U06-RDP-01..06, but those RDP contracts do not need to be complete before the initial Gap Review begins.
 
 It is not yet permitted to enter U06 runtime/code implementation.
 
@@ -299,9 +305,23 @@ Those documents are semantic inputs to U06 design, not a substitute for a U06 im
 
 ---
 
-# 7. Next gate: U06 Unit Entry / Readiness Package
+# 7. Next deliverable and formal gate
 
 Before U06 implementation, Phase 6 requires an independent Unit Spec.
+
+The immediate next deliverable is:
+
+```
+U06 Unit Spec v0.1
+```
+
+The next formal review gate is:
+
+```
+U06 Initial Implementation Readiness / Gap Review
+```
+
+This follows the established U04/U05 governance pattern: the initial readiness review does not require the full RDP package to already exist. Instead it evaluates the frozen semantic baseline, Unit Spec, repository state and dependency archaeology, then identifies missing unit-specific contracts as explicit readiness blockers.
 
 Minimum Unit Spec must define:
 
@@ -329,9 +349,11 @@ For U06, the Unit Spec must explicitly model all three frozen modes and their di
 
 ---
 
-# 8. Required U06 RDP package
+# 8. Expected U06 RDP blocker-resolution package
 
-Following the governed U04/U05 implementation-readiness pattern, U06 should create six unit-specific readiness contracts before implementation authorization.
+Following the governed U04/U05 implementation-readiness pattern, the initial U06 Gap Review is expected to identify six unit-specific implementation-governance contract families.
+
+These are the expected blocker-resolution structure before U06 can eventually become Implementation-Ready; they are not prerequisites for starting the initial Gap Review.
 
 ## U06-RDP-01 — Consumer Inbound / Admission Contract
 
@@ -509,17 +531,28 @@ U06 Business-Semantic Baseline
 
 ↓ NOW
 
-U06 Unit Spec
-+ Dependency Gap Assessment
-+ RDP-01..06 design
+U06 Unit Spec v0.1
 
-↓ independent design reviews / owner decisions / re-freeze as required
+↓
+
+U06 Initial Implementation Readiness / Gap Review
+
+↓ expected output:
+  explicit readiness blockers
+  dependency gaps
+  U06-RDP-01..06 design tasks
+
+↓
+
+U06-RDP blocker remediation / design / review / freeze
+
+↓
 
 U06 Aggregate Contract Compatibility Review
 
 ↓
 
-U06 Implementation Readiness Review
+U06 Implementation Readiness Re-Evaluation
 
 ↓
 
@@ -546,7 +579,7 @@ Independent evidence review
 Merge authorization / post-merge verification
 ```
 
-Therefore the immediate next gate is not:
+Therefore the immediate next formal gate is not:
 
 ```
 U06 Implementation Authorization
@@ -560,10 +593,10 @@ U08
 Production Activation
 ```
 
-The immediate gate is:
+The immediate next formal review gate is:
 
 ```
-U06 Unit Entry / Definition-Dependency-Contract Readiness
+U06 Initial Implementation Readiness / Gap Review
 ```
 
 ---
@@ -595,13 +628,16 @@ U06 Unit Entry / Definition-Dependency-Contract Readiness
 NEXT DEVELOPMENT UNIT
 = U06
 
-NEXT FORMAL GATE
-= U06 UNIT ENTRY / DEFINITION-DEPENDENCY-CONTRACT READINESS
+NEXT CONCRETE DELIVERABLE
+= U06 Unit Spec v0.1
 
-NEXT DELIVERABLE
-= U06 Unit Spec
-  + U06 Dependency Gap Assessment
-  + U06-RDP-01..06 design package
+NEXT FORMAL REVIEW GATE
+= U06 Initial Implementation Readiness / Gap Review
+
+EXPECTED GATE OUTPUT
+= explicit readiness blockers
+  + dependency gap inventory
+  + U06-RDP-01..06 design tasks
 
 IMPLEMENTATION MAY BEGIN NOW
 = NO
@@ -611,8 +647,45 @@ Recommended first concrete action:
 
 ```
 Create U06 Unit Spec v0.1
-and immediately perform
-U06 Initial Implementation Readiness / Gap Assessment
+then perform
+U06 Initial Implementation Readiness / Gap Review
 ```
 
-That assessment should convert all currently missing U06-specific contracts/dependencies into explicit blockers before any implementation authorization is considered.
+Only after that gate identifies and the project closes the required U06-specific contract/dependency blockers should U06 Implementation Readiness be re-evaluated and Implementation Authorization considered.
+
+---
+
+# 13. Independent Review Remediation
+
+Initial Independent Review:
+
+```
+PR #227
+review_id = 5286991299
+verdict = REVISE_REQUIRED
+```
+
+Finding:
+
+```
+BF-U06-ENTRY-IR-01
+= INVENTED_FORMAL_GATE_NAME_AND_ORDERING
+```
+
+Remediation:
+
+- removed the descriptive but non-frozen gate name `U06 UNIT ENTRY / DEFINITION-DEPENDENCY-CONTRACT READINESS` as a claimed formal gate;
+- aligned the next formal review with the established U04/U05 pattern:
+  `U06 Initial Implementation Readiness / Gap Review`;
+- moved U06-RDP-01..06 from precondition to expected blocker-resolution output;
+- retained U06 as the confirmed next Development Unit.
+
+Current:
+
+```
+BF-U06-ENTRY-IR-01
+= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+U06 Entry Gate Assessment
+= REVISED
+```
