@@ -189,7 +189,25 @@ knowledge_release_ref
 
 and no first-class PromptReleaseRef / ModelRouteRef fields.
 
-Therefore it is reusable baseline, not a complete U06 trace contract.
+There is also a concrete applicability mismatch:
+
+```
+CapabilityTraceService.bindReleases(rule, knowledge)
+→ current implementation requires BOTH refs to be nonblank
+```
+
+while U06 frozen semantics require:
+
+```
+RuleReleaseRef / KnowledgeReleaseRef
+= as applicable
+```
+
+Therefore current P05 must not force a fake placeholder release ref merely to satisfy the trace API.
+
+If one release family is not applicable, the eventual U06 trace design must support that lawfully.
+
+Therefore P05 is reusable baseline, not a complete U06 trace contract.
 
 ## 3.5 P06 minimal Capability Binding
 
@@ -583,6 +601,31 @@ Trace must correlate:
 
 Current P05 baseline is insufficient to assume final U06 provenance shape automatically.
 
+A specific compatibility issue must be resolved:
+
+```
+current CapabilityTraceService.bindReleases()
+requires both RuleReleaseRef and KnowledgeReleaseRef
+
+but U06
+requires them only as applicable
+```
+
+Allowed solutions may include:
+- a scoped P05 compatibility amendment;
+- an optional/multi-ref trace extension;
+- a governed U06 trace adapter.
+
+Forbidden:
+
+```
+fake RuleReleaseRef
+fake KnowledgeReleaseRef
+overloading unrelated trace fields
+```
+
+If C03 later uses P03/model execution, PromptReleaseRef / ModelRouteRef provenance must also be represented without pretending the current P05 record already supports it.
+
 ```
 BF-U06-RG-03
 = OPEN / BLOCKING
@@ -677,6 +720,11 @@ Additionally the current minimal P06/BindingReleaseResolver:
 - resolves capability binding;
 - does not implement full KnowledgeRelease/RuleRelease registries;
 - does not physically bind the complete allowed Prompt/Model/Knowledge/Rule/Tool/Skill ref set frozen by Phase 8.
+
+RDP-05 must coordinate with RDP-03 on release applicability so that:
+- a release ref is required when the approved C03/D04 path actually depends on it;
+- a not-applicable release family remains absent/typed-not-applicable;
+- trace/binding layers never manufacture a placeholder ref solely for API compatibility.
 
 Conditional P03 applicability is also unresolved until the actual approved C03 implementation is selected.
 
@@ -829,6 +877,8 @@ Cross-RDP compatibility will be required because:
 - RDP-02 D04/F3 outcomes constrain RDP-03 state changes;
 - RDP-03 selected/delivered state is inseparable from RDP-04 delivery reconciliation;
 - RDP-05 binding/release applicability constrains RDP-01 admission and RDP-06 fixtures/oracles;
+- RDP-03 and RDP-05 must jointly resolve the current P05 "both release refs required" mismatch without fake refs;
+- conditional PromptReleaseRef / ModelRouteRef provenance must be covered if RDP-05 makes P03 applicable;
 - RDP-06 must verify the exact frozen RDP-01..05 package.
 
 ---
@@ -1032,7 +1082,7 @@ It also does not authorize legacy question services as C03.
 
 ```
 U06 Initial Implementation Readiness / Gap Review
-= COMPLETE_PENDING_INDEPENDENT_REVIEW
+= REVISED / TARGETED_RE_REVIEW_PENDING
 
 U06 Unit Definition
 = PASS
@@ -1054,4 +1104,46 @@ Recommended first design task
 
 Implementation Authorization Review
 = NOT_PERMITTED_YET
+```
+
+
+---
+
+# 14. Independent Review Remediation
+
+Initial Independent Review:
+
+```
+PR #229
+review_id = 5287115900
+verdict = REVISE_REQUIRED
+```
+
+Finding:
+
+```
+BF-U06-RG-IR-01
+= P05_RELEASE_TRACE_APPLICABILITY_MISMATCH_NOT_EXPLICIT
+```
+
+Remediation completed:
+
+1. recorded that current `CapabilityTraceService.bindReleases()` requires both RuleReleaseRef and KnowledgeReleaseRef;
+2. contrasted that with U06 frozen `as applicable` semantics;
+3. prohibited fake/placeholder release refs;
+4. assigned compatibility resolution jointly to U06-RDP-03 and U06-RDP-05;
+5. required PromptReleaseRef / ModelRouteRef provenance handling if P03 becomes applicable;
+6. retained the six primary readiness blocker families without inventing a solution.
+
+Current:
+
+```
+BF-U06-RG-IR-01
+= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+U06 Implementation Readiness
+= NOT_READY
+
+Implementation Authorization
+= NOT_GRANTED
 ```
