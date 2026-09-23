@@ -92,8 +92,18 @@ Allowed bounded statuses:
 
 ~~~text
 ACTIVE
+WAIT_CHECKPOINTED
 AWAITING_USER
 ~~~
+
+WAIT_CHECKPOINTED is an internal Runtime reconciliation state.
+
+It means:
+- authoritative business WAITING prerequisites were validated;
+- a durable wait checkpoint exists;
+- this Thread owns that exact checkpoint/effect claim;
+- Thread has not yet reached AWAITING_USER;
+- U07 eligibility is absent.
 
 This table is Runtime metadata only.
 
@@ -296,7 +306,7 @@ It may not infer business truth from delivery transport alone.
 
 ---
 
-# 10. Checkpoint-before-thread ordering
+# 10. Checkpoint reservation and Thread ordering
 
 Normal physical order:
 
@@ -307,51 +317,85 @@ R2. validate authoritative Consultation WAITING child
 
 R3. resolve RuntimeBindingRecord / thread_id
 
-R4. ensure RuntimeThreadStateRecord ACTIVE
+R4. derive stable checkpoint id/fingerprint
 
-R5. derive stable checkpoint id/fingerprint
+R5. checkpoint-reservation transaction:
+    lock RuntimeThreadStateRecord FOR UPDATE
 
-R6. durable checkpoint transaction commits
+    ACTIVE + no wait claim
+    → insert/reconcile exact checkpoint
+    → set:
+       runtime_status = WAIT_CHECKPOINTED
+       current_run_id = run_id
+       current_wait_checkpoint_id = checkpoint_id
+       current_wait_effect_id = QUESTION_DELIVERED_WAIT_EFFECT_ID
+    → commit
 
-R7. read-back exact checkpoint
+R6. authoritative read-back:
+    WAIT_CHECKPOINTED
+    + exact checkpoint/effect
 
-R8. separate Thread transition transaction:
-    ACTIVE → AWAITING_USER
-    current_run_id = run_id
-    current_wait_checkpoint_id = checkpoint_id
-    current_wait_effect_id = QUESTION_DELIVERED_WAIT_EFFECT_ID
+R7. separate Thread transition transaction:
+    lock same Thread state
+    WAIT_CHECKPOINTED → AWAITING_USER
+    preserve run/checkpoint/effect identity
+    → commit
 
-R9. authoritative Thread read-back
+R8. authoritative Thread read-back
 
-R10. emit/reattach U07ResumeEligibility
+R9. emit/reattach U07ResumeEligibility
 ~~~
 
-Checkpoint and Thread transition intentionally use separate local commits so the RDP-04 C8 boundary remains observable and recoverable.
+The checkpoint reservation and Thread claim are committed together.
+
+This prevents two different wait effects from each creating an independently active checkpoint for one Thread.
+
+The later WAIT_CHECKPOINTED → AWAITING_USER transition remains a separate commit, preserving the RDP-04 C8 recovery boundary.
 
 ---
 
-# 11. Checkpoint persistence transaction
+# 11. Checkpoint reservation transaction
 
 Define:
 
 ~~~text
-RuntimeWaitCheckpointService.ensureCheckpoint(command)
+RuntimeWaitCheckpointService.reserveCheckpoint(command)
 ~~~
+
+The service must lock RuntimeThreadStateRecord before creating or reattaching a checkpoint.
 
 Behavior:
 
 ~~~text
-existing checkpoint_id absent
+Thread ACTIVE + no wait claim
++ checkpoint absent
 → insert ACTIVE checkpoint
+→ Thread ACTIVE becomes WAIT_CHECKPOINTED
+→ bind checkpoint/effect/run
+→ one local transaction
 
-existing same id + same fingerprint
-→ exact replay / return existing
+Thread WAIT_CHECKPOINTED
++ same checkpoint/effect/run
++ same checkpoint fingerprint
+→ exact replay / reattach
 
-existing same id + different fingerprint
-→ replay conflict
+Thread AWAITING_USER
++ same checkpoint/effect/run
++ same checkpoint fingerprint
+→ already beyond reservation
+→ exact replay path may continue to eligibility
+
+Thread WAIT_CHECKPOINTED or AWAITING_USER
++ different effect/checkpoint
+→ U06_RUNTIME_WAIT_CONFLICT
+
+same checkpoint id + different fingerprint
+→ U06_WAIT_CHECKPOINT_REPLAY_CONFLICT
 ~~~
 
-A checkpoint cannot be rewritten to point to a different Question/delivery/wait effect.
+If a unique-key race occurs on checkpoint id or parent wait effect, reload under Thread lock and apply the same equality rules.
+
+A checkpoint cannot be rewritten to another Question/delivery/wait effect.
 
 ---
 
@@ -365,27 +409,30 @@ RuntimeThreadWaitTransitionService.enterAwaitingUser(command)
 
 Use a locked read of RuntimeThreadStateRecord.
 
-First transition requires:
+First AWAITING transition requires:
 
 ~~~text
-runtime_status = ACTIVE
-current_wait_checkpoint_id = null
-current_wait_effect_id = null
+runtime_status = WAIT_CHECKPOINTED
 
-checkpoint exists and is ACTIVE
-checkpoint identities match command
-~~~
-
-Then atomically update:
-
-~~~text
-runtime_status = AWAITING_USER
 current_run_id = run_id
 current_wait_checkpoint_id = checkpoint_id
 current_wait_effect_id = question_delivered_wait_effect_id
+
+checkpoint exists and is ACTIVE
+checkpoint identities/fingerprint match command
 ~~~
 
-row_version advances exactly once.
+Then atomically update only:
+
+~~~text
+runtime_status = AWAITING_USER
+~~~
+
+while preserving the same run/checkpoint/effect identities.
+
+The Thread row_version advances once for reservation and once for AWAITING transition.
+
+RDP-06 evidence must distinguish these two transitions.
 
 ---
 
@@ -444,22 +491,30 @@ No Consultation recommit.
 
 # 15. C8 recovery — checkpoint exists / Thread not AWAITING_USER
 
-If checkpoint is authoritative but Thread state remains ACTIVE:
+If checkpoint reservation is authoritative and Thread state is:
+
+~~~text
+WAIT_CHECKPOINTED
+~~~
+
+then:
 
 ~~~text
 validate checkpoint/business-state compatibility
-→ execute same Thread wait transition
+→ execute exact WAIT_CHECKPOINTED → AWAITING_USER transition
 → no new checkpoint
 → no delivery resend
 ~~~
 
-This is:
+This is the machine-readable C8 state:
 
 ~~~text
 WAIT_RUNTIME_RECONCILIATION_REQUIRED
 ~~~
 
 until transition succeeds.
+
+An orphan checkpoint with Thread still ACTIVE is inconsistent and must fail/reconcile; normal reservation protocol must not create it.
 
 No U07 eligibility exists yet.
 
@@ -654,15 +709,18 @@ IRR03-V02 initial status ACTIVE
 IRR03-V03 checkpoint id stable for same parent wait effect
 IRR03-V04 same checkpoint id + changed payload conflicts
 IRR03-V05 checkpoint commits before Thread AWAITING transition
-IRR03-V06 Thread transition advances row_version once
-IRR03-V07 exact Thread replay causes zero second transition
-IRR03-V08 C7 recovery creates/reuses checkpoint only
-IRR03-V09 C8 recovery transitions Thread without resend/recommit
-IRR03-V10 C9 recovery re-emits same eligibility only
-IRR03-V11 business WAITING + Thread ACTIVE → no U07 eligibility
-IRR03-V12 mismatched checkpoint/effect/thread fails closed
-IRR03-V13 Python test checkpoint is not used as authority
-IRR03-V14 production runtime store writes = 0 in PROFILE-B verification
+IRR03-V06 checkpoint reservation sets WAIT_CHECKPOINTED + claim atomically
+IRR03-V07 reservation advances Thread row_version exactly once
+IRR03-V08 AWAITING transition advances Thread row_version exactly once
+IRR03-V09 exact Thread replay causes zero second transition
+IRR03-V10 C7 recovery creates/reserves same checkpoint only
+IRR03-V11 C8 WAIT_CHECKPOINTED recovery transitions Thread without resend/recommit
+IRR03-V12 C9 recovery re-emits same eligibility only
+IRR03-V13 business WAITING + Thread not AWAITING_USER → no U07 eligibility
+IRR03-V14 competing different wait effects cannot create two active checkpoints
+IRR03-V15 mismatched checkpoint/effect/thread fails closed
+IRR03-V16 Python test checkpoint is not used as authority
+IRR03-V17 production runtime store writes = 0 in PROFILE-B verification
 ~~~
 
 ---
@@ -688,8 +746,11 @@ This design grants no runtime code, DB migration execution, live U07, Scheduler 
 
 ~~~text
 CA-U06-IRR-03
-= DRAFT / READY_FOR_INDEPENDENT_PHYSICAL_DESIGN_REVIEW
+= REVISED / READY_FOR_TARGETED_PHYSICAL_DESIGN_RE_REVIEW
+
+BF-U06-CA-IRR03-IR-01
+= REMEDIATED / RE_REVIEW_PENDING
 
 BF-U06-IRR-03
-= OPEN / DESIGN_REVIEW_PENDING
+= OPEN / DESIGN_RE_REVIEW_PENDING
 ~~~
