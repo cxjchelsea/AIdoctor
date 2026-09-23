@@ -1082,7 +1082,7 @@ It also does not authorize legacy question services as C03.
 
 ```
 U06 Initial Implementation Readiness / Gap Review
-= REVISED / TARGETED_RE_REVIEW_PENDING
+= PASS / COMPLETE
 
 U06 Unit Definition
 = PASS
@@ -1139,7 +1139,12 @@ Current:
 
 ```
 BF-U06-RG-IR-01
-= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+= CLOSED
+
+Targeted Independent Re-Review
+= PASS
+review_id = 5287124129
+reviewed_head = e4d5c199b5608158a656d00d63ae109016c0c20a
 
 U06 Implementation Readiness
 = NOT_READY
@@ -1147,3 +1152,41 @@ U06 Implementation Readiness
 Implementation Authorization
 = NOT_GRANTED
 ```
+
+
+---
+
+# 15. Final Review Provenance
+
+```
+Initial Independent Review
+= REVISE_REQUIRED
+review_id = 5287115900
+
+Targeted Independent Re-Review
+= PASS
+review_id = 5287124129
+
+Reviewed semantic head
+= e4d5c199b5608158a656d00d63ae109016c0c20a
+
+BF-U06-RG-IR-01
+= CLOSED
+
+U06 Initial Implementation Readiness / Gap Review
+= PASS / COMPLETE
+
+U06 Implementation Readiness
+= NOT_READY
+
+Open blocking readiness findings
+= 6
+
+Next permitted work
+= U06-RDP-01..06 DESIGN / REVIEW / FREEZE
+
+Recommended first design task
+= U06-RDP-01 Consumer Inbound / Admission Contract
+```
+
+This status synchronization changes no blocker, readiness condition, RDP mapping, capability-quality boundary, runtime boundary or authorization scope.
