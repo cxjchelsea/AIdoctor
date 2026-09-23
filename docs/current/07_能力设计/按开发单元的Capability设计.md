@@ -1832,7 +1832,7 @@ This amendment authorizes no capability activation, runtime implementation, prod
 # U06 Aggregate Compatibility Amendment — C03 Binding Consumption
 
 > Amendment ID: U06-AGR-01  
-> Status: REVIEW_PENDING / NOT_REFROZEN
+> Status: AMENDMENT_REVIEW_PASS / REF FREEZE PENDING
 
 U06 consumes C03 through the source-neutral dependency binding identity:
 
