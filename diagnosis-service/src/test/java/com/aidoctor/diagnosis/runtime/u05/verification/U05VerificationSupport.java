@@ -960,6 +960,7 @@ public final class U05VerificationSupport {
         mutationCounts(o, 2, 1, 1);
         addCommittedDetails(o, c);
         o.details.put("invalidation_effect_id", invalidated.getInvalidationEffectId());
+        o.sideEffectRefs.put("invalidation_effect", invalidated.getInvalidationEffectId());
         return o;
     }
 
@@ -970,6 +971,8 @@ public final class U05VerificationSupport {
                 U05ConsumerInboundRequest.GATE_ALLOW, null, null, null);
         StateTypes.CommitResult first = f.committer.commit(p.proposal.getStatePatch());
         Assertions.assertEquals("COMMITTED", first.status);
+        U05ClinicalReadinessCommitEvidence firstEvidence =
+                f.commitService.verifyCommittedReadBack(p.proposal, first);
         @SuppressWarnings("unchecked")
         Map<String, Object> payload =
                 (Map<String, Object>) p.proposal.getStatePatch().operations.get(0).value;
@@ -981,7 +984,9 @@ public final class U05VerificationSupport {
         mutationCounts(o, 1, 1, 0);
         addPreparedDetails(o, p);
         o.details.put("commit_status", conflict.status);
+        o.details.put("commit_result_ref", firstEvidence.getCommitResultRef());
         o.sideEffectRefs.put("readiness_effect", p.proposal.getEffectId());
+        o.sideEffectRefs.put("state_commit", firstEvidence.getCommitResultRef());
         return o;
     }
 
@@ -1017,6 +1022,8 @@ public final class U05VerificationSupport {
                 U05ConsumerInboundRequest.GATE_ALLOW, null, null, null);
         StateTypes.CommitResult first =
                 f.commitService.commitNonProduction(p.input, p.decision, p.proposal);
+        U05ClinicalReadinessCommitEvidence firstEvidence =
+                f.commitService.verifyCommittedReadBack(p.proposal, first);
         U05CommitService reconstructed =
                 new U05CommitService(f.committer,
                         new U05SyntheticClinicalReadinessSnapshotAdapter(f.repository));
@@ -1027,7 +1034,9 @@ public final class U05VerificationSupport {
         Observation o = observation("MUTATION", "REATTACHED_NO_DUPLICATE");
         mutationCounts(o, 1, 1, 0);
         addPreparedDetails(o, p);
+        o.details.put("commit_result_ref", firstEvidence.getCommitResultRef());
         o.sideEffectRefs.put("readiness_effect", p.proposal.getEffectId());
+        o.sideEffectRefs.put("state_commit", firstEvidence.getCommitResultRef());
         return o;
     }
 
@@ -1056,11 +1065,18 @@ public final class U05VerificationSupport {
         int committed = ("COMMITTED".equals(ra.status) ? 1 : 0) + ("COMMITTED".equals(rb.status) ? 1 : 0);
         Assertions.assertEquals(1, committed);
         Assertions.assertEquals(1, f.repository.mutationCount());
+        PreparedBundle winner = "COMMITTED".equals(ra.status) ? a : b;
+        StateTypes.CommitResult winnerResult = "COMMITTED".equals(ra.status) ? ra : rb;
+        U05ClinicalReadinessCommitEvidence winnerEvidence =
+                f.commitService.verifyCommittedReadBack(winner.proposal, winnerResult);
         Observation o = observation("MUTATION", "AT_MOST_ONE_COMMIT");
         mutationCounts(o, 1, 1, 0);
-        addPreparedDetails(o, a);
+        addPreparedDetails(o, winner);
         o.details.put("writer_a_status", ra.status);
         o.details.put("writer_b_status", rb.status);
+        o.details.put("commit_result_ref", winnerEvidence.getCommitResultRef());
+        o.sideEffectRefs.put("readiness_effect", winner.proposal.getEffectId());
+        o.sideEffectRefs.put("state_commit", winnerEvidence.getCommitResultRef());
         return o;
     }
 
