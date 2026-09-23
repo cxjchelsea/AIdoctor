@@ -1,7 +1,7 @@
 # U06 Implementation Authorization Decision v0.1
 
 > Decision ID: **AUTH-U06-PROFILEB-IMPL-001**  
-> Decision status: **READY_FOR_OWNER_DECISION / NOT_DECIDED**  
+> Decision status: **AUTHORIZED / OWNER_APPROVED**  
 > Authorization Review: **PASS / PR #241**  
 > Reviewed authorization semantic head: **50db54beefe670b396b9b1d0044196ac49332f34**  
 > Authorization Review status head: **60401646a35819e80473aff3eddc6e82ee767275**  
@@ -672,18 +672,29 @@ PROFILE-B remains implementation-ready but unauthorized.
 
 # 21. Current decision state
 
-Until explicit owner choice:
+Repository owner decision:
+
+~~~text
+AUTHORIZE
+~~~
+
+Therefore:
 
 ~~~text
 AUTH-U06-PROFILEB-IMPL-001
-= NOT_DECIDED
+= AUTHORIZED
 
 U06 Implementation Authorization
-= NOT_GRANTED
+= GRANTED
+/ NON_PRODUCTION_ONLY
+/ PROFILE_B_SYNTHETIC_STRUCTURAL_ONLY
 
 Implementation
-= NOT_AUTHORIZED
+= AUTHORIZED_TO_BEGIN
+within the exact bounded manifest only
 ~~~
+
+This does not authorize merge, production, live routing, PROFILE-A, or real-patient use.
 
 ---
 
@@ -709,28 +720,145 @@ Gate proved:
 - no merge/live/production leakage;
 - owner agency preserved.
 
-Current:
+Decision-package gate before owner decision:
 
 ~~~text
 U06 Implementation Authorization Decision Package
 = PASS / READY_FOR_OWNER_DECISION
-
-AUTH-U06-PROFILEB-IMPL-001
-= NOT_DECIDED
-
-U06 Implementation Authorization
-= NOT_GRANTED
-
-Implementation
-= NOT_AUTHORIZED
 ~~~
 
-Owner choices:
+Owner has now explicitly selected:
 
 ~~~text
 AUTHORIZE
-REVISE
-REJECT
 ~~~
 
-This status synchronization does not itself authorize implementation.
+The gate scope remains unchanged and binding.
+
+
+---
+
+# 23. Owner Implementation Authorization Record
+
+Owner decision:
+
+~~~text
+AUTHORIZE
+~~~
+
+Authorization:
+
+~~~text
+AUTH-U06-PROFILEB-IMPL-001
+= AUTHORIZED
+~~~
+
+Exact authorization shape:
+
+~~~text
+NON_PRODUCTION_ONLY
+PROFILE_B_SYNTHETIC_STRUCTURAL_ONLY
+FROZEN_RDP01_TO_RDP06
+AGGREGATE_AC01_TO_AC10
+CA_IRR01_TO_IRR03
+ZERO_REAL_PHI
+ZERO_REAL_EXTERNAL_IO
+ZERO_PRODUCTION_STORE_WRITE
+NO_REAL_C03_D04
+NO_REAL_PATIENT_QUESTION_CONTENT
+NO_DIRECT_F1_RUNTIME_ACTIVATION
+NO_LIVE_UPSTREAM_PRODUCER_CUTOVER
+NO_LIVE_U07
+NO_PRODUCTION_SCHEDULER_ROUTING
+EXACT_SHARED_RUNTIME_ALLOWLIST_ONLY
+NO_UNREVIEWED_SHARED_RUNTIME_SEMANTIC_CHANGE
+~~~
+
+Reviewed authorization basis:
+
+~~~text
+PR #241
+Authorization Review semantic PASS head
+= 50db54beefe670b396b9b1d0044196ac49332f34
+
+Targeted Independent Authorization Re-Review
+= PASS
+review_id = 5288613782
+~~~
+
+Decision-package gate basis:
+
+~~~text
+PR #242
+Decision-package semantic PASS head
+= c4cdfcb01e023d427d33fff66891397395db2022
+
+Independent Gate Review
+= PASS
+review_id = 5288639260
+~~~
+
+Authorization-time allowed-change manifest:
+
+~~~text
+path =
+docs/current/06_开发单元/U06_Authorization_Time_Allowed_Change_Manifest_v0.1.md
+
+manifest creation commit =
+40a37f7811e6d76a63c5d8a6ef8fe8e5e090b54c
+
+manifest Git blob SHA =
+c2ee220a1a4323d3b3aef0ef3076f753e937ac9b
+~~~
+
+The manifest is immutable for this authorization.
+Implementation may not broaden it.
+
+Owner authorization record identity:
+
+~~~text
+the Git commit containing this exact AUTHORIZED document state
+~~~
+
+Its exact SHA is recorded in PR #242 authorization provenance and is the only valid:
+
+~~~text
+IMPLEMENTATION_BASE_SHA
+~~~
+
+Authorized implementation branch:
+
+~~~text
+impl/u06-profileb-synthetic-structural-v1
+~~~
+
+The implementation branch MUST be created from exactly that owner-authorization commit.
+
+Still NOT authorized:
+
+~~~text
+merge
+production Clinical Runtime
+production Clinical State mutation
+production Consultation/Runtime mutation
+real C03/D04
+real patient-facing Question content
+external delivery
+direct F1 runtime activation
+live upstream producer cutover
+live U07
+production Scheduler routing
+PROFILE-A
+release activation
+real-patient traffic
+squash merge
+rebase merge
+~~~
+
+If implementation requires anything outside the frozen allowlist:
+
+~~~text
+STOP
+→ AUTHORIZATION_STALE_OR_INSUFFICIENT
+→ governance impact review / amendment / re-authorization
+~~~
