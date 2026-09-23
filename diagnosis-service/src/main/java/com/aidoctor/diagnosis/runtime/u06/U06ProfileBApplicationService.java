@@ -45,7 +45,7 @@ public final class U06ProfileBApplicationService {
     public U06ExecutionResult execute(U06ProfileBRequest r,U06SyntheticDecisionBundle d,
                                       U06SyntheticDeliveryService.ScopeAuthorization scope,
                                       U06SyntheticPostF3SafetyBarrier.Evidence safetyEvidence) {
-        U06AdmissionService.Admission a=admission.admit(r);
+        U06AdmissionService.Admission a=admission.admit(r,state.readCurrent().getVersion());
         if(!a.isAdmitted())
             return new U06ExecutionResult(U06ExecutionResult.ADMISSION_REJECTED,a.getAdmissionId(),
                     null,null,null,null,null,null,a.getReasonCode());
