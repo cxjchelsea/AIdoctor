@@ -1064,7 +1064,9 @@ Facts
 → routing projection
 → PRE_READINESS_A1_F3_C03_ELIGIBLE
 → U06 PRE_READINESS_GAP_ASSESSMENT
-→ validate C03 CapabilityBindingRef
+→ validate dependency_binding_type + dependency_binding_ref
+→ resolve real C03 CapabilityBindingRef only for REAL_CAPABILITY_BINDING
+→ validate REQUIRED dependency/release families
 → C03
 → U06/F3 Owner interpretation
 → K09 StateChangeProposal
@@ -1710,3 +1712,19 @@ This section is architecture-only and authorizes no live Clinical Runtime, produ
 This amendment records that the direct-F1 business edge is runtime-gated and disabled in the initial bounded U06 implementation scope.
 
 No new Safety authority, Scheduler edge activation, or patient-facing delivery is authorized.
+
+
+## U06-AGR-01 Runtime Dependency Identity Normalization
+
+For U06 MODE-1 / MODE-2, Runtime consumes the normalized dependency identity:
+
+~~~text
+dependency_binding_type
+dependency_binding_ref
+~~~
+
+It must not require a production P06 CapabilityBindingRef when the explicitly authorized profile is SYNTHETIC_VERIFICATION_BINDING.
+
+For REAL_CAPABILITY_BINDING, Runtime resolves and validates the actual governed P06 C03 binding.
+
+No synthetic binding may be promoted into production capability authority.
