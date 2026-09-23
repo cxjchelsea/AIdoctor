@@ -448,6 +448,43 @@ revalidation/reassessment context identity
 
 直接启动 MODE-1。
 
+## 8.1 Reassessment projection identity
+
+定义稳定：
+
+```
+F3_REASSESSMENT_ROUTING_ID
+```
+
+至少绑定：
+
+```
+consultation_id
+cdp_id
+source F3 revalidation decision id
+source F3_CANONICAL_EFFECT_ID
+source revalidation context
+target authoritative Clinical State dependency identity
+current U04 Gate / safety authority
+current route authorization
+reassessment projection policy version
+```
+
+因此：
+
+```
+same authoritative REASSESSMENT_REQUIRED decision
++ same context/current basis
+→ same reassessment routing identity
+
+different context
+or different revalidation decision
+or different Gate/routing basis
+→ different projection identity
+```
+
+该 identity 只保护 execution/admission projection replay，不拥有 F3 truth。
+
 ## 8.2 Context preservation
 
 F3_REASSESSMENT_ROUTING 必须保留原 evaluation/continuation context，例如：
