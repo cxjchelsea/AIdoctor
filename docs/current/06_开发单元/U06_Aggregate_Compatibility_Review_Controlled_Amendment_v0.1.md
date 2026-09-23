@@ -143,6 +143,11 @@ AC-U06-09
 RDP-06 oracle/fixture/contract authority
 vs
 any aggregate amendment/refreeze performed here
+
+AC-U06-10
+RDP04-AC-18 recoverable Thread wait wording
+vs
+final RDP-04 authoritative Thread = AWAITING_USER eligibility rule
 ~~~
 
 ---
@@ -1030,7 +1035,7 @@ Current register:
 | A07 | direct F1 business legality | DEFERRED_DISABLED | business legal but live/runtime activation blocked | RDP-01, RDP-02, RDP-06 |
 | A08 | one undifferentiated U06 readiness target | REFINED_FOR_U06 | bounded PROFILE-B target separate from blocked PROFILE-A | Readiness, RDP-05, RDP-06 |
 | A09 | RDP-06 authority manifest excludes aggregate amendment | REFINED_FOR_U06 | aggregate amendment digest required in contract/oracle/fixture authority | RDP-06 |
-| A10 | RDP04-AC-18 recoverable Thread wait wording | SUPERSEDED_FOR_U06 | U07 eligibility requires authoritative Thread = AWAITING_USER + compatible durable checkpoint | RDP-04 acceptance authority, RDP-06 |
+| AC-U06-10 | RDP04-AC-18 recoverable Thread wait wording | SUPERSEDED_FOR_U06 | U07 eligibility requires authoritative Thread = AWAITING_USER + compatible durable checkpoint | RDP-04 acceptance authority, RDP-06 |
 
 Any implementation/verifier must consume this register as active U06 amendment authority.
 
@@ -1237,7 +1242,7 @@ PROFILE-A cannot fall back to PROFILE-B
 
 U06-AGG-V-012
 RDP-06 contract manifest includes this aggregate amendment digest
-and applies A10 U07 eligibility supersession
+and applies AC-U06-10 U07 eligibility supersession
 ~~~
 
 Aggregate evidence schema:
@@ -1317,23 +1322,133 @@ It does not mean U06 implementation readiness has passed.
 
 ---
 
-# 25. Next-step gate after aggregate PASS
+# 25. Aggregate-to-Readiness Handoff
 
-After aggregate PASS/refreeze:
+After aggregate PASS/refreeze, the next governance step is:
 
 ~~~text
 U06 Implementation Readiness Re-Evaluation
 ~~~
 
-must decide separately:
+The readiness review must evaluate two distinct targets and may not merge their evidence.
+
+## 25.1 Target B — bounded PROFILE-B structural non-production slice
+
+Entry preconditions are all required:
 
 ~~~text
-PROFILE-B bounded implementation target
-READY or NOT_READY
+AGG-HANDOFF-B01
+aggregate amendment semantic verdict = PASS / REFROZEN
 
-PROFILE-A real governed target
-NOT_READY unless real blockers have changed
+AGG-HANDOFF-B02
+AC-U06-01..10 = CLOSED
+
+AGG-HANDOFF-B03
+no unresolved semantic contradiction across Unit Spec / RDP-01..06 / aggregate amendment
+
+AGG-HANDOFF-B04
+direct F1 runtime activation remains DISABLED
+
+AGG-HANDOFF-B05
+real upstream producers not implemented
+= explicitly OUT_OF_SCOPE for bounded slice
+= may be represented only by independently reviewed synthetic authoritative fixtures
+= cannot be claimed implemented
+
+AGG-HANDOFF-B06
+PROFILE-A real C03 / D04 / real delivery remain disabled
+and cannot be used as fallback authority
+
+AGG-HANDOFF-B07
+IMP-U06-AGG-01..12 each classified by readiness review as exactly one:
+DESIGN_REQUIRED_BEFORE_IMPLEMENTATION
+IMPLEMENTATION_DETAIL_WITHIN_FROZEN_CONTRACT
+OUT_OF_SCOPE_FOR_BOUNDED_SLICE
+
+AGG-HANDOFF-B08
+any item classified DESIGN_REQUIRED_BEFORE_IMPLEMENTATION
+must have a reviewed concrete implementation design before READY may be declared
+
+AGG-HANDOFF-B09
+RDP-06 verification authority remains active
+including:
+106 EV
+9 CW
+3 HG
+10 VG
+12 U06-AGG-V
+
+AGG-HANDOFF-B10
+future oracle/fixture/contract manifest must bind this aggregate amendment semantic digest and precedence register
+
+AGG-HANDOFF-B11
+shared-runtime changes may only come from explicitly reviewed/authorized amendment refs and exact allowed paths
+
+AGG-HANDOFF-B12
+Implementation Authorization = NOT_GRANTED at readiness-entry time
 ~~~
+
+The readiness review may conclude:
+
+~~~text
+PROFILE-B
+= READY
+or NOT_READY
+~~~
+
+but READY means only:
+
+~~~text
+a bounded non-production structural implementation slice
+may be eligible for a later explicit Implementation Authorization Decision
+~~~
+
+It does not activate code by itself.
+
+## 25.2 Target A — real governed clinical/patient-facing slice
+
+Under current evidence:
+
+~~~text
+PROFILE-A
+= NOT_READY
+~~~
+
+The readiness review must preserve real blockers including:
+- real governed C03 + Quality Gate;
+- approved D04/F3/Question policy releases;
+- real patient-safe question content/rendering;
+- real delivery policy/adapter/privacy/consent;
+- required real upstream producers;
+- production environment and clinical evaluation gates.
+
+Synthetic fixtures/adapters are not substitutes for these blockers.
+
+The readiness review may update PROFILE-A only if new independently governed evidence exists.
+
+## 25.3 Physical impact classification deliverable
+
+The readiness review must produce a table:
+
+~~~text
+U06_IMPLEMENTATION_IMPACT_CLASSIFICATION_V0_1
+
+impact_id
+classification
+required_design_ref?
+authorized_scope
+owner
+blocking_status
+rationale
+~~~
+
+covering every:
+
+~~~text
+IMP-U06-AGG-01..12
+~~~
+
+No impact may be silently omitted.
 
 Implementation authorization remains a later explicit decision.
 
@@ -1394,6 +1509,32 @@ Remediation:
 
 3. froze mandatory U06-AGG-V-001..012 namespace and acceptance overlay requiring 12/12 PASS in addition to existing RDP-06 thresholds.
 
+Targeted Independent Aggregate Re-Review:
+
+~~~text
+review_id = 5288123097
+verdict = REVISE_REQUIRED
+reviewed_head = 394d4ac8350775d457f99008e3998a54392f58e0
+~~~
+
+Additional findings:
+
+~~~text
+BF-U06-AGG-TR-01
+= AMENDMENT_ID_SET_INCONSISTENT
+
+BF-U06-AGG-TR-02
+= IMPLEMENTATION_READINESS_ENTRY_CRITERIA_NOT_EXACT
+~~~
+
+Additional remediation:
+
+4. normalized the canonical amendment inventory to AC-U06-01..10, with AC-U06-10 owning the RDP04-AC-18 supersession;
+
+5. added U06 Aggregate-to-Readiness Handoff with exact bounded PROFILE-B and PROFILE-A entry rules;
+
+6. required explicit readiness classification for every IMP-U06-AGG-01..12 before any PROFILE-B READY verdict.
+
 Current:
 
 ~~~text
@@ -1406,14 +1547,17 @@ BF-U06-AGG-IR-02
 BF-U06-AGG-IR-03
 = REMEDIATED / RE-REVIEW_PENDING
 
-AC-U06-01..09
+BF-U06-AGG-TR-01
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-AGG-TR-02
+= REMEDIATED / RE-REVIEW_PENDING
+
+AC-U06-01..10
 = PROPOSED_RESOLUTION
 
-A10
-= PROPOSED_SUPERSESSION
-
 U06 Aggregate Compatibility Review / Controlled Amendment
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_AGGREGATE_RE_REVIEW
+= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_AGGREGATE_RE_REVIEW
 
 U06 Implementation Readiness
 = NOT_READY
@@ -1426,7 +1570,7 @@ U06 Implementation Authorization
 
 ~~~text
 U06 Aggregate Compatibility Review / Controlled Amendment
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_AGGREGATE_RE_REVIEW
+= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_AGGREGATE_RE_REVIEW
 ~~~
 
 No implementation, shared-runtime modification, direct F1 activation, real C03/D04 activation, external delivery, merge, production, or real-patient authorization is granted.
