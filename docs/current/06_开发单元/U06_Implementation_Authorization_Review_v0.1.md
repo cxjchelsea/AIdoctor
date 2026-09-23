@@ -338,32 +338,57 @@ diagnosis-service/src/main/resources/db/migration/V6__add_u06_wait_runtime.sql
 diagnosis-service/src/main/resources/db/migration-oracle/V6__add_u06_wait_runtime.sql
 ~~~
 
-The two migrations may only implement reviewed U06 physical persistence for:
+The two migrations have an exact semantic object allowlist.
+
+Existing-table ALTER allowed exactly:
 
 ~~~text
-clinical_consultation.current_wait_effect_id
-
-clinical_consultation_wait_effect
-
-clinical_runtime_thread_state
-
-clinical_runtime_wait_checkpoint
-
-U06-local delivery / trace / idempotency persistence
-required by RDP-04 and RDP-03
+clinical_consultation
+→ ADD nullable current_wait_effect_id only
 ~~~
 
-Allowed U06-local persistence may include tables whose ownership is explicitly U06 and whose rows are:
-- delivery governance/evidence;
-- U06 parent trace;
-- U06 idempotency/replay evidence.
+New shared/runtime tables allowed exactly:
+
+~~~text
+clinical_consultation_wait_effect
+clinical_runtime_thread_state
+clinical_runtime_wait_checkpoint
+~~~
+
+New U06-owned tables allowed exactly:
+
+~~~text
+u06_governed_execution_trace
+u06_delivery_authority
+u06_delivery_intent
+u06_delivery_attempt
+u06_delivery_receipt
+u06_delivery_confirmation
+u06_delivery_ledger
+~~~
+
+These U06-owned tables are limited to the frozen RDP-03/RDP-04 parent trace and delivery/idempotency/reconciliation evidence.
+
+No other table may be created under AUTH-U06-PROFILEB-IMPL-001.
+
+No other existing table may be ALTERed.
 
 The migrations must not:
 - alter unrelated clinical tables;
 - backfill invented WAITING_USER states;
 - write business truth;
 - alter existing Clinical State schema semantics;
+- add production recipient secrets;
+- add real-patient fixture data;
 - activate production behavior.
+
+If implementation needs an eighth U06-owned table or another existing-table ALTER:
+
+~~~text
+STOP
+→ authorization scope insufficient
+→ impact review / explicit amendment
+~~~
 
 Migration files may exist in the implementation candidate, but executing them against production is not authorized.
 
@@ -404,10 +429,34 @@ diagnosis-service/src/test/resources/u06/**
 
 .github/workflows/u06-rdp06-authoritative-verification.yml
 
-docs/current/06_开发单元/U06_*Implementation*
-docs/current/06_开发单元/U06_*Verification*
-docs/current/06_开发单元/U06_*Evidence*
+docs/current/06_开发单元/u06_implementation/**
 ~~~
+
+The implementation-only governance directory must be new and may contain only:
+- implementation status/review records;
+- verifier/evidence manifests;
+- implementation verification closure records;
+- sanitized accepted evidence snapshots.
+
+Existing authority documents are read-only during implementation, including:
+- U06 Unit Spec;
+- U06-RDP-01..06;
+- U06 Aggregate Compatibility Amendment;
+- CA-U06-IRR-01..03;
+- readiness re-evaluations;
+- this authorization review;
+- the later owner decision record.
+
+If implementation discovers an authority-document defect:
+
+~~~text
+STOP
+→ controlled governance amendment
+→ independent review
+→ authorization applicability review
+~~~
+
+Do not edit frozen authority under implementation authorization.
 
 Verification tooling may produce:
 - static oracle;
@@ -666,21 +715,101 @@ Network egress must be denied-by-default or equivalently isolated.
 
 ---
 
-# 22. Authorized shared-runtime change manifest
+# 22. Authorization-Time Allowed Change Manifest
 
-Before authoritative CI, the implementation candidate must produce:
+Before owner decision, this review freezes:
+
+~~~text
+U06_AUTHORIZATION_ALLOWED_CHANGE_MANIFEST_V0_1
+~~~
+
+Logical fields:
+
+~~~text
+authorization_id
+reviewed_authorization_semantic_head
+
+readiness_status_head
+aggregate_semantic_head
+physical_design_semantic_head
+post_physical_readiness_semantic_head
+
+owner_decision_record_head
+= PENDING_OWNER_DECISION
+
+implementation_branch
+= impl/u06-profileb-synthetic-structural-v1
+
+implementation_base
+= FINAL_OWNER_AUTHORIZED_DECISION_RECORD_HEAD
+
+allowed_existing_files[]
+allowed_new_file_roots[]
+allowed_exact_new_shared_files[]
+allowed_migration_files[]
+allowed_migration_objects[]
+
+forbidden_existing_files[]
+forbidden_roots[]
+
+verification_authority_refs[]
+manifest_fingerprint
+~~~
+
+Frozen allowed existing production files:
+
+~~~text
+diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/ConsultationRecord.java
+diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/ConsultationRepository.java
+~~~
+
+Frozen allowed new production root:
+
+~~~text
+diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/**
+~~~
+
+Frozen exact new shared-runtime files are the six files in section 8.
+
+Frozen migration files and migration objects are exactly those in section 10.
+
+Frozen test/tool/workflow/document roots are exactly sections 11 and 12.
+
+Forbidden existing files include the exact section-9 files.
+
+Forbidden roots include:
+
+~~~text
+contracts/releases/**
+packages/python_runtime/**
+diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u03/**
+diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u04/**
+diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u05/**
+diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/**
+~~~
+
+except read-only consumption.
+
+The owner decision record must finalize:
+- owner_decision_record_head;
+- implementation_base;
+- manifest_fingerprint/provenance.
+
+After implementation, the RDP-06:
 
 ~~~text
 U06_AUTHORIZED_SHARED_RUNTIME_CHANGE_MANIFEST
 ~~~
 
-bound to:
-- exact implementation base SHA;
-- exact target SHA;
-- this authorization decision;
-- exact allowed files/path patterns.
+must compare the actual:
 
-Observed files must be computed from Git diff.
+~~~text
+git diff --name-only implementation_base..implementation_target
+~~~
+
+against this authorization-time manifest.
+
+Implementation may not author or broaden its own allowlist after coding begins.
 
 Unexpected shared-runtime files:
 
@@ -689,8 +818,6 @@ Unexpected shared-runtime files:
 ~~~
 
 is mandatory.
-
-Implementation may not self-report the diff.
 
 ---
 
@@ -786,7 +913,60 @@ STOP
 
 ---
 
-# 27. Authorization review decision
+# 27. Independent Authorization Review Remediation
+
+Initial Independent Authorization Review:
+
+~~~text
+PR #241
+review_id = 5288601353
+verdict = REVISE_REQUIRED
+reviewed_head = 2ac9d8f33e2f66b7bb682fcd2930c03470c1b943
+~~~
+
+Findings:
+
+~~~text
+BF-U06-IA-IR-01
+= GOVERNANCE_DOCUMENT_GLOB_CAN_TOUCH_FROZEN_AUTHORITY
+
+BF-U06-IA-IR-02
+= MIGRATION_SEMANTIC_ALLOWLIST_TOO_OPEN
+
+BF-U06-IA-IR-03
+= AUTHORIZED_CHANGE_MANIFEST_NOT_FROZEN_AT_OWNER_DECISION_BOUNDARY
+~~~
+
+Remediation:
+1. replaced broad governance-document globs with a new implementation-only document directory and made frozen authority documents read-only;
+2. froze exact existing-table ALTER and exact new-table allowlist;
+3. froze U06_AUTHORIZATION_ALLOWED_CHANGE_MANIFEST_V0_1 before owner decision, with implementation base defined as the final owner-authorized decision-record head.
+
+Current:
+
+~~~text
+BF-U06-IA-IR-01
+= REMEDIATED / RE_REVIEW_PENDING
+
+BF-U06-IA-IR-02
+= REMEDIATED / RE_REVIEW_PENDING
+
+BF-U06-IA-IR-03
+= REMEDIATED / RE_REVIEW_PENDING
+
+U06 Implementation Authorization Review
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_AUTHORIZATION_RE_REVIEW
+
+AUTH-U06-PROFILEB-IMPL-001
+= NOT_DECIDED
+
+Implementation
+= NOT_AUTHORIZED
+~~~
+
+---
+
+# 28. Authorization review decision
 
 Based on current readiness and the bounded exact scope:
 
@@ -805,11 +985,11 @@ Owner decision remains a later explicit action.
 
 ---
 
-# 28. Draft verdict
+# 29. Revised verdict
 
 ~~~text
 U06 Implementation Authorization Review
-= DRAFT / READY_FOR_INDEPENDENT_AUTHORIZATION_REVIEW
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_AUTHORIZATION_RE_REVIEW
 
 AUTH-U06-PROFILEB-IMPL-001
 = NOT_DECIDED
