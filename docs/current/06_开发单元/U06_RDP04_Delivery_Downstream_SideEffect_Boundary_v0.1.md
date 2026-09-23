@@ -381,7 +381,82 @@ or explicit conflict if mutation is not lawful
 
 ---
 
-# 9. Delivery idempotency key
+# 9. One active delivery effect per selected Question
+
+For one current:
+
+~~~text
+QUESTION_SELECTION_EFFECT_ID
+~~~
+
+there may be at most one active/pending Question delivery effect.
+
+Define logical durable authority:
+
+~~~text
+QuestionDeliveryAuthority
+
+question_selection_effect_id
+question_id
+
+active_delivery_effect_id?
+active_delivery_id?
+
+authority_status
+superseded_delivery_effect_refs[]
+
+updated_at
+trace_refs[]
+~~~
+
+Allowed authority_status:
+
+~~~text
+NO_ACTIVE_DELIVERY
+ACTIVE_PENDING
+CONFIRMED_TERMINAL
+TERMINAL_NOT_DELIVERED
+BLOCKED_RECONCILIATION
+~~~
+
+Rules:
+
+~~~text
+no prior delivery effect
+→ one new effect may become ACTIVE_PENDING
+
+before first transport attempt:
+changed content / endpoint / channel / policy
+→ old READY intent may be governed CANCELLED_BEFORE_SEND
+→ authority may replace it with one new delivery effect
+→ old effect remains auditable
+
+after any transport attempt with ambiguous outcome:
+→ new delivery effect for same selection prohibited
+→ authority = BLOCKED_RECONCILIATION
+→ old effect must reconcile first
+
+old effect definitively NOT_DELIVERED
+→ authority may become TERMINAL_NOT_DELIVERED
+→ retry policy may allow another attempt under same effect
+→ a distinct new delivery effect requires an explicit governed rebinding decision
+
+old effect CONFIRMED
+→ authority = CONFIRMED_TERMINAL
+→ no second delivery effect for same Question selection
+
+redelivery / re-ask after a confirmed delivery
+→ requires a new lawful Question selection/re-ask effect
+→ not ad hoc delivery rebinding
+~~~
+
+This authority is non-clinical delivery governance state.
+
+It does not own Question truth.
+
+---
+
+# 10. Delivery idempotency key
 
 Define:
 
@@ -408,7 +483,7 @@ Transport attempt identity is not delivery business identity.
 
 ---
 
-# 10. Durable DeliveryIntent
+# 11. Durable DeliveryIntent
 
 Before any send attempt, persist:
 
@@ -455,7 +530,7 @@ Intent is immutable in business-defining fields after READY.
 
 ---
 
-# 11. Intent durability rule
+# 12. Intent durability rule
 
 Formal ordering:
 
@@ -485,7 +560,7 @@ retry reloads current Question
 
 ---
 
-# 12. Transport attempt contract
+# 13. Transport attempt contract
 
 Logical:
 
@@ -529,7 +604,7 @@ It must not alter:
 
 ---
 
-# 13. Transport idempotency capability contract
+# 14. Transport idempotency capability contract
 
 Each transport adapter must declare:
 
@@ -568,7 +643,7 @@ No optimistic duplicate resend.
 
 ---
 
-# 14. Delivery receipt contract
+# 15. Delivery receipt contract
 
 Durable transport evidence:
 
@@ -620,7 +695,7 @@ UNKNOWN
 
 ---
 
-# 15. Delivery confirmation resolver
+# 16. Delivery confirmation resolver
 
 Define:
 
@@ -660,7 +735,74 @@ Only CONFIRMED may authorize RDP-03 delivered/wait child effects.
 
 ---
 
-# 16. CONFIRMED semantics
+# 17. Delivery confirmation identity and evidence evolution
+
+Define:
+
+~~~text
+DELIVERY_CONFIRMATION_EVALUATION_ID
+=
+delivery_id
++ canonical_delivery_evidence_set_identity
++ confirmation_policy_version
++ confirmation_contract_version
+~~~
+
+Define:
+
+~~~text
+DELIVERY_CONFIRMATION_CANONICAL_FINGERPRINT
+~~~
+
+covering:
+
+~~~text
+delivery_id
+intent identity/fingerprint
+evaluated attempt refs
+evaluated receipt refs
+status-query evidence refs
+recipient/channel binding
+rendered content fingerprint
+confirmation policy/version
+confirmation outcome
+reason code
+~~~
+
+Rules:
+
+~~~text
+same exact evidence set + same policy
+→ same evaluation identity
+→ same confirmation result
+
+new authoritative receipt/query evidence
+→ new confirmation evaluation
+→ may supersede prior non-terminal INDETERMINATE evaluation
+→ prior evaluation remains immutable/auditable
+
+CONFIRMED
+→ terminal positive delivery truth
+→ cannot later be rewritten to NOT_CONFIRMED
+
+evidence conflicting with prior CONFIRMED
+→ DELIVERY_CONFIRMATION_EVIDENCE_CONFLICT
+→ reconciliation/failure
+→ do not rewrite historical confirmation
+
+NOT_CONFIRMED
+→ terminal only when policy/evidence proves non-delivery or terminal rejection/failure
+
+INDETERMINATE
+→ non-terminal
+→ may be superseded by later evidence
+~~~
+
+confirmation_decision_id must equal or stably derive from DELIVERY_CONFIRMATION_EVALUATION_ID.
+
+---
+
+# 18. CONFIRMED semantics
 
 CONFIRMED requires:
 
@@ -692,7 +834,7 @@ Synthetic confirmation cannot be reused as real-patient evidence.
 
 ---
 
-# 17. ACCEPTED != CONFIRMED
+# 19. ACCEPTED != CONFIRMED
 
 Critical rule:
 
@@ -720,7 +862,7 @@ That policy must be explicit and versioned.
 
 ---
 
-# 18. INDETERMINATE semantics
+# 20. INDETERMINATE semantics
 
 Used when:
 
@@ -749,7 +891,7 @@ The delivery attempt enters reconciliation.
 
 ---
 
-# 19. Retry after ambiguous transport
+# 21. Retry after ambiguous transport
 
 For INDETERMINATE:
 
@@ -780,7 +922,7 @@ This prevents duplicate user messages.
 
 ---
 
-# 20. Definitive delivery failure
+# 22. Definitive delivery failure
 
 If receipt/adapter proves:
 
@@ -808,7 +950,7 @@ Retry is allowed only by approved delivery retry policy and only while selected 
 
 ---
 
-# 21. Delivery retry policy
+# 23. Delivery retry policy
 
 Logical:
 
@@ -837,7 +979,7 @@ No implementation may invent infinite retries.
 
 ---
 
-# 22. Delivery cancellation before confirmation
+# 24. Delivery cancellation before confirmation
 
 Delivery must stop if current authoritative state shows:
 - Question SUPERSEDED;
@@ -869,7 +1011,7 @@ not pretend delivery never occurred
 
 ---
 
-# 23. Delivery confirmation to business-state handoff
+# 25. Delivery confirmation to business-state handoff
 
 Only:
 
@@ -906,7 +1048,7 @@ delivery profile
 
 ---
 
-# 24. Business-state choreography
+# 26. Business-state choreography
 
 RDP-03 froze two business child effects.
 
@@ -947,7 +1089,7 @@ without an authoritative delivered Question
 
 ---
 
-# 25. Partial business-state reconciliation
+# 27. Partial business-state reconciliation
 
 Cross-store mutation is not physically atomic.
 
@@ -979,7 +1121,7 @@ Runtime must finish reconciliation or enter governed failure recovery.
 
 ---
 
-# 26. Consultation WAITING failure after delivered Clinical State
+# 28. Consultation WAITING failure after delivered Clinical State
 
 If:
 - Clinical State delivered child committed;
@@ -1009,7 +1151,7 @@ Do not mutate Question back to SELECTED merely to create artificial consistency.
 
 ---
 
-# 27. Runtime wait checkpoint contract
+# 29. Runtime wait checkpoint contract
 
 After both business sub-effects are authoritative, create:
 
@@ -1052,7 +1194,7 @@ Checkpoint:
 
 ---
 
-# 28. Thread AWAITING_USER transition
+# 30. Thread AWAITING_USER transition
 
 Thread may transition to AWAITING_USER only when:
 
@@ -1078,7 +1220,7 @@ No duplicate Question send.
 
 ---
 
-# 29. U07 eligibility contract
+# 31. U07 eligibility contract
 
 U07 eligibility exists only when all are true:
 
@@ -1086,11 +1228,22 @@ U07 eligibility exists only when all are true:
 Question = DELIVERED_TO_USER
 PendingQuestion = current same Question
 Consultation = WAITING_USER
-Thread = AWAITING_USER or recoverably equivalent runtime wait state
+Thread = AWAITING_USER
 delivery_id / parent effect provenance match
 wait checkpoint compatible
 Question not expired/superseded
 ~~~
+
+If business WAITING state exists but Runtime wait state/checkpoint is missing, stale, or not yet reconciled:
+
+~~~text
+WAIT_RUNTIME_RECONCILIATION_REQUIRED
+→ U07 eligibility = absent
+~~~
+
+Runtime must first reconstruct/reconcile Thread AWAITING_USER from authoritative business wait evidence and durable delivery/checkpoint evidence.
+
+Only after Thread = AWAITING_USER may U07ResumeEligibility be emitted or reattached.
 
 Define:
 
@@ -1127,7 +1280,7 @@ U07 still owns those.
 
 ---
 
-# 30. Stable U07 eligibility identity
+# 32. Stable U07 eligibility identity
 
 Define:
 
@@ -1150,7 +1303,7 @@ It must not create multiple independent resume windows for the same pending Ques
 
 ---
 
-# 31. U07 ineligibility conditions
+# 33. U07 ineligibility conditions
 
 No U07 eligibility when:
 - Question only SELECTED;
@@ -1167,7 +1320,7 @@ No U07 eligibility when:
 
 ---
 
-# 32. Crash window C1 — after Question selection / before intent
+# 34. Crash window C1 — after Question selection / before intent
 
 State:
 
@@ -1189,7 +1342,7 @@ No external send has occurred.
 
 ---
 
-# 33. Crash window C2 — after intent / before send
+# 35. Crash window C2 — after intent / before send
 
 State:
 
@@ -1210,7 +1363,7 @@ then create first/next lawful attempt
 
 ---
 
-# 34. Crash window C3 — after send / before receipt
+# 36. Crash window C3 — after send / before receipt
 
 This is the highest-risk duplication window.
 
@@ -1241,7 +1394,7 @@ else
 
 ---
 
-# 35. Crash window C4 — after receipt / before confirmation
+# 37. Crash window C4 — after receipt / before confirmation
 
 State:
 
@@ -1262,7 +1415,7 @@ No external resend is required merely because confirmation decision is missing.
 
 ---
 
-# 36. Crash window C5 — after confirmation / before Clinical State child
+# 38. Crash window C5 — after confirmation / before Clinical State child
 
 State:
 
@@ -1281,7 +1434,7 @@ no transport resend
 
 ---
 
-# 37. Crash window C6 — after Clinical State child / before Consultation WAITING
+# 39. Crash window C6 — after Clinical State child / before Consultation WAITING
 
 State:
 
@@ -1303,7 +1456,7 @@ no U07 eligibility yet
 
 ---
 
-# 38. Crash window C7 — after Consultation WAITING / before checkpoint
+# 40. Crash window C7 — after Consultation WAITING / before checkpoint
 
 State:
 
@@ -1326,7 +1479,7 @@ No clinical/business mutation replay required if already authoritative.
 
 ---
 
-# 39. Crash window C8 — after checkpoint / before Thread AWAITING
+# 41. Crash window C8 — after checkpoint / before Thread AWAITING
 
 State:
 
@@ -1346,7 +1499,7 @@ without recommitting business state
 
 ---
 
-# 40. Crash window C9 — after Thread AWAITING / before U07 eligibility projection
+# 42. Crash window C9 — after Thread AWAITING / before U07 eligibility projection
 
 Recovery:
 
@@ -1359,7 +1512,7 @@ No new delivery.
 
 ---
 
-# 41. Delivery ledger
+# 43. Delivery ledger
 
 RDP-04 freezes a durable non-clinical delivery ledger/read model:
 
@@ -1414,7 +1567,7 @@ This ledger:
 
 ---
 
-# 42. Delivery ledger replay semantics
+# 44. Delivery ledger replay semantics
 
 Same delivery effect:
 
@@ -1445,7 +1598,7 @@ but must preserve history.
 
 ---
 
-# 43. Transport-side duplicate prevention
+# 45. Transport-side duplicate prevention
 
 RDP-04 requires:
 
@@ -1476,7 +1629,7 @@ unless verified for the selected adapter/provider semantics.
 
 ---
 
-# 44. Safety preemption before send
+# 46. Safety preemption before send
 
 Before first or retry send:
 
@@ -1500,7 +1653,7 @@ Safety preemption cannot erase evidence that a message may already have been sen
 
 ---
 
-# 45. Safety change after confirmed delivery
+# 47. Safety change after confirmed delivery
 
 If Question delivery is already CONFIRMED:
 
@@ -1517,7 +1670,7 @@ But the delivery event remains historical truth.
 
 ---
 
-# 46. Delivery expiry
+# 48. Delivery expiry
 
 Question may have delivery expiry distinct from answer expiry.
 
@@ -1540,7 +1693,7 @@ Do not use delivery expiry to erase a confirmed delivery.
 
 ---
 
-# 47. External side-effect boundary
+# 49. External side-effect boundary
 
 RDP-04 is the first U06 design that explicitly touches external side effects.
 
@@ -1566,7 +1719,7 @@ Transport must not receive:
 
 ---
 
-# 48. PROFILE-B synthetic adapter
+# 50. PROFILE-B synthetic adapter
 
 RDP-04 chooses the current U06 non-production verification profile:
 
@@ -1597,7 +1750,7 @@ No runtime path may relabel this as real delivery.
 
 ---
 
-# 49. Synthetic delivery confirmation semantics
+# 51. Synthetic delivery confirmation semantics
 
 For PROFILE-B:
 
@@ -1623,7 +1776,7 @@ All resulting Question/WAITING fixture state must remain explicitly non-producti
 
 ---
 
-# 50. Real delivery activation gate
+# 52. Real delivery activation gate
 
 PROFILE-A cannot activate until at least:
 
@@ -1648,7 +1801,7 @@ production authorization granted
 
 ---
 
-# 51. Delivery failure handoff
+# 53. Delivery failure handoff
 
 RDP-04 defines typed failure evidence, not U14 final business outcome.
 
@@ -1701,7 +1854,7 @@ This:
 
 ---
 
-# 52. No alternate clinical route invention
+# 54. No alternate clinical route invention
 
 If delivery fails:
 
@@ -1723,7 +1876,7 @@ Delivery failure is not:
 
 ---
 
-# 53. U15 relationship
+# 55. U15 relationship
 
 If Consultation is cancelled/expired while delivery is pending:
 
@@ -1739,7 +1892,7 @@ RDP-04 must:
 
 ---
 
-# 54. U07 answer boundary
+# 56. U07 answer boundary
 
 U07 may accept a USER_ANSWER only against a valid current wait boundary.
 
@@ -1758,7 +1911,7 @@ It only establishes the prerequisite wait context.
 
 ---
 
-# 55. Frontend boundary
+# 57. Frontend boundary
 
 Frontend may display:
 - selected/delivered Question;
@@ -1774,7 +1927,7 @@ Frontend may not:
 
 ---
 
-# 56. Downstream sequence after successful wait establishment
+# 58. Downstream sequence after successful wait establishment
 
 Successful U06 MODE-2 terminal output:
 
@@ -1805,7 +1958,82 @@ USER_ANSWER
 
 ---
 
-# 57. Trace obligations
+# 59. U06 MODE-2 terminal outcome contract
+
+Define one typed outward result:
+
+~~~text
+U06QuestionDeliveryOutcome
+
+outcome_id
+consultation_id
+question_id
+
+delivery_id?
+question_delivery_effect_id?
+question_delivered_wait_effect_id?
+
+status
+reason_code
+
+delivery_confirmation_ref?
+clinical_state_child_effect_ref?
+consultation_wait_effect_ref?
+checkpoint_ref?
+u07_eligibility_ref?
+failure_handoff_ref?
+
+current_clinical_state_version
+trace_ref
+created_at
+~~~
+
+Allowed status:
+
+~~~text
+WAIT_ESTABLISHED
+RECONCILIATION_REQUIRED
+NOT_CONFIRMED
+CANCELLED
+FAILURE_REQUIRED
+~~~
+
+Semantics:
+
+~~~text
+WAIT_ESTABLISHED
+→ all business wait effects authoritative
+→ checkpoint compatible
+→ Thread AWAITING_USER
+→ carries U07 eligibility
+
+RECONCILIATION_REQUIRED
+→ one or more delivery/business/runtime stages incomplete or ambiguous
+→ no U07 eligibility
+→ no new ordinary Question send until reconciled
+
+NOT_CONFIRMED
+→ delivery terminally not confirmed
+→ no delivered/wait state
+→ no U07 eligibility
+
+CANCELLED
+→ delivery stopped by authoritative supersede/cancel/expiry before valid confirmation
+→ no U07 eligibility
+
+FAILURE_REQUIRED
+→ typed failure handoff required
+→ no alternate clinical route
+→ no U07 eligibility
+~~~
+
+Only WAIT_ESTABLISHED is the normal successful terminal output of U06 MODE-2.
+
+Outcome identity is stable for the exact U06 delivery terminal evaluation and is trace/routing evidence, not Clinical State.
+
+---
+
+# 60. Trace obligations
 
 U06GovernedExecutionTrace must correlate:
 
@@ -1830,7 +2058,7 @@ No raw recipient secret is required in parent trace.
 
 ---
 
-# 58. Delivery evidence retention
+# 61. Delivery evidence retention
 
 Durable evidence required for replay/recovery:
 
@@ -1851,7 +2079,7 @@ RDP-04 requires only that evidence remains sufficient to prevent duplicate send 
 
 ---
 
-# 59. RDP-03 compatibility
+# 62. RDP-03 compatibility
 
 RDP-04 must consume and preserve:
 
@@ -1872,7 +2100,7 @@ It may not redesign:
 
 ---
 
-# 60. RDP-01/RDP-02/RDP-05 compatibility
+# 63. RDP-01/RDP-02/RDP-05 compatibility
 
 RDP-04 preserves:
 - exact admitted MODE-2 source;
@@ -1888,7 +2116,7 @@ No delivery adapter may bypass:
 
 ---
 
-# 61. RDP-06 verification obligations
+# 64. RDP-06 verification obligations
 
 RDP-06 must verify at least:
 
@@ -1939,7 +2167,7 @@ remains blocked absent all gates
 
 ---
 
-# 62. Current implementation impact inventory
+# 65. Current implementation impact inventory
 
 All remain NOT_AUTHORIZED.
 
@@ -1993,9 +2221,25 @@ Need a current delivery-action permission seam.
 
 Need typed U06DeliveryFailureHandoff to governed failure path.
 
+## U06-RDP04-IMP-10 — Delivery authority / uniqueness guard
+
+Need durable per-QUESTION_SELECTION_EFFECT_ID authority preventing multiple active/pending delivery effects.
+
+## U06-RDP04-IMP-11 — Confirmation evaluation history
+
+Need immutable/versioned confirmation evaluation storage supporting:
+- exact evidence-set replay;
+- INDETERMINATE supersession by later evidence;
+- terminal CONFIRMED protection;
+- evidence-conflict detection.
+
+## U06-RDP04-IMP-12 — U06 terminal delivery outcome
+
+Need typed U06QuestionDeliveryOutcome for Scheduler/governance handoff.
+
 ---
 
-# 63. Design acceptance scenarios
+# 66. Design acceptance scenarios
 
 ~~~text
 RDP04-AC-01
@@ -2095,11 +2339,44 @@ RDP04-AC-20
 same delivery effect replay after fully established wait
 → reattach all existing evidence/effects
 → zero transport resend
+
+RDP04-AC-21
+same Question selection has ACTIVE_PENDING delivery effect
++ endpoint/policy changes
+→ no second active effect until governed replacement/reconciliation
+
+RDP04-AC-22
+ambiguous old delivery attempt exists
+→ new delivery effect for same selection prohibited
+
+RDP04-AC-23
+later receipt resolves prior INDETERMINATE
+→ new confirmation evaluation supersedes prior non-terminal evaluation
+→ history preserved
+
+RDP04-AC-24
+prior confirmation = CONFIRMED
++ later conflicting evidence
+→ evidence conflict/failure
+→ historical CONFIRMED not rewritten
+
+RDP04-AC-25
+business WAITING established but Thread not AWAITING_USER
+→ WAIT_RUNTIME_RECONCILIATION_REQUIRED
+→ no U07 eligibility
+
+RDP04-AC-26
+U06QuestionDeliveryOutcome WAIT_ESTABLISHED
+→ exactly one U07 eligibility
+
+RDP04-AC-27
+any non-WAIT_ESTABLISHED terminal/outstanding outcome
+→ no U07 eligibility
 ~~~
 
 ---
 
-# 64. Readiness blocker disposition
+# 67. Readiness blocker disposition
 
 If Independent Design Review passes:
 
@@ -2116,7 +2393,7 @@ It remains pending aggregate closure because:
 
 ---
 
-# 65. Authorization boundary
+# 68. Authorization boundary
 
 This design does not authorize:
 
@@ -2141,15 +2418,63 @@ PROFILE-B synthetic structural implementation also requires later explicit imple
 
 ---
 
-# 66. Draft verdict
+# 69. Independent Design Review Remediation
+
+Initial Independent Design Review:
 
 ~~~text
+PR #234
+review_id = 5287763500
+verdict = REVISE_REQUIRED
+reviewed_head = f8df7ca17dcfe5a6f61d5042f9417e3c4d0c5c8f
+~~~
+
+Findings:
+
+~~~text
+BF-U06-RDP04-IR-01
+= ONE_ACTIVE_DELIVERY_EFFECT_PER_SELECTED_QUESTION_UNDERDEFINED
+
+BF-U06-RDP04-IR-02
+= DELIVERY_CONFIRMATION_IDENTITY_AND_EVIDENCE_EVOLUTION_UNDERDEFINED
+
+BF-U06-RDP04-IR-03
+= U07_ELIGIBILITY_RUNTIME_WAIT_PRECONDITION_AMBIGUOUS
+
+BF-U06-RDP04-IR-04
+= U06_MODE2_TERMINAL_OUTCOME_CONTRACT_MISSING
+~~~
+
+Remediation applied:
+
+1. froze QuestionDeliveryAuthority and at-most-one ACTIVE/PENDING delivery effect per Question selection;
+
+2. froze DELIVERY_CONFIRMATION_EVALUATION_ID, canonical confirmation fingerprint, immutable evidence evolution, non-terminal INDETERMINATE supersession, and terminal CONFIRMED protection;
+
+3. removed recoverably-equivalent shortcut from U07 eligibility and added WAIT_RUNTIME_RECONCILIATION_REQUIRED;
+
+4. added typed U06QuestionDeliveryOutcome with WAIT_ESTABLISHED / RECONCILIATION_REQUIRED / NOT_CONFIRMED / CANCELLED / FAILURE_REQUIRED.
+
+Current:
+
+~~~text
+BF-U06-RDP04-IR-01
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP04-IR-02
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP04-IR-03
+= REMEDIATED / RE-REVIEW_PENDING
+
+BF-U06-RDP04-IR-04
+= REMEDIATED / RE-REVIEW_PENDING
+
 U06-RDP-04
-Delivery / Downstream / Side-effect Boundary
-= DRAFT / READY_FOR_INDEPENDENT_DESIGN_REVIEW
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 
 BF-U06-RG-04
-= OPEN / DESIGN_REVIEW_PENDING
+= OPEN / DESIGN_RE_REVIEW_PENDING
 
 U06 Implementation Readiness
 = NOT_READY
@@ -2158,8 +2483,11 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-Recommended next action:
+# 70. Revised verdict
 
 ~~~text
-U06-RDP-04 Independent Design Review
+U06-RDP-04
+= REVISED / READY_FOR_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
 ~~~
+
+No real patient delivery, external transport activation, U06/U07 implementation, merge, production, or real-patient authorization is granted.
