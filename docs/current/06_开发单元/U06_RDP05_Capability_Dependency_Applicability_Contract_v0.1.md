@@ -503,9 +503,73 @@ current P06 minimal binding
 
 ---
 
-# 11. U06 governed dependency binding view
+# 11. U06 governed dependency binding identity and view
 
-RDP-05 defines a semantic normalized object:
+RDP-05 must support two different governed binding identity classes:
+
+```
+REAL_CAPABILITY_BINDING
+SYNTHETIC_VERIFICATION_BINDING
+```
+
+Define normalized identity fields:
+
+```
+dependency_binding_type
+dependency_binding_ref
+```
+
+Rules:
+
+### REAL_CAPABILITY_BINDING
+
+```
+dependency_binding_type = REAL_CAPABILITY_BINDING
+dependency_binding_ref = real P06 CapabilityBindingRef
+```
+
+Required for PROFILE-A.
+
+The referenced binding must resolve through governed P06 and must represent a registered implementation whose governed capability role is C03 when C03 is required.
+
+### SYNTHETIC_VERIFICATION_BINDING
+
+```
+dependency_binding_type = SYNTHETIC_VERIFICATION_BINDING
+dependency_binding_ref = stable synthetic verification binding identity
+```
+
+Required for PROFILE-B.
+
+It must:
+- exist only in the authorized synthetic/non-production verification surface;
+- never be registered as an ACTIVE clinical capability binding in the real P06 registry;
+- never be accepted by production/live capability invocation paths;
+- carry explicit `synthetic = true`;
+- carry `patient_data_classification = SYNTHETIC_NON_PATIENT`;
+- carry an allowed environment/profile identity.
+
+Therefore:
+
+```
+RDP-01 capability_binding_ref = REQUIRED
+```
+
+must be interpreted during aggregate compatibility as:
+
+```
+a governed dependency binding identity is REQUIRED
+
+PROFILE-A
+→ real CapabilityBindingRef
+
+PROFILE-B
+→ synthetic verification binding ref
+```
+
+This is an explicit RDP-01 aggregate compatibility amendment impact and must not be silently implemented as a semantic drift.
+
+RDP-05 then defines a semantic normalized object:
 
 ```
 U06DependencyBindingView
@@ -518,10 +582,15 @@ Minimum fields:
 ```
 dependency_binding_view_id
 
+dependency_binding_type
+dependency_binding_ref
+
 consultation_id
 cdp_id
 u06_mode
 
+expected_capability_role = C03 when C03 applies
+registered_capability_role?
 capability_binding_ref?
 capability_id?
 capability_version?
@@ -560,9 +629,67 @@ validity
 trace_refs[]
 ```
 
-It must be formed from authoritative registries/policies or a specifically authorized synthetic verification profile.
+It must be formed from:
+- authoritative registries/policies for REAL_CAPABILITY_BINDING; or
+- a specifically authorized synthetic verification binding registry/fixture set for SYNTHETIC_VERIFICATION_BINDING.
 
 It must not be caller-populated and blindly trusted.
+
+## 11.1 C03 implementation role identity
+
+RDP-05 freezes:
+
+```
+expected_capability_role = C03
+```
+
+whenever MODE-1 or MODE-2 requires C03.
+
+A real binding must resolve:
+
+```
+CapabilityBindingRef
+→ registered implementation/version
+→ governed capability role = C03
+```
+
+A file path, package directory, broad package id, class name, prompt name, or model route is not sufficient authority.
+
+Specifically:
+
+```
+adult_respiratory_v1
+```
+
+currently identifies a broad structural capability package.
+
+It may provide asset/package provenance in the future, but:
+
+```
+adult_respiratory_v1 exists
+!= registered C03 implementation
+!= active C03 binding
+```
+
+unless a future governed registration explicitly maps an approved implementation/version from that package to capability role C03 and passes the required quality/activation gates.
+
+PROFILE-B uses:
+
+```
+registered_capability_role = SYNTHETIC_C03
+expected_capability_role = C03
+synthetic = true
+```
+
+only to exercise the C03 consumer interface shape.
+
+It must never be reported as:
+
+```
+C03 ACTIVE
+C03 QUALITY GATE PASS
+real clinical capability invocation
+```
 
 ---
 
@@ -927,6 +1054,19 @@ RDP-05 freezes two **distinct execution profiles**.
 
 ## PROFILE-A — REAL_GOVERNED_C03
 
+Binding identity:
+
+```
+dependency_binding_type
+= REAL_CAPABILITY_BINDING
+
+dependency_binding_ref
+= real governed P06 CapabilityBindingRef
+
+expected_capability_role
+= C03
+```
+
 May be activated only when:
 - C03 Capability Quality Gate passes;
 - D04 policy is approved for MODE-2;
@@ -945,6 +1085,22 @@ PROFILE-A
 ```
 
 ## PROFILE-B — SYNTHETIC_STRUCTURAL_NONPROD
+
+Binding identity:
+
+```
+dependency_binding_type
+= SYNTHETIC_VERIFICATION_BINDING
+
+dependency_binding_ref
+= stable synthetic verification binding identity
+
+registered_capability_role
+= SYNTHETIC_C03
+
+expected_capability_role
+= C03
+```
 
 Purpose:
 
@@ -1147,6 +1303,14 @@ Possible physical implementation:
 
 Exact choice deferred to implementation design/aggregate review.
 
+Real-profile resolution must also prove:
+
+```
+registered capability role = C03
+```
+
+rather than accepting a broad capability package id as equivalent to C03.
+
 ## U06-RDP05-IMP-02 — release registries/resolvers as applicable
 
 If real profile needs Rule/Knowledge releases:
@@ -1166,8 +1330,10 @@ Resolve optional/multi-ref release trace and conditional Prompt/Model provenance
 No governed C03 runtime implementation currently exists.
 
 Need either:
-- PROFILE-A real governed C03;
-- or PROFILE-B synthetic nonprod adapter.
+- PROFILE-A real governed C03 with registered capability role = C03;
+- or PROFILE-B synthetic nonprod adapter with explicit role = SYNTHETIC_C03.
+
+The broad `adult_respiratory_v1` package id alone is not a C03 implementation identity.
 
 ## U06-RDP05-IMP-05 — D04 executable policy/adapter
 
@@ -1227,7 +1393,16 @@ No contradiction:
 - RDP-01 asks whether required refs/source authority are present/current enough to admit;
 - RDP-05 defines which refs are required for the exact dependency profile and whether they are authorized.
 
-For PROFILE-B synthetic structural verification, the admitted refs must identify the synthetic dependency profile explicitly; they must not masquerade as production CapabilityBindingRefs.
+For PROFILE-B synthetic structural verification, the admitted refs must identify:
+
+```
+dependency_binding_type = SYNTHETIC_VERIFICATION_BINDING
+dependency_binding_ref = synthetic verification binding identity
+```
+
+and must not masquerade as production CapabilityBindingRefs.
+
+This creates an explicit aggregate compatibility amendment impact on the current RDP-01 wording `capability_binding_ref = REQUIRED`; aggregate review must reconcile the normalized binding field without weakening the rule that every MODE-1/MODE-2 admission has a stable governed dependency-binding identity.
 
 ---
 
@@ -1474,4 +1649,71 @@ Next after independent design PASS:
 
 ```
 U06-RDP-02 F3 Owner / D04 Question Policy Contract
+```
+
+
+---
+
+# 37. Independent Design Review Remediation
+
+Initial Independent Design Review:
+
+```
+PR #231
+review_id = 5287371485
+verdict = REVISE_REQUIRED
+```
+
+Findings:
+
+```
+BF-U06-RDP05-IR-01
+= SYNTHETIC_BINDING_IDENTITY_CONFLICT_WITH_RDP01
+
+BF-U06-RDP05-IR-02
+= C03_IMPLEMENTATION_IDENTITY_NOT_EXPLICIT
+```
+
+Remediation:
+
+1. introduced typed dependency binding identity:
+   - `REAL_CAPABILITY_BINDING`;
+   - `SYNTHETIC_VERIFICATION_BINDING`;
+
+2. introduced normalized:
+   - `dependency_binding_type`;
+   - `dependency_binding_ref`;
+
+3. froze PROFILE-A to require a real P06 CapabilityBindingRef;
+
+4. froze PROFILE-B to require a synthetic verification binding that:
+   - never enters the real P06 registry as ACTIVE;
+   - cannot be consumed by production/live paths;
+   - is explicitly synthetic/non-patient;
+
+5. recorded the existing RDP-01 `capability_binding_ref = REQUIRED` wording as an explicit aggregate compatibility amendment impact rather than silently violating it;
+
+6. froze:
+   `expected_capability_role = C03`
+   for real MODE-1/MODE-2 C03 consumption;
+
+7. clarified:
+   `adult_respiratory_v1`
+   is broad package/asset provenance, not automatically a C03 implementation identity;
+
+8. froze PROFILE-B role as:
+   `SYNTHETIC_C03`
+   without any claim of C03 activation or Quality Gate PASS.
+
+Current:
+
+```
+BF-U06-RDP05-IR-01
+= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+BF-U06-RDP05-IR-02
+= REMEDIATED / TARGETED_RE_REVIEW_PENDING
+
+U06-RDP-05
+= REVISED / TARGETED_RE_REVIEW_PENDING
 ```
