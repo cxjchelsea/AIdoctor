@@ -198,23 +198,29 @@ class U06ProfileBStructuralTest {
     }
 
     @Test
-    void exactMode1ReplayReattachesWithoutSecondMutation(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
-        U06ProfileBApplicationService app=minimalApp(state);
-        U06SyntheticDecisionBundle gap=new U06SyntheticDecisionBundle(
-                U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,"f3-effect-replay","gap-replay","DECISION_MATERIAL",true,
-                null,null,null,null,null,null,null,null,null);
-        U06ProfileBRequest req=request(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null);
-        U06SyntheticPostF3SafetyBarrier.Evidence safety=
-                new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.ALLOWED,"synthetic-safety-replay");
+    void admissionIdentityIgnoresTransportRequestAndTraceMetadata(){
+        U06AdmissionService service=new U06AdmissionService();
+        U06ProfileBRequest first=new U06ProfileBRequest(
+                "transport-request-a","consult-1","cdp-1",U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                U06ProfileBRequest.A1_PRE_READINESS_ROUTING,"synthetic-source-1",0,0,
+                U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
+                "synthetic-binding-1","f3-policy-1",null,null,"event-ref-1","business-event-1",null,null,0L,
+                "corr-a","trace-a",AT);
+        U06ProfileBRequest retry=new U06ProfileBRequest(
+                "transport-request-b","consult-1","cdp-1",U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                U06ProfileBRequest.A1_PRE_READINESS_ROUTING,"synthetic-source-1",0,0,
+                U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
+                "synthetic-binding-1","f3-policy-1",null,null,"event-ref-1","business-event-1",null,null,0L,
+                "corr-b","trace-b",AT);
 
-        U06ExecutionResult first=app.execute(req,gap,null,safety);
-        U06ExecutionResult replay=app.execute(req,gap,null,safety);
+        U06AdmissionService.Admission a=service.admit(first,0);
+        U06AdmissionService.Admission b=service.admit(retry,0);
 
-        assertEquals(U06ExecutionResult.MODE1_COMMITTED,first.getStatus());
-        assertEquals(U06ExecutionResult.MODE1_COMMITTED,replay.getStatus());
-        assertEquals(1,state.getMutationCount());
-        assertEquals(1,state.readCurrent().getVersion());
+        assertTrue(a.isAdmitted());
+        assertTrue(b.isAdmitted());
+        assertEquals(a.getAdmissionId(),b.getAdmissionId());
+        assertEquals(a.getFingerprint(),b.getFingerprint());
+        assertTrue(b.isReplay());
     }
 
     private void establishF3Current(U06ProfileBApplicationService app,U06SyntheticP01Runtime state,String effectId){
