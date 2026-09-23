@@ -6,7 +6,7 @@
 > Parent head: **332f4e1d341051232325fdbd60192f3ade6cbffa**  
 > Runtime repository basis: **main@7b37c03026cb17e89e3d7769df2b1bb1f03a9ca8**  
 > Scope: **VERIFICATION / DURABLE EVIDENCE DESIGN ONLY**  
-> Status: **DRAFT / READY_FOR_INDEPENDENT_DESIGN_REVIEW**  
+> Status: **PASS / CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE**  
 > This document defines how future U06 implementation must be verified. It does not authorize implementation, real C03/D04 activation, real patient delivery, merge, production, or real-patient traffic.
 
 ---
@@ -2347,7 +2347,7 @@ It only freezes what those future verification assets must prove.
 
 # 53. Readiness blocker disposition
 
-If Independent Design Review passes:
+Second Targeted Independent Design Re-Review has passed:
 
 ~~~text
 BF-U06-RG-06
@@ -2488,38 +2488,46 @@ Additional remediation:
 
 8. added U06_AUTHORIZED_SHARED_RUNTIME_CHANGE_MANIFEST and required changed-file computation from exact bound Git diff rather than SUT self-report.
 
+Second Targeted Independent Design Re-Review:
+
+~~~text
+review_id = 5287974250
+verdict = PASS
+reviewed_head = 49bb7817b150202daed8041b2bb9d6c9a64dfc97
+~~~
+
 Current:
 
 ~~~text
 BF-U06-RDP06-IR-01
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP06-IR-02
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP06-IR-03
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP06-IR-04
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP06-IR-05
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP06-TR-01
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP06-TR-02
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP06-TR-03
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 U06-RDP-06
-= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= PASS
 
 BF-U06-RG-06
-= OPEN / DESIGN_RE_REVIEW_PENDING
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
 
 U06 Implementation Readiness
 = NOT_READY
@@ -2528,11 +2536,35 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-# 57. Revised verdict
+# 57. Final Design Review Provenance
 
 ~~~text
+Initial Independent Design Review
+= REVISE_REQUIRED
+review_id = 5287844164
+reviewed_head = c6724b010918f728099299309e27ea9b402d27bb
+
+Targeted Independent Design Re-Review
+= REVISE_REQUIRED
+review_id = 5287857225
+reviewed_head = 1ddf342ce43de8ac94943ec1afe295e2aa29a7ee
+
+Second Targeted Independent Design Re-Review
+= PASS
+review_id = 5287974250
+reviewed_head = 49bb7817b150202daed8041b2bb9d6c9a64dfc97
+
 U06-RDP-06
-= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= PASS
+
+BF-U06-RG-06
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
+~~~
+
+Next governance step:
+
+~~~text
+U06 Aggregate Compatibility Review / Controlled Amendment
 ~~~
 
 No implementation, synthetic adapter implementation, real C03/D04 activation, external delivery, merge, production, or real-patient authorization is granted.
