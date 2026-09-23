@@ -36,8 +36,8 @@ jobs:
       - name: Exact allowed-change diff guard
         shell: bash
         run: |
-          git diff --name-only "$U06_IMPLEMENTATION_BASE"...HEAD > /tmp/u06_changed.txt
-          while IFS= read -r f; do
+          git diff --name-only -z "$U06_IMPLEMENTATION_BASE"...HEAD > /tmp/u06_changed.bin
+          while IFS= read -r -d '' f; do
             case "$f" in
               diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/*) ;;
               diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/ConsultationRecord.java) ;;
@@ -59,7 +59,7 @@ jobs:
               docs/current/06_开发单元/u06_implementation/*) ;;
               *) echo "UNAUTHORIZED_CHANGE=$f"; exit 1 ;;
             esac
-          done < /tmp/u06_changed.txt
+          done < /tmp/u06_changed.bin
       - name: Structural no-live guard
         shell: bash
         run: |
