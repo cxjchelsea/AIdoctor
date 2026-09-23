@@ -244,7 +244,21 @@ class U06ProfileBStructuralTest {
                         U06SyntheticDecisionInput.POLICY_ALLOW_CONTINUE,tie),
                 state.readCurrent());
         assertEquals(U06SyntheticDecisionBundle.FAILED,tied.getQuestionSelectionStatus());
-        assertEquals(U06SyntheticDecisionBundle.FAILED,tied.getD04Status());
+        assertEquals(U06SyntheticDecisionBundle.CONTINUE,tied.getD04Status());
+    }
+
+    @Test
+    void syntheticDecisionEngineDoesNotInventD04ForC03Failure(){
+        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticDecisionBundle failed=new U06SyntheticDecisionEngine().decide(
+                request(U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,0,"thread-1","run-1"),
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.DEPENDENCY_FAILURE,false,false,null,null,false,
+                        null,Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
+                state.readCurrent());
+
+        assertEquals(U06SyntheticDecisionBundle.FAILED,failed.getQuestionSelectionStatus());
+        assertNull(failed.getD04Status());
     }
 
     @Test
