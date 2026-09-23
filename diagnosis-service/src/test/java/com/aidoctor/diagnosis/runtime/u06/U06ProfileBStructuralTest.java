@@ -177,10 +177,10 @@ class U06ProfileBStructuralTest {
     void mode3SameIdentityChangedEvidenceConflictsAndNeverMutates(){
         U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06ProfileBApplicationService app=minimalApp(state);
-        establishF3Current(app,state,"f3-effect-mode3");
+        String currentEffect=establishF3Current(app,state);
 
         U06SyntheticDecisionBundle first=new U06SyntheticDecisionBundle(
-                U06SyntheticDecisionBundle.NOT_DECIDABLE,"f3-effect-mode3",null,null,false,null,null,null,null,null,null,null,
+                U06SyntheticDecisionBundle.NOT_DECIDABLE,currentEffect,null,null,false,null,null,null,null,null,null,null,
                 U06SyntheticDecisionBundle.REVALIDATED_CURRENT,"revalidation-1");
         U06ExecutionResult r1=app.execute(
                 request(U06ProfileBRequest.F3_CURRENT_VERSION_REVALIDATION,U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,1,null,null),
@@ -204,12 +204,12 @@ class U06ProfileBStructuralTest {
     void mode3NeverMutatesClinicalState(){
         U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06ProfileBApplicationService app=minimalApp(state);
-        establishF3Current(app,state,"f3-effect-current");
+        String currentEffect=establishF3Current(app,state);
         int mutationsBefore=state.getMutationCount();
         int versionBefore=state.readCurrent().getVersion();
 
         U06SyntheticDecisionBundle d=new U06SyntheticDecisionBundle(
-                U06SyntheticDecisionBundle.NOT_DECIDABLE,"f3-effect-current",null,null,false,null,null,null,null,null,null,null,
+                U06SyntheticDecisionBundle.NOT_DECIDABLE,currentEffect,null,null,false,null,null,null,null,null,null,null,
                 U06SyntheticDecisionBundle.REVALIDATED_CURRENT,"revalidation-current");
         U06ExecutionResult result=app.execute(
                 request(U06ProfileBRequest.F3_CURRENT_VERSION_REVALIDATION,U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,versionBefore,null,null),
@@ -297,28 +297,23 @@ class U06ProfileBStructuralTest {
         assertTrue(b.isReplay());
     }
 
-    private void establishF3Current(U06ProfileBApplicationService app,U06SyntheticP01Runtime state,String effectId){
+    private String establishF3Current(U06ProfileBApplicationService app,U06SyntheticP01Runtime state){
         U06ProfileBRequest req=request(
                 U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null);
-        U06SyntheticDecisionBundle generated=new U06SyntheticDecisionEngine().decide(
+        U06SyntheticDecisionBundle gap=new U06SyntheticDecisionEngine().decide(
                 req,
                 new U06SyntheticDecisionInput(
                         U06SyntheticDecisionInput.SUCCESS,false,true,null,null,false,
                         null,Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
                 state.readCurrent());
-        U06SyntheticDecisionBundle gap=new U06SyntheticDecisionBundle(
-                generated.getF3OwnerStatus(),effectId,generated.getGapId(),generated.getGapDecisionImpact(),
-                generated.isAskableOnline(),generated.getD04Status(),generated.getQuestionSelectionStatus(),
-                generated.getQuestionSelectionEffectId(),generated.getQuestionId(),generated.getQuestionSemanticKey(),
-                generated.getQuestionContentRef(),generated.getQuestionContentFingerprint(),
-                generated.getRevalidationStatus(),generated.getRevalidationRef());
         U06ExecutionResult result=app.execute(
                 req,
                 gap,
                 null,
                 new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.ALLOWED,"synthetic-safety-mode3"));
         assertEquals(U06ExecutionResult.MODE1_COMMITTED,result.getStatus());
-        assertEquals(effectId,state.readCurrent().mapString("/patient_state/f3_gap_assessment","f3_canonical_effect_id"));
+        assertEquals(gap.getF3CanonicalEffectId(),state.readCurrent().mapString("/patient_state/f3_gap_assessment","f3_canonical_effect_id"));
+        return gap.getF3CanonicalEffectId();
     }
 
     private U06ProfileBApplicationService minimalApp(U06SyntheticP01Runtime state){
