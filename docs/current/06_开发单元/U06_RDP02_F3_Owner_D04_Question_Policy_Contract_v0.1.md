@@ -402,12 +402,26 @@ C03 NO_RESULT
 It produces no positive F3 truth.
 
 MODE-1:
-- no canonical no-gap effect may be invented from NO_RESULT;
-- owner consequence is non-decidable/failure handling.
+
+~~~text
+C03 NO_RESULT
+→ F3AssessmentOwnerDecision = NOT_DECIDABLE
+→ no canonical positive/negative F3 truth
+→ no Question
+~~~
 
 MODE-2:
-- no Question may be selected from NO_RESULT;
-- path becomes typed no-candidate/no-progress handling.
+
+~~~text
+C03 NO_RESULT
+→ F3QuestionSelectionDecision = NO_SELECTION
+→ reason = C03_NO_RESULT
+→ D04 CONTINUE/STOP must not be inferred
+→ no Question
+→ no WAITING_USER
+~~~
+
+This capability-no-result branch is not D04 STOP evidence and is not itself F3_QUESTION_PATH_NO_PROGRESS evidence. It remains eligible for governed retry/failure routing or explicit source-owner reevaluation under later RDP/runtime policy.
 
 ## 8.3 INSUFFICIENT_INFORMATION
 
@@ -449,6 +463,20 @@ In neither case may INSUFFICIENT_INFORMATION become automatic permission to ask.
 ## 8.4 DEPENDENCY_FAILURE / TIMEOUT / INVALID_OUTPUT
 
 All are execution/capability failures.
+
+Exact owner mapping:
+
+~~~text
+MODE-1
+→ F3AssessmentOwnerDecision = FAILED
+→ no canonical F3 truth
+
+MODE-2
+→ F3QuestionSelectionDecision = FAILED
+→ D04 not inferred
+→ no Question
+→ no WAITING_USER
+~~~
 
 They must never become:
 
@@ -1656,7 +1684,12 @@ Remediation applied:
 3. froze C03 INSUFFICIENT_INFORMATION per mode:
    - MODE-1 -> NOT_DECIDABLE;
    - MODE-2 -> NO_SELECTION / C03_INSUFFICIENT_FOR_SELECTION unless the approved contract classifies it as FAILED;
-   - never inferred CONTINUE/STOP or WAITING_USER.
+   - never inferred CONTINUE/STOP or WAITING_USER;
+
+4. hardened the remaining C03 status mappings:
+   - NO_RESULT -> MODE-1 NOT_DECIDABLE / MODE-2 NO_SELECTION;
+   - DEPENDENCY_FAILURE / TIMEOUT / INVALID_OUTPUT -> owner/selection FAILED;
+   - none of these statuses may be inferred as D04 STOP or Clinical Readiness.
 
 Current:
 
