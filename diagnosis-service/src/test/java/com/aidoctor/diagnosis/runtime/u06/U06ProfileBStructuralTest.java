@@ -81,23 +81,36 @@ class U06ProfileBStructuralTest {
         };
         U06ProfileBApplicationService app=new U06ProfileBApplicationService(new U06AdmissionService(),state,delivery,consultationWait,waitCoordinator,traces);
 
-        U06SyntheticDecisionBundle gap=new U06SyntheticDecisionBundle(
-                U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,"f3-effect-1","gap-1","DECISION_MATERIAL",true,
-                null,null,null,null,null,null,null,null,null);
+        U06SyntheticDecisionEngine engine=new U06SyntheticDecisionEngine();
+        U06ProfileBRequest mode1Request=request(
+                U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null);
+        U06SyntheticDecisionBundle gap=engine.decide(
+                mode1Request,
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,true,false,"gap-1","DECISION_MATERIAL",true,
+                        null,Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
+                state.readCurrent());
         U06ExecutionResult m1=app.execute(
-                request(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null),
+                mode1Request,
                 gap,
                 null,
                 new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.ALLOWED,"synthetic-safety-allowed-1"));
         assertEquals(U06ExecutionResult.MODE1_COMMITTED,m1.getStatus());assertEquals(1,state.readCurrent().getVersion());
 
-        U06SyntheticDecisionBundle selected=new U06SyntheticDecisionBundle(
-                U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,"f3-effect-1","gap-1","DECISION_MATERIAL",true,
-                U06SyntheticDecisionBundle.CONTINUE,U06SyntheticDecisionBundle.SELECTED,"select-effect-1",
-                "question-1","semantic-1","synthetic-content-ref-1","content-fingerprint-1",null,null);
+        U06ProfileBRequest mode2Request=request(
+                U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,1,"thread-1","run-1");
+        U06SyntheticDecisionBundle selected=engine.decide(
+                mode2Request,
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,false,false,"gap-1","DECISION_MATERIAL",true,
+                        U06SyntheticDecisionInput.POLICY_ALLOW_CONTINUE,
+                        Collections.singletonList(new U06SyntheticDecisionInput.Candidate(
+                                "candidate-1","question-1","semantic-1","synthetic-content-ref-1",
+                                "content-fingerprint-1",10,true))),
+                state.readCurrent());
         U06SyntheticDeliveryService.ScopeAuthorization scope=new U06SyntheticDeliveryService.ScopeAuthorization(
                 "consult-1",U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,"fixture-scope-1","synthetic-store-1","ci-nonprod-u06","synthetic-endpoint-1",false,false,false);
-        U06ExecutionResult m2=app.execute(request(U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,1,"thread-1","run-1"),selected,scope);
+        U06ExecutionResult m2=app.execute(mode2Request,selected,scope);
 
         assertEquals(U06ExecutionResult.WAIT_ESTABLISHED,m2.getStatus());
         assertEquals(3,state.readCurrent().getVersion());
@@ -113,11 +126,16 @@ class U06ProfileBStructuralTest {
     void mode1BlockedSafetyStopsAfterCanonicalCommitWithoutQuestionOrWait(){
         U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06ProfileBApplicationService app=minimalApp(state);
-        U06SyntheticDecisionBundle gap=new U06SyntheticDecisionBundle(
-                U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,"f3-effect-blocked","gap-blocked","DECISION_MATERIAL",true,
-                null,null,null,null,null,null,null,null,null);
+        U06ProfileBRequest req=request(
+                U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null);
+        U06SyntheticDecisionBundle gap=new U06SyntheticDecisionEngine().decide(
+                req,
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,true,false,"gap-blocked","DECISION_MATERIAL",true,
+                        null,Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
+                state.readCurrent());
         U06ExecutionResult result=app.execute(
-                request(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null),
+                req,
                 gap,
                 null,
                 new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.BLOCKED,"synthetic-safety-blocked-1"));
@@ -132,17 +150,22 @@ class U06ProfileBStructuralTest {
         U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         InMemoryDeliveryStore deliveryStore=new InMemoryDeliveryStore();
         U06ProfileBApplicationService app=minimalApp(state,deliveryStore);
-        U06SyntheticDecisionBundle selected=new U06SyntheticDecisionBundle(
-                U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,"f3-effect-1","gap-1","DECISION_MATERIAL",true,
-                U06SyntheticDecisionBundle.CONTINUE,U06SyntheticDecisionBundle.SELECTED,"select-effect-missing-runtime",
-                "question-1","semantic-1","synthetic-content-ref-1","content-fingerprint-1",null,null);
+        U06ProfileBRequest req=request(
+                U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,0,null,null);
+        U06SyntheticDecisionBundle selected=new U06SyntheticDecisionEngine().decide(
+                req,
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,false,false,"gap-1","DECISION_MATERIAL",true,
+                        U06SyntheticDecisionInput.POLICY_ALLOW_CONTINUE,
+                        Collections.singletonList(new U06SyntheticDecisionInput.Candidate(
+                                "candidate-missing-runtime","question-1","semantic-1","synthetic-content-ref-1",
+                                "content-fingerprint-1",1,true))),
+                state.readCurrent());
         U06SyntheticDeliveryService.ScopeAuthorization scope=new U06SyntheticDeliveryService.ScopeAuthorization(
                 "consult-1",U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,"fixture-scope-1","synthetic-store-1",
                 "ci-nonprod-u06","synthetic-endpoint-1",false,false,false);
 
-        U06ExecutionResult result=app.execute(
-                request(U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,0,null,null),
-                selected,scope);
+        U06ExecutionResult result=app.execute(req,selected,scope);
 
         assertEquals(U06ExecutionResult.ADMISSION_REJECTED,result.getStatus());
         assertEquals("U06_RUNTIME_WAIT_INPUT_REQUIRED",result.getReasonCode());
@@ -198,6 +221,57 @@ class U06ProfileBStructuralTest {
     }
 
     @Test
+    void syntheticDecisionEngineMapsNoResultAndTieFailClosed(){
+        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticDecisionEngine engine=new U06SyntheticDecisionEngine();
+
+        U06SyntheticDecisionBundle noResult=engine.decide(
+                request(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null),
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.NO_RESULT,false,false,null,null,false,
+                        null,Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
+                state.readCurrent());
+        assertEquals(U06SyntheticDecisionBundle.NOT_DECIDABLE,noResult.getF3OwnerStatus());
+        assertNull(noResult.getF3CanonicalEffectId());
+
+        List<U06SyntheticDecisionInput.Candidate> tie=Arrays.asList(
+                new U06SyntheticDecisionInput.Candidate("c1","q1","semantic-q1","ref-q1","fp-q1",1,true),
+                new U06SyntheticDecisionInput.Candidate("c2","q2","semantic-q2","ref-q2","fp-q2",1,true));
+        U06SyntheticDecisionBundle tied=engine.decide(
+                request(U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,0,"thread-1","run-1"),
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,false,false,"gap-1","DECISION_MATERIAL",true,
+                        U06SyntheticDecisionInput.POLICY_ALLOW_CONTINUE,tie),
+                state.readCurrent());
+        assertEquals(U06SyntheticDecisionBundle.FAILED,tied.getQuestionSelectionStatus());
+        assertEquals(U06SyntheticDecisionBundle.FAILED,tied.getD04Status());
+    }
+
+    @Test
+    void syntheticDecisionEngineSuppressesCurrentSemanticDuplicate(){
+        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        Map<String,Object> existing=new LinkedHashMap<String,Object>();
+        existing.put("question_id","q-old");
+        existing.put("question_semantic_key","semantic-dup");
+        existing.put("status","SELECTED");
+        state.commit("seed-question-effect","seed-question-proposal",
+                Collections.singletonList(state.upsert("/patient_state/questions/q-old",existing)),
+                Collections.singletonList("synthetic-seed"),"corr-seed","trace-seed",AT);
+
+        U06SyntheticDecisionBundle result=new U06SyntheticDecisionEngine().decide(
+                request(U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,1,"thread-1","run-1"),
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,false,false,"gap-1","DECISION_MATERIAL",true,
+                        U06SyntheticDecisionInput.POLICY_ALLOW_CONTINUE,
+                        Collections.singletonList(new U06SyntheticDecisionInput.Candidate(
+                                "candidate-dup","q-new","semantic-dup","ref-new","fp-new",1,true))),
+                state.readCurrent());
+
+        assertEquals(U06SyntheticDecisionBundle.NO_SELECTION,result.getQuestionSelectionStatus());
+        assertEquals(U06SyntheticDecisionBundle.STOP,result.getD04Status());
+    }
+
+    @Test
     void admissionIdentityIgnoresTransportRequestAndTraceMetadata(){
         U06AdmissionService service=new U06AdmissionService();
         U06ProfileBRequest first=new U06ProfileBRequest(
@@ -224,11 +298,22 @@ class U06ProfileBStructuralTest {
     }
 
     private void establishF3Current(U06ProfileBApplicationService app,U06SyntheticP01Runtime state,String effectId){
+        U06ProfileBRequest req=request(
+                U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null);
+        U06SyntheticDecisionBundle generated=new U06SyntheticDecisionEngine().decide(
+                req,
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,false,true,null,null,false,
+                        null,Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
+                state.readCurrent());
         U06SyntheticDecisionBundle gap=new U06SyntheticDecisionBundle(
-                U06SyntheticDecisionBundle.NO_CURRENT_ONLINE_GAP_BASIS_ESTABLISHED,effectId,null,null,false,
-                null,null,null,null,null,null,null,null,null);
+                generated.getF3OwnerStatus(),effectId,generated.getGapId(),generated.getGapDecisionImpact(),
+                generated.isAskableOnline(),generated.getD04Status(),generated.getQuestionSelectionStatus(),
+                generated.getQuestionSelectionEffectId(),generated.getQuestionId(),generated.getQuestionSemanticKey(),
+                generated.getQuestionContentRef(),generated.getQuestionContentFingerprint(),
+                generated.getRevalidationStatus(),generated.getRevalidationRef());
         U06ExecutionResult result=app.execute(
-                request(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null),
+                req,
                 gap,
                 null,
                 new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.ALLOWED,"synthetic-safety-mode3"));
