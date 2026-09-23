@@ -17,7 +17,9 @@ public final class U06SyntheticDecisionBundle {
     private void validate(){if(GAP_BASIS_ESTABLISHED.equals(f3OwnerStatus)){req(f3CanonicalEffectId,"f3CanonicalEffectId");req(gapId,"gapId");req(gapDecisionImpact,"gapDecisionImpact");}
         if(SELECTED.equals(questionSelectionStatus)){if(!CONTINUE.equals(d04Status))throw new IllegalArgumentException("SELECTED requires CONTINUE");
             req(questionSelectionEffectId,"questionSelectionEffectId");req(questionId,"questionId");req(questionSemanticKey,"questionSemanticKey");
-            req(questionContentRef,"questionContentRef");req(questionContentFingerprint,"questionContentFingerprint");}}
+            req(questionContentRef,"questionContentRef");req(questionContentFingerprint,"questionContentFingerprint");}
+        if(REVALIDATED_CURRENT.equals(revalidationStatus)){req(revalidationRef,"revalidationRef");req(f3CanonicalEffectId,"f3CanonicalEffectId");}
+        if(REASSESSMENT_REQUIRED.equals(revalidationStatus)){req(revalidationRef,"revalidationRef");}}
     public String getF3OwnerStatus(){return f3OwnerStatus;}public String getF3CanonicalEffectId(){return f3CanonicalEffectId;}public String getGapId(){return gapId;}
     public String getGapDecisionImpact(){return gapDecisionImpact;}public boolean isAskableOnline(){return askableOnline;}public String getD04Status(){return d04Status;}
     public String getQuestionSelectionStatus(){return questionSelectionStatus;}public String getQuestionSelectionEffectId(){return questionSelectionEffectId;}
