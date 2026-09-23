@@ -6,7 +6,7 @@
 > Parent head: **23fd6764439f55c053691daa500fede5030411ec**  
 > Runtime repository basis: **main@7b37c03026cb17e89e3d7769df2b1bb1f03a9ca8**  
 > Scope: **STATE OWNERSHIP / K09-P01 MUTATION / REPLAY / TRACE DESIGN ONLY**  
-> Status: **DRAFT / READY_FOR_INDEPENDENT_DESIGN_REVIEW**  
+> Status: **PASS / CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE**  
 > This document grants no C03/D04 activation, U06 implementation, delivery, WAITING_USER activation, merge, production, or real-patient authorization.
 
 ---
@@ -2693,7 +2693,7 @@ but no durable matching wait-effect/question/delivery provenance
 
 # 55. Readiness blocker disposition
 
-If independent design review passes:
+Second Targeted Independent Design Re-Review has passed:
 
 ~~~text
 BF-U06-RG-03
@@ -2804,32 +2804,40 @@ Additional remediation:
 
 8. froze Consultation exact replay to require matching parent effect/question/delivery provenance, not merely lifecycle = WAITING_USER.
 
+Second Targeted Independent Design Re-Review:
+
+~~~text
+review_id = 5287691534
+verdict = PASS
+reviewed_head = f1ea963c15e3ddf686bc500364932b2d2290567d
+~~~
+
 Current:
 
 ~~~text
 BF-U06-RDP03-IR-01
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP03-IR-02
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP03-IR-03
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP03-IR-04
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP03-TR-01
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP03-TR-02
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 U06-RDP-03
-= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= PASS
 
 BF-U06-RG-03
-= OPEN / DESIGN_RE_REVIEW_PENDING
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
 
 U06 Implementation Readiness
 = NOT_READY
@@ -2838,11 +2846,36 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-# 58. Revised verdict
+# 58. Final Design Review Provenance
 
 ~~~text
+Initial Independent Design Review
+= REVISE_REQUIRED
+review_id = 5287657930
+reviewed_head = 46542fee7b4d84baaa9a500dcecbc761cf056b4f
+
+Targeted Independent Design Re-Review
+= REVISE_REQUIRED
+review_id = 5287675433
+reviewed_head = 907dd78aa40f1557a51aa256d902c2ed92c9ffc0
+
+Second Targeted Independent Design Re-Review
+= PASS
+review_id = 5287691534
+reviewed_head = f1ea963c15e3ddf686bc500364932b2d2290567d
+
 U06-RDP-03
-= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= PASS
+
+BF-U06-RG-03
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
+~~~
+
+Next recommended design:
+
+~~~text
+U06-RDP-04
+Delivery / Downstream / Side-effect Boundary
 ~~~
 
 No Shared Contracts/P01/P05 modification, C03/D04 activation, runtime implementation, delivery, WAITING_USER activation, merge, production, or real-patient authorization is granted.
