@@ -2643,7 +2643,7 @@ This amendment changes contracts only; it does not authorize runtime implementat
 # U06 Aggregate Compatibility Controlled Amendment — Phase 8 Binding Normalization
 
 > Amendment ID: U06-AGR-02  
-> Amendment status: REVIEW_PENDING / NOT_REFROZEN  
+> Amendment status: AMENDMENT_REVIEW_PASS / REF FREEZE PENDING  
 > Review package: U06 Aggregate Compatibility Review / Controlled Amendment v0.1
 
 This controlled amendment refines only the binding-identity component of the previously refrozen A1 F3 contracts.
@@ -2695,5 +2695,5 @@ Until explicit aggregate re-freeze:
 
 ```text
 Phase 8 U06-AGR-02 amendment
-= REVIEW_PENDING / NOT_CURRENT_FROZEN_BASELINE
+= AMENDMENT_REVIEW_PASS / REF FREEZE PENDING / NOT_CURRENT_FROZEN_BASELINE
 ```
