@@ -186,7 +186,10 @@ A governed C03 invocation must return typed:
 capability_result_id
 capability_id = C03
 capability_version
-capability_binding_ref
+
+dependency_binding_type
+dependency_binding_ref
+capability_binding_ref?
 
 business_status
 reason_code
