@@ -6,7 +6,7 @@
 > Reviewed amendment head: `3a518619de51c4378f787165443b2a4a0ca70b1c`  
 > Independent review: **PASS** / review_id `5285738351`  
 > Exact implementation target: `2b7926afd69de9fe2224d8a5b69e91c02c2db495`  
-> Status: **OWNER DECISION PENDING**
+> Status: **AUTHORIZED / CONSUMED_FOR_TARGET_BINDING_AMENDMENT**
 
 ## 1. Decision question
 
@@ -153,10 +153,60 @@ Current:
     = AUTHORIZED
 
     AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-002A
-    = NOT_GRANTED
+    = AUTHORIZED
 
     RDP-06 authoritative verification
-    = BLOCKED_PENDING_REBIND_002A_DECISION
+    = AUTHORIZED_TO_RESUME_AFTER_EXACT_HEAD_OVERLAY_REVIEW
 
     U05 Implementation Verification
     = NOT_PASSED
+
+
+## 9. Repository Owner Decision
+
+The repository owner explicitly selected:
+
+    AUTHORIZE
+
+against exact reviewed decision-package head:
+
+    e01c95072cdd8d494df58f322f88620bf42c54a5
+
+Therefore:
+
+    AUTH-U05-RDP06-AUTHORITATIVE-VERIFIER-REBIND-002A
+    = AUTHORIZED
+
+Exact implementation target remains:
+
+    2b7926afd69de9fe2224d8a5b69e91c02c2db495
+
+Authorized verifier amendment:
+
+    exactly eight reviewed verifier paths
+    target/provenance/digest binding only
+
+Required continuation:
+
+    amend exactly eight paths
+    -> structured semantic diff guard
+    -> recompute static input digests
+    -> independent exact-head overlay/static review
+    -> authoritative exact-target RDP-06 CI
+    -> durable evidence
+    -> independent evidence-only review.
+
+Still not authorized:
+
+    any ninth verifier path
+    any EV expected-outcome change
+    any precedence semantic change
+    any fixture semantic change
+    U05 production source modification
+    shared runtime modification
+    merge
+    production activation
+    live downstream execution
+    external delivery
+    PHI / real-patient traffic
+    release activation.
