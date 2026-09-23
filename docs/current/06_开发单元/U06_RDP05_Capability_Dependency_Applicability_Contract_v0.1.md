@@ -555,12 +555,15 @@ It must:
 Therefore:
 
 ```
-RDP-01 capability_binding_ref = REQUIRED
+Pre-aggregate RDP-01 wording was:
+
+```text
+capability_binding_ref = REQUIRED
 ```
 
-must be interpreted during aggregate compatibility as:
+The aggregate amendment candidate replaces that source-neutral wording with:
 
-```
+```text
 a governed dependency binding identity is REQUIRED
 
 PROFILE-A
@@ -1405,7 +1408,7 @@ dependency_binding_ref = synthetic verification binding identity
 
 and must not masquerade as production CapabilityBindingRefs.
 
-This creates an explicit aggregate compatibility amendment impact on the current RDP-01 wording `capability_binding_ref = REQUIRED`; aggregate review must reconcile the normalized binding field without weakening the rule that every MODE-1/MODE-2 admission has a stable governed dependency-binding identity.
+This compatibility impact is addressed by the U06 aggregate amendment candidate: RDP-01 now uses dependency_binding_type + dependency_binding_ref as the source-neutral admission identity while preserving the rule that every MODE-1/MODE-2 admission has a stable governed dependency-binding identity. Explicit refreeze is still pending.
 
 ---
 
@@ -1694,7 +1697,7 @@ Remediation:
    - cannot be consumed by production/live paths;
    - is explicitly synthetic/non-patient;
 
-5. recorded the existing RDP-01 `capability_binding_ref = REQUIRED` wording as an explicit aggregate compatibility amendment impact rather than silently violating it;
+5. recorded the pre-aggregate RDP-01 capability_binding_ref requirement as an explicit aggregate compatibility impact; the current amendment candidate normalizes it to dependency_binding_type + dependency_binding_ref, pending explicit refreeze;
 
 6. froze:
    `expected_capability_role = C03`
