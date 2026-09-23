@@ -1101,7 +1101,7 @@ C = conditional
 | canonical F3 effect | - | R | C | - | R | R |
 | prior F3 revalidation decision | - | R | - | - | - | C |
 | continuation routing ref | - | C | - | - | - | R |
-| C03 current binding | R | R | R | R | - | - |
+| current dependency binding identity | R | R | R | R | - | - |
 | question policy ref | - | - | R | R | - | - |
 | historical F3 binding refs | - | C | - | - | R | R |
 | A1 bootstrap binding | R | C | - | - | R | C |
@@ -1209,6 +1209,13 @@ mode-specific business basis:
   F1 clarification requirement
   or U05 readiness/eligibility
   or F3 canonical effect/revalidation/continuation refs
+
+normalized dependency binding identity when applicable:
+  dependency_binding_type
+  + dependency_binding_ref
+
+historical normalized dependency binding identity
+when MODE-3 compatibility semantics require it
 
 admission contract version
 ```
@@ -2002,3 +2009,25 @@ U06-AGR-01
 ```
 
 No implementation or activation is authorized.
+
+
+## U06-AGR-01 Admission Identity Clarification
+
+The aggregate amendment additionally freezes:
+
+~~~text
+U06_ADMISSION_ID
+must bind the normalized dependency binding identity
+whenever MODE-1 / MODE-2 execution depends on it.
+~~~
+
+Therefore a lawful governing binding change does not reuse the prior admission identity.
+
+For MODE-3, historical normalized dependency identity participates when it is part of the revalidation compatibility basis.
+
+This preserves:
+
+~~~text
+changed governing binding
+!= exact replay
+~~~
