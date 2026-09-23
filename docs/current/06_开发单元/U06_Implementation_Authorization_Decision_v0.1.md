@@ -1,7 +1,7 @@
 # U06 Implementation Authorization Decision v0.1
 
 > Decision ID: **AUTH-U06-PROFILEB-IMPL-001**  
-> Decision status: **NOT_DECIDED**  
+> Decision status: **READY_FOR_OWNER_DECISION / NOT_DECIDED**  
 > Authorization Review: **PASS / PR #241**  
 > Reviewed authorization semantic head: **50db54beefe670b396b9b1d0044196ac49332f34**  
 > Authorization Review status head: **60401646a35819e80473aff3eddc6e82ee767275**  
@@ -689,7 +689,16 @@ Implementation
 
 # 22. Decision-package gate
 
-Before owner choice is acted upon, this package must independently prove:
+Independent Gate Review:
+
+~~~text
+PR #242
+review_id = 5288639260
+verdict = PASS
+reviewed_head = c4cdfcb01e023d427d33fff66891397395db2022
+~~~
+
+Gate proved:
 - exact authorization basis;
 - allowed-change manifest;
 - forbidden surfaces;
@@ -697,14 +706,31 @@ Before owner choice is acted upon, this package must independently prove:
 - owner-lineage rule;
 - verification thresholds;
 - PROFILE-B/PROFILE-A separation;
-- no merge/live/production leakage.
+- no merge/live/production leakage;
+- owner agency preserved.
 
 Current:
 
 ~~~text
 U06 Implementation Authorization Decision Package
-= READY_FOR_INDEPENDENT_GATE_REVIEW
+= PASS / READY_FOR_OWNER_DECISION
 
 AUTH-U06-PROFILEB-IMPL-001
 = NOT_DECIDED
+
+U06 Implementation Authorization
+= NOT_GRANTED
+
+Implementation
+= NOT_AUTHORIZED
 ~~~
+
+Owner choices:
+
+~~~text
+AUTHORIZE
+REVISE
+REJECT
+~~~
+
+This status synchronization does not itself authorize implementation.
