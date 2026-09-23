@@ -179,7 +179,7 @@ jobs:
         working-directory: sut
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Du05.verification.evidenceDir=diagnosis-service/target/u05-rdp06-evidence
+          -Du05.verification.evidenceDir=target/u05-rdp06-evidence
           -Dtest=U05ConsumerAdmissionVerificationTest,U05D03PolicyVerificationTest,U05ReadinessMutationVerificationTest,U05DownstreamRoutingVerificationTest,U05ReplayRecoveryVerificationTest,U05EvidenceHarnessVerificationTest
           test
 
@@ -447,7 +447,7 @@ jobs:
         working-directory: sut
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Du05.verification.evidenceDir=diagnosis-service/target/u05-rdp06-evidence
+          -Du05.verification.evidenceDir=target/u05-rdp06-evidence
           -Dtest=U05ConsumerAdmissionVerificationTest,U05D03PolicyVerificationTest,U05ReadinessMutationVerificationTest,U05DownstreamRoutingVerificationTest,U05ReplayRecoveryVerificationTest
           test
 
@@ -455,7 +455,7 @@ jobs:
         working-directory: sut
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Du05.verification.evidenceDir=diagnosis-service/target/u05-rdp06-evidence
+          -Du05.verification.evidenceDir=target/u05-rdp06-evidence
           -Dtest=U05EvidenceHarnessVerificationTest
           test
 
@@ -463,7 +463,7 @@ jobs:
         working-directory: sut
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Du05.verification.evidenceDir=diagnosis-service/target/u05-rdp06-evidence
+          -Du05.verification.evidenceDir=target/u05-rdp06-evidence
           test
 
       - name: G7 build regression delta summary
