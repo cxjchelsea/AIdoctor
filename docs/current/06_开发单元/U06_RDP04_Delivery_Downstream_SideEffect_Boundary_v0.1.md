@@ -6,7 +6,7 @@
 > Parent head: **09bb7f0244300fdfc750065823361ef7846802f0**  
 > Runtime repository basis: **main@7b37c03026cb17e89e3d7769df2b1bb1f03a9ca8**  
 > Scope: **DELIVERY / DOWNSTREAM / SIDE-EFFECT DESIGN ONLY**  
-> Status: **DRAFT / READY_FOR_INDEPENDENT_DESIGN_REVIEW**  
+> Status: **PASS / CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE**  
 > This document grants no real patient delivery, external transport activation, production traffic, U07 implementation, merge, or production authorization.
 
 ---
@@ -2600,7 +2600,7 @@ RECONCILIATION_REQUIRED gains authoritative completion evidence
 
 # 67. Readiness blocker disposition
 
-If Independent Design Review passes:
+Second Targeted Independent Design Re-Review has passed:
 
 ~~~text
 BF-U06-RG-04
@@ -2708,35 +2708,43 @@ Additional remediation:
 
 8. froze U06_DELIVERY_OUTCOME_ID, canonical outcome fingerprint, exact replay, non-terminal reconciliation supersession, and WAIT_ESTABLISHED terminal-success reattachment.
 
+Second Targeted Independent Design Re-Review:
+
+~~~text
+review_id = 5287784841
+verdict = PASS
+reviewed_head = 91bca9a133cd45a788d005ad6d2c0a6e3aff406f
+~~~
+
 Current:
 
 ~~~text
 BF-U06-RDP04-IR-01
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP04-IR-02
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP04-IR-03
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP04-IR-04
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP04-TR-01
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP04-TR-02
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 BF-U06-RDP04-TR-03
-= REMEDIATED / RE-REVIEW_PENDING
+= CLOSED
 
 U06-RDP-04
-= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= PASS
 
 BF-U06-RG-04
-= OPEN / DESIGN_RE_REVIEW_PENDING
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
 
 U06 Implementation Readiness
 = NOT_READY
@@ -2745,11 +2753,36 @@ U06 Implementation Authorization
 = NOT_GRANTED
 ~~~
 
-# 70. Revised verdict
+# 70. Final Design Review Provenance
 
 ~~~text
+Initial Independent Design Review
+= REVISE_REQUIRED
+review_id = 5287763500
+reviewed_head = f8df7ca17dcfe5a6f61d5042f9417e3c4d0c5c8f
+
+Targeted Independent Design Re-Review
+= REVISE_REQUIRED
+review_id = 5287775286
+reviewed_head = c68f9cc17d45d2d8378d29041e5b75ed68d5efc5
+
+Second Targeted Independent Design Re-Review
+= PASS
+review_id = 5287784841
+reviewed_head = 91bca9a133cd45a788d005ad6d2c0a6e3aff406f
+
 U06-RDP-04
-= REVISED / READY_FOR_SECOND_TARGETED_INDEPENDENT_DESIGN_RE_REVIEW
+= PASS
+
+BF-U06-RG-04
+= CONTRACT_DESIGNED / PENDING_AGGREGATE_CLOSURE
+~~~
+
+Next recommended design:
+
+~~~text
+U06-RDP-06
+Verification / Evidence Contract
 ~~~
 
 No real patient delivery, external transport activation, U06/U07 implementation, merge, production, or real-patient authorization is granted.
