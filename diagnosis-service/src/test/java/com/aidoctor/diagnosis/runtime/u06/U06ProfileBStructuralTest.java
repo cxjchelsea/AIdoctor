@@ -154,33 +154,80 @@ class U06ProfileBStructuralTest {
     void mode3SameIdentityChangedEvidenceConflictsAndNeverMutates(){
         U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06ProfileBApplicationService app=minimalApp(state);
+        establishF3Current(app,state,"f3-effect-mode3");
+
         U06SyntheticDecisionBundle first=new U06SyntheticDecisionBundle(
-                U06SyntheticDecisionBundle.NOT_DECIDABLE,null,null,null,false,null,null,null,null,null,null,null,
+                U06SyntheticDecisionBundle.NOT_DECIDABLE,"f3-effect-mode3",null,null,false,null,null,null,null,null,null,null,
                 U06SyntheticDecisionBundle.REVALIDATED_CURRENT,"revalidation-1");
         U06ExecutionResult r1=app.execute(
-                request(U06ProfileBRequest.F3_CURRENT_VERSION_REVALIDATION,U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,0,null,null),
+                request(U06ProfileBRequest.F3_CURRENT_VERSION_REVALIDATION,U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,1,null,null),
                 first,null);
         assertEquals(U06ExecutionResult.REVALIDATED_CURRENT,r1.getStatus());
 
         U06ProfileBRequest changed=new U06ProfileBRequest(
                 "req-mode3-changed","consult-1","cdp-1",U06ProfileBRequest.F3_CURRENT_VERSION_REVALIDATION,
-                U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,"synthetic-source-CHANGED",0,0,
+                U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,"synthetic-source-CHANGED",1,1,
                 U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
                 "synthetic-binding-1","f3-policy-1",null,null,"event-ref-1","business-event-1",null,null,0L,
                 "corr-1","trace-1",AT);
         U06ExecutionResult r2=app.execute(changed,first,null);
         assertEquals(U06ExecutionResult.FAILURE_REQUIRED,r2.getStatus());
         assertEquals(U06SyntheticRevalidationAuthority.REPLAY_CONFLICT,r2.getReasonCode());
-        assertEquals(0,state.getMutationCount());
+        assertEquals(1,state.getMutationCount());
+        assertEquals(1,state.readCurrent().getVersion());
     }
 
     @Test
     void mode3NeverMutatesClinicalState(){
         U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06ProfileBApplicationService app=minimalApp(state);
-        U06SyntheticDecisionBundle d=new U06SyntheticDecisionBundle(U06SyntheticDecisionBundle.NOT_DECIDABLE,null,null,null,false,null,null,null,null,null,null,null,U06SyntheticDecisionBundle.REVALIDATED_CURRENT,"revalidation-1");
-        U06ExecutionResult result=app.execute(request(U06ProfileBRequest.F3_CURRENT_VERSION_REVALIDATION,U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,0,null,null),d,null);
-        assertEquals(U06ExecutionResult.REVALIDATED_CURRENT,result.getStatus());assertEquals(0,state.getMutationCount());assertEquals(0,state.readCurrent().getVersion());
+        establishF3Current(app,state,"f3-effect-current");
+        int mutationsBefore=state.getMutationCount();
+        int versionBefore=state.readCurrent().getVersion();
+
+        U06SyntheticDecisionBundle d=new U06SyntheticDecisionBundle(
+                U06SyntheticDecisionBundle.NOT_DECIDABLE,"f3-effect-current",null,null,false,null,null,null,null,null,null,null,
+                U06SyntheticDecisionBundle.REVALIDATED_CURRENT,"revalidation-current");
+        U06ExecutionResult result=app.execute(
+                request(U06ProfileBRequest.F3_CURRENT_VERSION_REVALIDATION,U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,versionBefore,null,null),
+                d,null);
+
+        assertEquals(U06ExecutionResult.REVALIDATED_CURRENT,result.getStatus());
+        assertEquals(mutationsBefore,state.getMutationCount());
+        assertEquals(versionBefore,state.readCurrent().getVersion());
+    }
+
+    @Test
+    void exactMode1ReplayReattachesWithoutSecondMutation(){
+        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06ProfileBApplicationService app=minimalApp(state);
+        U06SyntheticDecisionBundle gap=new U06SyntheticDecisionBundle(
+                U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,"f3-effect-replay","gap-replay","DECISION_MATERIAL",true,
+                null,null,null,null,null,null,null,null,null);
+        U06ProfileBRequest req=request(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null);
+        U06SyntheticPostF3SafetyBarrier.Evidence safety=
+                new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.ALLOWED,"synthetic-safety-replay");
+
+        U06ExecutionResult first=app.execute(req,gap,null,safety);
+        U06ExecutionResult replay=app.execute(req,gap,null,safety);
+
+        assertEquals(U06ExecutionResult.MODE1_COMMITTED,first.getStatus());
+        assertEquals(U06ExecutionResult.MODE1_COMMITTED,replay.getStatus());
+        assertEquals(1,state.getMutationCount());
+        assertEquals(1,state.readCurrent().getVersion());
+    }
+
+    private void establishF3Current(U06ProfileBApplicationService app,U06SyntheticP01Runtime state,String effectId){
+        U06SyntheticDecisionBundle gap=new U06SyntheticDecisionBundle(
+                U06SyntheticDecisionBundle.NO_CURRENT_ONLINE_GAP_BASIS_ESTABLISHED,effectId,null,null,false,
+                null,null,null,null,null,null,null,null,null);
+        U06ExecutionResult result=app.execute(
+                request(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null),
+                gap,
+                null,
+                new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.ALLOWED,"synthetic-safety-mode3"));
+        assertEquals(U06ExecutionResult.MODE1_COMMITTED,result.getStatus());
+        assertEquals(effectId,state.readCurrent().mapString("/patient_state/f3_gap_assessment","f3_canonical_effect_id"));
     }
 
     private U06ProfileBApplicationService minimalApp(U06SyntheticP01Runtime state){
