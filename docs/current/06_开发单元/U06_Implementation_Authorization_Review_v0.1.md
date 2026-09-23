@@ -5,7 +5,7 @@
 > Readiness basis: **U06 Post-Physical-Design Implementation Readiness Re-Evaluation / PR #240**  
 > Reviewed readiness semantic head: **8122e7c11bd069106d5e99c64331981f22cee7c9**  
 > Current readiness status head: **337f2176b39e1454bc848d6ecdeaaafe5a2012a7**  
-> Status: **DRAFT / READY_FOR_INDEPENDENT_AUTHORIZATION_REVIEW**  
+> Status: **PASS / ELIGIBLE_FOR_EXPLICIT_REPOSITORY_OWNER_DECISION**  
 > This document does not itself grant implementation authorization.
 
 ---
@@ -985,15 +985,51 @@ Owner decision remains a later explicit action.
 
 ---
 
-# 29. Revised verdict
+# 29. Final Authorization Review Provenance
+
+~~~text
+Initial Independent Authorization Review
+= REVISE_REQUIRED
+review_id = 5288601353
+reviewed_head = 2ac9d8f33e2f66b7bb682fcd2930c03470c1b943
+
+Targeted Independent Authorization Re-Review
+= PASS
+review_id = 5288613782
+reviewed_head = 50db54beefe670b396b9b1d0044196ac49332f34
+~~~
+
+# 30. Final authorization-review verdict
 
 ~~~text
 U06 Implementation Authorization Review
-= REVISED / READY_FOR_TARGETED_INDEPENDENT_AUTHORIZATION_RE_REVIEW
+= PASS
 
 AUTH-U06-PROFILEB-IMPL-001
-= NOT_DECIDED
+= ELIGIBLE_FOR_EXPLICIT_REPOSITORY_OWNER_DECISION
+
+BF-U06-IA-IR-01
+= CLOSED
+
+BF-U06-IA-IR-02
+= CLOSED
+
+BF-U06-IA-IR-03
+= CLOSED
+
+U06 Implementation Authorization
+= NOT_GRANTED
 
 Implementation
 = NOT_AUTHORIZED
 ~~~
+
+Next governance step:
+
+~~~text
+U06 Implementation Authorization Decision Package
+→ explicit owner choice:
+AUTHORIZE / REVISE / REJECT
+~~~
+
+This status synchronization does not grant implementation authorization.
