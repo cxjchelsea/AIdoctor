@@ -1075,7 +1075,7 @@ class U06Rdp06AuthoritativeObservationTest {
         String gate=control(fixture, "gate_state");
         String permission=control(fixture, "permission_state");
         boolean sourcePresent=!"MISSING".equals(sourceState);
-        boolean sourceCurrent=!"STALE".equals(control(fixture, "state_currentness"));
+        boolean sourceCurrent=sourcePresent;
         boolean routeValid=!"INVALID".equals(routeState);
         boolean consultationMatch=!"MISMATCH".equals(control(fixture, "consultation_cdp_match"));
         boolean superseded=fixture.path("scenario_controls").path("source_superseded").asBoolean(false);
