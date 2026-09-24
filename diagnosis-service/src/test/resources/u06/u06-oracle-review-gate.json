@@ -1,0 +1,16 @@
+{
+  "schema": "U06_ORACLE_REVIEW_GATE_V0_1",
+  "oracle_review_id": "5298506940",
+  "reviewed_oracle_digest": "6e7de2ab663bb683902514ba244eaafb8986b43b5bbb3caf5cc8916dbe5a865e",
+  "reviewed_contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+  "reviewed_contract_manifest_blob_sha": "d06ae221d0bc6724d422257d66b0337472e63b51",
+  "reviewed_freeze_head": "995528242cc87ea3e9abc5f7787d7edf9e281f66",
+  "reviewer_role": "INDEPENDENT_CONTRACT_ORACLE_REVIEW",
+  "independence_marker": "EXPECTATION_AUTHORITY_DERIVED_FROM_FROZEN_CONTRACT_NOT_SUT_OUTPUT",
+  "verdict": "PASS",
+  "reviewed_at": "2026-09-24",
+  "finding_refs": [
+    "BF-U06-ORACLE-IR-01:CLOSED",
+    "BF-U06-ORACLE-IR-02:CLOSED"
+  ]
+}
