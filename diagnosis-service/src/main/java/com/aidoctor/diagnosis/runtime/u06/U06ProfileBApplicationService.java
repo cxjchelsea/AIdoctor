@@ -45,7 +45,9 @@ public final class U06ProfileBApplicationService {
     public U06ExecutionResult execute(U06ProfileBRequest r,U06SyntheticDecisionBundle d,
                                       U06SyntheticDeliveryService.ScopeAuthorization scope,
                                       U06SyntheticPostF3SafetyBarrier.Evidence safetyEvidence) {
-        U06AdmissionService.Admission a=admission.admit(r,state.readCurrent().getVersion());
+        U06SyntheticP01Runtime.StateView current=state.readCurrent();
+        boolean exactReplay=exactAuthoritativeReplayEvidence(r,d,current);
+        U06AdmissionService.Admission a=admission.admit(r,current.getVersion(),exactReplay);
         if(!a.isAdmitted())
             return new U06ExecutionResult(U06ExecutionResult.ADMISSION_REJECTED,a.getAdmissionId(),
                     null,null,null,null,null,null,a.getReasonCode());
@@ -58,16 +60,25 @@ public final class U06ProfileBApplicationService {
         trace.start(tr,r.getConsultationId(),a.getAdmissionId(),r.getMode(),r.getExecutionProfile(),
                 a.getFingerprint(),r.getCreatedAt());
 
-        U06ExecutionResult result;
-        if(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT.equals(r.getMode()))
-            result=mode1(r,a,d,safetyEvidence);
-        else if(U06ProfileBRequest.QUESTION_SELECTION_DELIVERY.equals(r.getMode()))
-            result=mode2(r,a,d,scope);
-        else
-            result=mode3(r,a,d);
+        try {
+            U06ExecutionResult result;
+            if(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT.equals(r.getMode()))
+                result=mode1(r,a,d,safetyEvidence);
+            else if(U06ProfileBRequest.QUESTION_SELECTION_DELIVERY.equals(r.getMode()))
+                result=mode2(r,a,d,scope);
+            else
+                result=mode3(r,a,d);
 
-        trace.complete(tr,traceLifecycle(result),result.getStatus(),r.getCreatedAt());
-        return result;
+            trace.complete(tr,traceLifecycle(result),result.getStatus(),r.getCreatedAt());
+            return result;
+        } catch (RuntimeException failure) {
+            try {
+                trace.complete(tr,"FAILED",U06ExecutionResult.FAILURE_REQUIRED,r.getCreatedAt());
+            } catch (RuntimeException ignored) {
+                // Existing terminal trace evidence must not be destructively overwritten.
+            }
+            throw failure;
+        }
     }
 
     private U06ExecutionResult preflight(U06ProfileBRequest r,U06SyntheticDecisionBundle d,
@@ -80,7 +91,7 @@ public final class U06ProfileBApplicationService {
                 && U06SyntheticDecisionBundle.SELECTED.equals(d.getQuestionSelectionStatus())) {
             if(blank(r.getThreadId())||blank(r.getRunId()))
                 return rejected(a,"U06_RUNTIME_WAIT_INPUT_REQUIRED");
-            if(scope==null||!scope.isValidFor(r.getConsultationId())
+            if(scope==null||!scope.isValidFor(r.getConsultationId(),r.getCreatedAt())
                     ||!state.getStoreRef().equals(scope.getStateStoreRef()))
                 return rejected(a,"U06_SYNTHETIC_DELIVERY_SCOPE_INVALID");
         }
@@ -92,6 +103,26 @@ public final class U06ProfileBApplicationService {
                 null,null,null,null,null,null,reason);
     }
 
+    private boolean exactAuthoritativeReplayEvidence(U06ProfileBRequest r,U06SyntheticDecisionBundle d,
+                                                     U06SyntheticP01Runtime.StateView current) {
+        if(d==null)return false;
+
+        if(U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT.equals(r.getMode())
+                && d.getF3CanonicalEffectId()!=null) {
+            return d.getF3CanonicalEffectId().equals(
+                    current.mapString("/patient_state/f3_gap_assessment","f3_canonical_effect_id"));
+        }
+
+        if(U06ProfileBRequest.QUESTION_SELECTION_DELIVERY.equals(r.getMode())
+                && U06SyntheticDecisionBundle.SELECTED.equals(d.getQuestionSelectionStatus())
+                && d.getQuestionId()!=null) {
+            String path="/patient_state/questions/"+d.getQuestionId();
+            return d.getQuestionSelectionEffectId().equals(current.mapString(path,"selection_effect_id"));
+        }
+
+        return false;
+    }
+
     private U06ExecutionResult mode1(U06ProfileBRequest r,U06AdmissionService.Admission a,
                                      U06SyntheticDecisionBundle d,
                                      U06SyntheticPostF3SafetyBarrier.Evidence safetyEvidence) {
@@ -100,42 +131,57 @@ public final class U06ProfileBApplicationService {
             return new U06ExecutionResult(U06ExecutionResult.MODE1_NO_MUTATION,a.getAdmissionId(),
                     null,null,null,null,null,null,d.getF3OwnerStatus());
 
-        String effect=d.getF3CanonicalEffectId()!=null?d.getF3CanonicalEffectId():
-                U06Ids.hash("u06f3",r.getConsultationId(),r.getDependencyBindingType(),
-                        r.getDependencyBindingRef(),String.valueOf(r.getAuthoritativeClinicalStateVersion()),
-                        r.getF3OwnerPolicyRef(),r.getBusinessEventIdentity());
+        String effect=d.getF3CanonicalEffectId();
+        String payloadFp=f3PayloadFingerprint(r,d,effect);
+        U06SyntheticP01Runtime.StateView before=state.readCurrent();
+        String existingEffect=before.mapString("/patient_state/f3_gap_assessment","f3_canonical_effect_id");
 
-        List<U06SyntheticP01Runtime.OperationIntent>ops=new ArrayList<U06SyntheticP01Runtime.OperationIntent>();
-        ops.add(state.upsert("/patient_state/f3_gap_assessment",U06StateValues.f3Assessment(r,d,effect)));
-        if(U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED.equals(d.getF3OwnerStatus()))
-            ops.add(state.upsert("/patient_state/information_gaps/"+d.getGapId(),
-                    U06StateValues.gap(r,d,"QUESTIONABLE_ONLINE")));
+        U06SyntheticP01Runtime.StateView readBack;
+        String commitStatus="COMMITTED";
 
-        U06SyntheticP01Runtime.CommitEvidence ce=state.commit(effect,U06Ids.hash("u06proposal",effect),
-                ops,refs(r.getSourceAuthorityRef()),r.getCorrelationId(),r.getTraceId(),r.getCreatedAt());
+        if(effect.equals(existingEffect)) {
+            String existingFp=before.mapString("/patient_state/f3_gap_assessment","f3_payload_fingerprint");
+            if(!payloadFp.equals(existingFp))
+                return new U06ExecutionResult(U06ExecutionResult.FAILURE_REQUIRED,a.getAdmissionId(),effect,
+                        null,null,null,null,null,"U06_F3_CANONICAL_REPLAY_CONFLICT");
+            readBack=before;
+        } else {
+            List<U06SyntheticP01Runtime.OperationIntent>ops=new ArrayList<U06SyntheticP01Runtime.OperationIntent>();
+            ops.add(state.upsert("/patient_state/f3_gap_assessment",U06StateValues.f3Assessment(r,d,effect,payloadFp)));
+            if(U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED.equals(d.getF3OwnerStatus()))
+                ops.add(state.upsert("/patient_state/information_gaps/"+d.getGapId(),
+                        U06StateValues.gap(r,d,"QUESTIONABLE_ONLINE")));
 
-        if(!"COMMITTED".equals(ce.getResult().status))
+            U06SyntheticP01Runtime.CommitEvidence ce=state.commit(effect,U06Ids.hash("u06proposal",effect),
+                    ops,refs(r.getSourceAuthorityRef()),r.getCorrelationId(),r.getTraceId(),r.getCreatedAt());
+            commitStatus=ce.getResult().status;
+
+            if(!"COMMITTED".equals(commitStatus))
+                return new U06ExecutionResult(U06ExecutionResult.FAILURE_REQUIRED,a.getAdmissionId(),effect,
+                        commitStatus,null,null,null,null,ce.getResult().reasonCode);
+
+            readBack=ce.getReadBack();
+        }
+
+        String readBackEffect=readBack.mapString("/patient_state/f3_gap_assessment","f3_canonical_effect_id");
+        String readBackFp=readBack.mapString("/patient_state/f3_gap_assessment","f3_payload_fingerprint");
+        if(!effect.equals(readBackEffect)||!payloadFp.equals(readBackFp))
             return new U06ExecutionResult(U06ExecutionResult.FAILURE_REQUIRED,a.getAdmissionId(),effect,
-                    ce.getResult().status,null,null,null,null,ce.getResult().reasonCode);
-
-        String readBackEffect=ce.getReadBack().mapString("/patient_state/f3_gap_assessment","f3_canonical_effect_id");
-        if(!effect.equals(readBackEffect))
-            return new U06ExecutionResult(U06ExecutionResult.FAILURE_REQUIRED,a.getAdmissionId(),effect,
-                    ce.getResult().status,null,null,null,null,"U06_AUTHORITATIVE_READBACK_MISMATCH");
+                    commitStatus,null,null,null,null,"U06_AUTHORITATIVE_READBACK_MISMATCH");
 
         U06SyntheticPostF3SafetyBarrier.Evaluation safety=safetyBarrier.evaluate(
-                r.getConsultationId(),effect,ce.getResult().status,ce.getReadBack().getVersion(),safetyEvidence);
+                r.getConsultationId(),effect,commitStatus,readBack.getVersion(),safetyEvidence);
 
         if(U06SyntheticPostF3SafetyBarrier.BLOCKED.equals(safety.getStatus()))
             return new U06ExecutionResult(U06ExecutionResult.MODE1_SAFETY_BLOCKED,a.getAdmissionId(),effect,
-                    ce.getResult().status,null,null,null,null,"POST_F3_SAFETY_BLOCKED",safety.getEvaluationId());
+                    commitStatus,null,null,null,null,"POST_F3_SAFETY_BLOCKED",safety.getEvaluationId());
 
         if(U06SyntheticPostF3SafetyBarrier.UNAVAILABLE.equals(safety.getStatus()))
             return new U06ExecutionResult(U06ExecutionResult.FAILURE_REQUIRED,a.getAdmissionId(),effect,
-                    ce.getResult().status,null,null,null,null,"POST_F3_SAFETY_UNAVAILABLE",safety.getEvaluationId());
+                    commitStatus,null,null,null,null,"POST_F3_SAFETY_UNAVAILABLE",safety.getEvaluationId());
 
         return new U06ExecutionResult(U06ExecutionResult.MODE1_COMMITTED,a.getAdmissionId(),effect,
-                ce.getResult().status,null,null,null,null,null,safety.getEvaluationId());
+                commitStatus,null,null,null,null,null,safety.getEvaluationId());
     }
 
     private U06ExecutionResult mode2(U06ProfileBRequest r,U06AdmissionService.Admission a,
@@ -146,15 +192,25 @@ public final class U06ProfileBApplicationService {
                     null,null,null,null,null,null,d.getQuestionSelectionStatus());
 
         String selection=d.getQuestionSelectionEffectId();
-        List<U06SyntheticP01Runtime.OperationIntent>sel=new ArrayList<U06SyntheticP01Runtime.OperationIntent>();
-        sel.add(state.upsert("/patient_state/questions/"+d.getQuestionId(),U06StateValues.questionSelected(r,d)));
+        String questionPath="/patient_state/questions/"+d.getQuestionId();
+        U06SyntheticP01Runtime.StateView beforeSelection=state.readCurrent();
 
-        U06SyntheticP01Runtime.CommitEvidence sc=state.commit(selection,U06Ids.hash("u06proposal",selection),
-                sel,refs(r.getSourceAuthorityRef()),r.getCorrelationId(),r.getTraceId(),r.getCreatedAt());
+        if(beforeSelection.exists(questionPath)) {
+            String existingSelection=beforeSelection.mapString(questionPath,"selection_effect_id");
+            String existingContent=beforeSelection.mapString(questionPath,"content_fingerprint");
+            if(!selection.equals(existingSelection)||!d.getQuestionContentFingerprint().equals(existingContent))
+                throw new IllegalStateException("U06_QUESTION_SELECTION_REPLAY_CONFLICT");
+        } else {
+            List<U06SyntheticP01Runtime.OperationIntent>sel=new ArrayList<U06SyntheticP01Runtime.OperationIntent>();
+            sel.add(state.upsert(questionPath,U06StateValues.questionSelected(r,d)));
 
-        if(!"COMMITTED".equals(sc.getResult().status))
-            return new U06ExecutionResult(U06ExecutionResult.FAILURE_REQUIRED,a.getAdmissionId(),selection,
-                    sc.getResult().status,null,null,null,null,sc.getResult().reasonCode);
+            U06SyntheticP01Runtime.CommitEvidence sc=state.commit(selection,U06Ids.hash("u06proposal",selection),
+                    sel,refs(r.getSourceAuthorityRef()),r.getCorrelationId(),r.getTraceId(),r.getCreatedAt());
+
+            if(!"COMMITTED".equals(sc.getResult().status))
+                return new U06ExecutionResult(U06ExecutionResult.FAILURE_REQUIRED,a.getAdmissionId(),selection,
+                        sc.getResult().status,null,null,null,null,sc.getResult().reasonCode);
+        }
 
         U06SyntheticDeliveryService.Confirmation conf=delivery.confirm(r.getConsultationId(),selection,
                 d.getQuestionId(),d.getQuestionContentFingerprint(),scope,r.getCreatedAt());
@@ -163,33 +219,49 @@ public final class U06ProfileBApplicationService {
                 conf.getDeliveryId(),d.getQuestionContentFingerprint(),"1");
         String clinical=U06Ids.hash("u06waitstate",parent,"1");
 
-        List<U06SyntheticP01Runtime.OperationIntent>ops=new ArrayList<U06SyntheticP01Runtime.OperationIntent>();
-        ops.add(state.upsert("/patient_state/questions/"+d.getQuestionId(),
-                U06StateValues.questionDelivered(r,d,conf.getDeliveryEffectId(),conf.getDeliveryId())));
+        U06SyntheticP01Runtime.StateView beforeDelivered=state.readCurrent();
+        boolean deliveredAlready=exactDeliveredState(beforeDelivered,questionPath,d,parent,conf);
 
-        if(d.getGapId()!=null&&state.readCurrent().exists("/patient_state/information_gaps/"+d.getGapId()))
-            ops.add(state.upsert("/patient_state/information_gaps/"+d.getGapId(),U06StateValues.gapAsked(r,d)));
+        U06SyntheticP01Runtime.StateView deliveredReadBack;
+        String deliveredCommitStatus="COMMITTED";
 
-        U06SyntheticP01Runtime.StateView pendingView=state.readCurrent();
-        if(pendingView.exists("/patient_state/pending_question")) {
-            String existingQuestion=pendingView.mapString("/patient_state/pending_question","question_id");
-            String existingParent=pendingView.mapString("/patient_state/pending_question","question_delivered_wait_effect_id");
-            String existingDelivery=pendingView.mapString("/patient_state/pending_question","delivery_id");
-            if(!d.getQuestionId().equals(existingQuestion)
-                    ||!parent.equals(existingParent)
-                    ||!conf.getDeliveryId().equals(existingDelivery))
-                throw new IllegalStateException("U06_PENDING_QUESTION_CONFLICT");
+        if(deliveredAlready) {
+            deliveredReadBack=beforeDelivered;
+        } else {
+            if(beforeDelivered.exists("/patient_state/pending_question")) {
+                String existingQuestion=beforeDelivered.mapString("/patient_state/pending_question","question_id");
+                String existingParent=beforeDelivered.mapString("/patient_state/pending_question","question_delivered_wait_effect_id");
+                String existingDelivery=beforeDelivered.mapString("/patient_state/pending_question","delivery_id");
+                if(!d.getQuestionId().equals(existingQuestion)
+                        ||!parent.equals(existingParent)
+                        ||!conf.getDeliveryId().equals(existingDelivery))
+                    throw new IllegalStateException("U06_PENDING_QUESTION_CONFLICT");
+            }
+
+            List<U06SyntheticP01Runtime.OperationIntent>ops=new ArrayList<U06SyntheticP01Runtime.OperationIntent>();
+            ops.add(state.upsert(questionPath,
+                    U06StateValues.questionDelivered(r,d,conf.getDeliveryEffectId(),conf.getDeliveryId())));
+
+            if(d.getGapId()!=null&&beforeDelivered.exists("/patient_state/information_gaps/"+d.getGapId()))
+                ops.add(state.upsert("/patient_state/information_gaps/"+d.getGapId(),U06StateValues.gapAsked(r,d)));
+
+            ops.add(state.upsert("/patient_state/pending_question",
+                    U06StateValues.pending(d,parent,conf.getDeliveryId())));
+
+            U06SyntheticP01Runtime.CommitEvidence dc=state.commit(clinical,U06Ids.hash("u06proposal",clinical),
+                    ops,refs(conf.getConfirmationEvaluationId()),r.getCorrelationId(),r.getTraceId(),r.getCreatedAt());
+            deliveredCommitStatus=dc.getResult().status;
+
+            if(!"COMMITTED".equals(deliveredCommitStatus))
+                return new U06ExecutionResult(U06ExecutionResult.RECONCILIATION_REQUIRED,a.getAdmissionId(),parent,
+                        deliveredCommitStatus,conf.getDeliveryId(),null,null,null,dc.getResult().reasonCode);
+
+            deliveredReadBack=dc.getReadBack();
         }
 
-        ops.add(state.upsert("/patient_state/pending_question",
-                U06StateValues.pending(d,parent,conf.getDeliveryId())));
-
-        U06SyntheticP01Runtime.CommitEvidence dc=state.commit(clinical,U06Ids.hash("u06proposal",clinical),
-                ops,refs(conf.getConfirmationEvaluationId()),r.getCorrelationId(),r.getTraceId(),r.getCreatedAt());
-
-        if(!"COMMITTED".equals(dc.getResult().status))
+        if(!exactDeliveredState(deliveredReadBack,questionPath,d,parent,conf))
             return new U06ExecutionResult(U06ExecutionResult.RECONCILIATION_REQUIRED,a.getAdmissionId(),parent,
-                    dc.getResult().status,conf.getDeliveryId(),null,null,null,dc.getResult().reasonCode);
+                    deliveredCommitStatus,conf.getDeliveryId(),null,null,null,"U06_AUTHORITATIVE_READBACK_MISMATCH");
 
         String waitEffect=U06Ids.hash("u06consultwait",parent,"1");
         String waitFp=U06Ids.hash("u06consultwaitfp",r.getConsultationId(),waitEffect,parent,d.getQuestionId(),
@@ -204,16 +276,43 @@ public final class U06ProfileBApplicationService {
 
         String cp=U06Ids.hash("u06checkpoint",parent,"1");
         String cpFp=U06Ids.hash("u06checkpointfp",cp,r.getThreadId(),r.getRunId(),d.getQuestionId(),
-                conf.getDeliveryId(),String.valueOf(dc.getReadBack().getVersion()),waitEffect);
+                conf.getDeliveryId(),String.valueOf(deliveredReadBack.getVersion()),waitEffect);
 
         U06WaitCoordinator.Result rr=runtimeWait.establish(new U06WaitCoordinator.Command(cp,
                 r.getConsultationId(),r.getThreadId(),r.getRunId(),d.getQuestionId(),
                 "/patient_state/pending_question",selection,conf.getDeliveryEffectId(),parent,
-                conf.getDeliveryId(),conf.getConfirmationEvaluationId(),dc.getReadBack().getVersion(),
+                conf.getDeliveryId(),conf.getConfirmationEvaluationId(),deliveredReadBack.getVersion(),
                 wr.waitEffectId,r.getDependencyBindingRef(),r.getQuestionPolicyRef(),cpFp,r.getCreatedAt()));
 
         return new U06ExecutionResult(U06ExecutionResult.WAIT_ESTABLISHED,a.getAdmissionId(),parent,
-                dc.getResult().status,conf.getDeliveryId(),wr.waitEffectId,rr.checkpointId,rr.eligibilityId,null);
+                deliveredCommitStatus,conf.getDeliveryId(),wr.waitEffectId,rr.checkpointId,rr.eligibilityId,null);
+    }
+
+    private boolean exactDeliveredState(U06SyntheticP01Runtime.StateView view,String questionPath,
+                                        U06SyntheticDecisionBundle d,String parent,
+                                        U06SyntheticDeliveryService.Confirmation conf) {
+        return "DELIVERED_TO_USER".equals(view.mapString(questionPath,"status"))
+                &&d.getQuestionSelectionEffectId().equals(view.mapString(questionPath,"selection_effect_id"))
+                &&d.getQuestionContentFingerprint().equals(view.mapString(questionPath,"content_fingerprint"))
+                &&conf.getDeliveryEffectId().equals(view.mapString(questionPath,"delivery_effect_id"))
+                &&conf.getDeliveryId().equals(view.mapString(questionPath,"delivery_id"))
+                &&d.getQuestionId().equals(view.mapString("/patient_state/pending_question","question_id"))
+                &&parent.equals(view.mapString("/patient_state/pending_question","question_delivered_wait_effect_id"))
+                &&conf.getDeliveryId().equals(view.mapString("/patient_state/pending_question","delivery_id"));
+    }
+
+    private String f3PayloadFingerprint(U06ProfileBRequest r,U06SyntheticDecisionBundle d,String effect) {
+        return U06Ids.hash("u06f3payload",
+                effect,
+                d.getF3OwnerStatus(),
+                d.getGapId(),
+                d.getGapDecisionImpact(),
+                String.valueOf(d.isAskableOnline()),
+                r.getDependencyBindingType(),
+                r.getDependencyBindingRef(),
+                r.getF3OwnerPolicyRef(),
+                r.getSourceAuthorityRef(),
+                "1");
     }
 
     private U06ExecutionResult mode3(U06ProfileBRequest r,U06AdmissionService.Admission a,
