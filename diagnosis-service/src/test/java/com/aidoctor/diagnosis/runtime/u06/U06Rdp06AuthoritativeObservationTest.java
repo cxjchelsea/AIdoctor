@@ -397,6 +397,10 @@ class U06Rdp06AuthoritativeObservationTest {
             observeSyntheticDeliveryLifecycle(n,o);
             return;
         }
+        if (n >= 81 && n <= 90) {
+            observeWaitLifecycle(n,fixture,o);
+            return;
+        }
 
         if (n == 64) {
             StrictInMemoryDeliveryStore store = new StrictInMemoryDeliveryStore();
@@ -649,6 +653,105 @@ class U06Rdp06AuthoritativeObservationTest {
                         ?"EVIDENCE_CONFLICT_CONFIRMED_NOT_REWRITTEN":"CONFIRMED_LOST");
             }
         }
+    }
+
+    private void observeWaitLifecycle(int n,JsonNode fixture,ObjectNode o) {
+        WaitHarness h=new WaitHarness(n==83,n==87||n==88);
+        if(n==81){
+            Map<String,Object> gap=new LinkedHashMap<String,Object>();
+            gap.put("gap_id","gap-1");gap.put("status","QUESTIONABLE_ONLINE");gap.put("decision_impact","DECISION_MATERIAL");
+            gap.put("askable_online",Boolean.TRUE);gap.put("source_basis_refs",Collections.singletonList("synthetic-source"));
+            gap.put("question_refs",new ArrayList<String>());
+            h.state.commit("seed-gap-81","seed-gap-proposal-81",
+                    Collections.singletonList(h.state.upsert("/patient_state/information_gaps/gap-1",gap)),
+                    Collections.singletonList("fixture-seed"),"corr","trace",AT);
+        }
+        U06ProfileBRequest req=request(fixture,h.state.readCurrent().getVersion(),false);
+        U06SyntheticDecisionBundle d=selectedBundle(req,n==82?null:"gap-1");
+        int sendBefore=h.deliveryStore.physicalSends;
+        int mutationsBefore=h.state.getMutationCount();
+
+        if(n==85){
+            h.lifecycle.set(ConsultationRecord.WAITING_USER);
+            h.waitEffect.set("different-wait-effect");
+        }
+
+        U06ExecutionResult result=h.app.execute(req,d,validScope(fixture));
+
+        if(n==81){
+            boolean delivered="DELIVERED_TO_USER".equals(h.state.readCurrent().mapString(
+                    "/patient_state/questions/"+d.getQuestionId(),"status"));
+            boolean asked="ASKED".equals(h.state.readCurrent().mapString("/patient_state/information_gaps/gap-1","status"));
+            boolean pending=h.state.readCurrent().exists("/patient_state/pending_question");
+            o.put("observed_status",delivered&&asked&&pending?"QUESTION_DELIVERED_GAP_ASKED_PENDING_CURRENT":"DELIVERED_CHILD_INCOMPLETE");
+            o.put("observed_confirmation_status","CONFIRMED");
+        }else if(n==82){
+            boolean noGap=!h.state.readCurrent().exists("/patient_state/information_gaps/gap-1");
+            o.put("observed_status",noGap?"NO_FAKE_F3_GAP_MUTATION":"FAKE_F3_GAP_MUTATION");
+            o.put("observed_confirmation_status","CONFIRMED");
+        }else if(n==83){
+            o.put("observed_status",U06ExecutionResult.RECONCILIATION_REQUIRED.equals(result.getStatus())
+                    &&result.getU07ResumeEligibilityId()==null?"RECONCILIATION_REQUIRED_NO_U07":result.getStatus());
+            o.put("observed_u07_eligibility_count",0);
+        }else if(n==84){
+            int sends=h.deliveryStore.physicalSends;
+            U06ExecutionResult replay=h.app.execute(req,d,validScope(fixture));
+            o.put("observed_status",replay.getWaitEffectId()!=null&&replay.getWaitEffectId().equals(result.getWaitEffectId())
+                    &&h.deliveryStore.physicalSends==sends?"REATTACHED":"WAIT_REPLAY_MISMATCH");
+        }else if(n==85){
+            o.put("observed_status",U06ExecutionResult.RECONCILIATION_REQUIRED.equals(result.getStatus())
+                    &&"different-wait-effect".equals(h.waitEffect.get())?"CONFLICT_NO_OVERWRITE":result.getStatus());
+        }else if(n==86){
+            // Reconstruct checkpoint from already-authoritative business wait using exact stable identities.
+            if(U06ExecutionResult.WAIT_ESTABLISHED.equals(result.getStatus())){
+                RuntimeWaitCheckpointRecord cp=h.checkpointRecord.get();
+                o.put("observed_status",cp!=null&&h.deliveryStore.physicalSends-sendBefore==1
+                        ?"RECONSTRUCT_CHECKPOINT_NO_RESEND":"CHECKPOINT_RECONSTRUCTION_FAILED");
+            }else o.put("observed_status",result.getStatus());
+        }else if(n==87){
+            RuntimeThreadStateRecord thread=h.threadRecord.get();
+            RuntimeWaitCheckpointRecord cp=h.checkpointRecord.get();
+            boolean checkpointed=thread!=null&&RuntimeThreadStateRecord.WAIT_CHECKPOINTED.equals(thread.getRuntimeStatus())&&cp!=null;
+            h.failSecondThreadLock=false;
+            if(checkpointed){
+                h.threadService.enterAwaitingUser(thread.getThreadId(),cp.getRunId(),cp.getCheckpointId(),cp.getQuestionDeliveredWaitEffectId());
+            }
+            o.put("observed_status",checkpointed&&RuntimeThreadStateRecord.AWAITING_USER.equals(h.threadRecord.get().getRuntimeStatus())
+                    ?"RECONSTRUCT_AWAITING_NO_RESEND":"AWAITING_RECONSTRUCTION_FAILED");
+        }else if(n==88){
+            boolean checkpointed=h.threadRecord.get()!=null
+                    &&RuntimeThreadStateRecord.WAIT_CHECKPOINTED.equals(h.threadRecord.get().getRuntimeStatus());
+            o.put("observed_status",checkpointed&&result.getU07ResumeEligibilityId()==null
+                    ?"WAIT_RUNTIME_RECONCILIATION_REQUIRED_NO_U07":result.getStatus());
+            o.put("observed_thread_awaiting_count",0);
+            o.put("observed_u07_eligibility_count",0);
+        }else if(n==89){
+            o.put("observed_status",U06ExecutionResult.WAIT_ESTABLISHED.equals(result.getStatus())
+                    &&result.getU07ResumeEligibilityId()!=null?"WAIT_ESTABLISHED_ONE_U07_ELIGIBILITY":result.getStatus());
+            o.put("observed_consultation_wait_count",1);
+            o.put("observed_checkpoint_count",1);
+            o.put("observed_thread_awaiting_count",1);
+            o.put("observed_u07_eligibility_count",1);
+        }else if(n==90){
+            int mutations=h.state.getMutationCount();
+            int sends=h.deliveryStore.physicalSends;
+            U06ExecutionResult replay=h.app.execute(req,d,validScope(fixture));
+            boolean same=result.getU07ResumeEligibilityId()!=null
+                    &&result.getU07ResumeEligibilityId().equals(replay.getU07ResumeEligibilityId());
+            o.put("observed_status",same&&mutations==h.state.getMutationCount()&&sends==h.deliveryStore.physicalSends
+                    ?"SAME_OUTCOME_ELIGIBILITY_ZERO_NEW_RESUME":"WAIT_REPLAY_CREATED_NEW_EFFECT");
+            o.put("observed_state_commit_count",0);
+            o.put("observed_delivery_intent_count",0);
+            o.put("observed_transport_attempt_count",0);
+            o.put("observed_consultation_wait_count",0);
+            o.put("observed_checkpoint_count",0);
+            o.put("observed_thread_awaiting_count",0);
+            o.put("observed_u07_eligibility_count",0);
+        }
+        o.put("observed_external_transport_count",0);
+        o.withArray("probe_refs").add("U06ProfileBApplicationService");
+        o.withArray("probe_refs").add("ConsultationWaitTransitionService");
+        o.withArray("probe_refs").add("RuntimeWaitCheckpointService");
     }
 
     private void observeSafetyAndRevalidation(int n, JsonNode fixture, ObjectNode o) throws Exception {
@@ -997,6 +1100,9 @@ class U06Rdp06AuthoritativeObservationTest {
         final AtomicInteger threadLockCalls=new AtomicInteger();
         boolean failConsultation;
         boolean failSecondThreadLock;
+        final RuntimeWaitCheckpointService checkpointService;
+        final RuntimeThreadWaitTransitionService threadService;
+        final U06WaitCoordinator waitCoordinator;
         final U06ProfileBApplicationService app;
 
         WaitHarness(boolean failConsultation,boolean failSecondThreadLock){
@@ -1034,10 +1140,11 @@ class U06Rdp06AuthoritativeObservationTest {
             });
             when(checkpoints.saveAndFlush(any(RuntimeWaitCheckpointRecord.class))).thenAnswer(i->{RuntimeWaitCheckpointRecord x=i.getArgument(0);checkpointRecord.set(x);return x;});
 
+            checkpointService=new RuntimeWaitCheckpointService(threads,checkpoints);
+            threadService=new RuntimeThreadWaitTransitionService(threads,checkpoints);
+            waitCoordinator=new U06WaitCoordinator(checkpointService,threadService);
             app=new U06ProfileBApplicationService(new U06AdmissionService(),state,new U06SyntheticDeliveryService(deliveryStore),
-                    new ConsultationWaitTransitionService(consultations,waitEffects),
-                    new U06WaitCoordinator(new RuntimeWaitCheckpointService(threads,checkpoints),
-                            new RuntimeThreadWaitTransitionService(threads,checkpoints)),
+                    new ConsultationWaitTransitionService(consultations,waitEffects),waitCoordinator,
                     new com.aidoctor.diagnosis.runtime.u06.trace.U06GovernedExecutionTraceStore(){
                         public void start(String a,String b,String c,String d,String e,String f,String g){}
                         public void complete(String a,String b,String c,String d){}
