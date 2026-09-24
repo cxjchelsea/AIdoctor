@@ -2,6 +2,7 @@ package com.aidoctor.diagnosis.runtime.u06;
 
 import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryRuntime;
 import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01Runtime;
+import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01TestFactory;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -323,7 +324,7 @@ class U06AuthoritativeContractTest {
 
     private static U06ProfileBRequest mode1(int version){return req("mode1-"+version,U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,version,version,U06AdmissionEvidence.syntheticCurrentAllow());}
     private static U06ProfileBRequest mode2(int version){return req("mode2-"+version,U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,version,version,U06AdmissionEvidence.syntheticCurrentAllow());}
-    private static U06SyntheticP01Runtime state(){return U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);}
+    private static U06SyntheticP01Runtime state(){return U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);}
 
     private static U06SyntheticDecisionInput input(String c03,String policy,List<U06SyntheticDecisionInput.Candidate> candidates) {
         return new U06SyntheticDecisionInput(c03,false,false,"gap-x","DECISION_MATERIAL",true,policy,candidates);
