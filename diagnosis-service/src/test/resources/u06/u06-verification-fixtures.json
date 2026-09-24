@@ -1,6 +1,6 @@
 {
   "schema": "U06_VERIFICATION_FIXTURES_V0_1",
-  "authority_core_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+  "authority_core_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
   "digest_algorithm": "sha256",
   "fixture_count": 189,
   "fixtures": [

@@ -5,7 +5,7 @@
     "schema": "U06_CONTRACT_AUTHORITY_CORE_V0_1",
     "profile": "SYNTHETIC_STRUCTURAL_NONPROD",
     "implementation_base_sha": "f78bd9192d0603cfa3cc878644088f908dcb2fb8",
-    "implementation_semantic_pass_sha": "1d427fd09957767c938e34883dcbcda85b7fd992",
+    "implementation_semantic_pass_sha": "66fa3c078dce5e304e2ada9d6c0df0ff9fbde661",
     "verification_contract_sha": "e4110cf0ca85f9443a19ac01a5e448369c05832a",
     "aggregate_semantic_sha": "d4a709ee20564f123e996a572ac760797a25f593",
     "physical_design_semantic_sha": "9c0893a2892a8b08a9c03ce3a8f214397d893df4",
@@ -107,7 +107,7 @@
         "authority_id": "observed_change_manifest",
         "path": "docs/current/06_开发单元/u06_implementation/U06_Authorized_Shared_Runtime_Change_Manifest_v0.1.md",
         "digest_algorithm": "git-blob-sha1",
-        "content_digest": "07257c63c1981581aec0904a8fa7119381c6e7ce"
+        "content_digest": "9d393683af1166e86a82be383ecbdbcff9dd8791"
       },
       {
         "authority_id": "contract_version",
@@ -117,15 +117,15 @@
       }
     ]
   },
-  "authority_core_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+  "authority_core_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
   "digest_algorithm": "sha256",
   "oracle": {
     "path": "diagnosis-service/src/test/resources/u06/u06-verification-expectations.json",
-    "digest": "ac89a1e902bd82c84e39748d76de1807db434aff3bb6e21d44c03aa564a174d7"
+    "digest": "9a7ae0b5286bd033e74e28167af523a53d57fccd7694d16e7c76f3da281f234f"
   },
   "fixtures": {
     "path": "diagnosis-service/src/test/resources/u06/u06-verification-fixtures.json",
-    "digest": "6494a86da0e385c287276100e12af52e57067b5a72a441740cf3ab3ddf411c5a"
+    "digest": "df87c9fb7e30fc472d96f840f25fafac987d8a256cbcda2c872e89e2e8a63cd0"
   },
   "auth_profile": {
     "path": "diagnosis-service/src/test/resources/u06/u06-auth-profile.json",

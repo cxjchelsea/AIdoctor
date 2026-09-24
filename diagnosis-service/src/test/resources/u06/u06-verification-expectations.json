@@ -1,6 +1,6 @@
 {
   "schema": "U06_VERIFICATION_EXPECTATIONS_V0_1",
-  "authority_core_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+  "authority_core_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
   "digest_algorithm": "sha256",
   "case_counts": {
     "EV": 106,
@@ -26,7 +26,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-001 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-001",
       "fixture_digest": "cfd6162ede20df1f03049eaf578e89e77104744f77eaf4e90f22c12be889ecfd",
       "expected_reason_code": null,
@@ -62,7 +62,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-002 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-002",
       "fixture_digest": "f5fe76f601ae8ff211556790c9167f5c2e6aec57e9d52103e3810ccbf15e9d01",
       "expected_reason_code": null,
@@ -98,7 +98,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-003 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-003",
       "fixture_digest": "7b87a43a89209b4207cffceff47efdff37ae37e7e2340f39f571b421cadf1f1a",
       "expected_reason_code": null,
@@ -134,7 +134,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-004 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-004",
       "fixture_digest": "a4e01726c2184c1183ba42bf14b525c8568bac3dae8beb6405b0e2cefc6c4d32",
       "expected_reason_code": null,
@@ -170,7 +170,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-005 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-005",
       "fixture_digest": "415a466eb2c7014cb584f45dda24357d9333dcb9263399ccfb43d24c103eca6f",
       "expected_reason_code": null,
@@ -206,7 +206,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-006 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-006",
       "fixture_digest": "898f9fbdfe443207734570e4e2aea1793a32f1b919cd4f57f94318cf71dbbadb",
       "expected_reason_code": null,
@@ -242,7 +242,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-007 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-007",
       "fixture_digest": "688805ffe3034bc4a7eb2c2fdb616e87ab234cd357498750b2eba375a6f4f926",
       "expected_reason_code": null,
@@ -278,7 +278,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-008 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-008",
       "fixture_digest": "95f120fe7e6936d9c3b153bd386870be866f4c34656de60df7d7c1ca9064ed09",
       "expected_reason_code": null,
@@ -314,7 +314,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-009 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-009",
       "fixture_digest": "d4845ff3ab7976e8d7204c4adfb1fcf32d99d32aa049c7eea1c0559e624f8288",
       "expected_reason_code": null,
@@ -350,7 +350,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-010 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-010",
       "fixture_digest": "034b1557713bc12d25e0a27786695882d3fa1527784d2c0443484a8446699810",
       "expected_reason_code": null,
@@ -386,7 +386,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-011 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-011",
       "fixture_digest": "4a2690d3b542f5a15a509613f1be2b5834ab01da34ef643cdf149e14e6822d32",
       "expected_reason_code": null,
@@ -422,7 +422,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-012 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-012",
       "fixture_digest": "c081c1a618e208fd4933fbdaa5b74c188521a98f7546243992560069eb4a0344",
       "expected_reason_code": null,
@@ -458,7 +458,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-013 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-013",
       "fixture_digest": "5e29a1f3421a41ccf676d54d69e77cf73b0cd96e797b1f18372d2412d02625df",
       "expected_reason_code": null,
@@ -494,7 +494,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-014 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-014",
       "fixture_digest": "b9528656fa5d70755e842a7ab69af4fd0ab5d77f84fbf35195ff406e49ea3d48",
       "expected_reason_code": null,
@@ -530,7 +530,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-015 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-015",
       "fixture_digest": "1378239427a367e9ae15b6b071f74929f87e8d74b60e1b1b5bcb475c490c6b6f",
       "expected_reason_code": null,
@@ -566,7 +566,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-016 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-016",
       "fixture_digest": "3ba948ba472148255c37db2f9571e4130b315afe4756a63fad304fa01831211a",
       "expected_reason_code": null,
@@ -602,7 +602,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-017 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-017",
       "fixture_digest": "fcb7c1db080b2d46ed8f1d3b285af12a75678776e0d54c2057335eb826ded934",
       "expected_reason_code": null,
@@ -638,7 +638,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-018 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-018",
       "fixture_digest": "fa0249973879711889bb03e71a910a11dda3081c9aa768e39707acc1da62dae0",
       "expected_reason_code": null,
@@ -674,7 +674,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-019 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-019",
       "fixture_digest": "3b6b7f29a764d2bb8fb5acda5010a35398263597b6ed46461beafecb5efea022",
       "expected_reason_code": null,
@@ -710,7 +710,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-020 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-020",
       "fixture_digest": "4c00b0cd49af24f30847615dcd5d325d02b3c38ddf205ade8f36dc9e2d92104a",
       "expected_reason_code": null,
@@ -746,7 +746,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-021 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-021",
       "fixture_digest": "f9bb9717b6c883af91d17b6f9be45efa9de85756d5c35aeb31c3d074059488a5",
       "expected_reason_code": null,
@@ -782,7 +782,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-022 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-022",
       "fixture_digest": "bcd1f0cff3d0345fbeaee2bd20df3cdfe274033805a3a3d5f6d8bf5699ac67d3",
       "expected_reason_code": null,
@@ -818,7 +818,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-023 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-023",
       "fixture_digest": "82763d171c647b96c99aa5fb506dee92787b444a81fe0e248840cf53760d9b4d",
       "expected_reason_code": null,
@@ -854,7 +854,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-024 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-024",
       "fixture_digest": "feaa4c297a2ecf64599c3b5d2e9126d81fba8a9ae55b0892ba6e89e84cc14037",
       "expected_reason_code": null,
@@ -890,7 +890,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-025 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-025",
       "fixture_digest": "d100063432e05a8b77afa290fc7244e78689ee95324e5e1725a15d219fe30823",
       "expected_reason_code": null,
@@ -926,7 +926,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-026 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-026",
       "fixture_digest": "5134f5b0492b14b536b211871eba82d4d2836cf88c2dac203beeb572616bbc77",
       "expected_reason_code": null,
@@ -962,7 +962,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-027 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-027",
       "fixture_digest": "46fbb5ddd1e7fd75c431a253f8ecfe459c135293ff82021485a05e0f903d3b0e",
       "expected_reason_code": null,
@@ -998,7 +998,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-028 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-028",
       "fixture_digest": "4b8d1d18197af8e7c3ad86383433cf1d70db2f5b8bd4a72234f0abd0845b735f",
       "expected_reason_code": null,
@@ -1034,7 +1034,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-029 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-029",
       "fixture_digest": "0dc2f790c38de71d6bda6e2a020475e91939b06902b8a5a814ae60834a6d80b1",
       "expected_reason_code": null,
@@ -1070,7 +1070,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-030 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-030",
       "fixture_digest": "e86797cf0b5740d945a37a7e6d6b7b735c87cf29f4da9e0a1a5fde6b99fd1c45",
       "expected_reason_code": null,
@@ -1106,7 +1106,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-031 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-031",
       "fixture_digest": "52e5ba2d3234a643940991c69c6f3478b4aceedb6a6b4a0eaedb9d307a07f9b5",
       "expected_reason_code": null,
@@ -1142,7 +1142,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-032 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-032",
       "fixture_digest": "83edcdd4e0e62d88c092dc2ca8a9e25933a7c4cf88df6b9ea218e721eb761071",
       "expected_reason_code": null,
@@ -1178,7 +1178,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-033 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-033",
       "fixture_digest": "efbe3abd942c2fd4a94bf52393009e2135adb76a2dffd9e0eba7586c82699023",
       "expected_reason_code": null,
@@ -1214,7 +1214,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-034 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-034",
       "fixture_digest": "e2468c20d080d0415d25419440bc366342039a0e1d2f2601a86deac2c994333f",
       "expected_reason_code": null,
@@ -1250,7 +1250,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-035 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-035",
       "fixture_digest": "74e46557aeccad92e94dabcbdf912c93ec3a7776c0bcdc4403369a7ea81215cd",
       "expected_reason_code": null,
@@ -1286,7 +1286,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-036 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-036",
       "fixture_digest": "8394c371ab46a49b64febe5a4479b1b5f45556b99ff1df757774104d049349be",
       "expected_reason_code": null,
@@ -1322,7 +1322,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-037 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-037",
       "fixture_digest": "2e093b6bd6b47166805dfa8644adc797f47f1959c2c7f71823eb52512341408c",
       "expected_reason_code": null,
@@ -1358,7 +1358,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-038 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-038",
       "fixture_digest": "409efec05493d4dd5ebde960b48020b1a5c7b49a18ba858bc537f7399bf01350",
       "expected_reason_code": null,
@@ -1394,7 +1394,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-039 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-039",
       "fixture_digest": "be49f9d5735e0932c85450e94b2af2868d24d5fea67e7bb9fe61234d119e5ef4",
       "expected_reason_code": null,
@@ -1430,7 +1430,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-040 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-040",
       "fixture_digest": "6a858d5acb80685b900ed9dd53753fb660d56cf7f8f2be473779a7c8e926b3e5",
       "expected_reason_code": null,
@@ -1466,7 +1466,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-041 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-041",
       "fixture_digest": "66798e1e56ed478eeb9bfea9cddace4e77c05224f5c74ec7b015dbf85b5a6b2b",
       "expected_reason_code": null,
@@ -1502,7 +1502,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-042 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-042",
       "fixture_digest": "48b7a73e22c07401aada94a3251f21f27d5df023835549181c9c8bd30f4e39bb",
       "expected_reason_code": null,
@@ -1538,7 +1538,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-043 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-043",
       "fixture_digest": "2aac978518a1f00ec7d82fd023c8b9f89f5f2b2f4812a05537f2ff5b085fde00",
       "expected_reason_code": null,
@@ -1574,7 +1574,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-044 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-044",
       "fixture_digest": "a604d03be778819bc1386c139654101868552a4660a927eeda26295e9988c064",
       "expected_reason_code": null,
@@ -1610,7 +1610,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-045 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-045",
       "fixture_digest": "5b022885c7b930c311a4420475c25a91c4391db2f913feaa2e83194447712c2a",
       "expected_reason_code": null,
@@ -1646,7 +1646,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-046 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-046",
       "fixture_digest": "0592cf41036021536ce82adc0fd00a52614c8a2df1491f83cc338acc01a6864c",
       "expected_reason_code": null,
@@ -1685,7 +1685,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-047 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-047",
       "fixture_digest": "a434043ccdebbdb82e528f4702da8f56ba533014cdabd46b7f96da2dad1da28f",
       "expected_reason_code": null,
@@ -1721,7 +1721,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-048 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-048",
       "fixture_digest": "bd31dbadbbe08ada6151378c91fb5df95c92d8c3da7f93670c9d785583761a10",
       "expected_reason_code": null,
@@ -1757,7 +1757,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-049 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-049",
       "fixture_digest": "f4b58f6ae4e3a258f128cef13a229255a214b435c90be5dc308e4f1b0b75934d",
       "expected_reason_code": null,
@@ -1793,7 +1793,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-050 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-050",
       "fixture_digest": "3f1c77d34ca004e80a43a61be9f2467db7bfb80638394e613aeacd429d231c54",
       "expected_reason_code": null,
@@ -1829,7 +1829,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-051 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-051",
       "fixture_digest": "fceb1eb21dd5bed535bfd444295c3568225c06b615c113fb492686b8dfec902c",
       "expected_reason_code": null,
@@ -1865,7 +1865,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-052 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-052",
       "fixture_digest": "cdb6d696525ff621bc0b0ad17a2a1149951353ba3a8bf7b2b961e44a7c995989",
       "expected_reason_code": null,
@@ -1901,7 +1901,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-053 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-053",
       "fixture_digest": "7fe01e1c4913c1c2c124f7abba2935da0ea518c93a892490bb4a3be5b28f6423",
       "expected_reason_code": null,
@@ -1937,7 +1937,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-054 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-054",
       "fixture_digest": "80bb7d48046c8aa870a19f3402189ee5ff7c91e94037f6e537bf00f316102e79",
       "expected_reason_code": null,
@@ -1973,7 +1973,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-055 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-055",
       "fixture_digest": "c83931c3e3a34a3ccac0f070f049123ae6b4085b3549194ad7f5cec8a65e5f1d",
       "expected_reason_code": null,
@@ -2009,7 +2009,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-056 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-056",
       "fixture_digest": "87f1c5e39d926b423ed8fda151c24f185c4a40b8ff1cbdcfdfaf0822d7de4284",
       "expected_reason_code": null,
@@ -2045,7 +2045,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-057 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-057",
       "fixture_digest": "6dcdc56d315630c7c31db4eb24f06c8f62ea1f65e4ade824c03aa1bf739df6bc",
       "expected_reason_code": null,
@@ -2081,7 +2081,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-058 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-058",
       "fixture_digest": "9049cf5d7970a85c933dcfc2cfd3fe02175ee030c04afa16125689f6d8f38089",
       "expected_reason_code": null,
@@ -2117,7 +2117,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-059 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-059",
       "fixture_digest": "a389238cbe4361cb95067a3e75bec0f6a39cdb83753f62f7be6208316a9c4d81",
       "expected_reason_code": null,
@@ -2155,7 +2155,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-060 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-060",
       "fixture_digest": "500d1ae3b198e45298323a483147c9e6cf1b128028e3f73b655882bf62427e2a",
       "expected_reason_code": null,
@@ -2191,7 +2191,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-061 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-061",
       "fixture_digest": "70d712eae2e92f69dc19f250436e77c938f2e5f8b09ebf269fba4abe14cc0ea6",
       "expected_reason_code": null,
@@ -2227,7 +2227,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-062 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-062",
       "fixture_digest": "d89b3c68caf022584ce7393a0bfbb226b137c7f63484874cdda2dace0a99d495",
       "expected_reason_code": null,
@@ -2263,7 +2263,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-063 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-063",
       "fixture_digest": "ffb92b7d3ffe84152e06b556a68a3510be87dcd3e8df09b0461b51b10820652f",
       "expected_reason_code": null,
@@ -2299,7 +2299,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-064 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-064",
       "fixture_digest": "1c0b4ce1bdaee7e2cfc685f28b94b698e6279c647a8787f6437c8df27c779aa1",
       "expected_reason_code": null,
@@ -2338,7 +2338,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-065 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-065",
       "fixture_digest": "ddd270be6a8e1f8ff4a4b089bbd581b0af46ee73f82bbdfe645935d5ae90e70f",
       "expected_reason_code": null,
@@ -2374,7 +2374,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-066 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-066",
       "fixture_digest": "642f37c1d54e2c34fc8688f5c27b786182dcb438263662f3fb1171a92b0103ee",
       "expected_reason_code": null,
@@ -2410,7 +2410,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-067 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-067",
       "fixture_digest": "a0a9dcf787a6e5d1f447f0d5100567b4c19ce01ca6bb5366382f208eec9ec938",
       "expected_reason_code": null,
@@ -2446,7 +2446,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-068 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-068",
       "fixture_digest": "70a4a0cd00fcd97932a682a1f1d7adb04120498120ffb3e12e8300439d512736",
       "expected_reason_code": null,
@@ -2482,7 +2482,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-069 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-069",
       "fixture_digest": "602f2e56c83e33f29baae06ecbb8ff7338fa060393bbc66f8eba1f31d2be8138",
       "expected_reason_code": null,
@@ -2518,7 +2518,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-070 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-070",
       "fixture_digest": "fc903a8bc1ca311c1746b901e0b423c77e906b0524a31ad15c65bbc86809eef0",
       "expected_reason_code": null,
@@ -2554,7 +2554,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-071 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-071",
       "fixture_digest": "9e0af9397fb3a2cdc608dcbbf51d4651a38adf9e2ab06ddec62f5b42b42407ce",
       "expected_reason_code": null,
@@ -2590,7 +2590,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-072 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-072",
       "fixture_digest": "95889193c275e270b51287d33a0730ed32536852bd809c019ab56a76da4daae4",
       "expected_reason_code": null,
@@ -2626,7 +2626,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-073 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-073",
       "fixture_digest": "094e4bd0b7a2cac3f44d3ad9b09d46a2bcc02cc3b7db8168f752d4245a1bdbbe",
       "expected_reason_code": null,
@@ -2662,7 +2662,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-074 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-074",
       "fixture_digest": "f5b7fc595c017d71339bd251c3bfba41f4bc3520950bae96afa604d0681c495f",
       "expected_reason_code": null,
@@ -2698,7 +2698,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-075 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-075",
       "fixture_digest": "fd96c7647a24dadfdeabed93fecc05573616d08693b633d99637a185f91d406f",
       "expected_reason_code": null,
@@ -2734,7 +2734,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-076 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-076",
       "fixture_digest": "0b2037008ef66cf01aeb89b8af128b89d5247a26450aaa801569dee238bf0a30",
       "expected_reason_code": null,
@@ -2770,7 +2770,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-077 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-077",
       "fixture_digest": "49e34a4843200a854a047e389e6c486dfebc275270706db388338a41028e6ca6",
       "expected_reason_code": null,
@@ -2806,7 +2806,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-078 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-078",
       "fixture_digest": "2845e5a66f1185656db23965506c7cf692bf3fe8923db779e2182b366b876314",
       "expected_reason_code": null,
@@ -2842,7 +2842,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-079 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-079",
       "fixture_digest": "77f0f2086ebbcff015d886683385f126b571f3a5ec93f5af396b146226d029b9",
       "expected_reason_code": null,
@@ -2878,7 +2878,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-080 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-080",
       "fixture_digest": "e9320e43b811430541078fbdfcbe6418328dc34fe9cf7559c0c7658a0a70b642",
       "expected_reason_code": null,
@@ -2914,7 +2914,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-081 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-081",
       "fixture_digest": "a842a673a715b224d8d866c3989a2d3e92118d5cc054e6a3d9ea927fdba6943a",
       "expected_reason_code": null,
@@ -2950,7 +2950,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-082 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-082",
       "fixture_digest": "1b1eeaad672e5247c59a77365a05630c8f89dad8c54e65758e71c72a5b0e5e59",
       "expected_reason_code": null,
@@ -2986,7 +2986,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-083 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-083",
       "fixture_digest": "5616d5d2da5aa82abdd79f2ce33aa5149e604aa1b86fa1105d64a8086276c715",
       "expected_reason_code": null,
@@ -3022,7 +3022,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-084 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-084",
       "fixture_digest": "c81027b6a83f0b7414609ceb6d4d3fcce5acebed8301beb755ec06a3e059a4f5",
       "expected_reason_code": null,
@@ -3058,7 +3058,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-085 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-085",
       "fixture_digest": "acc8078848bd5a1db8c10aa3e120ebd08a22895ab781c8730ea3a8821f5ef83e",
       "expected_reason_code": null,
@@ -3094,7 +3094,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-086 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-086",
       "fixture_digest": "2943f2c8676180c87993be09375cd014e8f70d90a06349aefa85b8d246cbe6b5",
       "expected_reason_code": null,
@@ -3130,7 +3130,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-087 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-087",
       "fixture_digest": "3b9a970be94ecd95228af1040458144e6953703df0917ab2dcafc5aeaa15c8c3",
       "expected_reason_code": null,
@@ -3166,7 +3166,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-088 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-088",
       "fixture_digest": "1558214173ca56ddefcbb56a07dd55500d97e9a7576003c0b5e4efa8c4d93352",
       "expected_reason_code": null,
@@ -3202,7 +3202,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-089 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-089",
       "fixture_digest": "0f921dfe175e5e44d095273516a8ba569426c4c9adf4890c7ad4e8339329d8cb",
       "expected_reason_code": null,
@@ -3238,7 +3238,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-090 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-090",
       "fixture_digest": "f3781b20d8cfbce388364bd31fbc9a24146130943ba3c774673b0e8b6eb67e12",
       "expected_reason_code": null,
@@ -3277,7 +3277,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-091 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-091",
       "fixture_digest": "09e6b7b832752ad958354fae1ab7f780ad4157241989a0af5c0c999229528f7e",
       "expected_reason_code": null,
@@ -3313,7 +3313,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-092 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-092",
       "fixture_digest": "6477ffab2f4d2b9da5e1016f938751fc4c5394c61f2d332bc6c21889fa3821ba",
       "expected_reason_code": null,
@@ -3349,7 +3349,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-093 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-093",
       "fixture_digest": "62bc64488312f1af8bf5a1ea7a75d1e99e0eade9aba5e4a5e75c9f973e37ff71",
       "expected_reason_code": null,
@@ -3385,7 +3385,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-094 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-094",
       "fixture_digest": "624e58d18523ad285fdb48a21e50de65a6ed6c33f3718a18c0dab16fe03f5bc3",
       "expected_reason_code": null,
@@ -3421,7 +3421,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-095 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-095",
       "fixture_digest": "98d7057750c8cd69a83735e140be353e1abe665e63e5cd13a9c95253d8e9f428",
       "expected_reason_code": null,
@@ -3457,7 +3457,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-096 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-096",
       "fixture_digest": "a145888a5a19ba495afebc8db097ebb8630f534a2af2e8ae3281fe96433c162b",
       "expected_reason_code": null,
@@ -3493,7 +3493,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-097 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-097",
       "fixture_digest": "ca85d1af697bb8bb935f98bd1e2c0b2674841fb8fcd13e6fdb838085caba0247",
       "expected_reason_code": null,
@@ -3529,7 +3529,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-098 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-098",
       "fixture_digest": "3ac1cd4ec5732a27228bd4899b0a4f96c0a84d4c003b050e211fd903260e1529",
       "expected_reason_code": null,
@@ -3565,7 +3565,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-099 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-099",
       "fixture_digest": "9ac170ae5147aa8dba35795f0010dd0956fb1827bb4e599517e5fa828c24b7e8",
       "expected_reason_code": null,
@@ -3601,7 +3601,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-100 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-100",
       "fixture_digest": "27ca5aa9fb6373ffa5c4b5a04427d3a68f55c19eb4658a4aaf0a5b2bec647422",
       "expected_reason_code": null,
@@ -3637,7 +3637,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-101 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-101",
       "fixture_digest": "52d9804febc57a9285e5033475295610e526265d8d6908255030c420f4c93a7c",
       "expected_reason_code": null,
@@ -3673,7 +3673,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-102 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-102",
       "fixture_digest": "611feb4b7cf2c5cc34425eeebb23e7921555c791e3d9bd1758c14a01829be4b0",
       "expected_reason_code": null,
@@ -3709,7 +3709,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-103 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-103",
       "fixture_digest": "e63cb66c72a16b819c79e8c034c9a360001032ed00cbb41baf39614efd86e82e",
       "expected_reason_code": null,
@@ -3745,7 +3745,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-104 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-104",
       "fixture_digest": "efeaf1b6bb7102d620bc0783632d16f9149e77e13fa35b0223d4afb0cebe678f",
       "expected_reason_code": null,
@@ -3781,7 +3781,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-105 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-105",
       "fixture_digest": "edb753cee3aa91094ed055e2492b397fda1cd174da3a76b01ff40b69b1b04230",
       "expected_reason_code": null,
@@ -3817,7 +3817,7 @@
       "authority_semantic_claims": [
         "Frozen U06-EV-106 case semantics"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-ev-106",
       "fixture_digest": "1b35960babb7982228e00eec8deb9d178ca169e2d11af82db55e74c303ea9541",
       "expected_reason_code": null,
@@ -3856,7 +3856,7 @@
       "authority_semantic_claims": [
         "RDP-04 C1-C9 crash recovery"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-cw-01",
       "fixture_digest": "09158077c4ddc2d335258186931f3c2bb990bd97eca7d27cad86d42c3db39f62",
       "expected_reason_code": null,
@@ -3895,7 +3895,7 @@
       "authority_semantic_claims": [
         "RDP-04 C1-C9 crash recovery"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-cw-02",
       "fixture_digest": "21e7aad80086041e4ce6f99b15a26f01a4a9ec23cb739fbcde5f7348f8d13d5a",
       "expected_reason_code": null,
@@ -3934,7 +3934,7 @@
       "authority_semantic_claims": [
         "RDP-04 C1-C9 crash recovery"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-cw-03",
       "fixture_digest": "882e1275b0c5b9cf5dd40bc076bc0ca485c14a6b2f241ada4077b6ae07f046d9",
       "expected_reason_code": null,
@@ -3973,7 +3973,7 @@
       "authority_semantic_claims": [
         "RDP-04 C1-C9 crash recovery"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-cw-04",
       "fixture_digest": "77132406a95b1501d9eb59bcc1c3e11b54edf3f4e58508fb1dbf2de284ffe64a",
       "expected_reason_code": null,
@@ -4012,7 +4012,7 @@
       "authority_semantic_claims": [
         "RDP-04 C1-C9 crash recovery"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-cw-05",
       "fixture_digest": "f9a741bb4065f837072d1f5cf95130b8d244b39b30fc4cd6290504ba10b9a569",
       "expected_reason_code": null,
@@ -4051,7 +4051,7 @@
       "authority_semantic_claims": [
         "RDP-04 C1-C9 crash recovery"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-cw-06",
       "fixture_digest": "d3a710bcf413a2bac0a5fa39f116aa0ddd60baa2d807c8124ebfd1b31d9f1845",
       "expected_reason_code": null,
@@ -4090,7 +4090,7 @@
       "authority_semantic_claims": [
         "RDP-04 C1-C9 crash recovery"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-cw-07",
       "fixture_digest": "2268c0fa5adb1fe8692bdf068dddacb510bec07c98a40abaa7a0d8d92f22d7d4",
       "expected_reason_code": null,
@@ -4129,7 +4129,7 @@
       "authority_semantic_claims": [
         "RDP-04 C1-C9 crash recovery"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-cw-08",
       "fixture_digest": "ff19d5ba39766b0bebc821a5f7108a294e734d46579c8ef7a08302ec5744e0b0",
       "expected_reason_code": null,
@@ -4168,7 +4168,7 @@
       "authority_semantic_claims": [
         "RDP-04 C1-C9 crash recovery"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-cw-09",
       "fixture_digest": "d858396b0404172acea3958ee8ac639d3d31dc3e5b297617439874a0838f18e2",
       "expected_reason_code": null,
@@ -4204,7 +4204,7 @@
       "authority_semantic_claims": [
         "RDP-06 harness self-test"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-hg-001",
       "fixture_digest": "fcaf877b5bb2d05c2b8ae54585f8541acee474ad500ab971017611923cfc8ceb",
       "expected_reason_code": null,
@@ -4240,7 +4240,7 @@
       "authority_semantic_claims": [
         "RDP-06 harness self-test"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-hg-002",
       "fixture_digest": "c557e2f24300429b1023b188462e354bfa4c92cc002f0da63d6b0aa0effe10d1",
       "expected_reason_code": null,
@@ -4276,7 +4276,7 @@
       "authority_semantic_claims": [
         "RDP-06 harness self-test"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-hg-003",
       "fixture_digest": "fc8acfa2f9cc8d8c1c63b40c51be8532427f3d213caeffbba51f60851fea3377",
       "expected_reason_code": null,
@@ -4312,7 +4312,7 @@
       "authority_semantic_claims": [
         "exact implementation/verifier/contract SHA plus reviewed oracle and allowlist"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-vg-001",
       "fixture_digest": "5fe03d945f47d0e4e37b1722c63ad9d3e7c9623f371fa5bd306a062a5648b856",
       "expected_reason_code": null,
@@ -4348,7 +4348,7 @@
       "authority_semantic_claims": [
         "all EV-001..106 present and PASS"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-vg-002",
       "fixture_digest": "2a7522b5926382a78353aba352f584fa0d75a67a093ba2b169431c2f5bce85c3",
       "expected_reason_code": null,
@@ -4384,7 +4384,7 @@
       "authority_semantic_claims": [
         "all CW-01..09 present and PASS"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-vg-003",
       "fixture_digest": "2767f801b2fb250905817876387d2c557967ee4d68a8b10c88055ae1dc9e8b1a",
       "expected_reason_code": null,
@@ -4420,7 +4420,7 @@
       "authority_semantic_claims": [
         "HG-001..003 PASS"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-vg-004",
       "fixture_digest": "20e2c2252f93beeca1a8d767537cfa55cefea3e089b337a87c55dfaaa7160c35",
       "expected_reason_code": null,
@@ -4456,7 +4456,7 @@
       "authority_semantic_claims": [
         "zero real PHI and production recipient evidence"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-vg-005",
       "fixture_digest": "c152d3077e379c223fda39e6ac06fd557de450d2f4ff0721c6576bb41a912fb4",
       "expected_reason_code": null,
@@ -4492,7 +4492,7 @@
       "authority_semantic_claims": [
         "zero real external delivery/model/tool/knowledge and isolated environment"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-vg-006",
       "fixture_digest": "460be4dbd95e764811a620280308a1a2612e8e8c05a2f4a749e15887b49a550c",
       "expected_reason_code": null,
@@ -4528,7 +4528,7 @@
       "authority_semantic_claims": [
         "PROFILE-A remains blocked"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-vg-007",
       "fixture_digest": "4ab8332f5bb241f12bb22df50a22ad08eeee92b7730cb3417047be618ecabb97",
       "expected_reason_code": null,
@@ -4564,7 +4564,7 @@
       "authority_semantic_claims": [
         "no Clinical State bypass of K09/P01 and no Trace/Checkpoint as truth"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-vg-008",
       "fixture_digest": "8a45258b8f2c414271463b2d38e2e3ad7d4d9ac41a7f3cc878817d55007176af",
       "expected_reason_code": null,
@@ -4600,7 +4600,7 @@
       "authority_semantic_claims": [
         "no live U07 execution or U14 final decision"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-vg-009",
       "fixture_digest": "fda9cdfad009a9abf7d1381a44995113cf2d68e9f7ff25e9f8983a539b914659",
       "expected_reason_code": null,
@@ -4636,7 +4636,7 @@
       "authority_semantic_claims": [
         "Foundation plus U01-U05 plus U06 regression"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-vg-010",
       "fixture_digest": "06262b278d8a92557536f13e1c2381cb72083c302d971a03850405720f4315be",
       "expected_reason_code": null,
@@ -4672,7 +4672,7 @@
       "authority_semantic_claims": [
         "synthetic binding does not populate legacy real capability_binding_ref"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-001",
       "fixture_digest": "114b03e9e283f66e18b98074119ff7b77c9aa79705659a26730643a7985b2b7f",
       "expected_reason_code": null,
@@ -4708,7 +4708,7 @@
       "authority_semantic_claims": [
         "real compatibility alias maps exactly to REAL_CAPABILITY_BINDING"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-002",
       "fixture_digest": "2050fb51ef0023c6d0107b0f9514ceb2ee6826f55f46549864b0662210ddad98",
       "expected_reason_code": null,
@@ -4744,7 +4744,7 @@
       "authority_semantic_claims": [
         "mode-specific policy refs are enforced"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-003",
       "fixture_digest": "8045458d8d1ee54d9bcee6c35de4bdc794bd920b0d4a2083ccf54ec259ed5e28",
       "expected_reason_code": null,
@@ -4780,7 +4780,7 @@
       "authority_semantic_claims": [
         "F3 effect identity changes when normalized dependency binding identity changes"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-004",
       "fixture_digest": "94ac18e1620c854533e55fb696747a5998fd01848b7155545cb7b675e2c4bfb0",
       "expected_reason_code": null,
@@ -4816,7 +4816,7 @@
       "authority_semantic_claims": [
         "synthetic F3 effect never claims real P06 binding"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-005",
       "fixture_digest": "bfdd7607eabfcde866334da928fd8f9661f9fcc99b89307d62cd668ee7ce76cc",
       "expected_reason_code": null,
@@ -4852,7 +4852,7 @@
       "authority_semantic_claims": [
         "NOT_APPLICABLE release family has no fake P05 ref"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-006",
       "fixture_digest": "cf819b4731fef5ffb10d2cd9add2228ee49a14d18d2f3f60a72901c1e3c986a9",
       "expected_reason_code": null,
@@ -4888,7 +4888,7 @@
       "authority_semantic_claims": [
         "U06 parent trace links leaf capability trace without becoming Clinical State"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-007",
       "fixture_digest": "8a3acc9b528fec1d54147f419a0410282e9d6f42f2f7f88489221bd80935554a",
       "expected_reason_code": null,
@@ -4924,7 +4924,7 @@
       "authority_semantic_claims": [
         "delivery parent/child effect identities remain cross-store consistent"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-008",
       "fixture_digest": "2655ba51350a054ad229ed83b9c01c1a45fc4630c8c34b7308ad5fc4af8c8da1",
       "expected_reason_code": null,
@@ -4960,7 +4960,7 @@
       "authority_semantic_claims": [
         "direct F1 live source remains disabled in bounded profile"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-009",
       "fixture_digest": "45297190410f89672fb0235b19b3039e31905e73ebfb65c9e71dc22cd8b07b89",
       "expected_reason_code": null,
@@ -4996,7 +4996,7 @@
       "authority_semantic_claims": [
         "missing real upstream producer is not relabeled implemented because fixture exists"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-010",
       "fixture_digest": "61a8e9386862d6f7a6f2561b439301b3fc7e98995e462e304a0d21aac4252fa8",
       "expected_reason_code": null,
@@ -5032,7 +5032,7 @@
       "authority_semantic_claims": [
         "PROFILE-A cannot fall back to PROFILE-B"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-011",
       "fixture_digest": "69bf480b24f0f7ca259ed1a3c9dd9e5b64800c916f8b5ed3dabd4c012818246f",
       "expected_reason_code": null,
@@ -5068,7 +5068,7 @@
       "authority_semantic_claims": [
         "contract manifest includes aggregate amendment digest and AC-U06-10 U07 eligibility supersession"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-u06-agg-v-012",
       "fixture_digest": "df9d8b1aecbaccd0faed567cd602bb82bc4a09511c42935972ce674daf897bd8",
       "expected_reason_code": null,
@@ -5104,7 +5104,7 @@
       "authority_semantic_claims": [
         "structural containers exist with no business truth"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v01",
       "fixture_digest": "6e34508841df5510f18990e3004480eced1f50608d5483890cde16b235a8798e",
       "expected_reason_code": null,
@@ -5140,7 +5140,7 @@
       "authority_semantic_claims": [
         "producer equals u06-runtime"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v02",
       "fixture_digest": "13afbcc7f0b95db2c40b71d9fe6e78956d0d032c0e2c0582cd14d27e2ca35196",
       "expected_reason_code": null,
@@ -5176,7 +5176,7 @@
       "authority_semantic_claims": [
         "P01 capability equals u06-state-writer@1.0.0"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v03",
       "fixture_digest": "fe9ee6103c694aad196d4d3ca2f7b2bd9782a3acf15055b34d76e5653a47e85f",
       "expected_reason_code": null,
@@ -5212,7 +5212,7 @@
       "authority_semantic_claims": [
         "C03 binding never becomes P01 capability"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v04",
       "fixture_digest": "9d9e559b267d3f464f993667f28a72e59249a3927635df20ef4082afe280b72a",
       "expected_reason_code": null,
@@ -5248,7 +5248,7 @@
       "authority_semantic_claims": [
         "only exact U06 state paths are allowed"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v05",
       "fixture_digest": "0ee4f30b3195f79e1587a4600ee1fe9755145422dc380ec8748feb52ff435cd9",
       "expected_reason_code": null,
@@ -5284,7 +5284,7 @@
       "authority_semantic_claims": [
         "unknown state paths fail closed"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v06",
       "fixture_digest": "8613e6633e32bda70a692c7947aae0fc0a902a7403caba3f7100cc6bc60bd1a1",
       "expected_reason_code": null,
@@ -5320,7 +5320,7 @@
       "authority_semantic_claims": [
         "source equals RULE_DERIVED"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v07",
       "fixture_digest": "a0a683a8cc04d255cd8f822832d50345035f85ce00276ea3a6c23c081dd2cb0e",
       "expected_reason_code": null,
@@ -5356,7 +5356,7 @@
       "authority_semantic_claims": [
         "synthetic repository only and production writes zero"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v08",
       "fixture_digest": "0fd725316dfa2d0e27e7bbe4837bdf871c7255007073c97b7dbd3a445d63dd6d",
       "expected_reason_code": null,
@@ -5392,7 +5392,7 @@
       "authority_semantic_claims": [
         "malformed missing parent fails closed"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v09",
       "fixture_digest": "3de0787b441d88e135087a04d18ac17ad0bb1eec403900b90cfeb6f644fb034a",
       "expected_reason_code": null,
@@ -5428,7 +5428,7 @@
       "authority_semantic_claims": [
         "ADD/REPLACE follows authoritative pre-read"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v10",
       "fixture_digest": "25d51c383bb39c8eb8a5c93d8648d30cb77566e6cefa7e19520a629c113b2c6e",
       "expected_reason_code": null,
@@ -5464,7 +5464,7 @@
       "authority_semantic_claims": [
         "different pending Question conflicts"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v11",
       "fixture_digest": "0e99fa184e1607a80f7dcc348c1b90d57b44961c047e436da058db61243168c7",
       "expected_reason_code": null,
@@ -5500,7 +5500,7 @@
       "authority_semantic_claims": [
         "nested value cannot bypass boundary via stringification"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v12",
       "fixture_digest": "3f038d55a693d94698735d1b1e87bd36d131bcc15de8a7a60c371edba1c68c41",
       "expected_reason_code": null,
@@ -5536,7 +5536,7 @@
       "authority_semantic_claims": [
         "version conflict does not blindly refresh base version"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v13",
       "fixture_digest": "2421dcf1044089204654076c94e2f7109fecfe532bef790be457bf61bb2dd715",
       "expected_reason_code": null,
@@ -5572,7 +5572,7 @@
       "authority_semantic_claims": [
         "exact replay causes zero second mutation"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v14",
       "fixture_digest": "a9f9b09db5f0a25d2c45d98b3d606550678c5d77291819ee545067af279c1e7a",
       "expected_reason_code": null,
@@ -5608,7 +5608,7 @@
       "authority_semantic_claims": [
         "read-store ref equals commit-store ref equals admitted store ref"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v15",
       "fixture_digest": "5c02958fc0cde67412edf05786ba21443235ab293ac9fca333242b8d97c7244e",
       "expected_reason_code": null,
@@ -5644,7 +5644,7 @@
       "authority_semantic_claims": [
         "mismatched synthetic read/write repositories fail construction"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr01-v16",
       "fixture_digest": "ef120a8cd0e677ceb89c27d65d5c864a676e866ae339efc150907464a7dcab46",
       "expected_reason_code": null,
@@ -5680,7 +5680,7 @@
       "authority_semantic_claims": [
         "ACTIVE plus null current_wait_effect is initial state"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v01",
       "fixture_digest": "18c91e98474bc16e0009cc6155270f34547f4905beff0daaf1b1e6bfa74b6523",
       "expected_reason_code": null,
@@ -5716,7 +5716,7 @@
       "authority_semantic_claims": [
         "first valid transition yields WAITING_USER pointer and committed effect"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v02",
       "fixture_digest": "da75285cb2f5ba18070558639218666c5cb1b91aa513890d81557fbcace5cc54",
       "expected_reason_code": null,
@@ -5752,7 +5752,7 @@
       "authority_semantic_claims": [
         "row version advances exactly once"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v03",
       "fixture_digest": "ea329087e3f5482b4e40ee7804bfdd855d9f30d7322d3ac511c80f36ec2e4ddf",
       "expected_reason_code": null,
@@ -5788,7 +5788,7 @@
       "authority_semantic_claims": [
         "exact replay causes zero second mutation"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v04",
       "fixture_digest": "e04806f4f896d456b5d397c6ca1c16c93a4add267c48e5897a42957af3cdb698",
       "expected_reason_code": null,
@@ -5824,7 +5824,7 @@
       "authority_semantic_claims": [
         "same effect changed fingerprint fails closed"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v05",
       "fixture_digest": "ab393a5879e69152a5a59f3b1a082dfb32ab527aeb80a485e2454423a2aaeab0",
       "expected_reason_code": null,
@@ -5860,7 +5860,7 @@
       "authority_semantic_claims": [
         "WAITING_USER different effect conflicts"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v06",
       "fixture_digest": "1d593eb3b9e59d50baef05d4a586c641f9fc40436404dd7de6a055804dff2edc",
       "expected_reason_code": null,
@@ -5896,7 +5896,7 @@
       "authority_semantic_claims": [
         "row-version mismatch conflicts"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v07",
       "fixture_digest": "ef6a1e75dafa91dcf286357ac16154748ae15c03fed4f4029ddba08fbf0f81ba",
       "expected_reason_code": null,
@@ -5932,7 +5932,7 @@
       "authority_semantic_claims": [
         "crash before commit leaves no committed lifecycle or effect"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v08",
       "fixture_digest": "498409747c1e754447e94855d631d64c18e0d180ea5733b6c1a1161bd079985a",
       "expected_reason_code": null,
@@ -5968,7 +5968,7 @@
       "authority_semantic_claims": [
         "crash after commit replay returns original result"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v09",
       "fixture_digest": "779db199df215a66b171ac528987f9fe46bf3e84a7b38e2b3ee86aeb223e55f3",
       "expected_reason_code": null,
@@ -6004,7 +6004,7 @@
       "authority_semantic_claims": [
         "ledger/record inconsistency fails closed"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v10",
       "fixture_digest": "2ab9c68f6893355f632f5b59fe04049f4395565120c99bfac5a7e5f075c700d1",
       "expected_reason_code": null,
@@ -6040,7 +6040,7 @@
       "authority_semantic_claims": [
         "synthetic DB only and production writes zero"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v11",
       "fixture_digest": "08e9b896e57963a9735334162ef45c21c43832f6378e4828f253803258347e86",
       "expected_reason_code": null,
@@ -6076,7 +6076,7 @@
       "authority_semantic_claims": [
         "U01 start remains ACTIVE with null pointer"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v12",
       "fixture_digest": "43b686261dd53d451e4937ece20bb21384d945d450082a6d469893d2f3a0af32",
       "expected_reason_code": null,
@@ -6112,7 +6112,7 @@
       "authority_semantic_claims": [
         "two concurrent identical commands produce one mutation plus one replay"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v13",
       "fixture_digest": "af1af5f1a6b4c3eae5bb02a6adbfdad5df1a0841ca8731d2c626d5ccbb1ab772",
       "expected_reason_code": null,
@@ -6148,7 +6148,7 @@
       "authority_semantic_claims": [
         "post-lock reread detects first committer"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v14",
       "fixture_digest": "aa1ad038b01a55ec08bf4733895b677a42722f80115dca94a947beb5a106559d",
       "expected_reason_code": null,
@@ -6184,7 +6184,7 @@
       "authority_semantic_claims": [
         "committed_row_version equals flushed JPA version"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v15",
       "fixture_digest": "c79640948c39c782cb01dee51f8a14585bfc299c5df4882d9cca2fef75da9fcc",
       "expected_reason_code": null,
@@ -6220,7 +6220,7 @@
       "authority_semantic_claims": [
         "unique-key race reloads and applies exact equality"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr02-v16",
       "fixture_digest": "de5cc860c1e5230b2b6e0498cf099d211d9abe6ef28236a3d06ffe8fb9a2bc13",
       "expected_reason_code": null,
@@ -6256,7 +6256,7 @@
       "authority_semantic_claims": [
         "one RuntimeThreadState per runtime thread"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v01",
       "fixture_digest": "e70824307b1d3b4784de7bd6b411f56909e28c4f8ac8b0c0e6f42ce3f5aa5f47",
       "expected_reason_code": null,
@@ -6292,7 +6292,7 @@
       "authority_semantic_claims": [
         "initial runtime status ACTIVE"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v02",
       "fixture_digest": "e88a2fa9a5d05282a9958c8c27ea791be883d1683e5ec1363108748ee8d1219f",
       "expected_reason_code": null,
@@ -6328,7 +6328,7 @@
       "authority_semantic_claims": [
         "checkpoint id stable for same parent wait effect"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v03",
       "fixture_digest": "c7536a85e3f190bbcc0b0275da35637a557af9f8d0bb18b81814faabc08cd3da",
       "expected_reason_code": null,
@@ -6364,7 +6364,7 @@
       "authority_semantic_claims": [
         "same checkpoint id changed payload conflicts"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v04",
       "fixture_digest": "c8e5ce83eac8cf0be7cfa6c254f3a0f1ce8a9ee5a7ac0d0e3105ee2dbdb18655",
       "expected_reason_code": null,
@@ -6400,7 +6400,7 @@
       "authority_semantic_claims": [
         "checkpoint reservation precedes AWAITING transition"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v05",
       "fixture_digest": "e9be729bb2ea7c7453dc3ffe466165fa9a52249b414669084be2b90697cbe9d1",
       "expected_reason_code": null,
@@ -6436,7 +6436,7 @@
       "authority_semantic_claims": [
         "reservation atomically sets WAIT_CHECKPOINTED plus claim"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v06",
       "fixture_digest": "41bc6514d2dcdab857e10845318a94673a0ce1e8e54eaaa13bc2852c2a5a2751",
       "expected_reason_code": null,
@@ -6472,7 +6472,7 @@
       "authority_semantic_claims": [
         "reservation advances Thread row version once"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v07",
       "fixture_digest": "eff20a62e609a39bdd353c766473a011cd78d5309c5427dc175056f5e5595206",
       "expected_reason_code": null,
@@ -6508,7 +6508,7 @@
       "authority_semantic_claims": [
         "AWAITING transition advances Thread row version once"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v08",
       "fixture_digest": "0af318e9359e6b3039ed235fe19097a81584690f6a673598994e5151d2b1c94c",
       "expected_reason_code": null,
@@ -6544,7 +6544,7 @@
       "authority_semantic_claims": [
         "exact Thread replay causes zero second transition"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v09",
       "fixture_digest": "41b6b7769d5eccfaaae0f4c75689dae5ef3986908af98b1a2bed09f2bd808303",
       "expected_reason_code": null,
@@ -6580,7 +6580,7 @@
       "authority_semantic_claims": [
         "C7 recovery creates or reserves same checkpoint only"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v10",
       "fixture_digest": "e7bac49271a14fc5d7b1930cc13143914c9f1fee4818422ee60024d370d58544",
       "expected_reason_code": null,
@@ -6616,7 +6616,7 @@
       "authority_semantic_claims": [
         "C8 WAIT_CHECKPOINTED recovery transitions without resend or recommit"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v11",
       "fixture_digest": "b869b45bf8c43bf310cc9c41315cf7151941ea837241906b3eed781a440a8d8f",
       "expected_reason_code": null,
@@ -6652,7 +6652,7 @@
       "authority_semantic_claims": [
         "C9 recovery re-emits same eligibility only"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v12",
       "fixture_digest": "a8b5c175ae12cf6d2811dfb1c44551c1e35f6e9440d1187984d2928f05d7dd55",
       "expected_reason_code": null,
@@ -6688,7 +6688,7 @@
       "authority_semantic_claims": [
         "business WAITING plus Thread not AWAITING_USER yields no U07"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v13",
       "fixture_digest": "3abc0607bb6bb6e312abec6cb289b9b2efa4735c5373b8ad7d52461b1f5b88cf",
       "expected_reason_code": null,
@@ -6724,7 +6724,7 @@
       "authority_semantic_claims": [
         "competing different wait effects cannot create two active checkpoints"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v14",
       "fixture_digest": "15ed51abde6936b6a5a1edfd95e3824816b38f640022d96076856e7bc804981a",
       "expected_reason_code": null,
@@ -6760,7 +6760,7 @@
       "authority_semantic_claims": [
         "mismatched checkpoint effect or thread fails closed"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v15",
       "fixture_digest": "7cb6ad426b1d3dce5ffad128c9bf7ed003fb7f00bde38f80224f699f402e6e1e",
       "expected_reason_code": null,
@@ -6796,7 +6796,7 @@
       "authority_semantic_claims": [
         "Python test checkpoint is not Runtime authority"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v16",
       "fixture_digest": "abe6533f27b5614ba37814555045dedaec5f834843909b45e27268d787f290a7",
       "expected_reason_code": null,
@@ -6832,7 +6832,7 @@
       "authority_semantic_claims": [
         "production Runtime store writes zero in PROFILE-B"
       ],
-      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
       "fixture_id": "fixture-irr03-v17",
       "fixture_digest": "a53bae37b6248431cbe097b20de16d9e14ffc351b1461848c8d64a6bec06abec",
       "expected_reason_code": null,

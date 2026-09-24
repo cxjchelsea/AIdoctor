@@ -89,7 +89,7 @@ jobs:
     permissions:
       contents: read
     env:
-      U06_IMPLEMENTATION_SEMANTIC_SHA: 1d427fd09957767c938e34883dcbcda85b7fd992
+      U06_IMPLEMENTATION_SEMANTIC_SHA: 66fa3c078dce5e304e2ada9d6c0df0ff9fbde661
       U06_PROFILE: SYNTHETIC_STRUCTURAL_NONPROD
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

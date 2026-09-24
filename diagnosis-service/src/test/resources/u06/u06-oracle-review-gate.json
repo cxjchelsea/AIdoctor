@@ -1,10 +1,10 @@
 {
   "schema": "U06_ORACLE_REVIEW_GATE_V0_1",
   "oracle_review_id": "5298650596",
-  "reviewed_oracle_digest": "ac89a1e902bd82c84e39748d76de1807db434aff3bb6e21d44c03aa564a174d7",
-  "reviewed_contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
-  "reviewed_contract_manifest_blob_sha": "e1e228ea23da384353609ef2e86385dff9ef1e44",
-  "reviewed_freeze_head": "a832018ec9c9623e18330d04c50fecc7b89d7067",
+  "reviewed_oracle_digest": "9a7ae0b5286bd033e74e28167af523a53d57fccd7694d16e7c76f3da281f234f",
+  "reviewed_contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
+  "reviewed_contract_manifest_blob_sha": "1b53f4413278719efd9e2345fad7e27ec231f704",
+  "reviewed_freeze_head": "66fa3c078dce5e304e2ada9d6c0df0ff9fbde661",
   "reviewer_role": "INDEPENDENT_CONTRACT_ORACLE_REVIEW",
   "independence_marker": "EXPECTATION_AUTHORITY_DERIVED_FROM_FROZEN_CONTRACT_NOT_SUT_OUTPUT",
   "verdict": "PASS",
@@ -12,6 +12,9 @@
   "finding_refs": [
     "BF-U06-ORACLE-IR-01:CLOSED",
     "BF-U06-ORACLE-IR-02:CLOSED",
-    "BYTE_INTEGRITY_REBOUND:PASS"
-  ]
+    "BYTE_INTEGRITY_REBOUND:PASS",
+    "SEMANTIC_REFREEZE_PROVENANCE_REBIND:PASS"
+  ],
+  "review_binding_revalidated_by": "U06_TARGETED_EXACT_HEAD_IMPLEMENTATION_REVIEW_7ddc61b9aae7b0cb14f3a44e8dcc638e4c171da1",
+  "review_binding_revalidation_scope": "PROVENANCE_ONLY_NO_ORACLE_CASE_SEMANTIC_CHANGE"
 }
