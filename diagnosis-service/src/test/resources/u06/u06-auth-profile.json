@@ -1,0 +1,16 @@
+{
+  "schema": "U06_AUTH_PROFILE_V0_1",
+  "authorization_id": "AUTH-U06-PROFILEB-IMPL-001",
+  "execution_profile": "SYNTHETIC_STRUCTURAL_NONPROD",
+  "delivery_profile": "SYNTHETIC_NONLIVE_DURABLE_DELIVERY",
+  "implementation_semantic_pass_sha": "1d427fd09957767c938e34883dcbcda85b7fd992",
+  "real_phi_allowed": false,
+  "external_io_allowed": false,
+  "production_store_write_allowed": false,
+  "real_c03_d04_allowed": false,
+  "direct_f1_runtime_activation": false,
+  "live_u07": false,
+  "production_scheduler_routing": false,
+  "profile_a_enabled": false,
+  "network_egress_policy": "DENY_BY_DEFAULT_REQUIRED_FOR_AUTHORITATIVE_RUN"
+}
