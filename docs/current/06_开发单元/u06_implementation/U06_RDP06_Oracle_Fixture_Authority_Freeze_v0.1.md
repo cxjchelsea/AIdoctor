@@ -38,7 +38,7 @@ The contract manifest file itself is:
 diagnosis-service/src/test/resources/u06/u06-contract-manifest.json
 
 Git blob SHA
-= d06ae221d0bc6724d422257d66b0337472e63b51
+= e1e228ea23da384353609ef2e86385dff9ef1e44
 ~~~
 
 Review-gate verdicts are separate immutable records and do not mutate the authority core.
@@ -55,7 +55,7 @@ schema
 = U06_VERIFICATION_EXPECTATIONS_V0_1
 
 SHA-256 exact UTF-8 file text
-= 6e7de2ab663bb683902514ba244eaafb8986b43b5bbb3caf5cc8916dbe5a865e
+= ac89a1e902bd82c84e39748d76de1807db434aff3bb6e21d44c03aa564a174d7
 ~~~
 
 Case identity inventory:
@@ -94,7 +94,7 @@ targeted re-review
 = 5298506940 / PASS
 
 reviewed_oracle_digest
-= 6e7de2ab663bb683902514ba244eaafb8986b43b5bbb3caf5cc8916dbe5a865e
+= ac89a1e902bd82c84e39748d76de1807db434aff3bb6e21d44c03aa564a174d7
 
 reviewed_contract_manifest_digest
 = 4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0
@@ -120,7 +120,7 @@ schema
 = U06_VERIFICATION_FIXTURES_V0_1
 
 SHA-256 exact UTF-8 file text
-= 945f340d4c387c2cf417f64f9b54d23db10f24931c2cc5dfd6978ac5ac7e737b
+= 6494a86da0e385c287276100e12af52e57067b5a72a441740cf3ab3ddf411c5a
 
 fixture count
 = 189
@@ -154,7 +154,7 @@ targeted re-review
 = 5298507129 / PASS
 
 reviewed_fixture_manifest_digest
-= 945f340d4c387c2cf417f64f9b54d23db10f24931c2cc5dfd6978ac5ac7e737b
+= 6494a86da0e385c287276100e12af52e57067b5a72a441740cf3ab3ddf411c5a
 
 reviewed_contract_manifest_digest
 = 4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0
@@ -178,7 +178,7 @@ schema
 = U06_AUTH_PROFILE_V0_1
 
 SHA-256 exact UTF-8 file text
-= 6a5a5139741ebd69618c90b036e37f38c4caa7a71df68bacb3c603f4d6ae0944
+= 38f6afb30a55ea8d4cd54dad52509a629e20fbd31639b9b537e1324205a65f7c
 ~~~
 
 The auth profile requires:
