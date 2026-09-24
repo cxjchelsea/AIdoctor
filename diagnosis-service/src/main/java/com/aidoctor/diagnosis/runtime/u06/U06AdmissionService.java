@@ -36,14 +36,14 @@ public final class U06AdmissionService {
         String id=admissionId(r);
         String fp=canonicalFingerprint(r);
 
-        String staticRejection=validateStatic(r);
-        if(staticRejection!=null)return Admission.rejected(id,staticRejection,fp,r);
-
         String existing=admittedFingerprints.get(id);
         if(existing!=null) {
             if(!existing.equals(fp))throw new IllegalStateException("U06_ADMISSION_REPLAY_CONFLICT");
             return Admission.admitted(id,fp,r,true);
         }
+
+        String staticRejection=validateStatic(r);
+        if(staticRejection!=null)return Admission.rejected(id,staticRejection,fp,r);
 
         if(actualCurrentStateVersion!=r.getAuthoritativeClinicalStateVersion()
                 &&!exactAuthoritativeReplayEvidence)
