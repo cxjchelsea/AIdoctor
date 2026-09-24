@@ -11,6 +11,15 @@ public final class U06AdmissionService {
     public static final String REJECTED_BINDING="REJECTED_BINDING";
     public static final String REJECTED_POLICY="REJECTED_POLICY";
     public static final String REJECTED_F1_DISABLED="REJECTED_F1_DISABLED";
+    public static final String REJECTED_SOURCE_AUTHORITY="REJECTED_SOURCE_AUTHORITY";
+    public static final String REJECTED_GATE="REJECTED_GATE";
+    public static final String REJECTED_PERMISSION="REJECTED_PERMISSION";
+    public static final String FAILURE_PERMISSION_UNAVAILABLE="FAILURE_PERMISSION_UNAVAILABLE";
+    public static final String REJECTED_CONSULTATION_CDP_MISMATCH="REJECTED_CONSULTATION_CDP_MISMATCH";
+    public static final String REJECTED_ROUTE_CONSEQUENCE="REJECTED_ROUTE_CONSEQUENCE";
+    public static final String REJECTED_DEPENDENCY="REJECTED_DEPENDENCY";
+    public static final String REJECTED_SOURCE_SUPERSEDED="REJECTED_SOURCE_SUPERSEDED";
+    public static final String REJECTED_SYNTHETIC_MARKER="REJECTED_SYNTHETIC_MARKER";
 
     private final Map<String,String> admittedFingerprints=new LinkedHashMap<String,String>();
 
@@ -84,8 +93,26 @@ public final class U06AdmissionService {
     }
 
     private String validateStatic(U06ProfileBRequest r) {
+        U06AdmissionEvidence evidence=r.getAdmissionEvidence();
+        if(evidence==null)return REJECTED_SOURCE_AUTHORITY;
+        if(!evidence.isSyntheticExecutionMarkerValid())return REJECTED_SYNTHETIC_MARKER;
         if(!U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD.equals(r.getExecutionProfile()))
             return REJECTED_PROFILE;
+        if(!evidence.isSourceAuthorityPresent()||!evidence.isSourceAuthorityCurrent())
+            return REJECTED_SOURCE_AUTHORITY;
+        if(evidence.isSourceSuperseded())return REJECTED_SOURCE_SUPERSEDED;
+        if(!evidence.isRouteConsequenceValid())return REJECTED_ROUTE_CONSEQUENCE;
+        if(!evidence.isConsultationCdpMatch())return REJECTED_CONSULTATION_CDP_MISMATCH;
+        if(U06AdmissionEvidence.GATE_STALE.equals(evidence.getGateState()))
+            return REJECTED_GATE;
+        if(U06AdmissionEvidence.GATE_RESTRICTED_CURRENT.equals(evidence.getGateState())) {
+            if(U06AdmissionEvidence.PERMISSION_UNAVAILABLE.equals(evidence.getPermissionState()))
+                return FAILURE_PERMISSION_UNAVAILABLE;
+            if(!U06AdmissionEvidence.PERMISSION_ALLOWED.equals(evidence.getPermissionState()))
+                return REJECTED_PERMISSION;
+        }
+        if(!evidence.isDependencyUsableForProfileB())
+            return REJECTED_DEPENDENCY;
         if(!U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING.equals(r.getDependencyBindingType()))
             return REJECTED_BINDING;
         if(r.getClaimedClinicalStateVersion()!=r.getAuthoritativeClinicalStateVersion())
