@@ -29,10 +29,38 @@ Not claimed:
 - merge;
 - production or real-patient use.
 
+Implementation review provenance:
+~~~text
+Initial exact-head implementation review
+review_id = 5298397911
+reviewed_head = 8b4f08b0344e642a2766a936cfac8358f4d3a85b
+verdict = REVISE_REQUIRED
+
+Targeted implementation re-review
+review_id = 5298441567
+reviewed_head = 1d427fd09957767c938e34883dcbcda85b7fd992
+verdict = PASS
+
+Engineering workflow
+run_id = 35939859643
+verdict = SUCCESS
+
+Focused structural tests
+= 14 / 14 PASS
+~~~
+
 Current implementation status:
 ~~~text
-IMPLEMENTATION_CANDIDATE = IN_PROGRESS
-IMPLEMENTATION_REVIEW = NOT_YET_PASSED
+IMPLEMENTATION_CANDIDATE
+= IMPLEMENTED / REVIEW_PASS
+/ PENDING_RDP06_AUTHORITATIVE_VERIFICATION
+
+BF-U06-IMPL-IR-01 = CLOSED
+BF-U06-IMPL-IR-02 = CLOSED
+BF-U06-IMPL-IR-03 = CLOSED
+BF-U06-IMPL-IR-04 = CLOSED
+
 AUTHORITATIVE_VERIFICATION = NOT_RUN
+IMPLEMENTATION_VERIFICATION_CLOSURE = NOT_PASSED
 MERGE_AUTHORIZATION = NOT_GRANTED
 ~~~
