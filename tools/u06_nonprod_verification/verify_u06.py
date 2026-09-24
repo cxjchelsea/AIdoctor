@@ -40,7 +40,7 @@ def sha256_file(path):
 
 def git_blob_sha1(path):
     data = Path(path).read_bytes()
-    header = ("blob " + str(len(data)) + "\\0").encode("utf-8")
+    header = ("blob " + str(len(data)) + "\0").encode("utf-8")
     return hashlib.sha1(header + data).hexdigest()
 
 EXPECTED_AUTH_SHARED_RUNTIME_REFS = [
