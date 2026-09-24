@@ -834,7 +834,7 @@ class U06Rdp06AuthoritativeObservationTest {
                     ?"SAME_OUTCOME_ELIGIBILITY_ZERO_NEW_RESUME":"WAIT_REPLAY_CREATED_NEW_EFFECT");
             if(same){
                 o.withArray("observed_identity_equalities").add("same outcome identity");
-                o.withArray("observed_identity_equalities").add("same U07 eligibility");
+                o.withArray("observed_identity_equalities").add("same U07 eligibility identity");
             }
             o.put("observed_state_commit_count",0);
             o.put("observed_delivery_intent_count",0);
