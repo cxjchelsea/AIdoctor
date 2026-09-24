@@ -143,6 +143,5 @@
     "total": 189
   },
   "asset_digest_semantics": "SHA-256 over exact committed UTF-8 file text including trailing newline",
-  "oracle_review_gate_status": "PENDING_TARGETED_RE_REVIEW",
-  "fixture_review_gate_status": "PENDING_TARGETED_RE_REVIEW"
+  "review_gate_binding_semantics": "oracle/fixture review verdicts are external immutable gate records bound to authority_core_digest and exact asset digests"
 }
