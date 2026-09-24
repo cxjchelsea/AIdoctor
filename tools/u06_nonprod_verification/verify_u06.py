@@ -38,6 +38,40 @@ def sha256_file(path):
             h.update(chunk)
     return h.hexdigest()
 
+def git_blob_sha1(path):
+    data = Path(path).read_bytes()
+    header = ("blob " + str(len(data)) + "\\0").encode("utf-8")
+    return hashlib.sha1(header + data).hexdigest()
+
+EXPECTED_AUTH_SHARED_RUNTIME_REFS = [
+    'AUTH-U06-PROFILEB-IMPL-001',
+    'FROZEN_RDP01_TO_RDP06',
+    'AGGREGATE_AC01_TO_AC10',
+    'CA_IRR01_TO_IRR03',
+    'EXACT_SHARED_RUNTIME_ALLOWLIST_ONLY'
+]
+
+EXPECTED_AUTH_SHARED_RUNTIME_PATHS = [
+    'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/**',
+    'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/ConsultationRecord.java',
+    'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/ConsultationRepository.java',
+    'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeThreadStateRecord.java',
+    'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeThreadStateRepository.java',
+    'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeWaitCheckpointRecord.java',
+    'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeWaitCheckpointRepository.java',
+    'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeWaitCheckpointService.java',
+    'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeThreadWaitTransitionService.java',
+    'diagnosis-service/src/main/resources/db/migration/V6__add_u06_wait_runtime.sql',
+    'diagnosis-service/src/main/resources/db/migration-oracle/V6__add_u06_wait_runtime.sql',
+    'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u06/**',
+    'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/u06/**',
+    'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u01/U01ConsultationServiceTest.java',
+    'diagnosis-service/src/test/resources/u06/**',
+    'tools/u06_nonprod_verification/**',
+    '.github/workflows/u06-rdp06-authoritative-verification.yml',
+    'docs/current/06_开发单元/u06_implementation/**'
+]
+
 def load(path):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -350,6 +384,7 @@ def main():
         "oracle": resources / "u06-verification-expectations.json",
         "fixtures": resources / "u06-verification-fixtures.json",
         "auth": resources / "u06-auth-profile.json",
+        "auth_gate": resources / "u06-auth-profile-review-gate.json",
         "oracle_gate": resources / "u06-oracle-refreeze-review-gate.json",
         "fixture_gate": resources / "u06-fixture-refreeze-review-gate.json",
     }
@@ -358,6 +393,7 @@ def main():
     oracle = load(paths["oracle"])
     fixtures = load(paths["fixtures"])
     auth = load(paths["auth"])
+    ag = load(paths["auth_gate"])
     og = load(paths["oracle_gate"])
     fg = load(paths["fixture_gate"])
     env = load(args.environment_evidence)
@@ -373,12 +409,55 @@ def main():
     valid &= chk("oracle_sha256", sha256_file(paths["oracle"]), manifest["oracle"]["digest"])
     valid &= chk("fixture_sha256", sha256_file(paths["fixtures"]), manifest["fixtures"]["digest"])
     valid &= chk("auth_profile_sha256", sha256_file(paths["auth"]), manifest["auth_profile"]["digest"])
+
+    # Auth-profile authority-status consistency gate. A byte-valid file is not enough:
+    # the body must implement the frozen RDP-06 machine-readable authorization contract.
+    valid &= chk("auth_profile_schema", auth.get("schema"), "U06_VERIFICATION_AUTH_PROFILE_V0_1")
+    valid &= chk("auth_profile_authorization_id", auth.get("authorization_id"), "AUTH-U06-PROFILEB-IMPL-001")
+    valid &= chk("auth_profile_environment", auth.get("environment"), "NON_PRODUCTION")
+    valid &= chk("auth_profile_execution_profile", auth.get("execution_profile"), "SYNTHETIC_STRUCTURAL_NONPROD")
+    valid &= chk("auth_profile_delivery_profile", auth.get("delivery_profile"), "SYNTHETIC_NONLIVE_DURABLE_DELIVERY")
+    valid &= chk("auth_profile_semantic_sha", auth.get("implementation_semantic_pass_sha"),
+                 manifest["authority_core"]["implementation_semantic_pass_sha"])
+    valid &= chk("auth_profile_semantic_sha_arg", auth.get("implementation_semantic_pass_sha"),
+                 args.implementation_sha)
+    valid &= chk("auth_profile_synthetic_patient_data_only", auth.get("synthetic_patient_data_only"), True)
+    valid &= chk("auth_profile_real_patient_traffic", auth.get("real_patient_traffic"), False)
+    valid &= chk("auth_profile_profile_a_real_c03_enabled", auth.get("profile_a_real_c03_enabled"), False)
+    valid &= chk("auth_profile_profile_a_real_delivery_enabled", auth.get("profile_a_real_delivery_enabled"), False)
+    valid &= chk("auth_profile_external_delivery_side_effects", auth.get("external_delivery_side_effects"), False)
+    valid &= chk("auth_profile_external_model_calls", auth.get("external_model_calls"), False)
+    valid &= chk("auth_profile_external_tool_calls", auth.get("external_tool_calls"), False)
+    valid &= chk("auth_profile_external_knowledge_calls", auth.get("external_knowledge_calls"), False)
+    valid &= chk("auth_profile_production_state_store", auth.get("production_state_store"), False)
+    valid &= chk("auth_profile_production_consultation_store", auth.get("production_consultation_store"), False)
+    valid &= chk("auth_profile_live_u07_execution", auth.get("live_u07_execution"), False)
+    valid &= chk("auth_profile_live_u14_final_routing", auth.get("live_u14_final_routing"), False)
+    valid &= chk("auth_profile_synthetic_delivery_scope_required", auth.get("synthetic_delivery_scope_required"), True)
+    valid &= chk("auth_profile_authorized_refs", auth.get("authorized_shared_runtime_change_refs"),
+                 EXPECTED_AUTH_SHARED_RUNTIME_REFS)
+    valid &= chk("auth_profile_authorized_paths", auth.get("authorized_shared_runtime_paths"),
+                 EXPECTED_AUTH_SHARED_RUNTIME_PATHS)
+    valid &= chk("auth_profile_unreviewed_change_count", auth.get("unreviewed_shared_runtime_change_count"), 0)
+
+    manifest_blob = git_blob_sha1(paths["manifest"])
+    valid &= chk("auth_profile_gate_verdict", ag.get("verdict"), "PASS")
+    valid &= chk("auth_profile_gate_digest", ag.get("reviewed_auth_profile_digest"), manifest["auth_profile"]["digest"])
+    valid &= chk("auth_profile_gate_contract", ag.get("reviewed_contract_manifest_digest"), core)
+    valid &= chk("auth_profile_gate_contract_blob", ag.get("reviewed_contract_manifest_blob_sha"), manifest_blob)
+    valid &= chk("auth_profile_gate_semantic_sha", ag.get("reviewed_implementation_semantic_sha"),
+                 args.implementation_sha)
+    valid &= chk("auth_profile_gate_review_id_present", bool(ag.get("auth_profile_review_id")), True)
+    valid &= chk("auth_profile_gate_review_record_present", bool(ag.get("independent_review_record_sha")), True)
+
     valid &= chk("oracle_gate_verdict", og.get("verdict"), "PASS")
     valid &= chk("fixture_gate_verdict", fg.get("verdict"), "PASS")
     valid &= chk("oracle_gate_digest", og.get("reviewed_oracle_digest"), manifest["oracle"]["digest"])
     valid &= chk("fixture_gate_digest", fg.get("reviewed_fixture_manifest_digest"), manifest["fixtures"]["digest"])
     valid &= chk("oracle_gate_contract", og.get("reviewed_contract_manifest_digest"), core)
     valid &= chk("fixture_gate_contract", fg.get("reviewed_contract_manifest_digest"), core)
+    valid &= chk("oracle_gate_contract_blob", og.get("reviewed_contract_manifest_blob_sha"), manifest_blob)
+    valid &= chk("fixture_gate_contract_blob", fg.get("reviewed_contract_manifest_blob_sha"), manifest_blob)
     valid &= chk("oracle_gate_review_id", og.get("oracle_review_id"),
                  "U06_ORACLE_REFREEZE_PROVENANCE_REVIEW_20260924_01")
     valid &= chk("fixture_gate_review_id", fg.get("fixture_review_id"),
@@ -706,6 +785,7 @@ def main():
         "u06-verification-expectations.json": paths["oracle"],
         "u06-verification-fixtures.json": paths["fixtures"],
         "u06-auth-profile.json": paths["auth"],
+        "u06-auth-profile-review-gate.json": paths["auth_gate"],
         "u06-oracle-refreeze-review-gate.json": paths["oracle_gate"],
         "u06-fixture-refreeze-review-gate.json": paths["fixture_gate"],
         "u06-oracle-review-gate-historical.json": resources / "u06-oracle-review-gate.json",

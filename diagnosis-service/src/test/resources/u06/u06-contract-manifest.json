@@ -129,7 +129,7 @@
   },
   "auth_profile": {
     "path": "diagnosis-service/src/test/resources/u06/u06-auth-profile.json",
-    "digest": "38f6afb30a55ea8d4cd54dad52509a629e20fbd31639b9b537e1324205a65f7c"
+    "digest": "b1aaea818525f6e6c81089d18a8d2ac38d35478a666173de27903c70e4ab77b4"
   },
   "case_counts": {
     "EV": 106,
