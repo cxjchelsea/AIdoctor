@@ -164,6 +164,8 @@ def static_physical_case(case_id, root, env, passed_methods):
     thread = root / "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeThreadStateRecord.java"
     checkpoint = root / "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeWaitCheckpointService.java"
     transition = root / "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeThreadWaitTransitionService.java"
+    wait_coordinator = root / "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/wait/U06WaitCoordinator.java"
+    eligibility_projector = root / "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/wait/U07ResumeEligibilityProjector.java"
     py_checkpoint = root / "packages/python_runtime/checkpoint.py"
 
     if case_id == "IRR01-V01":
@@ -257,7 +259,7 @@ def static_physical_case(case_id, root, env, passed_methods):
     if case_id == "IRR03-V11":
         return static_contains(transition, "WAIT_CHECKPOINTED") or static_contains(thread, "WAIT_CHECKPOINTED")
     if case_id == "IRR03-V12":
-        return static_contains(app, "u07elig")
+        return eligibility_projector.exists() and static_contains(eligibility_projector, 'U06Ids.hash("u07elig"', "threadAwaitingUser") and static_contains(wait_coordinator, "projector.project")
     if case_id == "IRR03-V13":
         return static_contains(app, "rr.eligibilityId") and static_contains(transition, "AWAITING_USER")
     if case_id == "IRR03-V14":
