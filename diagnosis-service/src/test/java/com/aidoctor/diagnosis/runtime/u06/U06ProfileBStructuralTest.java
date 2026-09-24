@@ -315,7 +315,7 @@ class U06ProfileBStructuralTest {
                 U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,"synthetic-source-CHANGED",1,1,
                 U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
                 "synthetic-binding-1","f3-policy-1",null,null,"event-ref-1","business-event-1",null,null,0L,
-                "corr-1","trace-1",AT);
+                "corr-1","trace-1",AT,U06AdmissionEvidence.syntheticCurrentAllow());
         U06ExecutionResult r2=app.execute(changed,first,null);
         assertEquals(U06ExecutionResult.FAILURE_REQUIRED,r2.getStatus());
         assertEquals(U06SyntheticRevalidationAuthority.REPLAY_CONFLICT,r2.getReasonCode());
@@ -486,6 +486,102 @@ class U06ProfileBStructuralTest {
     }
 
     @Test
+    void admissionReplayRevalidatesCurrentAuthorityBeforeReattach(){
+        U06AdmissionService service=new U06AdmissionService();
+        U06ProfileBRequest current=requestWithEvidence(
+                U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null,
+                U06AdmissionEvidence.syntheticCurrentAllow());
+
+        U06AdmissionService.Admission original=service.admit(current,0);
+        assertTrue(original.isAdmitted());
+        assertFalse(original.isReplay());
+
+        U06AdmissionEvidence sourceStale=new U06AdmissionEvidence(
+                true,false,true,U06AdmissionEvidence.GATE_ALLOW_CURRENT,
+                U06AdmissionEvidence.PERMISSION_NOT_REQUIRED,true,
+                U06AdmissionEvidence.DEPENDENCY_ACTIVE_SYNTHETIC,false,true);
+        assertEquals(U06AdmissionService.REJECTED_SOURCE_AUTHORITY,
+                service.admit(requestWithEvidence(
+                        U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                        U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null,sourceStale),0,true).getStatus());
+
+        U06AdmissionEvidence superseded=new U06AdmissionEvidence(
+                true,true,true,U06AdmissionEvidence.GATE_ALLOW_CURRENT,
+                U06AdmissionEvidence.PERMISSION_NOT_REQUIRED,true,
+                U06AdmissionEvidence.DEPENDENCY_ACTIVE_SYNTHETIC,true,true);
+        assertEquals(U06AdmissionService.REJECTED_SOURCE_SUPERSEDED,
+                service.admit(requestWithEvidence(
+                        U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                        U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null,superseded),0,true).getStatus());
+
+        U06AdmissionEvidence gateStale=new U06AdmissionEvidence(
+                true,true,true,U06AdmissionEvidence.GATE_STALE,
+                U06AdmissionEvidence.PERMISSION_NOT_REQUIRED,true,
+                U06AdmissionEvidence.DEPENDENCY_ACTIVE_SYNTHETIC,false,true);
+        assertEquals(U06AdmissionService.REJECTED_GATE,
+                service.admit(requestWithEvidence(
+                        U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                        U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null,gateStale),0,true).getStatus());
+
+        U06AdmissionEvidence permissionDenied=new U06AdmissionEvidence(
+                true,true,true,U06AdmissionEvidence.GATE_RESTRICTED_CURRENT,
+                U06AdmissionEvidence.PERMISSION_DENIED,true,
+                U06AdmissionEvidence.DEPENDENCY_ACTIVE_SYNTHETIC,false,true);
+        assertEquals(U06AdmissionService.REJECTED_PERMISSION,
+                service.admit(requestWithEvidence(
+                        U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                        U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null,permissionDenied),0,true).getStatus());
+
+        U06AdmissionEvidence permissionUnavailable=new U06AdmissionEvidence(
+                true,true,true,U06AdmissionEvidence.GATE_RESTRICTED_CURRENT,
+                U06AdmissionEvidence.PERMISSION_UNAVAILABLE,true,
+                U06AdmissionEvidence.DEPENDENCY_ACTIVE_SYNTHETIC,false,true);
+        assertEquals(U06AdmissionService.FAILURE_PERMISSION_UNAVAILABLE,
+                service.admit(requestWithEvidence(
+                        U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                        U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null,permissionUnavailable),0,true).getStatus());
+
+        U06AdmissionEvidence dependencyExpired=new U06AdmissionEvidence(
+                true,true,true,U06AdmissionEvidence.GATE_ALLOW_CURRENT,
+                U06AdmissionEvidence.PERMISSION_NOT_REQUIRED,true,
+                U06AdmissionEvidence.DEPENDENCY_EXPIRED,false,true);
+        assertEquals(U06AdmissionService.REJECTED_DEPENDENCY,
+                service.admit(requestWithEvidence(
+                        U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                        U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null,dependencyExpired),0,true).getStatus());
+
+        U06AdmissionService.Admission stillCurrentReplay=service.admit(
+                requestWithEvidence(
+                        U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                        U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null,
+                        U06AdmissionEvidence.syntheticCurrentAllow()),
+                1,true);
+        assertTrue(stillCurrentReplay.isAdmitted());
+        assertTrue(stillCurrentReplay.isReplay());
+        assertEquals(original.getAdmissionId(),stillCurrentReplay.getAdmissionId());
+    }
+
+    @Test
+    void requestWithoutExplicitAdmissionEvidenceFailsClosed(){
+        U06ProfileBRequest missingEvidence=new U06ProfileBRequest(
+                "request-missing-evidence","consult-1","cdp-1",
+                U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                U06ProfileBRequest.A1_PRE_READINESS_ROUTING,
+                "synthetic-source-1",0,0,
+                U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
+                "synthetic-binding-1","f3-policy-1",null,null,
+                "event-ref-1","business-event-1",null,null,0L,
+                "corr-missing","trace-missing",AT);
+
+        assertNull(missingEvidence.getAdmissionEvidence());
+        U06AdmissionService.Admission result=new U06AdmissionService().admit(missingEvidence,0);
+        assertFalse(result.isAdmitted());
+        assertEquals(U06AdmissionService.REJECTED_SOURCE_AUTHORITY,result.getStatus());
+    }
+
+    @Test
     void admissionIdentityIgnoresTransportRequestAndTraceMetadata(){
         U06AdmissionService service=new U06AdmissionService();
         U06ProfileBRequest first=new U06ProfileBRequest(
@@ -493,13 +589,13 @@ class U06ProfileBStructuralTest {
                 U06ProfileBRequest.A1_PRE_READINESS_ROUTING,"synthetic-source-1",0,0,
                 U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
                 "synthetic-binding-1","f3-policy-1",null,null,"event-ref-1","business-event-1",null,null,0L,
-                "corr-a","trace-a",AT);
+                "corr-a","trace-a",AT,U06AdmissionEvidence.syntheticCurrentAllow());
         U06ProfileBRequest retry=new U06ProfileBRequest(
                 "transport-request-b","consult-1","cdp-1",U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
                 U06ProfileBRequest.A1_PRE_READINESS_ROUTING,"synthetic-source-1",0,0,
                 U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
                 "synthetic-binding-1","f3-policy-1",null,null,"event-ref-1","business-event-1",null,null,0L,
-                "corr-b","trace-b",AT);
+                "corr-b","trace-b",AT,U06AdmissionEvidence.syntheticCurrentAllow());
 
         U06AdmissionService.Admission a=service.admit(first,0);
         U06AdmissionService.Admission b=service.admit(retry,0);
@@ -551,11 +647,16 @@ class U06ProfileBStructuralTest {
     }
 
     private U06ProfileBRequest request(String mode,String source,int version,String thread,String run){
+        return requestWithEvidence(mode,source,version,thread,run,U06AdmissionEvidence.syntheticCurrentAllow());
+    }
+
+    private U06ProfileBRequest requestWithEvidence(String mode,String source,int version,String thread,String run,
+                                                   U06AdmissionEvidence evidence){
         return new U06ProfileBRequest("req-"+mode+"-"+version,"consult-1","cdp-1",mode,source,"synthetic-source-1",version,version,
                 U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,"synthetic-binding-1",
                 "f3-policy-1",U06ProfileBRequest.QUESTION_SELECTION_DELIVERY.equals(mode)?"question-policy-1":null,
                 U06ProfileBRequest.QUESTION_SELECTION_DELIVERY.equals(mode)?"d04-policy-1":null,
-                "event-ref-1","business-event-1",thread,run,0L,"corr-1","trace-1",AT);
+                "event-ref-1","business-event-1",thread,run,0L,"corr-1","trace-1",AT,evidence);
     }
 
     private static final class InMemoryDeliveryStore implements U06DeliveryStore{

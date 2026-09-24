@@ -62,7 +62,7 @@ class U06AuthoritativeNetworkSpyTest {
                     "f3-policy-spy","question-policy-spy","d04-policy-spy",
                     "event-ref-spy","business-event-spy",
                     "thread-spy","run-spy",0L,
-                    "corr-spy","trace-spy",AT);
+                    "corr-spy","trace-spy",AT,U06AdmissionEvidence.syntheticCurrentAllow());
 
             U06SyntheticDecisionBundle decision=new U06SyntheticDecisionEngine().decide(
                     request,

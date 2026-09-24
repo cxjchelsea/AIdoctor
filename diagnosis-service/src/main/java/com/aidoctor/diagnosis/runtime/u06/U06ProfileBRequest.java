@@ -33,7 +33,9 @@ public final class U06ProfileBRequest {
         if(expectedConsultationRowVersion<0)throw new IllegalArgumentException("expectedConsultationRowVersion must be non-negative");
         this.expectedConsultationRowVersion=expectedConsultationRowVersion;this.correlationId=req(correlationId,"correlationId");
         this.traceId=req(traceId,"traceId");this.createdAt=req(createdAt,"createdAt");
-        this.admissionEvidence=U06AdmissionEvidence.syntheticCurrentAllow();
+        // Compatibility constructor is intentionally fail-closed. Positive synthetic authority
+        // must be supplied explicitly by verification/test fixture infrastructure.
+        this.admissionEvidence=null;
     }
 
     public U06ProfileBRequest(String requestId,String consultationId,String cdpId,String mode,String sourceAuthorityType,
