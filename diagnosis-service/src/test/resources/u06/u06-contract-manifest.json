@@ -121,15 +121,15 @@
   "digest_algorithm": "sha256",
   "oracle": {
     "path": "diagnosis-service/src/test/resources/u06/u06-verification-expectations.json",
-    "digest": "dca6307c6eda0215e165a1747f5573d3286bafa7b8fa8c212bd622fd50d887cc"
+    "digest": "6e7de2ab663bb683902514ba244eaafb8986b43b5bbb3caf5cc8916dbe5a865e"
   },
   "fixtures": {
     "path": "diagnosis-service/src/test/resources/u06/u06-verification-fixtures.json",
-    "digest": "a3817364d90eca67cd743826e32644c3d95d4ccdacdc79cdf2699772bc7e45db"
+    "digest": "945f340d4c387c2cf417f64f9b54d23db10f24931c2cc5dfd6978ac5ac7e737b"
   },
   "auth_profile": {
     "path": "diagnosis-service/src/test/resources/u06/u06-auth-profile.json",
-    "digest": "ab3326c47ee335aba5c29d74db8988ad3944f588d093e48b7cc625201b1212c5"
+    "digest": "6a5a5139741ebd69618c90b036e37f38c4caa7a71df68bacb3c603f4d6ae0944"
   },
   "case_counts": {
     "EV": 106,
@@ -141,5 +141,8 @@
     "IRR02": 16,
     "IRR03": 17,
     "total": 189
-  }
+  },
+  "asset_digest_semantics": "SHA-256 over exact committed UTF-8 file text including trailing newline",
+  "oracle_review_gate_status": "PENDING_TARGETED_RE_REVIEW",
+  "fixture_review_gate_status": "PENDING_TARGETED_RE_REVIEW"
 }
