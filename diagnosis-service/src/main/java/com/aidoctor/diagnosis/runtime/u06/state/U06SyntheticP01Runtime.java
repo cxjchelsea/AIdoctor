@@ -4,13 +4,14 @@ import com.aidoctor.diagnosis.runtime.u06.U06Ids;import com.aidoctor.diagnosis.s
 import java.time.Clock;import java.util.*;
 public final class U06SyntheticP01Runtime {
     public static final String PRODUCER="u06-runtime",CAPABILITY_ID="u06-state-writer",CAPABILITY_VERSION="1.0.0",SOURCE="RULE_DERIVED",SENSITIVITY="INTERNAL_SENSITIVE";
-    private final String storeRef,consultationId,cdpId;private final SyntheticVersionedStateRepository repository;private final StateCommitter committer;private final Map<String,StablePatch> stablePatches=new LinkedHashMap<String,StablePatch>();private boolean readBackMismatchOnce;
-    private U06SyntheticP01Runtime(String storeRef,String consultationId,String cdpId,SyntheticVersionedStateRepository repository,StateCommitter committer){this.storeRef=req(storeRef);this.consultationId=req(consultationId);this.cdpId=req(cdpId);this.repository=repository;this.committer=committer;}
-    public static U06SyntheticP01Runtime create(String storeRef,String consultationId,String cdpId,Clock clock){
-        Map<String,Object>patient=new LinkedHashMap<String,Object>();patient.put("information_gaps",new LinkedHashMap<String,Object>());patient.put("questions",new LinkedHashMap<String,Object>());
-        Map<String,Object>root=new LinkedHashMap<String,Object>();root.put("patient_state",patient);Map<String,SyntheticStateSnapshot>states=new HashMap<String,SyntheticStateSnapshot>();states.put(cdpId,new SyntheticStateSnapshot(0,root));
-        SyntheticVersionedStateRepository repo=new SyntheticVersionedStateRepository(states);StateCommitter c=new StateCommitter(repo,new Cap(),new Field(),new Consent(),new Source(),new Idem(),new Audit(clock),new Events(),clock);
-        return new U06SyntheticP01Runtime(storeRef,consultationId,cdpId,repo,c);
+    private final String storeRef,consultationId,cdpId;private final Backend backend;private final StateCommitter committer;private final Map<String,StablePatch> stablePatches=new LinkedHashMap<String,StablePatch>();private boolean readBackMismatchOnce;
+    private U06SyntheticP01Runtime(String storeRef,String consultationId,String cdpId,Backend backend,StateCommitter committer){this.storeRef=req(storeRef);this.consultationId=req(consultationId);this.cdpId=req(cdpId);this.backend=backend;this.committer=committer;}
+    public static U06SyntheticP01Runtime createInjected(String storeRef,String consultationId,String cdpId,Clock clock,Backend backend){
+        if(backend==null)throw new IllegalArgumentException("backend is required");
+        StateRepositoryPort port=backend.repositoryPort();
+        if(port==null)throw new IllegalArgumentException("backend repository port is required");
+        StateCommitter c=new StateCommitter(port,new Cap(),new Field(),new Consent(),new Source(),new Idem(),new Audit(clock),new Events(),clock);
+        return new U06SyntheticP01Runtime(storeRef,consultationId,cdpId,backend,c);
     }
     public synchronized CommitEvidence commit(String effect,String proposal,List<OperationIntent>intents,List<String>evidence,String corr,String trace,String createdAt){
         return commitAtBaseVersion(effect,proposal,intents,evidence,corr,trace,createdAt,readCurrent().version);
@@ -22,7 +23,7 @@ public final class U06SyntheticP01Runtime {
         StateTypes.CommitResult result=committer.commit(stable.patch);
         StateView readBack=readCurrent();
         if(readBackMismatchOnce&&"COMMITTED".equals(result.status)){readBackMismatchOnce=false;readBack=corruptReadBack(readBack);}
-        return new CommitEvidence(result,readBack,repository.mutationCount(),storeRef);
+        return new CommitEvidence(result,readBack,backend.mutationCount(),storeRef);
     }
     public synchronized void injectReadBackMismatchOnce(){readBackMismatchOnce=true;}
     @SuppressWarnings("unchecked")
@@ -43,9 +44,9 @@ public final class U06SyntheticP01Runtime {
         }
         return out;
     }
-    public StateView readCurrent(){SyntheticStateSnapshot s=repository.snapshot(cdpId);return new StateView(s.version(),s.state());}
+    public StateView readCurrent(){return backend.readCurrent(cdpId);}
     public OperationIntent upsert(String path,Map<String,Object>value){return new OperationIntent(readCurrent().exists(path)?"REPLACE":"ADD",path,value);}
-    public String getStoreRef(){return storeRef;}public String getReadStoreRef(){return storeRef;}public String getCommitStoreRef(){return storeRef;}public int getMutationCount(){return repository.mutationCount();}
+    public String getStoreRef(){return storeRef;}public String getReadStoreRef(){return backend.readStoreRef();}public String getCommitStoreRef(){return backend.commitStoreRef();}public int getMutationCount(){return backend.mutationCount();}
     private StateTypes.StatePatch build(String effect,String proposal,List<OperationIntent>intents,List<String>evidence,String corr,String trace,String createdAt,int base){
         StateTypes.StatePatch p=new StateTypes.StatePatch();p.contractVersion=ContractVersion.CONTRACT_VERSION;p.envelope=new FoundationTypes.ContractEnvelope();p.envelope.contractName="StatePatch";p.envelope.contractVersion=ContractVersion.CONTRACT_VERSION;
         p.envelope.messageId=U06Ids.hash("u06msg",effect,proposal);p.envelope.correlationId=req(corr);p.envelope.traceId=req(trace);p.envelope.createdAt=req(createdAt);p.envelope.producer=PRODUCER;p.envelope.capabilityId=CAPABILITY_ID;p.envelope.capabilityVersion=CAPABILITY_VERSION;
@@ -54,6 +55,13 @@ public final class U06SyntheticP01Runtime {
         p.reasonCode="U06_STATE_WRITE";p.evidenceRefs=evidence==null?new ArrayList<String>():new ArrayList<String>(evidence);p.producer=PRODUCER;p.createdAt=createdAt;return p;}
     private static void authorize(String path){if("/patient_state/f3_gap_assessment".equals(path)||"/patient_state/pending_question".equals(path)||path.matches("^/patient_state/information_gaps/[A-Za-z0-9][A-Za-z0-9._:-]*$")||path.matches("^/patient_state/questions/[A-Za-z0-9][A-Za-z0-9._:-]*$"))return;throw new IllegalArgumentException("U06_FIELD_PERMISSION_DENIED");}
     private static String fingerprint(List<OperationIntent>i){List<String>v=new ArrayList<String>();for(OperationIntent x:i){v.add(x.path);v.add(String.valueOf(x.value));}return U06Ids.hash("u06statefp",v.toArray(new String[v.size()]));}
+    public interface Backend{
+        StateRepositoryPort repositoryPort();
+        StateView readCurrent(String cdpId);
+        int mutationCount();
+        String readStoreRef();
+        String commitStoreRef();
+    }
     public static final class OperationIntent{final String op,path;final Map<String,Object>value;public OperationIntent(String op,String path,Map<String,Object>value){if(!"ADD".equals(op)&&!"REPLACE".equals(op)&&!"REMOVE".equals(op))throw new IllegalArgumentException("unsupported op");this.op=op;this.path=req(path);this.value=value;}}
     public static final class StateView{private final int version;private final Map<String,Object>state;StateView(int v,Map<String,Object>s){version=v;state=s;}public int getVersion(){return version;}public Map<String,Object>getState(){return state;}
         @SuppressWarnings("unchecked") public boolean exists(String pointer){return value(pointer)!=null;}
