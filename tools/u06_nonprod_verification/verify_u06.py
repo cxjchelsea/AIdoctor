@@ -733,7 +733,11 @@ def main():
     environment_input = Path(args.environment_evidence)
     if not environment_input.exists():
         raise RuntimeError("environment input missing from durable bundle")
-    shutil.copyfile(str(environment_input), str(out / "environment-input.json"))
+    environment_input_copy = out / "environment-input.json"
+    if environment_input.resolve() != environment_input_copy.resolve():
+        shutil.copyfile(str(environment_input), str(environment_input_copy))
+    elif not environment_input_copy.exists():
+        raise RuntimeError("environment input copy missing from durable bundle")
 
     regression_summary = {
         "schema": "U06_REGRESSION_SUMMARY_V0_1",
