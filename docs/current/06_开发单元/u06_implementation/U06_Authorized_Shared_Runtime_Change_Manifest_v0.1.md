@@ -17,7 +17,7 @@ ahead_by = 39
 behind_by = 0
 
 observed_git_diff_digest
-= SHA256_NOT_AVAILABLE_IN_REVIEW_RUNTIME
+= 2ade8d23281c022d9c1e4c5a7218e34bed1c3e48f73bbec4066397d4c8a07b35
 ~~~
 
 Digest input is the canonical JSON tuple:
