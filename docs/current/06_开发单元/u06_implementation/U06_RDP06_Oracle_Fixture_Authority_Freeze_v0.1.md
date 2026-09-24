@@ -307,3 +307,58 @@ This freeze does not authorize or prove:
 - live routing;
 - real-patient use.
 
+
+
+---
+
+# 11. Byte-Integrity Rebound Review
+
+Diagnostic run:
+
+~~~text
+35941402018
+= INVALID_EVIDENCE
+~~~
+
+The failure was correctly caused by frozen digest metadata not matching exact committed UTF-8 bytes.
+
+No oracle, fixture, or auth-profile semantic content changed from the prior reviewed semantic freeze.
+
+Targeted integrity re-review:
+
+~~~text
+review_id = 5298650596
+verdict = PASS
+reviewed_head = a832018ec9c9623e18330d04c50fecc7b89d7067
+~~~
+
+Correct committed-byte SHA-256:
+
+~~~text
+oracle
+= ac89a1e902bd82c84e39748d76de1807db434aff3bb6e21d44c03aa564a174d7
+
+fixture
+= 6494a86da0e385c287276100e12af52e57067b5a72a441740cf3ab3ddf411c5a
+
+auth profile
+= 38f6afb30a55ea8d4cd54dad52509a629e20fbd31639b9b537e1324205a65f7c
+~~~
+
+Updated contract-manifest Git blob:
+
+~~~text
+e1e228ea23da384353609ef2e86385dff9ef1e44
+~~~
+
+Authority-core digest remains unchanged.
+
+Current gate state:
+
+~~~text
+ORACLE_GATE = PASS / BYTE_INTEGRITY_REBOUND
+FIXTURE_GATE = PASS / BYTE_INTEGRITY_REBOUND
+
+AUTHORITATIVE_VERIFICATION
+= NOT_PASSED
+~~~
