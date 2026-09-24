@@ -4,10 +4,14 @@ import com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle;
 import java.util.ArrayList;import java.util.LinkedHashMap;import java.util.List;import java.util.Map;
 public final class U06StateValues {
     private U06StateValues(){}
-    public static Map<String,Object> f3Assessment(U06ProfileBRequest r,U06SyntheticDecisionBundle d,String canonicalEffectId){Map<String,Object>v=new LinkedHashMap<String,Object>();
+    public static Map<String,Object> f3Assessment(U06ProfileBRequest r,U06SyntheticDecisionBundle d,String canonicalEffectId){
+        return f3Assessment(r,d,canonicalEffectId,null);
+    }
+    public static Map<String,Object> f3Assessment(U06ProfileBRequest r,U06SyntheticDecisionBundle d,String canonicalEffectId,String payloadFingerprint){Map<String,Object>v=new LinkedHashMap<String,Object>();
         v.put("f3_state_record_id",canonicalEffectId);v.put("f3_canonical_effect_id",canonicalEffectId);v.put("consultation_id",r.getConsultationId());
         v.put("cdp_id",r.getCdpId());v.put("owner_decision",d.getF3OwnerStatus());v.put("dependency_binding_type",r.getDependencyBindingType());v.put("dependency_binding_ref",r.getDependencyBindingRef());
-        v.put("f3_owner_policy_ref",r.getF3OwnerPolicyRef());v.put("online_gap_basis_status",d.getF3OwnerStatus());if(d.getGapId()!=null)v.put("gap_refs",list(d.getGapId()));v.put("validity","CURRENT");return v;}
+        v.put("f3_owner_policy_ref",r.getF3OwnerPolicyRef());v.put("online_gap_basis_status",d.getF3OwnerStatus());if(d.getGapId()!=null)v.put("gap_refs",list(d.getGapId()));
+        if(payloadFingerprint!=null)v.put("f3_payload_fingerprint",payloadFingerprint);v.put("validity","CURRENT");return v;}
     public static Map<String,Object> gap(U06ProfileBRequest r,U06SyntheticDecisionBundle d,String status){Map<String,Object>v=new LinkedHashMap<String,Object>();v.put("gap_id",d.getGapId());v.put("status",status);
         v.put("decision_impact",d.getGapDecisionImpact());v.put("askable_online",Boolean.valueOf(d.isAskableOnline()));v.put("source_basis_refs",list(r.getSourceAuthorityRef()));v.put("question_refs",new ArrayList<String>());return v;}
     public static Map<String,Object> gapAsked(U06ProfileBRequest r,U06SyntheticDecisionBundle d){Map<String,Object>v=gap(r,d,"ASKED");v.put("question_refs",list(d.getQuestionId()));return v;}
