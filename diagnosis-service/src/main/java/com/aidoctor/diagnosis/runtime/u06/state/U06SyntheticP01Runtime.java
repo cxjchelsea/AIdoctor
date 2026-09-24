@@ -13,8 +13,12 @@ public final class U06SyntheticP01Runtime {
         return new U06SyntheticP01Runtime(storeRef,consultationId,cdpId,repo,c);
     }
     public synchronized CommitEvidence commit(String effect,String proposal,List<OperationIntent>intents,List<String>evidence,String corr,String trace,String createdAt){
+        return commitAtBaseVersion(effect,proposal,intents,evidence,corr,trace,createdAt,readCurrent().version);
+    }
+    public synchronized CommitEvidence commitAtBaseVersion(String effect,String proposal,List<OperationIntent>intents,List<String>evidence,String corr,String trace,String createdAt,int baseVersion){
+        if(baseVersion<0)throw new IllegalArgumentException("baseVersion must be non-negative");
         String fp=fingerprint(intents);StablePatch stable=stablePatches.get(effect);if(stable!=null&&!stable.fp.equals(fp))throw new IllegalStateException("U06_STATE_EFFECT_REPLAY_CONFLICT");
-        if(stable==null){StateTypes.StatePatch p=build(effect,proposal,intents,evidence,corr,trace,createdAt,readCurrent().version);stable=new StablePatch(fp,p);stablePatches.put(effect,stable);}
+        if(stable==null){StateTypes.StatePatch p=build(effect,proposal,intents,evidence,corr,trace,createdAt,baseVersion);stable=new StablePatch(fp,p);stablePatches.put(effect,stable);}
         StateTypes.CommitResult result=committer.commit(stable.patch);return new CommitEvidence(result,readCurrent(),repository.mutationCount(),storeRef);
     }
     public StateView readCurrent(){SyntheticStateSnapshot s=repository.snapshot(cdpId);return new StateView(s.version(),s.state());}
