@@ -15,13 +15,37 @@ public final class U06AdmissionService {
     private final Map<String,String> admittedFingerprints=new LinkedHashMap<String,String>();
 
     public synchronized Admission admit(U06ProfileBRequest r) {
-        return admit(r,r.getAuthoritativeClinicalStateVersion());
+        return admit(r,r.getAuthoritativeClinicalStateVersion(),false);
     }
 
     public synchronized Admission admit(U06ProfileBRequest r,int actualCurrentStateVersion) {
-        String rejection=validate(r,actualCurrentStateVersion);
+        return admit(r,actualCurrentStateVersion,false);
+    }
 
-        String id=U06Ids.hash("u06adm",
+    public synchronized Admission admit(U06ProfileBRequest r,int actualCurrentStateVersion,
+                                        boolean exactAuthoritativeReplayEvidence) {
+        String id=admissionId(r);
+        String fp=canonicalFingerprint(r);
+
+        String staticRejection=validateStatic(r);
+        if(staticRejection!=null)return Admission.rejected(id,staticRejection,fp,r);
+
+        String existing=admittedFingerprints.get(id);
+        if(existing!=null) {
+            if(!existing.equals(fp))throw new IllegalStateException("U06_ADMISSION_REPLAY_CONFLICT");
+            return Admission.admitted(id,fp,r,true);
+        }
+
+        if(actualCurrentStateVersion!=r.getAuthoritativeClinicalStateVersion()
+                &&!exactAuthoritativeReplayEvidence)
+            return Admission.rejected(id,REJECTED_STALE_STATE,fp,r);
+
+        admittedFingerprints.put(id,fp);
+        return Admission.admitted(id,fp,r,exactAuthoritativeReplayEvidence);
+    }
+
+    private String admissionId(U06ProfileBRequest r) {
+        return U06Ids.hash("u06adm",
                 r.getConsultationId(),
                 r.getCdpId(),
                 r.getMode(),
@@ -37,15 +61,17 @@ public final class U06AdmissionService {
                 r.getQuestionPolicyRef(),
                 r.getD04PolicyRef(),
                 "1");
+    }
 
-        String fp=U06Ids.hash("u06admf",
+    private String canonicalFingerprint(U06ProfileBRequest r) {
+        return U06Ids.hash("u06admf",
                 r.getConsultationId(),
                 r.getCdpId(),
                 r.getMode(),
                 r.getSourceAuthorityType(),
                 r.getSourceAuthorityRef(),
                 String.valueOf(r.getClaimedClinicalStateVersion()),
-                String.valueOf(actualCurrentStateVersion),
+                String.valueOf(r.getAuthoritativeClinicalStateVersion()),
                 r.getExecutionProfile(),
                 r.getDependencyBindingType(),
                 r.getDependencyBindingRef(),
@@ -55,25 +81,14 @@ public final class U06AdmissionService {
                 r.getCanonicalEventRef(),
                 r.getBusinessEventIdentity(),
                 "1");
-
-        if(rejection!=null)return Admission.rejected(id,rejection,fp,r);
-
-        String existing=admittedFingerprints.get(id);
-        if(existing!=null&&!existing.equals(fp))
-            throw new IllegalStateException("U06_ADMISSION_REPLAY_CONFLICT");
-
-        boolean replay=existing!=null;
-        if(!replay)admittedFingerprints.put(id,fp);
-        return Admission.admitted(id,fp,r,replay);
     }
 
-    private String validate(U06ProfileBRequest r,int actualCurrentStateVersion) {
+    private String validateStatic(U06ProfileBRequest r) {
         if(!U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD.equals(r.getExecutionProfile()))
             return REJECTED_PROFILE;
         if(!U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING.equals(r.getDependencyBindingType()))
             return REJECTED_BINDING;
-        if(r.getClaimedClinicalStateVersion()!=r.getAuthoritativeClinicalStateVersion()
-                || actualCurrentStateVersion!=r.getAuthoritativeClinicalStateVersion())
+        if(r.getClaimedClinicalStateVersion()!=r.getAuthoritativeClinicalStateVersion())
             return REJECTED_STALE_STATE;
         if(U06ProfileBRequest.F1_CLARIFICATION_ROUTING.equals(r.getSourceAuthorityType()))
             return REJECTED_F1_DISABLED;
