@@ -10,6 +10,7 @@ import com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRecord;
 import com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRepository;
 import com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitTransitionService;
 import com.aidoctor.diagnosis.runtime.u06.wait.U06WaitCoordinator;
+import com.aidoctor.diagnosis.runtime.u06.wait.U07ResumeEligibilityProjector;
 import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRecord;
 import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRepository;
 import com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRecord;
