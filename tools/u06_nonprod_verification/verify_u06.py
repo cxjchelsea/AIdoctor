@@ -161,6 +161,7 @@ def compare_runtime_case(case, observation):
 
 def static_physical_case(case_id, root, env, passed_methods):
     state = root / "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/state/U06SyntheticP01Runtime.java"
+    state_fixture_factory = root / "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u06/state/U06SyntheticP01TestFactory.java"
     app = root / "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06ProfileBApplicationService.java"
     consult = root / "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/ConsultationRecord.java"
     consult_wait = root / "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/wait/ConsultationWaitTransitionService.java"
@@ -172,7 +173,8 @@ def static_physical_case(case_id, root, env, passed_methods):
     py_checkpoint = root / "packages/python_runtime/checkpoint.py"
 
     if case_id == "IRR01-V01":
-        return static_contains(state, 'patient.put("information_gaps"', 'patient.put("questions"')
+        return (static_contains(state_fixture_factory, 'patient.put("information_gaps"', 'patient.put("questions"')
+                and static_not_contains(state_fixture_factory, '"f3_gap_assessment"', '"pending_question"'))
     if case_id == "IRR01-V02":
         return static_contains(state, 'PRODUCER="u06-runtime"')
     if case_id == "IRR01-V03":
@@ -186,7 +188,10 @@ def static_physical_case(case_id, root, env, passed_methods):
     if case_id == "IRR01-V07":
         return static_contains(state, 'SOURCE="RULE_DERIVED"')
     if case_id == "IRR01-V08":
-        return int(env.get("production_store_write_count", 0)) == 0 and static_contains(state, "SyntheticVersionedStateRepository")
+        return (int(env.get("production_store_write_count", 0)) == 0
+                and static_contains(state_fixture_factory, "SyntheticVersionedStateRepository")
+                and static_contains(state, "createInjected", "Backend backend")
+                and static_not_contains(state, "new SyntheticVersionedStateRepository"))
     if case_id == "IRR01-V09":
         applier = root / "diagnosis-service/src/main/java/com/aidoctor/diagnosis/state/committer/SyntheticJsonPointerApplier.java"
         return static_contains(applier, "parent")
