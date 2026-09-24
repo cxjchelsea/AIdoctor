@@ -138,8 +138,13 @@ class U06Rdp06AuthoritativeObservationTest {
                 o.put("observed_status", "EXECUTABLE_ADMISSION_BLOCKED");
             } else if (U06AdmissionService.REJECTED_STALE_STATE.equals(a.getReasonCode()) && n == 13) {
                 o.put("observed_status", "REJECTED_READMISSION_REQUIRED");
-            } else if (U06AdmissionService.REJECTED_BINDING.equals(a.getReasonCode()) && n == 14) {
+            } else if (U06AdmissionService.REJECTED_DEPENDENCY.equals(a.getReasonCode()) && n == 14) {
                 o.put("observed_status", "DEPENDENCY_BLOCKED");
+            } else if (U06AdmissionService.FAILURE_PERMISSION_UNAVAILABLE.equals(a.getReasonCode()) && n == 5) {
+                o.put("observed_status", "REJECTED_WITH_FAILURE_GOVERNANCE");
+                o.put("observed_failure_handoff_count", 1);
+            } else if (U06AdmissionService.REJECTED_SOURCE_SUPERSEDED.equals(a.getReasonCode()) && n == 17) {
+                o.put("observed_status", "ADMISSION_NOT_CURRENT");
             } else {
                 o.put("observed_status", "REJECTED");
             }
@@ -632,6 +637,19 @@ class U06Rdp06AuthoritativeObservationTest {
         String thread = U06ProfileBRequest.QUESTION_SELECTION_DELIVERY.equals(mode) ? "thread-1" : null;
         String run = U06ProfileBRequest.QUESTION_SELECTION_DELIVERY.equals(mode) ? "run-1" : null;
 
+        String routeState=control(fixture, "route_consequence");
+        String gate=control(fixture, "gate_state");
+        String permission=control(fixture, "permission_state");
+        boolean sourcePresent=!"MISSING".equals(sourceState);
+        boolean sourceCurrent=!"STALE".equals(control(fixture, "state_currentness"));
+        boolean routeValid=!"INVALID".equals(routeState);
+        boolean consultationMatch=!"MISMATCH".equals(control(fixture, "consultation_cdp_match"));
+        boolean superseded=fixture.path("scenario_controls").path("source_superseded").asBoolean(false);
+        boolean markerValid=!"PROFILE_B_INVALID_MARKER".equals(profileTarget)
+                &&!"PROFILE_B_ESCAPE_ATTEMPT".equals(profileTarget);
+        U06AdmissionEvidence admissionEvidence=new U06AdmissionEvidence(
+                sourcePresent,sourceCurrent,routeValid,gate,permission,consultationMatch,depState,superseded,markerValid);
+
         return new U06ProfileBRequest(
                 "request-" + caseId(fixture) + (changedCanonicalPayload ? "-changed" : ""),
                 "consult-1", cdpId, mode, sourceType, sourceRef,
@@ -639,7 +657,7 @@ class U06Rdp06AuthoritativeObservationTest {
                 "f3-policy-1", questionPolicy, d04Policy,
                 "event-ref-1", "business-event-1", thread, run, 0L,
                 changedCanonicalPayload ? "corr-changed" : "corr-1",
-                changedCanonicalPayload ? "trace-changed" : "trace-1", AT);
+                changedCanonicalPayload ? "trace-changed" : "trace-1", AT, admissionEvidence);
     }
 
     private U06SyntheticDecisionBundle selectedBundle(U06ProfileBRequest req, String gapId) {
