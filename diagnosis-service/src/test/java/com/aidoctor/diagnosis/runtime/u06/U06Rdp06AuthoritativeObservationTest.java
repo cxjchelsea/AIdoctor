@@ -401,6 +401,10 @@ class U06Rdp06AuthoritativeObservationTest {
             observeWaitLifecycle(n,fixture,o);
             return;
         }
+        if (n >= 91 && n <= 93) {
+            observeDeliveryFailureBoundary(n,o);
+            return;
+        }
 
         if (n == 64) {
             StrictInMemoryDeliveryStore store = new StrictInMemoryDeliveryStore();
@@ -752,6 +756,30 @@ class U06Rdp06AuthoritativeObservationTest {
         o.withArray("probe_refs").add("U06ProfileBApplicationService");
         o.withArray("probe_refs").add("ConsultationWaitTransitionService");
         o.withArray("probe_refs").add("RuntimeWaitCheckpointService");
+    }
+
+    private void observeDeliveryFailureBoundary(int n,ObjectNode o) {
+        U06SyntheticDeliveryRuntime runtime=new U06SyntheticDeliveryRuntime();
+        U06SyntheticDeliveryRuntime.Snapshot intent=runtime.createIntent(
+                "consult-1","selection-"+n,"question-"+n,"content-fp-"+n,
+                "synthetic-endpoint-a","synthetic-delivery-policy-v1",AT);
+        if(n==91){
+            U06SyntheticDeliveryRuntime.AttemptResult a=runtime.attempt(intent.deliveryEffectId,"DELIVERY_FAILURE",AT);
+            o.put("observed_status",U06SyntheticDeliveryRuntime.NOT_CONFIRMED_TERMINAL.equals(a.authorityStatus)
+                    ?"NO_ALTERNATE_CLINICAL_ROUTE_INVENTION":"DELIVERY_FAILURE_NOT_TERMINAL");
+        }else if(n==92){
+            runtime.attempt(intent.deliveryEffectId,"AMBIGUOUS_STATUS_QUERY_AVAILABLE",AT);
+            int attempts=runtime.physicalAttemptCount(intent.deliveryEffectId);
+            runtime.reconcileStatusQuery(intent.deliveryEffectId,U06SyntheticDeliveryRuntime.NOT_CONFIRMED,AT);
+            o.put("observed_status",runtime.physicalAttemptCount(intent.deliveryEffectId)==attempts
+                    ?"NO_NEW_ATTEMPT_RECONCILE_OLD":"UNAUTHORIZED_NEW_ATTEMPT");
+        }else{
+            runtime.expireBeforeSend(intent.deliveryEffectId);
+            o.put("observed_status",runtime.physicalAttemptCount(intent.deliveryEffectId)==0
+                    ?"NO_SEND":"SEND_AFTER_EXPIRY");
+        }
+        o.put("observed_external_transport_count",0);
+        o.withArray("probe_refs").add("U06SyntheticDeliveryRuntime");
     }
 
     private void observeSafetyAndRevalidation(int n, JsonNode fixture, ObjectNode o) throws Exception {
