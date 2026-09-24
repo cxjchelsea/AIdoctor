@@ -837,11 +837,98 @@ class U06Rdp06AuthoritativeObservationTest {
     }
 
     private void observeCrashWindow(String caseId, JsonNode fixture, ObjectNode o) {
-        // The frozen crash-window contract requires injection at a precise durable boundary.
-        // Current production U06 ports expose only terminal synthetic confirmation / composed wait establishment,
-        // so the harness records the capability gap rather than pretending a happy-path replay is a crash recovery.
-        o.put("observed_status", "CRASH_WINDOW_INJECTION_NOT_EXPOSED_BY_CURRENT_SUT");
-        o.put("observed_external_transport_count", 0);
+        int n=Integer.parseInt(caseId.substring("U06-CW-".length()));
+        boolean recovered=false;
+        if(n<=5){
+            U06SyntheticDeliveryRuntime runtime=new U06SyntheticDeliveryRuntime();
+            U06SyntheticDeliveryRuntime.Snapshot intent=null;
+            if(n>=2)intent=runtime.createIntent("consult-1","cw-selection-"+n,"cw-question-"+n,
+                    "cw-content-"+n,"synthetic-endpoint","synthetic-policy",AT);
+            if(n==1){
+                U06SyntheticDeliveryRuntime.Snapshot a=runtime.createIntent("consult-1","cw-selection-1","cw-question-1",
+                        "cw-content-1","synthetic-endpoint","synthetic-policy",AT);
+                U06SyntheticDeliveryRuntime.Snapshot b=runtime.createIntent("consult-1","cw-selection-1","cw-question-1",
+                        "cw-content-1","synthetic-endpoint","synthetic-policy",AT);
+                recovered=a.deliveryId.equals(b.deliveryId)&&b.replay&&runtime.physicalAttemptCount(a.deliveryEffectId)==0;
+            }else if(n==2){
+                U06SyntheticDeliveryRuntime.Snapshot b=runtime.createIntent("consult-1","cw-selection-"+n,"cw-question-"+n,
+                        "cw-content-"+n,"synthetic-endpoint","synthetic-policy",AT);
+                recovered=b.replay&&runtime.physicalAttemptCount(intent.deliveryEffectId)==0;
+            }else if(n==3){
+                runtime.startAttemptWithoutReceipt(intent.deliveryEffectId,"AMBIGUOUS_STATUS_QUERY_AVAILABLE",AT);
+                int attempts=runtime.physicalAttemptCount(intent.deliveryEffectId);
+                runtime.reconcileStatusQuery(intent.deliveryEffectId,U06SyntheticDeliveryRuntime.NOT_CONFIRMED,AT);
+                recovered=runtime.physicalAttemptCount(intent.deliveryEffectId)==attempts;
+            }else if(n==4){
+                runtime.startAttemptWithoutReceipt(intent.deliveryEffectId,"SYNTHETIC_DELIVERED",AT);
+                runtime.recordReceiptWithoutConfirmation(intent.deliveryEffectId,U06SyntheticDeliveryRuntime.DELIVERED,AT);
+                int attempts=runtime.physicalAttemptCount(intent.deliveryEffectId);
+                U06SyntheticDeliveryRuntime.Snapshot after=runtime.resolveConfirmation(
+                        intent.deliveryEffectId,U06SyntheticDeliveryRuntime.CONFIRMED,"cw4-confirm",AT);
+                recovered=U06SyntheticDeliveryRuntime.CONFIRMED.equals(after.confirmationStatus)
+                        &&runtime.physicalAttemptCount(intent.deliveryEffectId)==attempts;
+            }else{
+                runtime.attempt(intent.deliveryEffectId,"SYNTHETIC_DELIVERED",AT);
+                int attempts=runtime.physicalAttemptCount(intent.deliveryEffectId);
+                U06SyntheticP01Runtime state=state();
+                Map<String,Object> q=new LinkedHashMap<String,Object>();
+                q.put("question_id","cw-question-5");q.put("question_semantic_key","cw-sem-5");
+                q.put("status","DELIVERED_TO_USER");q.put("delivery_id",intent.deliveryId);
+                state.commit("cw5-state-effect","cw5-state-proposal",
+                        Collections.singletonList(state.upsert("/patient_state/questions/cw-question-5",q)),
+                        Collections.singletonList("cw5-confirmed"),"corr","trace",AT);
+                recovered=state.getMutationCount()==1&&runtime.physicalAttemptCount(intent.deliveryEffectId)==attempts;
+            }
+        }else{
+            WaitHarness h=new WaitHarness(false,n==8);
+            String parent="cw-parent-"+n;
+            String waitEffect="cw-consult-wait-"+n;
+            String deliveryId="cw-delivery-"+n;
+            String questionId="cw-question-"+n;
+            String waitFp=U06Ids.hash("cw-wait-fp",waitEffect,parent,questionId,deliveryId,"1");
+            ConsultationWaitTransitionService.Result wr=h.consultationWaitService.establish(
+                    new ConsultationWaitTransitionService.Command(waitEffect,parent,"consult-1",questionId,deliveryId,
+                            waitFp,U06Ids.hash("cw-wait-idem",waitEffect),0L,
+                            java.time.OffsetDateTime.parse(AT).toLocalDateTime()));
+            if(n==6){
+                ConsultationWaitTransitionService.Result replay=h.consultationWaitService.establish(
+                        new ConsultationWaitTransitionService.Command(waitEffect,parent,"consult-1",questionId,deliveryId,
+                                waitFp,U06Ids.hash("cw-wait-idem",waitEffect),0L,
+                                java.time.OffsetDateTime.parse(AT).toLocalDateTime()));
+                recovered=wr.waitEffectId.equals(replay.waitEffectId)&&replay.replay;
+            }else{
+                h.checkpointService.initialize("cw-thread-"+n,"consult-1",AT);
+                String cp="cw-checkpoint-"+n;
+                String cpFp=U06Ids.hash("cw-cp-fp",cp,parent,"1");
+                RuntimeWaitCheckpointService.Reservation reservation=h.checkpointService.reserve(
+                        new RuntimeWaitCheckpointService.Command(cp,"consult-1","cw-thread-"+n,"cw-run-"+n,
+                                questionId,"/patient_state/pending_question","cw-selection-"+n,"cw-delivery-effect-"+n,
+                                parent,deliveryId,"cw-confirm-"+n,1,waitEffect,"synthetic-binding-u06-v1",
+                                "question-policy-1",cpFp,AT));
+                if(n==7){
+                    RuntimeWaitCheckpointService.Reservation replay=h.checkpointService.reserve(
+                            new RuntimeWaitCheckpointService.Command(cp,"consult-1","cw-thread-"+n,"cw-run-"+n,
+                                    questionId,"/patient_state/pending_question","cw-selection-"+n,"cw-delivery-effect-"+n,
+                                    parent,deliveryId,"cw-confirm-"+n,1,waitEffect,"synthetic-binding-u06-v1",
+                                    "question-policy-1",cpFp,AT));
+                    recovered=reservation.checkpoint.getCheckpointId().equals(replay.checkpoint.getCheckpointId())&&replay.replay;
+                }else if(n==8){
+                    // First transition lock is intentionally unavailable after the durable checkpoint reservation.
+                    try{h.threadService.enterAwaitingUser("cw-thread-"+n,"cw-run-"+n,cp,parent);}catch(RuntimeException expected){}
+                    h.failSecondThreadLock=false;
+                    h.threadService.enterAwaitingUser("cw-thread-"+n,"cw-run-"+n,cp,parent);
+                    recovered=RuntimeThreadStateRecord.AWAITING_USER.equals(h.threadRecord.get().getRuntimeStatus());
+                }else{
+                    h.threadService.enterAwaitingUser("cw-thread-"+n,"cw-run-"+n,cp,parent);
+                    U07ResumeEligibilityProjector projector=new U07ResumeEligibilityProjector();
+                    String e1=projector.project("consult-1","cw-thread-"+n,"cw-run-"+n,cp,parent,true);
+                    String e2=projector.project("consult-1","cw-thread-"+n,"cw-run-"+n,cp,parent,true);
+                    recovered=e1.equals(e2)&&RuntimeThreadStateRecord.AWAITING_USER.equals(h.threadRecord.get().getRuntimeStatus());
+                }
+            }
+        }
+        o.put("observed_status",recovered?"RECOVER_OR_REATTACH_WITHOUT_DUPLICATION":"CRASH_RECOVERY_FAILED");
+        o.put("observed_external_transport_count",0);
         o.withArray("probe_refs").add(caseId);
         o.withArray("probe_refs").add("RDP04-crash-window-boundary");
     }
@@ -1130,6 +1217,7 @@ class U06Rdp06AuthoritativeObservationTest {
         boolean failSecondThreadLock;
         final RuntimeWaitCheckpointService checkpointService;
         final RuntimeThreadWaitTransitionService threadService;
+        final ConsultationWaitTransitionService consultationWaitService;
         final U06WaitCoordinator waitCoordinator;
         final U06ProfileBApplicationService app;
 
@@ -1168,11 +1256,12 @@ class U06Rdp06AuthoritativeObservationTest {
             });
             when(checkpoints.saveAndFlush(any(RuntimeWaitCheckpointRecord.class))).thenAnswer(i->{RuntimeWaitCheckpointRecord x=i.getArgument(0);checkpointRecord.set(x);return x;});
 
+            consultationWaitService=new ConsultationWaitTransitionService(consultations,waitEffects);
             checkpointService=new RuntimeWaitCheckpointService(threads,checkpoints);
             threadService=new RuntimeThreadWaitTransitionService(threads,checkpoints);
             waitCoordinator=new U06WaitCoordinator(checkpointService,threadService);
             app=new U06ProfileBApplicationService(new U06AdmissionService(),state,new U06SyntheticDeliveryService(deliveryStore),
-                    new ConsultationWaitTransitionService(consultations,waitEffects),waitCoordinator,
+                    consultationWaitService,waitCoordinator,
                     new com.aidoctor.diagnosis.runtime.u06.trace.U06GovernedExecutionTraceStore(){
                         public void start(String a,String b,String c,String d,String e,String f,String g){}
                         public void complete(String a,String b,String c,String d){}
