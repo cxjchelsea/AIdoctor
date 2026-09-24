@@ -3,6 +3,7 @@ package com.aidoctor.diagnosis.runtime.u06;
 import com.aidoctor.diagnosis.runtime.u06.delivery.U06DeliveryStore;
 import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryService;
 import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01Runtime;
+import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01TestFactory;
 import org.junit.jupiter.api.Test;
 
 import java.security.Permission;
@@ -47,7 +48,7 @@ class U06AuthoritativeNetworkSpyTest {
         System.setSecurityManager(spy);
         try {
             Clock clock=Clock.fixed(Instant.parse(AT), ZoneOffset.UTC);
-            U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create(
+            U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create(
                     "synthetic-store-spy","consult-spy","cdp-spy",clock);
 
             U06ProfileBRequest request=new U06ProfileBRequest(
