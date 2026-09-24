@@ -1,0 +1,18 @@
+{
+  "schema": "U06_FIXTURE_REFREEZE_REVIEW_GATE_V0_1",
+  "fixture_review_id": "U06_FIXTURE_REFREEZE_PROVENANCE_REVIEW_20260924_01",
+  "prior_review_id": "5298650596",
+  "prior_reviewed_fixture_manifest_digest": "6494a86da0e385c287276100e12af52e57067b5a72a441740cf3ab3ddf411c5a",
+  "reviewed_fixture_manifest_digest": "df87c9fb7e30fc472d96f840f25fafac987d8a256cbcda2c872e89e2e8a63cd0",
+  "reviewed_contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
+  "reviewed_contract_manifest_blob_sha": "1b53f4413278719efd9e2345fad7e27ec231f704",
+  "reviewed_freeze_head": "66fa3c078dce5e304e2ada9d6c0df0ff9fbde661",
+  "independent_review_record_sha": "0a6cbc7d7c6f587d41da64fad969e421fa574e78",
+  "independent_review_pr": 247,
+  "reviewer_role": "INDEPENDENT_SYNTHETIC_FIXTURE_PROVENANCE_REVIEW",
+  "independence_marker": "EXACT_REFROZEN_BYTES_REVIEWED_AFTER_CREATION_SEPARATE_FROM_ORACLE",
+  "semantic_equivalence": "BYTE_EQUAL_AFTER_AUTHORITY_CORE_PROVENANCE_NORMALIZATION",
+  "scope": "PROVENANCE_ONLY_NO_FIXTURE_SCENARIO_SEMANTIC_CHANGE",
+  "verdict": "PASS",
+  "reviewed_at": "2026-09-24"
+}

@@ -4,6 +4,7 @@ import glob
 import hashlib
 import json
 import os
+import shutil
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -349,8 +350,8 @@ def main():
         "oracle": resources / "u06-verification-expectations.json",
         "fixtures": resources / "u06-verification-fixtures.json",
         "auth": resources / "u06-auth-profile.json",
-        "oracle_gate": resources / "u06-oracle-review-gate.json",
-        "fixture_gate": resources / "u06-fixture-review-gate.json",
+        "oracle_gate": resources / "u06-oracle-refreeze-review-gate.json",
+        "fixture_gate": resources / "u06-fixture-refreeze-review-gate.json",
     }
 
     manifest = load(paths["manifest"])
@@ -378,6 +379,14 @@ def main():
     valid &= chk("fixture_gate_digest", fg.get("reviewed_fixture_manifest_digest"), manifest["fixtures"]["digest"])
     valid &= chk("oracle_gate_contract", og.get("reviewed_contract_manifest_digest"), core)
     valid &= chk("fixture_gate_contract", fg.get("reviewed_contract_manifest_digest"), core)
+    valid &= chk("oracle_gate_review_id", og.get("oracle_review_id"),
+                 "U06_ORACLE_REFREEZE_PROVENANCE_REVIEW_20260924_01")
+    valid &= chk("fixture_gate_review_id", fg.get("fixture_review_id"),
+                 "U06_FIXTURE_REFREEZE_PROVENANCE_REVIEW_20260924_01")
+    valid &= chk("oracle_gate_review_record", og.get("independent_review_record_sha"),
+                 "0a6cbc7d7c6f587d41da64fad969e421fa574e78")
+    valid &= chk("fixture_gate_review_record", fg.get("independent_review_record_sha"),
+                 "0a6cbc7d7c6f587d41da64fad969e421fa574e78")
     valid &= chk("oracle_core", oracle.get("authority_core_digest"), core)
     valid &= chk("fixture_core", fixtures.get("authority_core_digest"), core)
     valid &= chk("implementation_semantic_head", args.implementation_sha,
@@ -689,10 +698,91 @@ def main():
     env_copy = out / "u06-environment-evidence.json"
     env_copy.write_text(json.dumps(env, indent=2) + "\n", encoding="utf-8")
 
-    files = [case_file, out / "u06-verification-summary.json", env_copy]
-    if observations_path.exists():
-        files.append(observations_path)
-    checksum_lines = [sha256_file(x) + "  " + x.name for x in files]
+    # Build a self-contained durable evidence package. Required authority/provenance
+    # source bytes are copied verbatim so independent review does not depend on a
+    # later mutable repository lookup.
+    retained_sources = {
+        "u06-contract-manifest.json": paths["manifest"],
+        "u06-verification-expectations.json": paths["oracle"],
+        "u06-verification-fixtures.json": paths["fixtures"],
+        "u06-auth-profile.json": paths["auth"],
+        "u06-oracle-refreeze-review-gate.json": paths["oracle_gate"],
+        "u06-fixture-refreeze-review-gate.json": paths["fixture_gate"],
+        "u06-oracle-review-gate-historical.json": resources / "u06-oracle-review-gate.json",
+        "u06-fixture-review-gate-historical.json": resources / "u06-fixture-review-gate.json",
+        "U06_Authorized_Shared_Runtime_Change_Manifest_v0.1.md":
+            root / "docs/current/06_开发单元/u06_implementation/U06_Authorized_Shared_Runtime_Change_Manifest_v0.1.md",
+        "u06-authoritative-workflow.yml":
+            root / ".github/workflows/u06-rdp06-authoritative-verification.yml",
+        "verify_u06.py": root / "tools/u06_nonprod_verification/verify_u06.py",
+    }
+    for name, source in retained_sources.items():
+        if not source.exists():
+            raise RuntimeError("required durable source missing: " + str(source))
+        shutil.copyfile(str(source), str(out / name))
+
+    if not observations_path.exists():
+        raise RuntimeError("runtime observations missing from durable bundle")
+    shutil.copyfile(str(observations_path), str(out / "u06-sut-observations.json"))
+
+    spy_path = observations_path.parent / "external-call-spy.json"
+    if not spy_path.exists():
+        raise RuntimeError("external-call spy evidence missing from durable bundle")
+    shutil.copyfile(str(spy_path), str(out / "external-call-spy.json"))
+
+    environment_input = Path(args.environment_evidence)
+    if not environment_input.exists():
+        raise RuntimeError("environment input missing from durable bundle")
+    shutil.copyfile(str(environment_input), str(out / "environment-input.json"))
+
+    regression_summary = {
+        "schema": "U06_REGRESSION_SUMMARY_V0_1",
+        "full_regression_pass": bool(env.get("full_regression_pass")),
+        "regression_test_count": int(env.get("regression_test_count", 0)),
+        "regression_failures": int(env.get("regression_failures", 0)),
+        "regression_errors": int(env.get("regression_errors", 0)),
+        "regression_skips": int(env.get("regression_skips", 0)),
+        "unexpected_skips": int(env.get("unexpected_skips", 0)),
+        "expected_skip_classes": env.get("expected_skip_classes", []),
+        "skipped_cases": env.get("skipped_cases", []),
+    }
+    (out / "u06-regression-summary.json").write_text(
+        json.dumps(regression_summary, indent=2) + "\n", encoding="utf-8"
+    )
+
+    run_metadata = out / "u06-run-metadata.json"
+    if not run_metadata.exists():
+        raise RuntimeError("run/toolchain metadata missing from durable bundle")
+
+    # The artifact manifest covers every primary retained evidence file. SHA256SUMS
+    # additionally covers the artifact manifest itself. SHA256SUMS is the sole
+    # standard self-exception because a checksum file cannot hash its own final bytes.
+    primary_files = sorted(
+        [p for p in out.iterdir()
+         if p.is_file() and p.name not in ("SHA256SUMS", "u06-artifact-manifest.json")],
+        key=lambda p: p.name
+    )
+    artifact_manifest = {
+        "schema": "U06_ARTIFACT_MANIFEST_V0_1",
+        "implementation_sha": args.implementation_sha,
+        "verifier_sha": args.verifier_sha,
+        "authority_core_digest": core,
+        "file_count": len(primary_files),
+        "files": [
+            {"name": p.name, "sha256": sha256_file(p), "size_bytes": p.stat().st_size}
+            for p in primary_files
+        ],
+    }
+    artifact_manifest_path = out / "u06-artifact-manifest.json"
+    artifact_manifest_path.write_text(
+        json.dumps(artifact_manifest, indent=2) + "\n", encoding="utf-8"
+    )
+
+    retained_files = sorted(
+        [p for p in out.iterdir() if p.is_file() and p.name != "SHA256SUMS"],
+        key=lambda p: p.name
+    )
+    checksum_lines = [sha256_file(p) + "  " + p.name for p in retained_files]
     (out / "SHA256SUMS").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
 
     print(json.dumps(summary, indent=2))

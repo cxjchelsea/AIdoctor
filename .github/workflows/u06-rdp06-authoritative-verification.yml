@@ -88,6 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
     env:
       U06_IMPLEMENTATION_SEMANTIC_SHA: 66fa3c078dce5e304e2ada9d6c0df0ff9fbde661
       U06_PROFILE: SYNTHETIC_STRUCTURAL_NONPROD
@@ -214,6 +215,69 @@ jobs:
           print(json.dumps(payload,indent=2))
           PY
 
+      - name: Prepare durable run and toolchain metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          U06_ARTIFACT_LOGICAL_NAME: u06-rdp06-authoritative-${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import json, os, platform, subprocess, urllib.request
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          api=os.environ["GITHUB_API_URL"]
+          repo=os.environ["GITHUB_REPOSITORY"]
+          run_id=os.environ["GITHUB_RUN_ID"]
+          token=os.environ["GH_TOKEN"]
+          req=urllib.request.Request(
+              f"{api}/repos/{repo}/actions/runs/{run_id}/jobs?filter=latest",
+              headers={"Authorization":f"Bearer {token}","Accept":"application/vnd.github+json"}
+          )
+          with urllib.request.urlopen(req) as response:
+              jobs=json.load(response)["jobs"]
+          matches=[j for j in jobs if j.get("name")=="u06-rdp06-authoritative"]
+          if len(matches)!=1:
+              raise SystemExit(f"unable to bind exact authoritative job id: {len(matches)} matches")
+          job=matches[0]
+
+          def cmd(*args):
+              p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,check=True)
+              return p.stdout.strip()
+
+          payload={
+            "schema":"U06_RUN_TOOLCHAIN_METADATA_V0_1",
+            "workflow_run_id":int(run_id),
+            "workflow_run_attempt":int(os.environ.get("GITHUB_RUN_ATTEMPT","1")),
+            "job_id":int(job["id"]),
+            "job_name":job["name"],
+            "workflow_name":os.environ.get("GITHUB_WORKFLOW"),
+            "workflow_ref":os.environ.get("GITHUB_WORKFLOW_REF"),
+            "event_name":os.environ.get("GITHUB_EVENT_NAME"),
+            "github_sha":os.environ.get("GITHUB_SHA"),
+            "github_ref":os.environ.get("GITHUB_REF"),
+            "github_head_ref":os.environ.get("GITHUB_HEAD_REF"),
+            "repository":repo,
+            "implementation_semantic_sha":os.environ["U06_IMPLEMENTATION_SEMANTIC_SHA"],
+            "runner_os":os.environ.get("RUNNER_OS"),
+            "runner_arch":os.environ.get("RUNNER_ARCH"),
+            "runner_name":os.environ.get("RUNNER_NAME"),
+            "image_os":os.environ.get("ImageOS"),
+            "platform":platform.platform(),
+            "java_version":cmd("java","-version"),
+            "maven_version":cmd("mvn","-version"),
+            "python_version":cmd("python3","--version"),
+            "docker_version":cmd("docker","--version"),
+            "authoritative_container_image":"maven:3.9.9-eclipse-temurin-8",
+            "artifact_logical_name":os.environ["U06_ARTIFACT_LOGICAL_NAME"],
+            "generated_at":datetime.now(timezone.utc).isoformat(),
+          }
+          out=Path("diagnosis-service/target/u06-rdp06-evidence/u06-run-metadata.json")
+          out.parent.mkdir(parents=True,exist_ok=True)
+          out.write_text(json.dumps(payload,indent=2)+"\n",encoding="utf-8")
+          print(json.dumps(payload,indent=2))
+          PY
+
       - name: Run authoritative RDP06 verifier
         id: verifier
         shell: bash
@@ -242,15 +306,54 @@ jobs:
           exit 1
 
       - name: Upload authoritative evidence bundle
+        id: upload_evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: u06-rdp06-authoritative-${{ github.sha }}
-          path: |
-            diagnosis-service/target/u06-rdp06-evidence/
-            diagnosis-service/target/u06-rdp06-observations/
+          path: diagnosis-service/target/u06-rdp06-evidence/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90
+
+      - name: Persist upload receipt
+        if: always() && steps.upload_evidence.outcome == 'success'
+        shell: bash
+        env:
+          U06_ARTIFACT_ID: ${{ steps.upload_evidence.outputs.artifact-id }}
+          U06_ARTIFACT_URL: ${{ steps.upload_evidence.outputs.artifact-url }}
+          U06_ARTIFACT_DIGEST: ${{ steps.upload_evidence.outputs.artifact-digest }}
+          U06_ARTIFACT_NAME: u06-rdp06-authoritative-${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          payload={
+            "schema":"U06_GITHUB_ARTIFACT_UPLOAD_RECEIPT_V0_1",
+            "workflow_run_id":int(os.environ["GITHUB_RUN_ID"]),
+            "artifact_id":int(os.environ["U06_ARTIFACT_ID"]),
+            "artifact_name":os.environ["U06_ARTIFACT_NAME"],
+            "artifact_url":os.environ["U06_ARTIFACT_URL"],
+            "artifact_digest":os.environ["U06_ARTIFACT_DIGEST"],
+            "implementation_semantic_sha":os.environ["U06_IMPLEMENTATION_SEMANTIC_SHA"],
+            "github_sha":os.environ["GITHUB_SHA"],
+          }
+          out=Path("diagnosis-service/target/u06-upload-receipt")
+          out.mkdir(parents=True,exist_ok=True)
+          receipt=out/"u06-upload-receipt.json"
+          receipt.write_text(json.dumps(payload,indent=2)+"\n",encoding="utf-8")
+          digest=hashlib.sha256(receipt.read_bytes()).hexdigest()
+          (out/"SHA256SUMS").write_text(digest+"  u06-upload-receipt.json\n",encoding="utf-8")
+          print(json.dumps(payload,indent=2))
+          PY
+
+      - name: Upload durable artifact receipt
+        if: always() && steps.upload_evidence.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: u06-rdp06-upload-receipt-${{ github.sha }}
+          path: diagnosis-service/target/u06-upload-receipt/
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Declare verification boundary
         if: always()
