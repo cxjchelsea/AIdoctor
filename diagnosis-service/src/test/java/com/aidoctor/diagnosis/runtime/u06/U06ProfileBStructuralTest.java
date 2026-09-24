@@ -52,14 +52,26 @@ class U06ProfileBStructuralTest {
         ConsultationRepository consultations=mock(ConsultationRepository.class);
         ConsultationWaitEffectRepository waitEffects=mock(ConsultationWaitEffectRepository.class);
         ConsultationRecord consultation=mock(ConsultationRecord.class);
+        AtomicReference<String> consultationLifecycle=new AtomicReference<String>(ConsultationRecord.ACTIVE);
+        AtomicReference<String> consultationWaitEffect=new AtomicReference<String>();
+        AtomicReference<Long> consultationVersion=new AtomicReference<Long>(Long.valueOf(0));
+        AtomicReference<ConsultationWaitEffectRecord> waitEffectRecord=new AtomicReference<ConsultationWaitEffectRecord>();
         when(consultations.findByIdForUpdate("consult-1")).thenReturn(Optional.of(consultation));
-        when(consultation.getLifecycleStatus()).thenReturn(ConsultationRecord.ACTIVE);
-        when(consultation.getCurrentWaitEffectId()).thenReturn(null);
-        when(consultation.getRowVersion()).thenReturn(Long.valueOf(0),Long.valueOf(0),Long.valueOf(1));
+        when(consultation.getLifecycleStatus()).thenAnswer(i->consultationLifecycle.get());
+        when(consultation.getCurrentWaitEffectId()).thenAnswer(i->consultationWaitEffect.get());
+        when(consultation.getRowVersion()).thenAnswer(i->consultationVersion.get());
+        doAnswer(i->{consultationLifecycle.set(ConsultationRecord.WAITING_USER);consultationWaitEffect.set(i.getArgument(0));consultationVersion.set(Long.valueOf(1));return null;})
+                .when(consultation).enterWaitingUser(anyString());
         when(consultations.saveAndFlush(consultation)).thenReturn(consultation);
-        when(waitEffects.findById(anyString())).thenReturn(Optional.empty());
-        when(waitEffects.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(waitEffects.saveAndFlush(any(ConsultationWaitEffectRecord.class))).thenAnswer(i->i.getArgument(0));
+        when(waitEffects.findById(anyString())).thenAnswer(i->{
+            ConsultationWaitEffectRecord x=waitEffectRecord.get();
+            return x!=null&&x.getWaitEffectId().equals(i.getArgument(0))?Optional.of(x):Optional.empty();
+        });
+        when(waitEffects.findByIdempotencyKey(anyString())).thenAnswer(i->{
+            ConsultationWaitEffectRecord x=waitEffectRecord.get();
+            return x!=null&&x.getIdempotencyKey().equals(i.getArgument(0))?Optional.of(x):Optional.empty();
+        });
+        when(waitEffects.saveAndFlush(any(ConsultationWaitEffectRecord.class))).thenAnswer(i->{ConsultationWaitEffectRecord x=i.getArgument(0);waitEffectRecord.set(x);return x;});
         ConsultationWaitTransitionService consultationWait=new ConsultationWaitTransitionService(consultations,waitEffects);
 
         RuntimeThreadStateRepository threadRepo=mock(RuntimeThreadStateRepository.class);
@@ -108,8 +120,7 @@ class U06ProfileBStructuralTest {
                                 "candidate-1","question-1","semantic-1","synthetic-content-ref-1",
                                 "content-fingerprint-1",10,true))),
                 state.readCurrent());
-        U06SyntheticDeliveryService.ScopeAuthorization scope=new U06SyntheticDeliveryService.ScopeAuthorization(
-                "consult-1",U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,"fixture-scope-1","synthetic-store-1","ci-nonprod-u06","synthetic-endpoint-1",false,false,false);
+        U06SyntheticDeliveryService.ScopeAuthorization scope=scope();
         U06ExecutionResult m2=app.execute(mode2Request,selected,scope);
 
         assertEquals(U06ExecutionResult.WAIT_ESTABLISHED,m2.getStatus());
@@ -119,8 +130,121 @@ class U06ProfileBStructuralTest {
         assertEquals(RuntimeThreadStateRecord.AWAITING_USER,thread.get().getRuntimeStatus());
         assertEquals(1,deliveryStore.physicalSends);
         verify(consultation).enterWaitingUser(anyString());
+
+        U06ExecutionResult replay=app.execute(mode2Request,selected,scope);
+        assertEquals(U06ExecutionResult.WAIT_ESTABLISHED,replay.getStatus());
+        assertEquals(m2.getDeliveryId(),replay.getDeliveryId());
+        assertEquals(m2.getWaitEffectId(),replay.getWaitEffectId());
+        assertEquals(m2.getCheckpointId(),replay.getCheckpointId());
+        assertEquals(m2.getU07ResumeEligibilityId(),replay.getU07ResumeEligibilityId());
+        assertEquals(3,state.readCurrent().getVersion());
+        assertEquals(3,state.getMutationCount());
+        assertEquals(1,deliveryStore.physicalSends);
+        verify(consultation,times(1)).enterWaitingUser(anyString());
     }
 
+    @Test
+    void mode1ExactReplayReattachesAndChangedPayloadFailsClosed(){
+        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06ProfileBApplicationService app=minimalApp(state);
+        U06ProfileBRequest req=request(
+                U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null);
+        U06SyntheticDecisionEngine engine=new U06SyntheticDecisionEngine();
+        U06SyntheticDecisionBundle first=engine.decide(req,
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,true,false,"gap-replay","DECISION_MATERIAL",true,
+                        null,Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
+                state.readCurrent());
+        U06SyntheticPostF3SafetyBarrier.Evidence safety=
+                new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.ALLOWED,"synthetic-safety-replay");
+
+        U06ExecutionResult one=app.execute(req,first,null,safety);
+        U06ExecutionResult two=app.execute(req,first,null,safety);
+        assertEquals(U06ExecutionResult.MODE1_COMMITTED,one.getStatus());
+        assertEquals(U06ExecutionResult.MODE1_COMMITTED,two.getStatus());
+        assertEquals(one.getEffectRef(),two.getEffectRef());
+        assertEquals(1,state.getMutationCount());
+        assertEquals(1,state.readCurrent().getVersion());
+
+        U06SyntheticDecisionBundle changed=engine.decide(req,
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,true,false,"gap-changed","DECISION_MATERIAL",true,
+                        null,Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
+                state.readCurrent());
+        assertEquals(first.getF3CanonicalEffectId(),changed.getF3CanonicalEffectId());
+
+        U06ExecutionResult conflict=app.execute(req,changed,null,safety);
+        assertEquals(U06ExecutionResult.FAILURE_REQUIRED,conflict.getStatus());
+        assertEquals("U06_F3_CANONICAL_REPLAY_CONFLICT",conflict.getReasonCode());
+        assertEquals(1,state.getMutationCount());
+    }
+
+    @Test
+    void invalidSyntheticDeliveryEnvironmentFailsClosedBeforeMutation(){
+        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        InMemoryDeliveryStore deliveryStore=new InMemoryDeliveryStore();
+        U06ProfileBApplicationService app=minimalApp(state,deliveryStore);
+        U06ProfileBRequest req=request(
+                U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,0,"thread-1","run-1");
+        U06SyntheticDecisionBundle selected=new U06SyntheticDecisionEngine().decide(req,
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,false,false,"gap-1","DECISION_MATERIAL",true,
+                        U06SyntheticDecisionInput.POLICY_ALLOW_CONTINUE,
+                        Collections.singletonList(new U06SyntheticDecisionInput.Candidate(
+                                "candidate-prod-env","question-prod-env","semantic-prod-env","synthetic-content-ref-prod",
+                                "content-fingerprint-prod",1,true))),
+                state.readCurrent());
+        U06SyntheticDeliveryService.ScopeAuthorization invalid=new U06SyntheticDeliveryService.ScopeAuthorization(
+                "scope-auth-prod","fixture-auth-prod",U06SyntheticDeliveryService.ScopeAuthorization.CURRENT,
+                "consult-1",U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                "fixture-scope-prod","fixture-review-prod","synthetic-store-1",
+                "production","synthetic-endpoint-prod",null,false,false,false);
+
+        U06ExecutionResult result=app.execute(req,selected,invalid);
+        assertEquals(U06ExecutionResult.ADMISSION_REJECTED,result.getStatus());
+        assertEquals("U06_SYNTHETIC_DELIVERY_SCOPE_INVALID",result.getReasonCode());
+        assertEquals(0,state.getMutationCount());
+        assertEquals(0,deliveryStore.physicalSends);
+    }
+
+    @Test
+    void runtimeExceptionTerminalizesParentTraceAsFailed(){
+        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06DeliveryStore exploding=new U06DeliveryStore(){
+            public Snapshot reconcileConfirmed(Command command){throw new IllegalStateException("synthetic-delivery-explosion");}
+        };
+        AtomicReference<String> lifecycle=new AtomicReference<String>();
+        AtomicReference<String> outcome=new AtomicReference<String>();
+        U06GovernedExecutionTraceStore trace=new U06GovernedExecutionTraceStore(){
+            public void start(String a,String b,String c,String d,String e,String f,String g){lifecycle.set("STARTED");}
+            public void complete(String a,String b,String c,String d){lifecycle.set(b);outcome.set(c);}
+        };
+        ConsultationRepository cr=mock(ConsultationRepository.class);
+        ConsultationWaitEffectRepository er=mock(ConsultationWaitEffectRepository.class);
+        RuntimeThreadStateRepository tr=mock(RuntimeThreadStateRepository.class);
+        RuntimeWaitCheckpointRepository cp=mock(RuntimeWaitCheckpointRepository.class);
+        U06ProfileBApplicationService app=new U06ProfileBApplicationService(
+                new U06AdmissionService(),state,new U06SyntheticDeliveryService(exploding),
+                new ConsultationWaitTransitionService(cr,er),
+                new U06WaitCoordinator(new RuntimeWaitCheckpointService(tr,cp),new RuntimeThreadWaitTransitionService(tr,cp)),
+                trace);
+
+        U06ProfileBRequest req=request(
+                U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,0,"thread-1","run-1");
+        U06SyntheticDecisionBundle selected=new U06SyntheticDecisionEngine().decide(req,
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,false,false,"gap-1","DECISION_MATERIAL",true,
+                        U06SyntheticDecisionInput.POLICY_ALLOW_CONTINUE,
+                        Collections.singletonList(new U06SyntheticDecisionInput.Candidate(
+                                "candidate-trace","question-trace","semantic-trace","synthetic-content-ref-trace",
+                                "content-fingerprint-trace",1,true))),
+                state.readCurrent());
+
+        IllegalStateException failure=assertThrows(IllegalStateException.class,()->app.execute(req,selected,scope()));
+        assertEquals("synthetic-delivery-explosion",failure.getMessage());
+        assertEquals("FAILED",lifecycle.get());
+        assertEquals(U06ExecutionResult.FAILURE_REQUIRED,outcome.get());
+    }
 
     @Test
     void mode1BlockedSafetyStopsAfterCanonicalCommitWithoutQuestionOrWait(){
@@ -161,9 +285,7 @@ class U06ProfileBStructuralTest {
                                 "candidate-missing-runtime","question-1","semantic-1","synthetic-content-ref-1",
                                 "content-fingerprint-1",1,true))),
                 state.readCurrent());
-        U06SyntheticDeliveryService.ScopeAuthorization scope=new U06SyntheticDeliveryService.ScopeAuthorization(
-                "consult-1",U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,"fixture-scope-1","synthetic-store-1",
-                "ci-nonprod-u06","synthetic-endpoint-1",false,false,false);
+        U06SyntheticDeliveryService.ScopeAuthorization scope=scope();
 
         U06ExecutionResult result=app.execute(req,selected,scope);
 
@@ -340,6 +462,14 @@ class U06ProfileBStructuralTest {
         return new U06ProfileBApplicationService(new U06AdmissionService(),state,new U06SyntheticDeliveryService(deliveryStore),
                 new ConsultationWaitTransitionService(c,e),new U06WaitCoordinator(new RuntimeWaitCheckpointService(tr,cp),new RuntimeThreadWaitTransitionService(tr,cp)),
                 new U06GovernedExecutionTraceStore(){public void start(String a,String b,String c,String d,String e,String f,String g){}public void complete(String a,String b,String c,String d){}});
+    }
+
+    private U06SyntheticDeliveryService.ScopeAuthorization scope(){
+        return new U06SyntheticDeliveryService.ScopeAuthorization(
+                "scope-auth-1","fixture-authorization-1",U06SyntheticDeliveryService.ScopeAuthorization.CURRENT,
+                "consult-1",U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                "fixture-scope-1","fixture-review-1","synthetic-store-1",
+                "ci-nonprod-u06","synthetic-endpoint-1",null,false,false,false);
     }
 
     private U06ProfileBRequest request(String mode,String source,int version,String thread,String run){
