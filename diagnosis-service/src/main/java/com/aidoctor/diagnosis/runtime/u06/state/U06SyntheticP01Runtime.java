@@ -4,7 +4,7 @@ import com.aidoctor.diagnosis.runtime.u06.U06Ids;import com.aidoctor.diagnosis.s
 import java.time.Clock;import java.util.*;
 public final class U06SyntheticP01Runtime {
     public static final String PRODUCER="u06-runtime",CAPABILITY_ID="u06-state-writer",CAPABILITY_VERSION="1.0.0",SOURCE="RULE_DERIVED",SENSITIVITY="INTERNAL_SENSITIVE";
-    private final String storeRef,consultationId,cdpId;private final SyntheticVersionedStateRepository repository;private final StateCommitter committer;private final Map<String,StablePatch> stablePatches=new LinkedHashMap<String,StablePatch>();
+    private final String storeRef,consultationId,cdpId;private final SyntheticVersionedStateRepository repository;private final StateCommitter committer;private final Map<String,StablePatch> stablePatches=new LinkedHashMap<String,StablePatch>();private boolean readBackMismatchOnce;
     private U06SyntheticP01Runtime(String storeRef,String consultationId,String cdpId,SyntheticVersionedStateRepository repository,StateCommitter committer){this.storeRef=req(storeRef);this.consultationId=req(consultationId);this.cdpId=req(cdpId);this.repository=repository;this.committer=committer;}
     public static U06SyntheticP01Runtime create(String storeRef,String consultationId,String cdpId,Clock clock){
         Map<String,Object>patient=new LinkedHashMap<String,Object>();patient.put("information_gaps",new LinkedHashMap<String,Object>());patient.put("questions",new LinkedHashMap<String,Object>());
@@ -19,7 +19,29 @@ public final class U06SyntheticP01Runtime {
         if(baseVersion<0)throw new IllegalArgumentException("baseVersion must be non-negative");
         String fp=fingerprint(intents);StablePatch stable=stablePatches.get(effect);if(stable!=null&&!stable.fp.equals(fp))throw new IllegalStateException("U06_STATE_EFFECT_REPLAY_CONFLICT");
         if(stable==null){StateTypes.StatePatch p=build(effect,proposal,intents,evidence,corr,trace,createdAt,baseVersion);stable=new StablePatch(fp,p);stablePatches.put(effect,stable);}
-        StateTypes.CommitResult result=committer.commit(stable.patch);return new CommitEvidence(result,readCurrent(),repository.mutationCount(),storeRef);
+        StateTypes.CommitResult result=committer.commit(stable.patch);
+        StateView readBack=readCurrent();
+        if(readBackMismatchOnce&&"COMMITTED".equals(result.status)){readBackMismatchOnce=false;readBack=corruptReadBack(readBack);}
+        return new CommitEvidence(result,readBack,repository.mutationCount(),storeRef);
+    }
+    public synchronized void injectReadBackMismatchOnce(){readBackMismatchOnce=true;}
+    @SuppressWarnings("unchecked")
+    private StateView corruptReadBack(StateView original){
+        Map<String,Object> root=deepCopyMap(original.state);
+        Object raw=root.get("patient_state");
+        if(raw instanceof Map)((Map<String,Object>)raw).remove("f3_gap_assessment");
+        return new StateView(original.version,root);
+    }
+    @SuppressWarnings("unchecked")
+    private static Map<String,Object> deepCopyMap(Map<String,Object> source){
+        Map<String,Object> out=new LinkedHashMap<String,Object>();
+        for(Map.Entry<String,Object>e:source.entrySet()){
+            Object v=e.getValue();
+            if(v instanceof Map)v=deepCopyMap((Map<String,Object>)v);
+            else if(v instanceof List)v=new ArrayList<Object>((List<Object>)v);
+            out.put(e.getKey(),v);
+        }
+        return out;
     }
     public StateView readCurrent(){SyntheticStateSnapshot s=repository.snapshot(cdpId);return new StateView(s.version(),s.state());}
     public OperationIntent upsert(String path,Map<String,Object>value){return new OperationIntent(readCurrent().exists(path)?"REPLACE":"ADD",path,value);}
