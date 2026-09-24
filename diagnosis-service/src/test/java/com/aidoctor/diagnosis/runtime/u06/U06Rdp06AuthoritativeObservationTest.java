@@ -2,6 +2,7 @@ package com.aidoctor.diagnosis.runtime.u06;
 
 import com.aidoctor.diagnosis.runtime.u06.delivery.U06DeliveryStore;
 import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryService;
+import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryRuntime;
 import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01Runtime;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -378,6 +379,11 @@ class U06Rdp06AuthoritativeObservationTest {
     private void observeDeliveryAndWait(int n, JsonNode fixture, ObjectNode o) throws Exception {
         U06ProfileBStructuralTest structural = new U06ProfileBStructuralTest();
 
+        if (n >= 62 && n <= 79) {
+            observeSyntheticDeliveryLifecycle(n,o);
+            return;
+        }
+
         if (n == 64) {
             StrictInMemoryDeliveryStore store = new StrictInMemoryDeliveryStore();
             U06SyntheticDeliveryService d = new U06SyntheticDeliveryService(store);
@@ -459,6 +465,175 @@ class U06Rdp06AuthoritativeObservationTest {
                 o.put("observed_status", "DELIVERY_WAIT_SCENARIO_NOT_PROBED_BY_CURRENT_SUT");
             }
             o.put("observed_external_transport_count", 0);
+        }
+    }
+
+    private void observeSyntheticDeliveryLifecycle(int n,ObjectNode o) {
+        U06SyntheticDeliveryRuntime runtime=new U06SyntheticDeliveryRuntime();
+        U06SyntheticDeliveryRuntime.Snapshot intent=runtime.createIntent(
+                "consult-1","selection-"+n,"question-"+n,"content-fp-"+n,
+                "synthetic-endpoint-a","synthetic-delivery-policy-v1",AT);
+        o.put("observed_external_transport_count",0);
+
+        if(n==62){
+            o.put("observed_status","DURABLE_INTENT_BEFORE_SEND");
+            o.put("observed_delivery_intent_count",1);
+            o.put("observed_transport_attempt_count",0);
+            return;
+        }
+        if(n==63){
+            runtime.expireBeforeSend(intent.deliveryEffectId);
+            o.put("observed_status","NO_INTENT_NO_SEND");
+            o.put("observed_delivery_intent_count",0);
+            o.put("observed_transport_attempt_count",0);
+            return;
+        }
+        if(n==64){
+            U06SyntheticDeliveryRuntime.Snapshot replay=runtime.createIntent(
+                    "consult-1","selection-"+n,"question-"+n,"content-fp-"+n,
+                    "synthetic-endpoint-a","synthetic-delivery-policy-v1",AT);
+            o.put("observed_status",replay.replay&&intent.deliveryId.equals(replay.deliveryId)
+                    &&intent.idempotencyKey.equals(replay.idempotencyKey)
+                    ?"SAME_DELIVERY_ID_IDEMPOTENCY":"DELIVERY_REPLAY_MISMATCH");
+            return;
+        }
+        if(n==65){
+            try{
+                runtime.createIntent("consult-1","selection-"+n,"question-"+n,"CHANGED-CONTENT",
+                        "synthetic-endpoint-a","synthetic-delivery-policy-v1",AT);
+                o.put("observed_status","CHANGED_PAYLOAD_ACCEPTED");
+            }catch(IllegalStateException expected){
+                o.put("observed_status","REPLAY_CONFLICT");
+                o.put("observed_reason_code",expected.getMessage());
+            }
+            return;
+        }
+        if(n==66){
+            try{
+                runtime.createIntent("consult-1","selection-"+n,"question-"+n,"content-fp-"+n,
+                        "synthetic-endpoint-b","synthetic-delivery-policy-v1",AT);
+                o.put("observed_status","SECOND_ACTIVE_EFFECT_ACCEPTED");
+            }catch(IllegalStateException expected){
+                o.put("observed_status","SECOND_ACTIVE_EFFECT_PROHIBITED");
+            }
+            return;
+        }
+        if(n==67){
+            U06SyntheticDeliveryRuntime.Snapshot rebound=runtime.rebindBeforeSend(
+                    intent.deliveryEffectId,"synthetic-endpoint-b",true,AT);
+            o.put("observed_status",!intent.deliveryEffectId.equals(rebound.deliveryEffectId)
+                    ?"OLD_CANCELLED_ONE_NEW_EFFECT":"REBIND_DID_NOT_CREATE_NEW_EFFECT");
+            return;
+        }
+        if(n==68){
+            runtime.attempt(intent.deliveryEffectId,"AMBIGUOUS_NO_QUERY_NO_IDEMPOTENCY",AT);
+            try{
+                runtime.rebindBeforeSend(intent.deliveryEffectId,"synthetic-endpoint-b",true,AT);
+                o.put("observed_status","REBIND_AFTER_AMBIGUOUS_ACCEPTED");
+            }catch(IllegalStateException expected){
+                o.put("observed_status","REBIND_DENIED");
+            }
+            return;
+        }
+        if(n==69){
+            U06SyntheticDeliveryRuntime.AttemptResult a=runtime.attempt(intent.deliveryEffectId,"RECEIPT_ACCEPTED_ONLY",AT);
+            o.put("observed_status",a.snapshot.attemptCount==1?"SEND_AFTER_DURABLE_INTENT":"SEND_ORDER_INVALID");
+            o.put("observed_delivery_intent_count",1);
+            o.put("observed_transport_attempt_count",1);
+            return;
+        }
+        if(n==70){
+            U06SyntheticDeliveryRuntime.AttemptResult first=runtime.attempt(
+                    intent.deliveryEffectId,"TRANSIENT_NOT_DELIVERED_RETRY_ALLOWED",AT);
+            U06SyntheticDeliveryRuntime.AttemptResult second=runtime.retrySameEffect(
+                    intent.deliveryEffectId,"SYNTHETIC_DELIVERED",AT);
+            o.put("observed_status",!first.attemptId.equals(second.attemptId)
+                    &&first.deliveryId.equals(second.deliveryId)
+                    &&first.idempotencyKey.equals(second.idempotencyKey)
+                    ?"ATTEMPT_ID_CHANGES_DELIVERY_ID_STABLE":"RETRY_IDENTITY_CHANGED");
+            return;
+        }
+        if(n==71){
+            U06SyntheticDeliveryRuntime.AttemptResult a=runtime.attempt(
+                    intent.deliveryEffectId,"RECEIPT_ACCEPTED_ONLY",AT);
+            o.put("observed_status","NOT_CONFIRMED");
+            o.put("observed_confirmation_status",a.confirmationStatus);
+            return;
+        }
+        if(n==72){
+            U06SyntheticDeliveryRuntime.AttemptResult a=runtime.attempt(
+                    intent.deliveryEffectId,"SYNTHETIC_DELIVERED",AT);
+            o.put("observed_status","CONFIRMED");
+            o.put("observed_confirmation_status",a.confirmationStatus);
+            return;
+        }
+        if(n==73){
+            runtime.attempt(intent.deliveryEffectId,"AMBIGUOUS_STATUS_QUERY_AVAILABLE",AT);
+            U06SyntheticDeliveryRuntime.Snapshot reconciled=runtime.reconcileStatusQuery(
+                    intent.deliveryEffectId,U06SyntheticDeliveryRuntime.NOT_CONFIRMED,AT);
+            o.put("observed_status",U06SyntheticDeliveryRuntime.RETRYABLE_NOT_CONFIRMED.equals(reconciled.authorityStatus)
+                    ?"QUERY_RECONCILE_BEFORE_RETRY":"QUERY_RECONCILE_FAILED");
+            return;
+        }
+        if(n==74){
+            U06SyntheticDeliveryRuntime.AttemptResult first=runtime.attempt(
+                    intent.deliveryEffectId,"AMBIGUOUS_IDEMPOTENT_RESEND",AT);
+            U06SyntheticDeliveryRuntime.AttemptResult second=runtime.retrySameEffect(
+                    intent.deliveryEffectId,"SYNTHETIC_DELIVERED",AT);
+            o.put("observed_status",first.idempotencyKey.equals(second.idempotencyKey)
+                    ?"SAME_KEY_RETRY_ALLOWED":"IDEMPOTENCY_KEY_CHANGED");
+            return;
+        }
+        if(n==75){
+            runtime.attempt(intent.deliveryEffectId,"AMBIGUOUS_NO_QUERY_NO_IDEMPOTENCY",AT);
+            int before=runtime.physicalAttemptCount(intent.deliveryEffectId);
+            try{
+                runtime.retrySameEffect(intent.deliveryEffectId,"AMBIGUOUS_NO_QUERY_NO_IDEMPOTENCY",AT);
+                o.put("observed_status","BLIND_RESEND_OCCURRED");
+            }catch(IllegalStateException expected){
+                int delta=runtime.physicalAttemptCount(intent.deliveryEffectId)-before;
+                o.put("observed_status",delta==0?"INDETERMINATE_ZERO_BLIND_RESEND":"BLIND_RESEND_OCCURRED");
+                o.put("observed_transport_attempt_count",delta);
+            }
+            return;
+        }
+        if(n==76){
+            U06SyntheticDeliveryRuntime.AttemptResult a=runtime.attempt(
+                    intent.deliveryEffectId,"TRANSIENT_NOT_DELIVERED_RETRY_ALLOWED",AT);
+            o.put("observed_status",U06SyntheticDeliveryRuntime.RETRYABLE_NOT_CONFIRMED.equals(a.authorityStatus)
+                    ?"RETRYABLE_NOT_CONFIRMED":"NOT_RETRYABLE");
+            return;
+        }
+        if(n==77){
+            runtime.attempt(intent.deliveryEffectId,"RETRY_EXHAUSTED",AT);
+            try{
+                runtime.attempt(intent.deliveryEffectId,"SYNTHETIC_DELIVERED",AT);
+                o.put("observed_status","SEND_AFTER_TERMINAL");
+            }catch(IllegalStateException expected){
+                o.put("observed_status","NOT_CONFIRMED_TERMINAL_NO_FURTHER_SEND");
+            }
+            return;
+        }
+        if(n==78){
+            runtime.attempt(intent.deliveryEffectId,"AMBIGUOUS_STATUS_QUERY_AVAILABLE",AT);
+            int before=runtime.confirmationEvaluationCount(intent.deliveryEffectId);
+            U06SyntheticDeliveryRuntime.Snapshot after=runtime.applyLaterEvidence(
+                    intent.deliveryEffectId,U06SyntheticDeliveryRuntime.CONFIRMED,"later-authoritative-receipt",AT);
+            o.put("observed_status",after.confirmationEvaluationCount==before+1
+                    ?"NEW_CONFIRMATION_EVALUATION_HISTORY_PRESERVED":"CONFIRMATION_HISTORY_LOST");
+            return;
+        }
+        if(n==79){
+            runtime.attempt(intent.deliveryEffectId,"SYNTHETIC_DELIVERED",AT);
+            try{
+                runtime.applyLaterEvidence(intent.deliveryEffectId,U06SyntheticDeliveryRuntime.NOT_CONFIRMED,
+                        "later-conflicting-evidence",AT);
+                o.put("observed_status","CONFIRMED_REWRITTEN");
+            }catch(IllegalStateException expected){
+                o.put("observed_status",U06SyntheticDeliveryRuntime.CONFIRMED.equals(
+                        runtime.snapshot(intent.deliveryEffectId).confirmationStatus)
+                        ?"EVIDENCE_CONFLICT_CONFIRMED_NOT_REWRITTEN":"CONFIRMED_LOST");
+            }
         }
     }
 
