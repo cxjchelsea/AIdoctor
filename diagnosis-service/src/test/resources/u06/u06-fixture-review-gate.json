@@ -1,0 +1,16 @@
+{
+  "schema": "U06_FIXTURE_REVIEW_GATE_V0_1",
+  "fixture_review_id": "5298650596",
+  "reviewed_fixture_manifest_digest": "6494a86da0e385c287276100e12af52e57067b5a72a441740cf3ab3ddf411c5a",
+  "reviewed_contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+  "reviewed_contract_manifest_blob_sha": "e1e228ea23da384353609ef2e86385dff9ef1e44",
+  "reviewed_freeze_head": "a832018ec9c9623e18330d04c50fecc7b89d7067",
+  "reviewer_role": "INDEPENDENT_SYNTHETIC_FIXTURE_REVIEW",
+  "independence_marker": "FIXTURE_STIMULI_REVIEWED_SEPARATELY_FROM_EXPECTATION_ORACLE",
+  "verdict": "PASS",
+  "reviewed_at": "2026-09-24",
+  "finding_refs": [
+    "BF-U06-FIXTURE-IR-01:CLOSED",
+    "BYTE_INTEGRITY_REBOUND:PASS"
+  ]
+}

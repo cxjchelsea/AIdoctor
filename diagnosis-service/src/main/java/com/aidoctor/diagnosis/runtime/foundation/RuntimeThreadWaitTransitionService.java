@@ -1,0 +1,7 @@
+package com.aidoctor.diagnosis.runtime.foundation;
+import org.springframework.transaction.annotation.*;
+public final class RuntimeThreadWaitTransitionService{
+ private final RuntimeThreadStateRepository threads;private final RuntimeWaitCheckpointRepository checkpoints;
+ public RuntimeThreadWaitTransitionService(RuntimeThreadStateRepository t,RuntimeWaitCheckpointRepository c){if(t==null||c==null)throw new IllegalArgumentException("repositories required");threads=t;checkpoints=c;}
+ @Transactional(isolation=Isolation.SERIALIZABLE) public RuntimeThreadStateRecord enterAwaitingUser(String threadId,String runId,String checkpointId,String waitEffectId){RuntimeThreadStateRecord t=threads.findByThreadIdForUpdate(threadId).orElseThrow(()->new IllegalStateException("U06_RUNTIME_THREAD_NOT_FOUND"));RuntimeWaitCheckpointRecord cp=checkpoints.findById(checkpointId).orElseThrow(()->new IllegalStateException("U06_WAIT_CHECKPOINT_NOT_FOUND"));if(!cp.getRunId().equals(runId)||!cp.getQuestionDeliveredWaitEffectId().equals(waitEffectId))throw new IllegalStateException("U06_RUNTIME_WAIT_CONFLICT");if(RuntimeThreadStateRecord.AWAITING_USER.equals(t.getRuntimeStatus())){if(!t.sameWait(runId,checkpointId,waitEffectId))throw new IllegalStateException("U06_RUNTIME_WAIT_CONFLICT");return t;}t.enterAwaitingUser(runId,checkpointId,waitEffectId,java.time.LocalDateTime.now());return threads.saveAndFlush(t);}
+}
