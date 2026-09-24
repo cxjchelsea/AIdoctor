@@ -4,6 +4,7 @@ import com.aidoctor.diagnosis.runtime.u06.delivery.U06DeliveryStore;
 import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryService;
 import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryRuntime;
 import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01Runtime;
+import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01TestFactory;
 import com.aidoctor.diagnosis.runtime.u01.ConsultationRecord;
 import com.aidoctor.diagnosis.runtime.u01.ConsultationRepository;
 import com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRecord;
@@ -1110,7 +1111,7 @@ class U06Rdp06AuthoritativeObservationTest {
     }
 
     private U06SyntheticP01Runtime state() {
-        return U06SyntheticP01Runtime.create("synthetic-store-u06-v1", "consult-1", "cdp-1", CLOCK);
+        return U06SyntheticP01TestFactory.create("synthetic-store-u06-v1", "consult-1", "cdp-1", CLOCK);
     }
 
     private U06ProfileBApplicationService minimalApp(U06SyntheticP01Runtime state, U06SyntheticDeliveryService delivery) {
@@ -1226,7 +1227,7 @@ class U06Rdp06AuthoritativeObservationTest {
     }
 
     private static final class WaitHarness {
-        final U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-u06-v1","consult-1","cdp-1",CLOCK);
+        final U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-u06-v1","consult-1","cdp-1",CLOCK);
         final StrictInMemoryDeliveryStore deliveryStore=new StrictInMemoryDeliveryStore();
         final ConsultationRepository consultations=mock(ConsultationRepository.class);
         final ConsultationWaitEffectRepository waitEffects=mock(ConsultationWaitEffectRepository.class);
