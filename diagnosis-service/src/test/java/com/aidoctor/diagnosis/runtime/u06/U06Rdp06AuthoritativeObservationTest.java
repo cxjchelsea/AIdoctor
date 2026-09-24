@@ -316,23 +316,48 @@ class U06Rdp06AuthoritativeObservationTest {
                     ? "CONFLICT_NO_BASE_VERSION_REWRITE" : conflict.getResult().status);
             o.put("observed_state_version_delta", s.readCurrent().getVersion());
         } else if (n >= 52 && n <= 55) {
-            // Execute the real selection boundary by forcing delivery to fail immediately after selection.
             U06SyntheticP01Runtime s = state();
+            if(n==55){
+                Map<String,Object> pending=new LinkedHashMap<String,Object>();
+                pending.put("question_id","different-question");
+                pending.put("question_delivered_wait_effect_id","different-wait-effect");
+                pending.put("delivery_id","different-delivery");
+                s.commit("seed-pending-55","seed-pending-proposal-55",
+                        Collections.singletonList(s.upsert("/patient_state/pending_question",pending)),
+                        Collections.singletonList("fixture-seed"),"corr","trace",AT);
+            }
             U06ProfileBRequest req = request(fixture, s.readCurrent().getVersion(), false);
             U06SyntheticDecisionBundle d = selectedBundle(req, "gap-selection");
-            U06DeliveryStore exploding = new U06DeliveryStore() {
-                public Snapshot reconcileConfirmed(Command c) {
-                    throw new IllegalStateException("synthetic-stop-after-selection");
+            if(n==55){
+                U06ProfileBApplicationService app=minimalApp(s,new U06SyntheticDeliveryService(new StrictInMemoryDeliveryStore()));
+                try{
+                    app.execute(req,d,validScope(fixture));
+                    o.put("observed_status","PENDING_CONFLICT_NOT_DETECTED");
+                }catch(IllegalStateException conflict){
+                    String existing=s.readCurrent().mapString("/patient_state/pending_question","question_id");
+                    o.put("observed_status","different-question".equals(existing)
+                            &&"U06_PENDING_QUESTION_CONFLICT".equals(conflict.getMessage())
+                            ?"CONFLICT_NO_OVERWRITE":"PENDING_CONFLICT_INCONSISTENT");
                 }
-            };
-            U06ProfileBApplicationService app = minimalApp(s, new U06SyntheticDeliveryService(exploding));
-            try { app.execute(req, d, validScope(fixture)); } catch (IllegalStateException expected) { /* boundary probe */ }
-            boolean selected = "SELECTED".equals(s.readCurrent().mapString("/patient_state/questions/" + d.getQuestionId(), "status"));
-            boolean pending = s.readCurrent().exists("/patient_state/pending_question");
-            if (n == 52 && selected) o.put("observed_status", "ONE_QUESTION_SELECTED_EFFECT_COMMIT");
-            else if (n == 53 && selected && !pending) o.put("observed_status", "GAP_NOT_ASKED_PENDING_ABSENT_NO_WAITING");
-            else if (n == 54) o.put("observed_status", "SELECTION_REPLAY_NOT_EXERCISED_BY_THIS_PROBE");
-            else o.put("observed_status", "PENDING_CONFLICT_NOT_EXERCISED_BY_THIS_PROBE");
+            }else{
+                U06DeliveryStore exploding = new U06DeliveryStore() {
+                    public Snapshot reconcileConfirmed(Command command) {
+                        throw new IllegalStateException("synthetic-stop-after-selection");
+                    }
+                };
+                U06ProfileBApplicationService app = minimalApp(s, new U06SyntheticDeliveryService(exploding));
+                try { app.execute(req, d, validScope(fixture)); } catch (IllegalStateException expected) { }
+                boolean selected = "SELECTED".equals(s.readCurrent().mapString("/patient_state/questions/" + d.getQuestionId(), "status"));
+                boolean pending = s.readCurrent().exists("/patient_state/pending_question");
+                if (n == 52 && selected) o.put("observed_status", "ONE_QUESTION_SELECTED_EFFECT_COMMIT");
+                else if (n == 53 && selected && !pending) o.put("observed_status", "GAP_NOT_ASKED_PENDING_ABSENT_NO_WAITING");
+                else if(n==54){
+                    int before=s.getMutationCount();
+                    try { app.execute(req,d,validScope(fixture)); } catch (IllegalStateException expected) { }
+                    o.put("observed_status",selected&&before==s.getMutationCount()
+                            ?"SAME_QUESTION_EFFECT_NO_DUPLICATE":"SELECTION_REPLAY_DUPLICATED");
+                }
+            }
             o.put("observed_state_commit_count", s.getMutationCount());
             o.put("observed_state_version_delta", s.readCurrent().getVersion());
         } else if (n == 57) {
