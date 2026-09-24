@@ -36,8 +36,14 @@ public final class U06AdmissionService {
         String id=admissionId(r);
         String fp=canonicalFingerprint(r);
 
-        // RDP-01 replay is not an authority bypass: current source/Gate/permission/binding
-        // evidence must be revalidated before an existing admission may be reattached.
+        // A changed canonical payload under the same protected admission identity is a
+        // replay conflict. This does not authorize reattachment and causes no business effect.
+        String existing=admittedFingerprints.get(id);
+        if(existing!=null&&!existing.equals(fp))
+            throw new IllegalStateException("U06_ADMISSION_REPLAY_CONFLICT");
+
+        // RDP-01 exact replay is not an authority bypass: current source/Gate/permission/
+        // binding evidence must be revalidated before an existing admission may reattach.
         String staticRejection=validateStatic(r);
         if(staticRejection!=null)return Admission.rejected(id,staticRejection,fp,r);
 
@@ -45,11 +51,7 @@ public final class U06AdmissionService {
                 &&!exactAuthoritativeReplayEvidence)
             return Admission.rejected(id,REJECTED_STALE_STATE,fp,r);
 
-        String existing=admittedFingerprints.get(id);
-        if(existing!=null) {
-            if(!existing.equals(fp))throw new IllegalStateException("U06_ADMISSION_REPLAY_CONFLICT");
-            return Admission.admitted(id,fp,r,true);
-        }
+        if(existing!=null)return Admission.admitted(id,fp,r,true);
 
         admittedFingerprints.put(id,fp);
         return Admission.admitted(id,fp,r,false);
