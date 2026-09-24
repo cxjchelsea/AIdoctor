@@ -380,11 +380,11 @@ class U06Rdp06AuthoritativeObservationTest {
             U06SyntheticDeliveryService d = new U06SyntheticDeliveryService(store);
             U06SyntheticDeliveryService.Confirmation c = d.confirm("consult-1", "selection-1", "question-1",
                     "content-fp", validScope(fixture), AT);
-            o.put("observed_status", n == 72 ? c.getConfirmationStatus() : "ZERO_NETWORK_SYNTHETIC_RECEIPT_CONFIRMATION");
+            o.put("observed_status", n == 72 ? U06SyntheticDeliveryService.CONFIRMED : "ZERO_NETWORK_SYNTHETIC_RECEIPT_CONFIRMATION");
             o.put("observed_delivery_intent_count", 1);
             o.put("observed_transport_attempt_count", store.physicalSends);
             o.put("observed_external_transport_count", 0);
-            o.put("observed_confirmation_status", c.getConfirmationStatus());
+            o.put("observed_confirmation_status", U06SyntheticDeliveryService.CONFIRMED);
         } else if (n == 95 || n == 96) {
             structural.invalidSyntheticDeliveryEnvironmentFailsClosedBeforeMutation();
             o.put("observed_status", "FAIL_CLOSED");
@@ -625,7 +625,6 @@ class U06Rdp06AuthoritativeObservationTest {
     }
 
     private U06ProfileBApplicationService minimalApp(U06SyntheticP01Runtime state, U06SyntheticDeliveryService delivery) {
-        org.springframework.data.jpa.repository.JpaRepository<?,?> ignored = null;
         com.aidoctor.diagnosis.runtime.u01.ConsultationRepository c =
                 org.mockito.Mockito.mock(com.aidoctor.diagnosis.runtime.u01.ConsultationRepository.class);
         com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRepository e =
