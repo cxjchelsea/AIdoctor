@@ -409,6 +409,83 @@ class U06ProfileBStructuralTest {
     }
 
     @Test
+    void syntheticDecisionEngineSuppressesUnchangedUserUnknownReask(){
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        Map<String,Object> existing=new LinkedHashMap<String,Object>();
+        existing.put("question_id","q-unknown");
+        existing.put("question_semantic_key","semantic-unknown");
+        existing.put("status","USER_UNKNOWN");
+        state.commit("seed-user-unknown-effect","seed-user-unknown-proposal",
+                Collections.singletonList(state.upsert("/patient_state/questions/q-unknown",existing)),
+                Collections.singletonList("synthetic-seed"),"corr-seed","trace-seed",AT);
+
+        U06SyntheticDecisionBundle result=new U06SyntheticDecisionEngine().decide(
+                request(U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,1,"thread-1","run-1"),
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,false,false,"gap-1","DECISION_MATERIAL",true,
+                        U06SyntheticDecisionInput.POLICY_ALLOW_CONTINUE,
+                        Collections.singletonList(new U06SyntheticDecisionInput.Candidate(
+                                "candidate-unknown","q-new","semantic-unknown","ref-new","fp-new",1,true))),
+                state.readCurrent());
+
+        assertEquals(U06SyntheticDecisionBundle.NO_SELECTION,result.getQuestionSelectionStatus());
+        assertEquals(U06SyntheticDecisionBundle.STOP,result.getD04Status());
+        assertEquals(1,state.getMutationCount());
+    }
+
+    @Test
+    void mode1DependencyFailureProducesTypedFailureWithoutMutation(){
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06ProfileBApplicationService app=minimalApp(state);
+        U06ProfileBRequest req=request(
+                U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null);
+        U06SyntheticDecisionBundle failed=new U06SyntheticDecisionEngine().decide(
+                req,
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.DEPENDENCY_FAILURE,false,false,null,null,false,
+                        null,Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
+                state.readCurrent());
+
+        U06ExecutionResult result=app.execute(req,failed,null);
+        assertEquals(U06ExecutionResult.FAILURE_REQUIRED,result.getStatus());
+        assertEquals(U06SyntheticDecisionInput.DEPENDENCY_FAILURE,result.getReasonCode());
+        assertEquals(0,state.getMutationCount());
+        assertEquals(0,state.readCurrent().getVersion());
+    }
+
+    @Test
+    void differentActivePendingQuestionFailsBeforeSelectionCommit(){
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        Map<String,Object> pending=new LinkedHashMap<String,Object>();
+        pending.put("question_id","different-question");
+        pending.put("question_delivered_wait_effect_id","different-wait-effect");
+        pending.put("delivery_id","different-delivery");
+        state.commit("seed-pending-effect","seed-pending-proposal",
+                Collections.singletonList(state.upsert("/patient_state/pending_question",pending)),
+                Collections.singletonList("synthetic-seed"),"corr-seed","trace-seed",AT);
+        int mutationsBefore=state.getMutationCount();
+        int versionBefore=state.readCurrent().getVersion();
+
+        U06ProfileBRequest req=request(
+                U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,versionBefore,"thread-1","run-1");
+        U06SyntheticP01Runtime decisionState=U06SyntheticP01TestFactory.create("synthetic-store-decision","consult-1","cdp-1",CLOCK);
+        U06SyntheticDecisionBundle selected=new U06SyntheticDecisionEngine().decide(
+                req,
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS,false,false,"gap-1","DECISION_MATERIAL",true,
+                        U06SyntheticDecisionInput.POLICY_ALLOW_CONTINUE,
+                        Collections.singletonList(new U06SyntheticDecisionInput.Candidate(
+                                "candidate-pending","question-new","semantic-new","ref-new","fp-new",1,true))),
+                decisionState.readCurrent());
+
+        IllegalStateException conflict=assertThrows(IllegalStateException.class,
+                ()->minimalApp(state).execute(req,selected,scope()));
+        assertEquals("U06_PENDING_QUESTION_CONFLICT",conflict.getMessage());
+        assertEquals(mutationsBefore,state.getMutationCount());
+        assertEquals(versionBefore,state.readCurrent().getVersion());
+    }
+
+    @Test
     void admissionIdentityIgnoresTransportRequestAndTraceMetadata(){
         U06AdmissionService service=new U06AdmissionService();
         U06ProfileBRequest first=new U06ProfileBRequest(
