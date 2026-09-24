@@ -121,15 +121,15 @@
   "digest_algorithm": "sha256",
   "oracle": {
     "path": "diagnosis-service/src/test/resources/u06/u06-verification-expectations.json",
-    "digest": "6e7de2ab663bb683902514ba244eaafb8986b43b5bbb3caf5cc8916dbe5a865e"
+    "digest": "ac89a1e902bd82c84e39748d76de1807db434aff3bb6e21d44c03aa564a174d7"
   },
   "fixtures": {
     "path": "diagnosis-service/src/test/resources/u06/u06-verification-fixtures.json",
-    "digest": "945f340d4c387c2cf417f64f9b54d23db10f24931c2cc5dfd6978ac5ac7e737b"
+    "digest": "6494a86da0e385c287276100e12af52e57067b5a72a441740cf3ab3ddf411c5a"
   },
   "auth_profile": {
     "path": "diagnosis-service/src/test/resources/u06/u06-auth-profile.json",
-    "digest": "6a5a5139741ebd69618c90b036e37f38c4caa7a71df68bacb3c603f4d6ae0944"
+    "digest": "38f6afb30a55ea8d4cd54dad52509a629e20fbd31639b9b537e1324205a65f7c"
   },
   "case_counts": {
     "EV": 106,
