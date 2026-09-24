@@ -1,0 +1,3069 @@
+{
+  "schema": "U06_VERIFICATION_EXPECTATIONS_V0_1",
+  "authority_core_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+  "digest_algorithm": "sha256",
+  "case_counts": {
+    "EV": 106,
+    "CW": 9,
+    "HG": 3,
+    "VG": 10,
+    "AGG_V": 12,
+    "IRR01": 16,
+    "IRR02": 16,
+    "IRR03": 17,
+    "total": 189
+  },
+  "cases": [
+    {
+      "case_id": "U06-EV-001",
+      "mode": "MODE-1",
+      "stimulus": "valid A1 pre-readiness eligibility and current ALLOW",
+      "expected_boundary": "ADMITTED",
+      "expected_status": "ADMITTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-001 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-001",
+      "fixture_digest": "60d66b7093133b0c03513dd22137521ac942ec78963c9260655371b3ca3946aa"
+    },
+    {
+      "case_id": "U06-EV-002",
+      "mode": "MODE-1",
+      "stimulus": "direct caller without frozen source authority",
+      "expected_boundary": "REJECTED",
+      "expected_status": "REJECTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-002 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-002",
+      "fixture_digest": "7630c587c8597d5dc2e2d2f2fe756ba1af5e6bc666cf651f5a9323912dafb945"
+    },
+    {
+      "case_id": "U06-EV-003",
+      "mode": "MODE-1",
+      "stimulus": "stale Gate",
+      "expected_boundary": "REJECTED",
+      "expected_status": "REJECTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-003 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-003",
+      "fixture_digest": "7adc99f2c1e1c0bbb2cae372e94d5f98fee208ff79cfeb10a599adaad9cb0e66"
+    },
+    {
+      "case_id": "U06-EV-004",
+      "mode": "MODE-1",
+      "stimulus": "RESTRICTED with action permission denied",
+      "expected_boundary": "REJECTED",
+      "expected_status": "REJECTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-004 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-004",
+      "fixture_digest": "ee8e3a42712cf45cc67e04246e922bba5c973b887947f531d2f3ae0169a9681d"
+    },
+    {
+      "case_id": "U06-EV-005",
+      "mode": "MODE-1",
+      "stimulus": "RESTRICTED permission unavailable",
+      "expected_boundary": "REJECTED_WITH_FAILURE_GOVERNANCE",
+      "expected_status": "REJECTED_WITH_FAILURE_GOVERNANCE",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-005 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-005",
+      "fixture_digest": "fa1c51fde025b29d45c3f2c4682157bde6cde7e65b9295ca7eeb56f75fb71de6"
+    },
+    {
+      "case_id": "U06-EV-006",
+      "mode": "MODE-2",
+      "stimulus": "U05 question routing with current refs",
+      "expected_boundary": "ADMITTED",
+      "expected_status": "ADMITTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-006 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-006",
+      "fixture_digest": "21842a2ebf161a568c71f866605670dbf1a1db9aabb9e44dd5f46328c9e81406"
+    },
+    {
+      "case_id": "U06-EV-007",
+      "mode": "MODE-2",
+      "stimulus": "F1 clarification source while controlled activation absent",
+      "expected_boundary": "EXECUTABLE_ADMISSION_BLOCKED",
+      "expected_status": "EXECUTABLE_ADMISSION_BLOCKED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-007 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-007",
+      "fixture_digest": "346320fd2e2c99392005e77d62d956196b34ca3282d9517e87122954063fb27d"
+    },
+    {
+      "case_id": "U06-EV-008",
+      "mode": "MODE-2",
+      "stimulus": "wrong route consequence",
+      "expected_boundary": "REJECTED",
+      "expected_status": "REJECTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-008 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-008",
+      "fixture_digest": "4d99ca815cffe7762183d0d6c06af023c2d8e973bf8971975a71f21308562d35"
+    },
+    {
+      "case_id": "U06-EV-009",
+      "mode": "MODE-3",
+      "stimulus": "lawful post-F3 revalidation source",
+      "expected_boundary": "ADMITTED",
+      "expected_status": "ADMITTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-009 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-009",
+      "fixture_digest": "c0d55155459139b52a9af2526cd02be3fe0b23f42bb63e2761fafb61e40efd8e"
+    },
+    {
+      "case_id": "U06-EV-010",
+      "mode": "MODE-3",
+      "stimulus": "direct arbitrary invocation",
+      "expected_boundary": "REJECTED",
+      "expected_status": "REJECTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-010 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-010",
+      "fixture_digest": "5bbe872dc136aba34e37de0c50852730ab936629a78d3ac88671fb5d4cce1adf"
+    },
+    {
+      "case_id": "U06-EV-011",
+      "mode": "ANY",
+      "stimulus": "wrong mode and source combination",
+      "expected_boundary": "REJECTED",
+      "expected_status": "REJECTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-011 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-011",
+      "fixture_digest": "1ea1726d38bcca82b299c9e26ad728452d003f5b3650776ae402f29a9c4b23ea"
+    },
+    {
+      "case_id": "U06-EV-012",
+      "mode": "ANY",
+      "stimulus": "consultation and CDP mismatch",
+      "expected_boundary": "REJECTED",
+      "expected_status": "REJECTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-012 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-012",
+      "fixture_digest": "83cd25e75d77036755137f43b209be9f1efd60c468573e99fc78903c7856e05e"
+    },
+    {
+      "case_id": "U06-EV-013",
+      "mode": "ANY",
+      "stimulus": "source Clinical State Version drift before admission",
+      "expected_boundary": "REJECTED_READMISSION_REQUIRED",
+      "expected_status": "REJECTED_READMISSION_REQUIRED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-013 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-013",
+      "fixture_digest": "fe8d7015bcec1ff0961d3803051831c69d8d050544d7144e55b94152322f6241"
+    },
+    {
+      "case_id": "U06-EV-014",
+      "mode": "ANY",
+      "stimulus": "inactive or expired required dependency binding",
+      "expected_boundary": "DEPENDENCY_BLOCKED",
+      "expected_status": "DEPENDENCY_BLOCKED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-014 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-014",
+      "fixture_digest": "194602fc965280fc5ca8bdcde5294faa84b7e0261d3f45c544e19ae1a8b90a31"
+    },
+    {
+      "case_id": "U06-EV-015",
+      "mode": "ANY",
+      "stimulus": "exact admission replay",
+      "expected_boundary": "REATTACHED_SAME_ADMISSION",
+      "expected_status": "REATTACHED_SAME_ADMISSION",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-015 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-015",
+      "fixture_digest": "3f39d3756a73f839506618f2ed748ebd14e776f52c76ae83595ef5dc80f2b5e1"
+    },
+    {
+      "case_id": "U06-EV-016",
+      "mode": "ANY",
+      "stimulus": "same admission identity changed canonical payload",
+      "expected_boundary": "REPLAY_CONFLICT",
+      "expected_status": "REPLAY_CONFLICT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-016 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-016",
+      "fixture_digest": "a49cfaf12ffb691b072f21d8dd6babe8d3f10cf13f92e8e319851ea790f2f953"
+    },
+    {
+      "case_id": "U06-EV-017",
+      "mode": "ANY",
+      "stimulus": "same version but source authority superseded",
+      "expected_boundary": "ADMISSION_NOT_CURRENT",
+      "expected_status": "ADMISSION_NOT_CURRENT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-017 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-017",
+      "fixture_digest": "cb19d7d9eba922ba9654056dbd017fa4c65f2104a7782a6f8dc2d64918ff5902"
+    },
+    {
+      "case_id": "U06-EV-018",
+      "mode": "ANY",
+      "stimulus": "PROFILE-B without valid synthetic execution scope marker",
+      "expected_boundary": "REJECTED",
+      "expected_status": "REJECTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-018 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-018",
+      "fixture_digest": "174ab3993d98d60d6d8f4f2b637db73866d6a7c815145e79c0e4071553335c83"
+    },
+    {
+      "case_id": "U06-EV-019",
+      "mode": "MODE-1",
+      "stimulus": "C03 SUCCESS and explicit synthetic Gap basis",
+      "expected_boundary": "GAP_BASIS_ESTABLISHED_NO_QUESTION",
+      "expected_status": "GAP_BASIS_ESTABLISHED_NO_QUESTION",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-019 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-019",
+      "fixture_digest": "e554edabae9c2ee885577483a2357074efc0e7604681b4cf198bedce10715c71"
+    },
+    {
+      "case_id": "U06-EV-020",
+      "mode": "MODE-1",
+      "stimulus": "explicit governed no-online-gap coverage fixture",
+      "expected_boundary": "NO_CURRENT_ONLINE_GAP_BASIS_ESTABLISHED",
+      "expected_status": "NO_CURRENT_ONLINE_GAP_BASIS_ESTABLISHED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-020 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-020",
+      "fixture_digest": "ff4eef4b05671d0cad663ffde5c926cb792d7fbb2d61a940cbadbe471cb5ae19"
+    },
+    {
+      "case_id": "U06-EV-021",
+      "mode": "MODE-1",
+      "stimulus": "empty candidates without positive coverage",
+      "expected_boundary": "NOT_DECIDABLE",
+      "expected_status": "NOT_DECIDABLE",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-021 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-021",
+      "fixture_digest": "bf7c5534597522a0d8516126e7bf79f9f8904f69102636abdc8534b822ec8cc4"
+    },
+    {
+      "case_id": "U06-EV-022",
+      "mode": "MODE-1",
+      "stimulus": "C03 NO_RESULT",
+      "expected_boundary": "NOT_DECIDABLE_NO_NEGATIVE_TRUTH",
+      "expected_status": "NOT_DECIDABLE_NO_NEGATIVE_TRUTH",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-022 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-022",
+      "fixture_digest": "d1e1f56a69bf638afe04ef3508c087b7a0316c39e864d20909d4ed9c9ea68814"
+    },
+    {
+      "case_id": "U06-EV-023",
+      "mode": "MODE-1",
+      "stimulus": "C03 INSUFFICIENT_INFORMATION",
+      "expected_boundary": "NOT_DECIDABLE",
+      "expected_status": "NOT_DECIDABLE",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-023 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-023",
+      "fixture_digest": "1a21ecdcd253f7672b8a2445475f00da837f6e22e6090cd6ceba7c2a89c250b0"
+    },
+    {
+      "case_id": "U06-EV-024",
+      "mode": "MODE-1",
+      "stimulus": "C03 dependency failure timeout or invalid output",
+      "expected_boundary": "FAILED_NO_CANONICAL_F3",
+      "expected_status": "FAILED_NO_CANONICAL_F3",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-024 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-024",
+      "fixture_digest": "2b5849e4358aee347c732e199e190df6070505b135c4de3ddd7ca73022cc0db5"
+    },
+    {
+      "case_id": "U06-EV-025",
+      "mode": "MODE-2",
+      "stimulus": "F1 minimal clarification fixture",
+      "expected_boundary": "BOUND_TO_EXACT_F1_REQUIREMENT_ONLY",
+      "expected_status": "BOUND_TO_EXACT_F1_REQUIREMENT_ONLY",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-025 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-025",
+      "fixture_digest": "b56295bd91dae0bac18fe40cce7fbc6387d6fd95b038e4b650318087c82f2447"
+    },
+    {
+      "case_id": "U06-EV-026",
+      "mode": "MODE-2",
+      "stimulus": "current askable F3 Gap",
+      "expected_boundary": "LAWFUL_CANDIDATE_SET",
+      "expected_status": "LAWFUL_CANDIDATE_SET",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-026 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-026",
+      "fixture_digest": "7b5bce05326db56527ff62f8402721adea0392d3e1c5c31a566e1cf88d66afd7"
+    },
+    {
+      "case_id": "U06-EV-027",
+      "mode": "MODE-2",
+      "stimulus": "fresh invocation after MODE-1",
+      "expected_boundary": "MODE1_CANDIDATE_NOT_REUSED",
+      "expected_status": "MODE1_CANDIDATE_NOT_REUSED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-027 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-027",
+      "fixture_digest": "21c53ee09b24f679e7903e7f60fa154fc93a1c5bf493245958075bfd1b11e468"
+    },
+    {
+      "case_id": "U06-EV-028",
+      "mode": "MODE-2",
+      "stimulus": "equivalent Question already SELECTED",
+      "expected_boundary": "DUPLICATE_SUPPRESSED",
+      "expected_status": "DUPLICATE_SUPPRESSED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-028 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-028",
+      "fixture_digest": "5a2dcdd11d4ff2c390cf5e4891bbce47be944fd6f0045cd92acef4889316c63c"
+    },
+    {
+      "case_id": "U06-EV-029",
+      "mode": "MODE-2",
+      "stimulus": "equivalent Question already DELIVERED",
+      "expected_boundary": "DUPLICATE_SUPPRESSED",
+      "expected_status": "DUPLICATE_SUPPRESSED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-029 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-029",
+      "fixture_digest": "2a6c57eeb6900fc10f16df332515512e6f987d8b2f4624265f03731d09f263b6"
+    },
+    {
+      "case_id": "U06-EV-030",
+      "mode": "MODE-2",
+      "stimulus": "equivalent Question ANSWER_RECEIVED and answer current",
+      "expected_boundary": "CANDIDATE_SUPPRESSED",
+      "expected_status": "CANDIDATE_SUPPRESSED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-030 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-030",
+      "fixture_digest": "212c355b709c656aec57e4f126054081052f7651f83d2c8c32c3dc39b01171d4"
+    },
+    {
+      "case_id": "U06-EV-031",
+      "mode": "MODE-2",
+      "stimulus": "USER_UNKNOWN with unchanged semantic question",
+      "expected_boundary": "EXACT_REASK_SUPPRESSED",
+      "expected_status": "EXACT_REASK_SUPPRESSED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-031 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-031",
+      "fixture_digest": "1b75b151d56943e33796f84e0db74fb442fabeb65a9f28ffd861fb5c8ba52351"
+    },
+    {
+      "case_id": "U06-EV-032",
+      "mode": "MODE-2",
+      "stimulus": "UNMEASURED requiring offline evidence",
+      "expected_boundary": "NO_ONLINE_SELECTION",
+      "expected_status": "NO_ONLINE_SELECTION",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-032 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-032",
+      "fixture_digest": "982a11e8eb7c04284d86dc51fe3d39a7d35763b56619874c225b2977517fb521"
+    },
+    {
+      "case_id": "U06-EV-033",
+      "mode": "MODE-2",
+      "stimulus": "D04 CONTINUE and one lawful candidate",
+      "expected_boundary": "SELECTED",
+      "expected_status": "SELECTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-033 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-033",
+      "fixture_digest": "ea18b02a930bb9cfeab8dde96a62450ef20b5a97e22a551acae43be398118b2e"
+    },
+    {
+      "case_id": "U06-EV-034",
+      "mode": "MODE-2",
+      "stimulus": "D04 CONTINUE with deterministic ordering",
+      "expected_boundary": "EXACTLY_ONE_SELECTED",
+      "expected_status": "EXACTLY_ONE_SELECTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-034 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-034",
+      "fixture_digest": "2425e54050943fd5334fddc32204d1257ec0a5b4ad94b0f7372ef0c6d1a7ae89"
+    },
+    {
+      "case_id": "U06-EV-035",
+      "mode": "MODE-2",
+      "stimulus": "D04 CONTINUE unresolved ordering tie",
+      "expected_boundary": "SELECTION_FAILED_AMBIGUOUS",
+      "expected_status": "SELECTION_FAILED_AMBIGUOUS",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-035 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-035",
+      "fixture_digest": "c36044a8d8e2fe5cc2255c32eb5f979f71d27b4022d699554ada1ba01cd3eb82"
+    },
+    {
+      "case_id": "U06-EV-036",
+      "mode": "MODE-2",
+      "stimulus": "D04 STOP",
+      "expected_boundary": "NO_QUESTION_NO_READINESS_INVENTED",
+      "expected_status": "NO_QUESTION_NO_READINESS_INVENTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-036 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-036",
+      "fixture_digest": "49a0226b5d08d71de66b6d52ce3df7bbdbd29e8684a794413b1fa38c92a48a4b"
+    },
+    {
+      "case_id": "U06-EV-037",
+      "mode": "MODE-2",
+      "stimulus": "D04 FAILED",
+      "expected_boundary": "NO_QUESTION_NOT_STOP",
+      "expected_status": "NO_QUESTION_NOT_STOP",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-037 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-037",
+      "fixture_digest": "a431a5860390a15fea53df796d878d0cd6acc73836462d50ddf374fe75526b78"
+    },
+    {
+      "case_id": "U06-EV-038",
+      "mode": "MODE-2",
+      "stimulus": "C03 NO_RESULT",
+      "expected_boundary": "NO_SELECTION_NO_INFERRED_D04",
+      "expected_status": "NO_SELECTION_NO_INFERRED_D04",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-038 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-038",
+      "fixture_digest": "90a36da90af0726e0f84d048a30dde791aa933ab27033f4145366c8010803bb8"
+    },
+    {
+      "case_id": "U06-EV-039",
+      "mode": "MODE-2",
+      "stimulus": "C03 INSUFFICIENT_INFORMATION",
+      "expected_boundary": "NO_SELECTION_OR_GOVERNED_FAILED",
+      "expected_status": "NO_SELECTION_OR_GOVERNED_FAILED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-039 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-039",
+      "fixture_digest": "bcda9b4e6e7d65e56bcc46623e83134c8bd00588107c9f96c4f3290e9a7e4b45"
+    },
+    {
+      "case_id": "U06-EV-040",
+      "mode": "MODE-2",
+      "stimulus": "F1 no-progress",
+      "expected_boundary": "RETURN_U01_F1",
+      "expected_status": "RETURN_U01_F1",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-040 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-040",
+      "fixture_digest": "bbabc63eedc71987542c255bde368b0ba5b811213cf78177ad3c8766ed44c92a"
+    },
+    {
+      "case_id": "U06-EV-041",
+      "mode": "MODE-2",
+      "stimulus": "F3 no-progress",
+      "expected_boundary": "READINESS_REEVALUATION_REQUIRED_U05_D03",
+      "expected_status": "READINESS_REEVALUATION_REQUIRED_U05_D03",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-041 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-041",
+      "fixture_digest": "a0b1e597bc67db8fcba4377767964f9e02e88f6e0172236c8fe2266e232ceb58"
+    },
+    {
+      "case_id": "U06-EV-042",
+      "mode": "MODE-1",
+      "stimulus": "GAP_BASIS_ESTABLISHED mutation path",
+      "expected_boundary": "ONE_F3_EFFECT_PROPOSAL_COMMIT_READBACK",
+      "expected_status": "ONE_F3_EFFECT_PROPOSAL_COMMIT_READBACK",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-042 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-042",
+      "fixture_digest": "1321a11ce2a99dab194a6bd08b6f88655972679d19b0f7a4e9fa12e14179e249"
+    },
+    {
+      "case_id": "U06-EV-043",
+      "mode": "MODE-1",
+      "stimulus": "explicit no-online-gap assessment",
+      "expected_boundary": "EXPLICIT_F3_STATE_COMMITTED",
+      "expected_status": "EXPLICIT_F3_STATE_COMMITTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-043 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-043",
+      "fixture_digest": "c8a0a1433d573ae2a38fe87c0f408259915bcd98fc73cbf954b7a46647898d5d"
+    },
+    {
+      "case_id": "U06-EV-044",
+      "mode": "MODE-1",
+      "stimulus": "NOT_DECIDABLE mutation check",
+      "expected_boundary": "ZERO_PROPOSAL_ZERO_COMMIT",
+      "expected_status": "ZERO_PROPOSAL_ZERO_COMMIT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-044 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-044",
+      "fixture_digest": "7f5cdaed227d7ddac55993ab02b6be9a45bc62c4907a1826b0ab0f2ad579b4b3"
+    },
+    {
+      "case_id": "U06-EV-045",
+      "mode": "MODE-1",
+      "stimulus": "FAILED mutation check",
+      "expected_boundary": "ZERO_PROPOSAL_ZERO_COMMIT",
+      "expected_status": "ZERO_PROPOSAL_ZERO_COMMIT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-045 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-045",
+      "fixture_digest": "1603af8a318036fae5f9a9d23eee2df732003c7c6e491c800582c6e99f668081"
+    },
+    {
+      "case_id": "U06-EV-046",
+      "mode": "MODE-1",
+      "stimulus": "exact F3 effect replay after commit",
+      "expected_boundary": "REATTACH_ZERO_SECOND_VERSION_ADVANCE",
+      "expected_status": "REATTACH_ZERO_SECOND_VERSION_ADVANCE",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-046 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-046",
+      "fixture_digest": "5b930670c5e23a8586d65cc13f87a74bd4f7ace5ad7af289f468fd4ba5440f33"
+    },
+    {
+      "case_id": "U06-EV-047",
+      "mode": "MODE-1",
+      "stimulus": "same F3 effect id changed canonical payload",
+      "expected_boundary": "REPLAY_CONFLICT",
+      "expected_status": "REPLAY_CONFLICT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-047 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-047",
+      "fixture_digest": "2dddcd841331bae352ccaaa1d4e806f332712bd018192d70e6ec27ea03a38959"
+    },
+    {
+      "case_id": "U06-EV-048",
+      "mode": "MODE-1",
+      "stimulus": "version advances before first F3 commit",
+      "expected_boundary": "CONFLICT_NO_BASE_VERSION_REWRITE",
+      "expected_status": "CONFLICT_NO_BASE_VERSION_REWRITE",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-048 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-048",
+      "fixture_digest": "e0bca23e02e9b408eb5982070e1f1eeb77330d07029edeaa3ca3b3104d7b545b"
+    },
+    {
+      "case_id": "U06-EV-049",
+      "mode": "MODE-1",
+      "stimulus": "unauthorized F3 or Gap field path",
+      "expected_boundary": "P01_REJECTED",
+      "expected_status": "P01_REJECTED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-049 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-049",
+      "fixture_digest": "90a523142533839af416235bbec0a6538b2efaafe2fc735f84a05461db2bf0e0"
+    },
+    {
+      "case_id": "U06-EV-050",
+      "mode": "MODE-1",
+      "stimulus": "logical U06 physical producer mapping",
+      "expected_boundary": "LOWER_CASE_APPROVED_PRODUCER",
+      "expected_status": "LOWER_CASE_APPROVED_PRODUCER",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-050 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-050",
+      "fixture_digest": "c2115188ea88bee23143943d81c05d441fbd47b24f8886f7d1680f1594b9d2cb"
+    },
+    {
+      "case_id": "U06-EV-051",
+      "mode": "MODE-1",
+      "stimulus": "StatePatch capability and C03 binding provenance",
+      "expected_boundary": "P01_CAPABILITY_DISTINCT_FROM_C03",
+      "expected_status": "P01_CAPABILITY_DISTINCT_FROM_C03",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-051 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-051",
+      "fixture_digest": "717e3491ed3ba25fac352020321b356fa016fec5078c86121da48fe000ec05b9"
+    },
+    {
+      "case_id": "U06-EV-052",
+      "mode": "MODE-2",
+      "stimulus": "SELECTED owner decision",
+      "expected_boundary": "ONE_QUESTION_SELECTED_EFFECT_COMMIT",
+      "expected_status": "ONE_QUESTION_SELECTED_EFFECT_COMMIT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-052 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-052",
+      "fixture_digest": "e94835649e8a72fc4ef070e6a3dd42c507e8fdad204f16278199350b9abb9974"
+    },
+    {
+      "case_id": "U06-EV-053",
+      "mode": "MODE-2",
+      "stimulus": "selection commit only",
+      "expected_boundary": "GAP_NOT_ASKED_PENDING_ABSENT_NO_WAITING",
+      "expected_status": "GAP_NOT_ASKED_PENDING_ABSENT_NO_WAITING",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-053 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-053",
+      "fixture_digest": "c6312ddcb5cbd86707550c93f33f9807129ed846de856585018d98eb9b726a0a"
+    },
+    {
+      "case_id": "U06-EV-054",
+      "mode": "MODE-2",
+      "stimulus": "exact selection replay",
+      "expected_boundary": "SAME_QUESTION_EFFECT_NO_DUPLICATE",
+      "expected_status": "SAME_QUESTION_EFFECT_NO_DUPLICATE",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-054 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-054",
+      "fixture_digest": "1338a555839804e0cd90a019c614fe5eff3921a18ef3d76bf2790927245f70d3"
+    },
+    {
+      "case_id": "U06-EV-055",
+      "mode": "MODE-2",
+      "stimulus": "different active pending Question exists",
+      "expected_boundary": "CONFLICT_NO_OVERWRITE",
+      "expected_status": "CONFLICT_NO_OVERWRITE",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-055 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-055",
+      "fixture_digest": "0206e71acfc07e9110c1b75afe433fd65294cd665027150f65ea9126a1530309"
+    },
+    {
+      "case_id": "U06-EV-056",
+      "mode": "MODE-3",
+      "stimulus": "REVALIDATED_CURRENT",
+      "expected_boundary": "ZERO_STATEPATCH_ZERO_COMMIT_ZERO_VERSION_DELTA",
+      "expected_status": "ZERO_STATEPATCH_ZERO_COMMIT_ZERO_VERSION_DELTA",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-056 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-056",
+      "fixture_digest": "8975be35b7d39f38d0184a9357050a1ad93090038fe62056b07969f04c36a39f"
+    },
+    {
+      "case_id": "U06-EV-057",
+      "mode": "MODE-3",
+      "stimulus": "REASSESSMENT_REQUIRED",
+      "expected_boundary": "ZERO_MUTATION_ROUTE_FRESH_MODE1",
+      "expected_status": "ZERO_MUTATION_ROUTE_FRESH_MODE1",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-057 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-057",
+      "fixture_digest": "7515dbce1dce0f65681390fae8f429502a3eda340a289343c4308873e9df5d39"
+    },
+    {
+      "case_id": "U06-EV-058",
+      "mode": "MODE-3",
+      "stimulus": "FAILED",
+      "expected_boundary": "ZERO_MUTATION",
+      "expected_status": "ZERO_MUTATION",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-058 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-058",
+      "fixture_digest": "eadf5385ab4d378ca5d2dd8b0d4d9bc65e36e14f2a16147cf5d41ee547363ef2"
+    },
+    {
+      "case_id": "U06-EV-059",
+      "mode": "ANY",
+      "stimulus": "exact U06 execution replay",
+      "expected_boundary": "SAME_U06_TRACE_ID_CHILD_RETRY_EVIDENCE",
+      "expected_status": "SAME_U06_TRACE_ID_CHILD_RETRY_EVIDENCE",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-059 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-059",
+      "fixture_digest": "cea16c9b1cdb852171ee27fa6c6746093912dd7dad89f17855bf2e4ba49403a3"
+    },
+    {
+      "case_id": "U06-EV-060",
+      "mode": "ANY",
+      "stimulus": "NOT_APPLICABLE dependency family",
+      "expected_boundary": "NO_FAKE_RELEASE_REF",
+      "expected_status": "NO_FAKE_RELEASE_REF",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-060 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-060",
+      "fixture_digest": "5b0fcaa52759a287b99f64a0a73fbd3664b6d2eacc03912a80587a0d64ea3198"
+    },
+    {
+      "case_id": "U06-EV-061",
+      "mode": "ANY",
+      "stimulus": "P01 COMMITTED but authoritative readback mismatch",
+      "expected_boundary": "NO_DOWNSTREAM_RECONCILIATION_FAILURE",
+      "expected_status": "NO_DOWNSTREAM_RECONCILIATION_FAILURE",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-061 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-061",
+      "fixture_digest": "43df1fd566f66fc43a6811af3285a1e8e3ef32a4fa16db4254111485c45b9685"
+    },
+    {
+      "case_id": "U06-EV-062",
+      "mode": "MODE-2",
+      "stimulus": "authoritative current Question SELECTED",
+      "expected_boundary": "DURABLE_INTENT_BEFORE_SEND",
+      "expected_status": "DURABLE_INTENT_BEFORE_SEND",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-062 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-062",
+      "fixture_digest": "40835063eae354d0846c5b1dc0cdd311e2d6f59a89a9df0ff7c9a1deff6348ec"
+    },
+    {
+      "case_id": "U06-EV-063",
+      "mode": "MODE-2",
+      "stimulus": "Question stale or superseded before intent",
+      "expected_boundary": "NO_INTENT_NO_SEND",
+      "expected_status": "NO_INTENT_NO_SEND",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-063 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-063",
+      "fixture_digest": "b7cbbd09e42a0b4823aad539b0dba9888ff6271046b12216e8e561b7c1886acf"
+    },
+    {
+      "case_id": "U06-EV-064",
+      "mode": "MODE-2",
+      "stimulus": "same delivery effect replay",
+      "expected_boundary": "SAME_DELIVERY_ID_IDEMPOTENCY",
+      "expected_status": "SAME_DELIVERY_ID_IDEMPOTENCY",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-064 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-064",
+      "fixture_digest": "68b2b9cf1bf76fbafa6c4a75da27fdf96007481311167ea97a6a46c5ea390f87"
+    },
+    {
+      "case_id": "U06-EV-065",
+      "mode": "MODE-2",
+      "stimulus": "same delivery effect changed immutable payload",
+      "expected_boundary": "REPLAY_CONFLICT",
+      "expected_status": "REPLAY_CONFLICT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-065 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-065",
+      "fixture_digest": "a5df4a593641ca9c87168f453bd1f59ad84538064ce06330d6a977fc7149b07f"
+    },
+    {
+      "case_id": "U06-EV-066",
+      "mode": "MODE-2",
+      "stimulus": "one selection already ACTIVE_PENDING",
+      "expected_boundary": "SECOND_ACTIVE_EFFECT_PROHIBITED",
+      "expected_status": "SECOND_ACTIVE_EFFECT_PROHIBITED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-066 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-066",
+      "fixture_digest": "4f7f2cc757dde7545b8a3a857300133e20e073f456fb9fa7446ee311068cbcb6"
+    },
+    {
+      "case_id": "U06-EV-067",
+      "mode": "MODE-2",
+      "stimulus": "pre-send endpoint change valid REBIND_ALLOWED",
+      "expected_boundary": "OLD_CANCELLED_ONE_NEW_EFFECT",
+      "expected_status": "OLD_CANCELLED_ONE_NEW_EFFECT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-067 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-067",
+      "fixture_digest": "25244c7d486ee88a86ba0fcf72a6d3d75504ac81d6e2d388fbc574aa9b2408df"
+    },
+    {
+      "case_id": "U06-EV-068",
+      "mode": "MODE-2",
+      "stimulus": "endpoint change after ambiguous attempt",
+      "expected_boundary": "REBIND_DENIED",
+      "expected_status": "REBIND_DENIED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-068 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-068",
+      "fixture_digest": "4bbdf464a5e79dddc88c0006139097161785302824eb3b184df3b169d6628632"
+    },
+    {
+      "case_id": "U06-EV-069",
+      "mode": "MODE-2",
+      "stimulus": "transport ordering",
+      "expected_boundary": "SEND_AFTER_DURABLE_INTENT",
+      "expected_status": "SEND_AFTER_DURABLE_INTENT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-069 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-069",
+      "fixture_digest": "9d072d0afb3417a5b9046d08f0d912fa6580f844366f845dd3d0cce5a02efcab"
+    },
+    {
+      "case_id": "U06-EV-070",
+      "mode": "MODE-2",
+      "stimulus": "retry transport attempt",
+      "expected_boundary": "ATTEMPT_ID_CHANGES_DELIVERY_ID_STABLE",
+      "expected_status": "ATTEMPT_ID_CHANGES_DELIVERY_ID_STABLE",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-070 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-070",
+      "fixture_digest": "1050818af0d5cf63005e1c838d410a1d56a7c56da191347a8ad33380a3336ff7"
+    },
+    {
+      "case_id": "U06-EV-071",
+      "mode": "MODE-2",
+      "stimulus": "receipt ACCEPTED only",
+      "expected_boundary": "NOT_CONFIRMED",
+      "expected_status": "NOT_CONFIRMED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-071 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-071",
+      "fixture_digest": "aaf50614e0bc9fb2fa97ec2ce1114964dcfa1eb80cc778e2517f1def2fb8d88f"
+    },
+    {
+      "case_id": "U06-EV-072",
+      "mode": "MODE-2",
+      "stimulus": "synthetic delivered receipt under approved policy",
+      "expected_boundary": "CONFIRMED",
+      "expected_status": "CONFIRMED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-072 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-072",
+      "fixture_digest": "897b503039222b138f1b08b079dbee957f7eadc51c0081ef80ff774da5461050"
+    },
+    {
+      "case_id": "U06-EV-073",
+      "mode": "MODE-2",
+      "stimulus": "ambiguous send with status query",
+      "expected_boundary": "QUERY_RECONCILE_BEFORE_RETRY",
+      "expected_status": "QUERY_RECONCILE_BEFORE_RETRY",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-073 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-073",
+      "fixture_digest": "ff95b03dd0c05b4095a45359e9298e1e852e2f8c745ea993bc7522f380460c8b"
+    },
+    {
+      "case_id": "U06-EV-074",
+      "mode": "MODE-2",
+      "stimulus": "ambiguous send with idempotent resend",
+      "expected_boundary": "SAME_KEY_RETRY_ALLOWED",
+      "expected_status": "SAME_KEY_RETRY_ALLOWED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-074 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-074",
+      "fixture_digest": "8d36d7f6b8b920520b9b7314e9b6b41f53e1c1bc46435955632292fa27ad65ca"
+    },
+    {
+      "case_id": "U06-EV-075",
+      "mode": "MODE-2",
+      "stimulus": "ambiguous send no idempotency no query",
+      "expected_boundary": "INDETERMINATE_ZERO_BLIND_RESEND",
+      "expected_status": "INDETERMINATE_ZERO_BLIND_RESEND",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-075 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-075",
+      "fixture_digest": "0fe7c057d1926c1676f33f578ee36a44f402a6187b198077a6adca27c5f20a80"
+    },
+    {
+      "case_id": "U06-EV-076",
+      "mode": "MODE-2",
+      "stimulus": "definitive transient non-delivery retry allowed",
+      "expected_boundary": "RETRYABLE_NOT_CONFIRMED",
+      "expected_status": "RETRYABLE_NOT_CONFIRMED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-076 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-076",
+      "fixture_digest": "7293e327442d7f696df8fa8ea2fa78f45346bcf95704ec2e864938cc2b0661cb"
+    },
+    {
+      "case_id": "U06-EV-077",
+      "mode": "MODE-2",
+      "stimulus": "retry exhausted",
+      "expected_boundary": "NOT_CONFIRMED_TERMINAL_NO_FURTHER_SEND",
+      "expected_status": "NOT_CONFIRMED_TERMINAL_NO_FURTHER_SEND",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-077 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-077",
+      "fixture_digest": "408ba673e45d63bd5fca76d0bd18d4e04f147a07f82836c9c66f74ef544e2589"
+    },
+    {
+      "case_id": "U06-EV-078",
+      "mode": "MODE-2",
+      "stimulus": "later evidence supersedes INDETERMINATE",
+      "expected_boundary": "NEW_CONFIRMATION_EVALUATION_HISTORY_PRESERVED",
+      "expected_status": "NEW_CONFIRMATION_EVALUATION_HISTORY_PRESERVED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-078 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-078",
+      "fixture_digest": "20f03fbd75029f473054594d298fd008aaf34bbb77892bf53a329504ab07c13f"
+    },
+    {
+      "case_id": "U06-EV-079",
+      "mode": "MODE-2",
+      "stimulus": "prior CONFIRMED later conflicting evidence",
+      "expected_boundary": "EVIDENCE_CONFLICT_CONFIRMED_NOT_REWRITTEN",
+      "expected_status": "EVIDENCE_CONFLICT_CONFIRMED_NOT_REWRITTEN",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-079 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-079",
+      "fixture_digest": "05f28c86b9903845a222dbc400f63ecfddf58ce39abea01e636e54f4458fc683"
+    },
+    {
+      "case_id": "U06-EV-080",
+      "mode": "MODE-2",
+      "stimulus": "CONFIRMED delivery",
+      "expected_boundary": "ONE_QUESTION_DELIVERED_WAIT_EFFECT",
+      "expected_status": "ONE_QUESTION_DELIVERED_WAIT_EFFECT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-080 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-080",
+      "fixture_digest": "e43d00f3d4ced1182e852446e32ab8fe44c6dff45648b35d64133a12080c9c56"
+    },
+    {
+      "case_id": "U06-EV-081",
+      "mode": "MODE-2",
+      "stimulus": "Clinical State delivered child F3 path",
+      "expected_boundary": "QUESTION_DELIVERED_GAP_ASKED_PENDING_CURRENT",
+      "expected_status": "QUESTION_DELIVERED_GAP_ASKED_PENDING_CURRENT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-081 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-081",
+      "fixture_digest": "793f34ebc20d3c8b036ef45d314767a06e5179d0278180310a5bdd53fdbe51f2"
+    },
+    {
+      "case_id": "U06-EV-082",
+      "mode": "MODE-2",
+      "stimulus": "F1 clarification delivered child",
+      "expected_boundary": "NO_FAKE_F3_GAP_MUTATION",
+      "expected_status": "NO_FAKE_F3_GAP_MUTATION",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-082 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-082",
+      "fixture_digest": "40c5c49d6f44b22ae7e904085b1a6edcd247006f6cbaf0648707206627c8d127"
+    },
+    {
+      "case_id": "U06-EV-083",
+      "mode": "MODE-2",
+      "stimulus": "Clinical State child succeeds Consultation child pending",
+      "expected_boundary": "RECONCILIATION_REQUIRED_NO_U07",
+      "expected_status": "RECONCILIATION_REQUIRED_NO_U07",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-083 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-083",
+      "fixture_digest": "bab9ae4ee709ca2ecdb01539bb9c5acbe062e2a925231a2b3379fbef6e1e5894"
+    },
+    {
+      "case_id": "U06-EV-084",
+      "mode": "MODE-2",
+      "stimulus": "Consultation WAITING exact same parent replay",
+      "expected_boundary": "REATTACHED",
+      "expected_status": "REATTACHED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-084 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-084",
+      "fixture_digest": "4b81b2c5fd07fc32fea0aafb110a014fb7e68a72282daa8138c256b9f99cdf6d"
+    },
+    {
+      "case_id": "U06-EV-085",
+      "mode": "MODE-2",
+      "stimulus": "Consultation WAITING different Question effect",
+      "expected_boundary": "CONFLICT_NO_OVERWRITE",
+      "expected_status": "CONFLICT_NO_OVERWRITE",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-085 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-085",
+      "fixture_digest": "d632e29402b61efa4dbefd3a617bbcd0cde8cc2e967a30a361fe37f11510f347"
+    },
+    {
+      "case_id": "U06-EV-086",
+      "mode": "MODE-2",
+      "stimulus": "business wait complete checkpoint missing",
+      "expected_boundary": "RECONSTRUCT_CHECKPOINT_NO_RESEND",
+      "expected_status": "RECONSTRUCT_CHECKPOINT_NO_RESEND",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-086 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-086",
+      "fixture_digest": "bc5428290fe3eb14cf757d630bfbafa9c10a54d536de527b777b7a1dce646de5"
+    },
+    {
+      "case_id": "U06-EV-087",
+      "mode": "MODE-2",
+      "stimulus": "checkpoint durable Thread transition initially fails",
+      "expected_boundary": "RECONSTRUCT_AWAITING_NO_RESEND",
+      "expected_status": "RECONSTRUCT_AWAITING_NO_RESEND",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-087 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-087",
+      "fixture_digest": "c549eefd6fb29f28964bd253ae1616d5c12fbc095216ae92f8a594a812f9ef23"
+    },
+    {
+      "case_id": "U06-EV-088",
+      "mode": "MODE-2",
+      "stimulus": "Thread not AWAITING_USER",
+      "expected_boundary": "WAIT_RUNTIME_RECONCILIATION_REQUIRED_NO_U07",
+      "expected_status": "WAIT_RUNTIME_RECONCILIATION_REQUIRED_NO_U07",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-088 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-088",
+      "fixture_digest": "8c15680497733d1723df4ebb88bb824c0e1a6fce8c8f2f514d64478c609652ac"
+    },
+    {
+      "case_id": "U06-EV-089",
+      "mode": "MODE-2",
+      "stimulus": "all wait prerequisites satisfied",
+      "expected_boundary": "WAIT_ESTABLISHED_ONE_U07_ELIGIBILITY",
+      "expected_status": "WAIT_ESTABLISHED_ONE_U07_ELIGIBILITY",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-089 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-089",
+      "fixture_digest": "22473152978562e59c5bc968619f83a86132b23c9561c3a76953c9476a81e845"
+    },
+    {
+      "case_id": "U06-EV-090",
+      "mode": "MODE-2",
+      "stimulus": "exact WAIT_ESTABLISHED replay",
+      "expected_boundary": "SAME_OUTCOME_ELIGIBILITY_ZERO_NEW_RESUME",
+      "expected_status": "SAME_OUTCOME_ELIGIBILITY_ZERO_NEW_RESUME",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-090 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-090",
+      "fixture_digest": "283a44f77387dc6ebeb97df0076f25a860e106a57f2a54c6246cbbe4f6c52f8a"
+    },
+    {
+      "case_id": "U06-EV-091",
+      "mode": "MODE-2",
+      "stimulus": "delivery failure",
+      "expected_boundary": "NO_ALTERNATE_CLINICAL_ROUTE_INVENTION",
+      "expected_status": "NO_ALTERNATE_CLINICAL_ROUTE_INVENTION",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-091 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-091",
+      "fixture_digest": "424f743afe12a07757798bb5c2d4516b991ee193ba549f8b5dfc824d9df337f0"
+    },
+    {
+      "case_id": "U06-EV-092",
+      "mode": "MODE-2",
+      "stimulus": "Safety blocked before new send with ambiguous old attempt",
+      "expected_boundary": "NO_NEW_ATTEMPT_RECONCILE_OLD",
+      "expected_status": "NO_NEW_ATTEMPT_RECONCILE_OLD",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-092 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-092",
+      "fixture_digest": "84a9be03208f30c3c5ba887197f6abb33fff962ac5db7069cfa8919bca5ea465"
+    },
+    {
+      "case_id": "U06-EV-093",
+      "mode": "MODE-2",
+      "stimulus": "Question expires before send",
+      "expected_boundary": "NO_SEND",
+      "expected_status": "NO_SEND",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-093 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-093",
+      "fixture_digest": "442bee036389133db48f91c8c6a49d0577fb4cb271434d1efb361a76ca5b382d"
+    },
+    {
+      "case_id": "U06-EV-094",
+      "mode": "MODE-2",
+      "stimulus": "PROFILE-B valid synthetic scope",
+      "expected_boundary": "ZERO_NETWORK_SYNTHETIC_RECEIPT_CONFIRMATION",
+      "expected_status": "ZERO_NETWORK_SYNTHETIC_RECEIPT_CONFIRMATION",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-094 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-094",
+      "fixture_digest": "24cafec8a8e517241a2e489245c79d69f8b83effd2f0e6f7eee15fb45ad7fbb0"
+    },
+    {
+      "case_id": "U06-EV-095",
+      "mode": "MODE-2",
+      "stimulus": "PROFILE-B missing or mismatched scope authorization",
+      "expected_boundary": "FAIL_CLOSED",
+      "expected_status": "FAIL_CLOSED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-095 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-095",
+      "fixture_digest": "cf97b88a597829bd073f3e2e65be8d7c6431caaf5a3c31261cf265f874ea36ed"
+    },
+    {
+      "case_id": "U06-EV-096",
+      "mode": "MODE-2",
+      "stimulus": "PROFILE-B targets live store or real recipient",
+      "expected_boundary": "FAIL_CLOSED",
+      "expected_status": "FAIL_CLOSED",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-096 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-096",
+      "fixture_digest": "2220c3a7da9cf9e7b2264c467fb344c43e8dbe3c0403769f8eeafff1962052dc"
+    },
+    {
+      "case_id": "U06-EV-097",
+      "mode": "PROFILE-A",
+      "stimulus": "current repository real profile attempt",
+      "expected_boundary": "BLOCKED_NO_REAL_C03_D04_DELIVERY",
+      "expected_status": "BLOCKED_NO_REAL_C03_D04_DELIVERY",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-097 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-097",
+      "fixture_digest": "ff680c705f47212a72c9c2190256fbd4adcbe4a19d82fb326347e49ae35bc706"
+    },
+    {
+      "case_id": "U06-EV-098",
+      "mode": "PROFILE-B",
+      "stimulus": "synthetic binding",
+      "expected_boundary": "TYPED_SYNTHETIC_NEVER_REAL_P06",
+      "expected_status": "TYPED_SYNTHETIC_NEVER_REAL_P06",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-098 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-098",
+      "fixture_digest": "a2453e333239582bac4a39ecf46ff1d943153233f51206923873380159590e3c"
+    },
+    {
+      "case_id": "U06-EV-099",
+      "mode": "ANY",
+      "stimulus": "required dependency or release missing",
+      "expected_boundary": "FAIL_CLOSED_NO_FAKE_REF_NO_INVOCATION",
+      "expected_status": "FAIL_CLOSED_NO_FAKE_REF_NO_INVOCATION",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-099 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-099",
+      "fixture_digest": "74525e91ee3e45cb32497e1229c3015dc38fcf4d3c1b40a71ee183273a75d5bd"
+    },
+    {
+      "case_id": "U06-EV-100",
+      "mode": "MODE-3",
+      "stimulus": "historical compatibility path",
+      "expected_boundary": "NO_NEW_C03_RETAIN_APPLICABLE_REFS_REQUIRE_COMPATIBILITY",
+      "expected_status": "NO_NEW_C03_RETAIN_APPLICABLE_REFS_REQUIRE_COMPATIBILITY",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-100 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-100",
+      "fixture_digest": "ac4dc4e6438592920fe9bb920d26c35b03266456cd77b39f1881fa44b24cbcab"
+    },
+    {
+      "case_id": "U06-EV-101",
+      "mode": "MODE-1",
+      "stimulus": "canonical F3 commit and readback",
+      "expected_boundary": "POST_F3_SAFETY_AFTER_READBACK_NO_DIRECT_QUESTION_WAIT",
+      "expected_status": "POST_F3_SAFETY_AFTER_READBACK_NO_DIRECT_QUESTION_WAIT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-101 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-101",
+      "fixture_digest": "7d29200ec0b4d42aee5fbe0d30fcd193e2e17385d25557be21802ce65b8e0b4b"
+    },
+    {
+      "case_id": "U06-EV-102",
+      "mode": "MODE-1",
+      "stimulus": "post-F3 current Safety BLOCKED",
+      "expected_boundary": "NO_ORDINARY_CONTINUATION_NO_MODE2_WAIT",
+      "expected_status": "NO_ORDINARY_CONTINUATION_NO_MODE2_WAIT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-102 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-102",
+      "fixture_digest": "7e1400fff2ceca9722c9b908616ab81ed6fdfe87043f5aad15684ca9587e2d94"
+    },
+    {
+      "case_id": "U06-EV-103",
+      "mode": "MODE-1",
+      "stimulus": "post-F3 current Safety UNAVAILABLE",
+      "expected_boundary": "TYPED_FAILURE_NO_QUESTION_DELIVERY_WAIT",
+      "expected_status": "TYPED_FAILURE_NO_QUESTION_DELIVERY_WAIT",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-103 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-103",
+      "fixture_digest": "a8784c8d373213ec491b06e5c4a9e80d1008bf7af5dd9b402f25a79c559c84fa"
+    },
+    {
+      "case_id": "U06-EV-104",
+      "mode": "MODE-3",
+      "stimulus": "same revalidation identity same canonical evidence",
+      "expected_boundary": "REATTACH_C03_D04_STATEPATCH_ZERO",
+      "expected_status": "REATTACH_C03_D04_STATEPATCH_ZERO",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-104 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-104",
+      "fixture_digest": "578ed2201756797a6f1f81cc6a4fc5094dfaa1b7bdbb0da911cb252413e5a016"
+    },
+    {
+      "case_id": "U06-EV-105",
+      "mode": "MODE-3",
+      "stimulus": "same revalidation identity changed evidence",
+      "expected_boundary": "REPLAY_CONFLICT_NO_PROJECTION_MUTATION",
+      "expected_status": "REPLAY_CONFLICT_NO_PROJECTION_MUTATION",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-105 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-105",
+      "fixture_digest": "423bd1f16253f65c189dbbff9152c35e1656877ea121b34bd832910e52c48ae4"
+    },
+    {
+      "case_id": "U06-EV-106",
+      "mode": "MODE-3",
+      "stimulus": "currentness changes before projection publish",
+      "expected_boundary": "STALE_BEFORE_PUBLISH_C03_D04_P01_ZERO",
+      "expected_status": "STALE_BEFORE_PUBLISH_C03_D04_P01_ZERO",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Frozen U06-EV-106 case semantics"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-ev-106",
+      "fixture_digest": "1768199b199c6c7872044fa0f09dbab80adbdde3145042ef47b3c616c6f2dcb8"
+    },
+    {
+      "case_id": "U06-CW-01",
+      "mode": "MODE-2",
+      "stimulus": "after Question SELECTED before intent",
+      "expected_boundary": "STABLE_IDENTITIES_NO_DUPLICATE_EFFECT_OR_SEND",
+      "expected_status": "RECOVER_OR_REATTACH_WITHOUT_DUPLICATION",
+      "expected_authority_refs": [
+        "rdp04",
+        "rdp06",
+        "ca_irr02",
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "RDP-04 C1-C9 crash recovery"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-cw-01",
+      "fixture_digest": "b7f55f53c69b98678da4f45214a888e5ab216f2a8b22bf0236e0306048568567"
+    },
+    {
+      "case_id": "U06-CW-02",
+      "mode": "MODE-2",
+      "stimulus": "after intent before send",
+      "expected_boundary": "STABLE_IDENTITIES_NO_DUPLICATE_EFFECT_OR_SEND",
+      "expected_status": "RECOVER_OR_REATTACH_WITHOUT_DUPLICATION",
+      "expected_authority_refs": [
+        "rdp04",
+        "rdp06",
+        "ca_irr02",
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "RDP-04 C1-C9 crash recovery"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-cw-02",
+      "fixture_digest": "a3c387b10f7c083cfbb57032704bdec9764f2b2b53223fc63c29017aa84ea319"
+    },
+    {
+      "case_id": "U06-CW-03",
+      "mode": "MODE-2",
+      "stimulus": "after send before receipt",
+      "expected_boundary": "STABLE_IDENTITIES_NO_DUPLICATE_EFFECT_OR_SEND",
+      "expected_status": "RECOVER_OR_REATTACH_WITHOUT_DUPLICATION",
+      "expected_authority_refs": [
+        "rdp04",
+        "rdp06",
+        "ca_irr02",
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "RDP-04 C1-C9 crash recovery"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-cw-03",
+      "fixture_digest": "63ef20ef760bb50af74155e4069278b6133e230c386f0059c819c87a2287b910"
+    },
+    {
+      "case_id": "U06-CW-04",
+      "mode": "MODE-2",
+      "stimulus": "after receipt before confirmation",
+      "expected_boundary": "STABLE_IDENTITIES_NO_DUPLICATE_EFFECT_OR_SEND",
+      "expected_status": "RECOVER_OR_REATTACH_WITHOUT_DUPLICATION",
+      "expected_authority_refs": [
+        "rdp04",
+        "rdp06",
+        "ca_irr02",
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "RDP-04 C1-C9 crash recovery"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-cw-04",
+      "fixture_digest": "a7acba20e4b5187bb633aa7a21ac78dd5988f5737f33c20724478825140b03f1"
+    },
+    {
+      "case_id": "U06-CW-05",
+      "mode": "MODE-2",
+      "stimulus": "after confirmation before Clinical State child",
+      "expected_boundary": "STABLE_IDENTITIES_NO_DUPLICATE_EFFECT_OR_SEND",
+      "expected_status": "RECOVER_OR_REATTACH_WITHOUT_DUPLICATION",
+      "expected_authority_refs": [
+        "rdp04",
+        "rdp06",
+        "ca_irr02",
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "RDP-04 C1-C9 crash recovery"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-cw-05",
+      "fixture_digest": "168b825e451b4cf866a0e6820397f605d058fe0b9cd6cb7e43ea24b6002b5446"
+    },
+    {
+      "case_id": "U06-CW-06",
+      "mode": "MODE-2",
+      "stimulus": "after Clinical State child before Consultation WAITING",
+      "expected_boundary": "STABLE_IDENTITIES_NO_DUPLICATE_EFFECT_OR_SEND",
+      "expected_status": "RECOVER_OR_REATTACH_WITHOUT_DUPLICATION",
+      "expected_authority_refs": [
+        "rdp04",
+        "rdp06",
+        "ca_irr02",
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "RDP-04 C1-C9 crash recovery"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-cw-06",
+      "fixture_digest": "450bca94a50c84e8a9e9c50c780b643caaa94c55a7c803da7bbe288c5c561426"
+    },
+    {
+      "case_id": "U06-CW-07",
+      "mode": "MODE-2",
+      "stimulus": "after Consultation WAITING before checkpoint",
+      "expected_boundary": "STABLE_IDENTITIES_NO_DUPLICATE_EFFECT_OR_SEND",
+      "expected_status": "RECOVER_OR_REATTACH_WITHOUT_DUPLICATION",
+      "expected_authority_refs": [
+        "rdp04",
+        "rdp06",
+        "ca_irr02",
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "RDP-04 C1-C9 crash recovery"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-cw-07",
+      "fixture_digest": "db5d8386d7dc27cf65dea15ecf437c1f5060f8b072eacef63120a0f8f8175b3b"
+    },
+    {
+      "case_id": "U06-CW-08",
+      "mode": "MODE-2",
+      "stimulus": "after checkpoint reservation before Thread AWAITING_USER",
+      "expected_boundary": "STABLE_IDENTITIES_NO_DUPLICATE_EFFECT_OR_SEND",
+      "expected_status": "RECOVER_OR_REATTACH_WITHOUT_DUPLICATION",
+      "expected_authority_refs": [
+        "rdp04",
+        "rdp06",
+        "ca_irr02",
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "RDP-04 C1-C9 crash recovery"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-cw-08",
+      "fixture_digest": "dc0ea512e35b667d1bd647610bd5e92e0273f492133657e103378231e79d18ac"
+    },
+    {
+      "case_id": "U06-CW-09",
+      "mode": "MODE-2",
+      "stimulus": "after Thread AWAITING_USER before U07 eligibility",
+      "expected_boundary": "STABLE_IDENTITIES_NO_DUPLICATE_EFFECT_OR_SEND",
+      "expected_status": "RECOVER_OR_REATTACH_WITHOUT_DUPLICATION",
+      "expected_authority_refs": [
+        "rdp04",
+        "rdp06",
+        "ca_irr02",
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "RDP-04 C1-C9 crash recovery"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-cw-09",
+      "fixture_digest": "d0437a1883354e133a5515e626502b3ecd5c89ed5f9fdea6c2ea78ac531bfde5"
+    },
+    {
+      "case_id": "U06-HG-001",
+      "mode": "HARNESS",
+      "stimulus": "inject legal fixture with no frozen expectation",
+      "expected_boundary": "CONTRACT_EXPECTATION_GAP_DETECTOR_FIRES",
+      "expected_status": "CONTRACT_EXPECTATION_GAP_DETECTOR_FIRES",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "RDP-06 harness self-test"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-hg-001",
+      "fixture_digest": "c5db1baab857860e639609045543b5c18223bfcd60de3fa327d12f7637efe08d"
+    },
+    {
+      "case_id": "U06-HG-002",
+      "mode": "HARNESS",
+      "stimulus": "inject unauthorized external-call spy event",
+      "expected_boundary": "HARD_BOUNDARY_DETECTOR_FIRES",
+      "expected_status": "HARD_BOUNDARY_DETECTOR_FIRES",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "RDP-06 harness self-test"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-hg-002",
+      "fixture_digest": "317416f5a3d4c4d342f7976b72b0b4b33b6ccffc9d91589ee42c25902a4f1fa2"
+    },
+    {
+      "case_id": "U06-HG-003",
+      "mode": "HARNESS",
+      "stimulus": "attempt PROFILE-B against non-synthetic scope",
+      "expected_boundary": "SYNTHETIC_SCOPE_GUARD_FIRES",
+      "expected_status": "SYNTHETIC_SCOPE_GUARD_FIRES",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "RDP-06 harness self-test"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-hg-003",
+      "fixture_digest": "ae14b32364fce7646e7eb8ef984d47682771da03f88c9bbe43ffa1b70769c74e"
+    },
+    {
+      "case_id": "U06-VG-001",
+      "mode": "GATE",
+      "stimulus": "exact implementation/verifier/contract SHA plus reviewed oracle and allowlist",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "exact implementation/verifier/contract SHA plus reviewed oracle and allowlist"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-vg-001",
+      "fixture_digest": "ce472b09f897e575bf583e5fe5fb294e22cab95506b9491d0df8b14496561aff"
+    },
+    {
+      "case_id": "U06-VG-002",
+      "mode": "GATE",
+      "stimulus": "all EV-001..106 present and PASS",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "all EV-001..106 present and PASS"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-vg-002",
+      "fixture_digest": "c19f374f0047d25a502848de5bd1d9b2c13eb0f09eeb7a3301a77ab891c5dcca"
+    },
+    {
+      "case_id": "U06-VG-003",
+      "mode": "GATE",
+      "stimulus": "all CW-01..09 present and PASS",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "all CW-01..09 present and PASS"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-vg-003",
+      "fixture_digest": "9fdd11509975a88600d8928e14e51d6802c7970253cd78477ac2054ee0bd7f00"
+    },
+    {
+      "case_id": "U06-VG-004",
+      "mode": "GATE",
+      "stimulus": "HG-001..003 PASS",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "HG-001..003 PASS"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-vg-004",
+      "fixture_digest": "c965c9bd4cfad66dc260a4421fdbc5608f33b48f9350db8292117d805c5b2c23"
+    },
+    {
+      "case_id": "U06-VG-005",
+      "mode": "GATE",
+      "stimulus": "zero real PHI and production recipient evidence",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "zero real PHI and production recipient evidence"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-vg-005",
+      "fixture_digest": "10ab3c5a3a0e3063b64e750121e301baf398f90d9237e0b67317ac934768578d"
+    },
+    {
+      "case_id": "U06-VG-006",
+      "mode": "GATE",
+      "stimulus": "zero real external delivery/model/tool/knowledge and isolated environment",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "zero real external delivery/model/tool/knowledge and isolated environment"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-vg-006",
+      "fixture_digest": "5c377299511e473d8da65787d1d27d9b6cd3b68c76d646145b8d5f9d366da9fa"
+    },
+    {
+      "case_id": "U06-VG-007",
+      "mode": "GATE",
+      "stimulus": "PROFILE-A remains blocked",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "PROFILE-A remains blocked"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-vg-007",
+      "fixture_digest": "44b00e4449aa6d5ec372ea08c782d1d9fb56f74289da511c998b174dc8224c01"
+    },
+    {
+      "case_id": "U06-VG-008",
+      "mode": "GATE",
+      "stimulus": "no Clinical State bypass of K09/P01 and no Trace/Checkpoint as truth",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "no Clinical State bypass of K09/P01 and no Trace/Checkpoint as truth"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-vg-008",
+      "fixture_digest": "e5c78b43ce8daa856bf36f7ad29bd368a4cd6a4273c03ac00ecaedd56c15a67c"
+    },
+    {
+      "case_id": "U06-VG-009",
+      "mode": "GATE",
+      "stimulus": "no live U07 execution or U14 final decision",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "no live U07 execution or U14 final decision"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-vg-009",
+      "fixture_digest": "26f7dbe8430f6adb369c1d9affe27d294914d7d239468dfd6f47438c1cc3da8d"
+    },
+    {
+      "case_id": "U06-VG-010",
+      "mode": "GATE",
+      "stimulus": "Foundation plus U01-U05 plus U06 regression",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "rdp06"
+      ],
+      "authority_semantic_claims": [
+        "Foundation plus U01-U05 plus U06 regression"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-vg-010",
+      "fixture_digest": "3637ce6bf5fb7883a6482a41e508391a28786b7b98c87b12b525f95592159e5b"
+    },
+    {
+      "case_id": "U06-AGG-V-001",
+      "mode": "AGGREGATE",
+      "stimulus": "synthetic binding does not populate legacy real capability_binding_ref",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "synthetic binding does not populate legacy real capability_binding_ref"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-001",
+      "fixture_digest": "027e92b1527e7d56257aadf859f63366b3e1e66b532e7416120fe39094f36589"
+    },
+    {
+      "case_id": "U06-AGG-V-002",
+      "mode": "AGGREGATE",
+      "stimulus": "real compatibility alias maps exactly to REAL_CAPABILITY_BINDING",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "real compatibility alias maps exactly to REAL_CAPABILITY_BINDING"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-002",
+      "fixture_digest": "912e33063bce0d5a74bb851f71be90e2fa464c775ff4b75215639711f870ae6e"
+    },
+    {
+      "case_id": "U06-AGG-V-003",
+      "mode": "AGGREGATE",
+      "stimulus": "mode-specific policy refs are enforced",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "mode-specific policy refs are enforced"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-003",
+      "fixture_digest": "3d99b0dbe52ee793d80a4c7843c0d7d30fb2d4780666ec22f49f3f785cd2d92c"
+    },
+    {
+      "case_id": "U06-AGG-V-004",
+      "mode": "AGGREGATE",
+      "stimulus": "F3 effect identity changes when normalized dependency binding identity changes",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "F3 effect identity changes when normalized dependency binding identity changes"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-004",
+      "fixture_digest": "4a86751a08cba90f579686c021d12277d43fb1337e06807d55618996b57e7904"
+    },
+    {
+      "case_id": "U06-AGG-V-005",
+      "mode": "AGGREGATE",
+      "stimulus": "synthetic F3 effect never claims real P06 binding",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "synthetic F3 effect never claims real P06 binding"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-005",
+      "fixture_digest": "0b21a5c74ed221d3c45463f8a176952f5441286fe830450dc17adfc02c5d8e14"
+    },
+    {
+      "case_id": "U06-AGG-V-006",
+      "mode": "AGGREGATE",
+      "stimulus": "NOT_APPLICABLE release family has no fake P05 ref",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "NOT_APPLICABLE release family has no fake P05 ref"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-006",
+      "fixture_digest": "b0cba38f06ca251767537eab15c4414ef7818d1ec623f10339f699acf6056be6"
+    },
+    {
+      "case_id": "U06-AGG-V-007",
+      "mode": "AGGREGATE",
+      "stimulus": "U06 parent trace links leaf capability trace without becoming Clinical State",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "U06 parent trace links leaf capability trace without becoming Clinical State"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-007",
+      "fixture_digest": "ea26c44b639ec8e14df2133df09d7a039868ce432d4316e3bf6a1dc147d3b062"
+    },
+    {
+      "case_id": "U06-AGG-V-008",
+      "mode": "AGGREGATE",
+      "stimulus": "delivery parent/child effect identities remain cross-store consistent",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "delivery parent/child effect identities remain cross-store consistent"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-008",
+      "fixture_digest": "229761d24619ffc06032f6fc0c4ab3e70796956f8a22c9f8182a9cfba90b7164"
+    },
+    {
+      "case_id": "U06-AGG-V-009",
+      "mode": "AGGREGATE",
+      "stimulus": "direct F1 live source remains disabled in bounded profile",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "direct F1 live source remains disabled in bounded profile"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-009",
+      "fixture_digest": "1875bb7c3f41d8a081277f75aa303de55fd657df3a51f8a55b660b83a5982a66"
+    },
+    {
+      "case_id": "U06-AGG-V-010",
+      "mode": "AGGREGATE",
+      "stimulus": "missing real upstream producer is not relabeled implemented because fixture exists",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "missing real upstream producer is not relabeled implemented because fixture exists"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-010",
+      "fixture_digest": "7730a034911c715dbb8fe2ae082509dd143b8a665da61585e812d5c5d32eafec"
+    },
+    {
+      "case_id": "U06-AGG-V-011",
+      "mode": "AGGREGATE",
+      "stimulus": "PROFILE-A cannot fall back to PROFILE-B",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "PROFILE-A cannot fall back to PROFILE-B"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-011",
+      "fixture_digest": "e8c597d9389046b530784c279584eb18a89613f691e95b3557dddcea455e1183"
+    },
+    {
+      "case_id": "U06-AGG-V-012",
+      "mode": "AGGREGATE",
+      "stimulus": "contract manifest includes aggregate amendment digest and AC-U06-10 U07 eligibility supersession",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "aggregate"
+      ],
+      "authority_semantic_claims": [
+        "contract manifest includes aggregate amendment digest and AC-U06-10 U07 eligibility supersession"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-u06-agg-v-012",
+      "fixture_digest": "341ba2f771bcb39c05a72ec2028013d673db122e8928ff30daf4eb2e90a75826"
+    },
+    {
+      "case_id": "IRR01-V01",
+      "mode": "PHYSICAL",
+      "stimulus": "structural containers exist with no business truth",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "structural containers exist with no business truth"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v01",
+      "fixture_digest": "2d6937e142d201801110d2d8b946297852d1ad82f2ba918bc61edea07f9388d9"
+    },
+    {
+      "case_id": "IRR01-V02",
+      "mode": "PHYSICAL",
+      "stimulus": "producer equals u06-runtime",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "producer equals u06-runtime"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v02",
+      "fixture_digest": "8e8294bd88f2b3759640f1b9ce6476d1f9df5a894e963f520d87dad055ec5b5e"
+    },
+    {
+      "case_id": "IRR01-V03",
+      "mode": "PHYSICAL",
+      "stimulus": "P01 capability equals u06-state-writer@1.0.0",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "P01 capability equals u06-state-writer@1.0.0"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v03",
+      "fixture_digest": "681e145086ab3bf1971ebc78b4fe2f2aae62177bfb01593b3d3bc8dd90508dae"
+    },
+    {
+      "case_id": "IRR01-V04",
+      "mode": "PHYSICAL",
+      "stimulus": "C03 binding never becomes P01 capability",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "C03 binding never becomes P01 capability"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v04",
+      "fixture_digest": "b199df92e33e458f83b082de53bfc45c5f798c030ac130872acf071c7b830680"
+    },
+    {
+      "case_id": "IRR01-V05",
+      "mode": "PHYSICAL",
+      "stimulus": "only exact U06 state paths are allowed",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "only exact U06 state paths are allowed"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v05",
+      "fixture_digest": "252ef388582056b7928420704b0ea3ebcee450b28d4ee8687626c8f92a694760"
+    },
+    {
+      "case_id": "IRR01-V06",
+      "mode": "PHYSICAL",
+      "stimulus": "unknown state paths fail closed",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "unknown state paths fail closed"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v06",
+      "fixture_digest": "7b98762f6d0750878f5ec7f36c110f01ccf67d5070c2d7238bb23f95ab3f2bab"
+    },
+    {
+      "case_id": "IRR01-V07",
+      "mode": "PHYSICAL",
+      "stimulus": "source equals RULE_DERIVED",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "source equals RULE_DERIVED"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v07",
+      "fixture_digest": "9bcfe2472d6919656cbf3c53e4c95dca5ac8a8782d01f7492712a4d5860ba0dd"
+    },
+    {
+      "case_id": "IRR01-V08",
+      "mode": "PHYSICAL",
+      "stimulus": "synthetic repository only and production writes zero",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "synthetic repository only and production writes zero"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v08",
+      "fixture_digest": "28b8a1532a3794af9f804c363e0b457ff5234c7a4aa5ef580d35834c89165a91"
+    },
+    {
+      "case_id": "IRR01-V09",
+      "mode": "PHYSICAL",
+      "stimulus": "malformed missing parent fails closed",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "malformed missing parent fails closed"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v09",
+      "fixture_digest": "62163b383498d1882e24cdc0d3cf29890971f0471a77fb7416199b22b6512163"
+    },
+    {
+      "case_id": "IRR01-V10",
+      "mode": "PHYSICAL",
+      "stimulus": "ADD/REPLACE follows authoritative pre-read",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "ADD/REPLACE follows authoritative pre-read"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v10",
+      "fixture_digest": "f08cb6814fcf96cebc0ebb49c1f1f3fa8e90fac3019d6eb8c1de787310bbe1bd"
+    },
+    {
+      "case_id": "IRR01-V11",
+      "mode": "PHYSICAL",
+      "stimulus": "different pending Question conflicts",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "different pending Question conflicts"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v11",
+      "fixture_digest": "8e9333f7c3190c32683facdc1168fd795bd25408557e6c59c93cd17cd7aa3a9c"
+    },
+    {
+      "case_id": "IRR01-V12",
+      "mode": "PHYSICAL",
+      "stimulus": "nested value cannot bypass boundary via stringification",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "nested value cannot bypass boundary via stringification"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v12",
+      "fixture_digest": "8836d6a01fa143f879135859d1de858cc38d3c2259becec33dc231b6d507380d"
+    },
+    {
+      "case_id": "IRR01-V13",
+      "mode": "PHYSICAL",
+      "stimulus": "version conflict does not blindly refresh base version",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "version conflict does not blindly refresh base version"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v13",
+      "fixture_digest": "46f75c0da76b0f1202b2fa8171b7aa301ac58a5b00548c2f1e0d77a1ef3f4ae7"
+    },
+    {
+      "case_id": "IRR01-V14",
+      "mode": "PHYSICAL",
+      "stimulus": "exact replay causes zero second mutation",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "exact replay causes zero second mutation"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v14",
+      "fixture_digest": "2daecfc9bceffc075a3b28defdcb7b4e4588fb83b0ed2d51adb80677ad397358"
+    },
+    {
+      "case_id": "IRR01-V15",
+      "mode": "PHYSICAL",
+      "stimulus": "read-store ref equals commit-store ref equals admitted store ref",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "read-store ref equals commit-store ref equals admitted store ref"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v15",
+      "fixture_digest": "2b3cdb786b4de110b1b259f11b41d20a3d45f931ad2ae8e658bbe8c9e14a0127"
+    },
+    {
+      "case_id": "IRR01-V16",
+      "mode": "PHYSICAL",
+      "stimulus": "mismatched synthetic read/write repositories fail construction",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr01"
+      ],
+      "authority_semantic_claims": [
+        "mismatched synthetic read/write repositories fail construction"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr01-v16",
+      "fixture_digest": "d528a7644b5e94693a7c8d152a48b444bd8e7e1a3621eef402bb19b53a928fb1"
+    },
+    {
+      "case_id": "IRR02-V01",
+      "mode": "PHYSICAL",
+      "stimulus": "ACTIVE plus null current_wait_effect is initial state",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "ACTIVE plus null current_wait_effect is initial state"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v01",
+      "fixture_digest": "d1621d1ce782d4fe51039383a1b8bd41885807e2f59e2316ea72828a3a0cef68"
+    },
+    {
+      "case_id": "IRR02-V02",
+      "mode": "PHYSICAL",
+      "stimulus": "first valid transition yields WAITING_USER pointer and committed effect",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "first valid transition yields WAITING_USER pointer and committed effect"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v02",
+      "fixture_digest": "9bccd8fe9046b6c817aac830989a88e70f450dbb11c1e4cd00d9b7981d24a762"
+    },
+    {
+      "case_id": "IRR02-V03",
+      "mode": "PHYSICAL",
+      "stimulus": "row version advances exactly once",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "row version advances exactly once"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v03",
+      "fixture_digest": "63446bfb74ac1e08c82e6ecbe5940288b2066113b4e013e0192ed48564b9d993"
+    },
+    {
+      "case_id": "IRR02-V04",
+      "mode": "PHYSICAL",
+      "stimulus": "exact replay causes zero second mutation",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "exact replay causes zero second mutation"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v04",
+      "fixture_digest": "55213466fa071072b2cc8b3113c728dfb1f88e50cf9df6359cbd299d8707f244"
+    },
+    {
+      "case_id": "IRR02-V05",
+      "mode": "PHYSICAL",
+      "stimulus": "same effect changed fingerprint fails closed",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "same effect changed fingerprint fails closed"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v05",
+      "fixture_digest": "ba0645d1a4be4ac52f99639926c6135a8f109df632b6a1a7fd855aa3e71e05f7"
+    },
+    {
+      "case_id": "IRR02-V06",
+      "mode": "PHYSICAL",
+      "stimulus": "WAITING_USER different effect conflicts",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "WAITING_USER different effect conflicts"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v06",
+      "fixture_digest": "3d24f73438c7126c4579ea40d1bd94f26ecf0a9f3a27232736d5d44e9a9f0d22"
+    },
+    {
+      "case_id": "IRR02-V07",
+      "mode": "PHYSICAL",
+      "stimulus": "row-version mismatch conflicts",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "row-version mismatch conflicts"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v07",
+      "fixture_digest": "1c8bc8f9b73fcbaf933e1d7cb43f4b21e2ad75550745a5e03fd6dda35ac5f05e"
+    },
+    {
+      "case_id": "IRR02-V08",
+      "mode": "PHYSICAL",
+      "stimulus": "crash before commit leaves no committed lifecycle or effect",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "crash before commit leaves no committed lifecycle or effect"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v08",
+      "fixture_digest": "5bb4a0e58c104de0e901dc933c4d4a7ef5e6fec9c8d9d3334a29d76f43da81b5"
+    },
+    {
+      "case_id": "IRR02-V09",
+      "mode": "PHYSICAL",
+      "stimulus": "crash after commit replay returns original result",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "crash after commit replay returns original result"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v09",
+      "fixture_digest": "87f287b4ccbf78aeb51ba0057c3ce56e191174c2425ae82663e32b7ce609b4a1"
+    },
+    {
+      "case_id": "IRR02-V10",
+      "mode": "PHYSICAL",
+      "stimulus": "ledger/record inconsistency fails closed",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "ledger/record inconsistency fails closed"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v10",
+      "fixture_digest": "2eb9b71cf34dab0b8c1ba433a55b36607d294a23e3c27f1684c7a1324e471f58"
+    },
+    {
+      "case_id": "IRR02-V11",
+      "mode": "PHYSICAL",
+      "stimulus": "synthetic DB only and production writes zero",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "synthetic DB only and production writes zero"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v11",
+      "fixture_digest": "b33b187cc3b4a128c398b56b9b2b8bb6a77eaf839bd16344adacf2699a40c2d3"
+    },
+    {
+      "case_id": "IRR02-V12",
+      "mode": "PHYSICAL",
+      "stimulus": "U01 start remains ACTIVE with null pointer",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "U01 start remains ACTIVE with null pointer"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v12",
+      "fixture_digest": "3fc2309810d6af01903def6dd99215b2fd24f977328595cbccdac76cd8d380fb"
+    },
+    {
+      "case_id": "IRR02-V13",
+      "mode": "PHYSICAL",
+      "stimulus": "two concurrent identical commands produce one mutation plus one replay",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "two concurrent identical commands produce one mutation plus one replay"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v13",
+      "fixture_digest": "1845af2f2f793d639682c2571364693fa51fe90c5cadff369f45793f6e247247"
+    },
+    {
+      "case_id": "IRR02-V14",
+      "mode": "PHYSICAL",
+      "stimulus": "post-lock reread detects first committer",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "post-lock reread detects first committer"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v14",
+      "fixture_digest": "d7f9c0df51cdc68d1c0ebce74814713e3706b77308c4ffe3faf3608c27082ce5"
+    },
+    {
+      "case_id": "IRR02-V15",
+      "mode": "PHYSICAL",
+      "stimulus": "committed_row_version equals flushed JPA version",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "committed_row_version equals flushed JPA version"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v15",
+      "fixture_digest": "e1679f0682e30f340a347aeebd84a75c1a83eb14c18bb49c620c9cc26f0a7860"
+    },
+    {
+      "case_id": "IRR02-V16",
+      "mode": "PHYSICAL",
+      "stimulus": "unique-key race reloads and applies exact equality",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr02"
+      ],
+      "authority_semantic_claims": [
+        "unique-key race reloads and applies exact equality"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr02-v16",
+      "fixture_digest": "e57dd4dc6e92e145896b95fed9a50752973d18cf6418aed92e1dcadb03a3d2cb"
+    },
+    {
+      "case_id": "IRR03-V01",
+      "mode": "PHYSICAL",
+      "stimulus": "one RuntimeThreadState per runtime thread",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "one RuntimeThreadState per runtime thread"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v01",
+      "fixture_digest": "a186ed547aa96e0fc80567f9154d0cb94721d5b71e16acb881d0447a5d3a8ec7"
+    },
+    {
+      "case_id": "IRR03-V02",
+      "mode": "PHYSICAL",
+      "stimulus": "initial runtime status ACTIVE",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "initial runtime status ACTIVE"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v02",
+      "fixture_digest": "37e3e48b3115608f96c535af75c7f61b08c12b5e575f0e3541f0523fff0ccda9"
+    },
+    {
+      "case_id": "IRR03-V03",
+      "mode": "PHYSICAL",
+      "stimulus": "checkpoint id stable for same parent wait effect",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "checkpoint id stable for same parent wait effect"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v03",
+      "fixture_digest": "528e2dbd03a9a351b27a5f329d5aa40d87e8bcc68b59067bd443fa0f668d753e"
+    },
+    {
+      "case_id": "IRR03-V04",
+      "mode": "PHYSICAL",
+      "stimulus": "same checkpoint id changed payload conflicts",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "same checkpoint id changed payload conflicts"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v04",
+      "fixture_digest": "ba653c67f21776a49e95aca5fb14471b0e4867577a2955995262280fe69c77ba"
+    },
+    {
+      "case_id": "IRR03-V05",
+      "mode": "PHYSICAL",
+      "stimulus": "checkpoint reservation precedes AWAITING transition",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "checkpoint reservation precedes AWAITING transition"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v05",
+      "fixture_digest": "329e8e6e79f2fd885d25e42119e530dd4b9b85125a434099ae261729ff620f7f"
+    },
+    {
+      "case_id": "IRR03-V06",
+      "mode": "PHYSICAL",
+      "stimulus": "reservation atomically sets WAIT_CHECKPOINTED plus claim",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "reservation atomically sets WAIT_CHECKPOINTED plus claim"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v06",
+      "fixture_digest": "bbb6d6b02e14ffd326b7d212d63b7c914e306baf5da7998bb22dd55f292c63f8"
+    },
+    {
+      "case_id": "IRR03-V07",
+      "mode": "PHYSICAL",
+      "stimulus": "reservation advances Thread row version once",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "reservation advances Thread row version once"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v07",
+      "fixture_digest": "386cbd986bd66dfd80871c8b8bc9149bf2c259ed93b04aeb153ecf27dbf9a11f"
+    },
+    {
+      "case_id": "IRR03-V08",
+      "mode": "PHYSICAL",
+      "stimulus": "AWAITING transition advances Thread row version once",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "AWAITING transition advances Thread row version once"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v08",
+      "fixture_digest": "ba71b60d5a9281dbcb687c667b60e6f52044f7977028b98c20649b1e459e8e93"
+    },
+    {
+      "case_id": "IRR03-V09",
+      "mode": "PHYSICAL",
+      "stimulus": "exact Thread replay causes zero second transition",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "exact Thread replay causes zero second transition"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v09",
+      "fixture_digest": "49afe4dd019bb98b564c21c63bf7ead2953dd2527616c12ceb6cefe4ca913129"
+    },
+    {
+      "case_id": "IRR03-V10",
+      "mode": "PHYSICAL",
+      "stimulus": "C7 recovery creates or reserves same checkpoint only",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "C7 recovery creates or reserves same checkpoint only"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v10",
+      "fixture_digest": "ecb98a11f01508b5990ef59b6ab85f35b9b659f9c874ae99dab674c21c8b44db"
+    },
+    {
+      "case_id": "IRR03-V11",
+      "mode": "PHYSICAL",
+      "stimulus": "C8 WAIT_CHECKPOINTED recovery transitions without resend or recommit",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "C8 WAIT_CHECKPOINTED recovery transitions without resend or recommit"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v11",
+      "fixture_digest": "a2ef1235631153678eae791b9f8a98dd03f7fbc6a3d55f93f550271182b5b35d"
+    },
+    {
+      "case_id": "IRR03-V12",
+      "mode": "PHYSICAL",
+      "stimulus": "C9 recovery re-emits same eligibility only",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "C9 recovery re-emits same eligibility only"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v12",
+      "fixture_digest": "78a10cd0ef36ebf8b2887ca08904096d71dab92e492ea9d22838a4fdd547fd4d"
+    },
+    {
+      "case_id": "IRR03-V13",
+      "mode": "PHYSICAL",
+      "stimulus": "business WAITING plus Thread not AWAITING_USER yields no U07",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "business WAITING plus Thread not AWAITING_USER yields no U07"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v13",
+      "fixture_digest": "67f34378006e10936e86c3a56ecc6687ac85e0c95fee4125303e28fc6fb7a647"
+    },
+    {
+      "case_id": "IRR03-V14",
+      "mode": "PHYSICAL",
+      "stimulus": "competing different wait effects cannot create two active checkpoints",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "competing different wait effects cannot create two active checkpoints"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v14",
+      "fixture_digest": "58ef8570105aacb266bdede7cbff0901fca598d5035a42033c51d499356de8c9"
+    },
+    {
+      "case_id": "IRR03-V15",
+      "mode": "PHYSICAL",
+      "stimulus": "mismatched checkpoint effect or thread fails closed",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "mismatched checkpoint effect or thread fails closed"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v15",
+      "fixture_digest": "28936a944f21cb577040f2e0eaa7dbb78c4448207bbe60dd65aaccecc9161424"
+    },
+    {
+      "case_id": "IRR03-V16",
+      "mode": "PHYSICAL",
+      "stimulus": "Python test checkpoint is not Runtime authority",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "Python test checkpoint is not Runtime authority"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v16",
+      "fixture_digest": "228c934f8ab81202a665df506a493393182088f35646558d6e3c31d56031a4ba"
+    },
+    {
+      "case_id": "IRR03-V17",
+      "mode": "PHYSICAL",
+      "stimulus": "production Runtime store writes zero in PROFILE-B",
+      "expected_boundary": "PASS",
+      "expected_status": "PASS",
+      "expected_authority_refs": [
+        "ca_irr03"
+      ],
+      "authority_semantic_claims": [
+        "production Runtime store writes zero in PROFILE-B"
+      ],
+      "contract_manifest_digest": "4f2a1373ab5e6cc25a599a80df3aa3ddab05e55959a643eef80d8b3112d664d0",
+      "fixture_id": "fixture-irr03-v17",
+      "fixture_digest": "eb7b9edd78d35e17f76d22d5a33ac7317e0fac110cd7f1afa561812ef03f51f2"
+    }
+  ]
+}
