@@ -35,18 +35,13 @@ public final class U06SyntheticDecisionEngine {
         if(in.hasExplicitGapBasis()) {
             String gap=req(in.getGapId(),"gapId");
             String impact=req(in.getGapDecisionImpact(),"gapDecisionImpact");
-            String effect=U06Ids.hash("u06f3",r.getConsultationId(),r.getDependencyBindingType(),
-                    r.getDependencyBindingRef(),String.valueOf(r.getAuthoritativeClinicalStateVersion()),
-                    r.getF3OwnerPolicyRef(),r.getBusinessEventIdentity(),"GAP_BASIS",gap,impact,
-                    String.valueOf(in.isAskableOnline()));
+            String effect=f3EffectId(r);
             return new U06SyntheticDecisionBundle(
                     U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,effect,gap,impact,in.isAskableOnline(),
                     null,null,null,null,null,null,null,null,null);
         }
         if(in.hasExplicitNoCurrentOnlineGapBasis()) {
-            String effect=U06Ids.hash("u06f3",r.getConsultationId(),r.getDependencyBindingType(),
-                    r.getDependencyBindingRef(),String.valueOf(r.getAuthoritativeClinicalStateVersion()),
-                    r.getF3OwnerPolicyRef(),r.getBusinessEventIdentity(),"NO_CURRENT_ONLINE_GAP_BASIS");
+            String effect=f3EffectId(r);
             return new U06SyntheticDecisionBundle(
                     U06SyntheticDecisionBundle.NO_CURRENT_ONLINE_GAP_BASIS_ESTABLISHED,effect,null,null,false,
                     null,null,null,null,null,null,null,null,null);
@@ -113,6 +108,20 @@ public final class U06SyntheticDecisionEngine {
                 return true;
         }
         return false;
+    }
+
+    private String f3EffectId(U06ProfileBRequest r) {
+        return U06Ids.hash("u06f3",
+                r.getConsultationId(),
+                r.getSourceAuthorityType(),
+                r.getSourceAuthorityRef(),
+                String.valueOf(r.getAuthoritativeClinicalStateVersion()),
+                r.getDependencyBindingType(),
+                r.getDependencyBindingRef(),
+                r.getF3OwnerPolicyRef(),
+                r.getCanonicalEventRef(),
+                r.getBusinessEventIdentity(),
+                "1");
     }
 
     private U06SyntheticDecisionBundle noDecision(U06ProfileBRequest r,String reason) {
