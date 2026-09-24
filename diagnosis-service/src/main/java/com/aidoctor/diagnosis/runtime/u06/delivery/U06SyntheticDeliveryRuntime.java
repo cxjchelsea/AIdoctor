@@ -70,6 +70,38 @@ public final class U06SyntheticDeliveryRuntime {
                 newEndpointRef,old.policyRef,createdAt);
     }
 
+    public synchronized AttemptResult startAttemptWithoutReceipt(String effect,String transportScenario,String createdAt) {
+        DeliveryState s=state(effect);
+        if(!READY.equals(s.intentStatus))throw new IllegalStateException("U06_DELIVERY_INTENT_NOT_READY");
+        if(CONFIRMED_TERMINAL.equals(s.authorityStatus)||NOT_CONFIRMED_TERMINAL.equals(s.authorityStatus)
+                ||CANCELLED_TERMINAL.equals(s.authorityStatus))
+            throw new IllegalStateException("U06_DELIVERY_TERMINAL_NO_SEND");
+        int n=s.attempts.size()+1;
+        String attemptId=U06Ids.hash("u06attempt",s.deliveryEffectId,String.valueOf(n));
+        Attempt a=new Attempt(attemptId,s.deliveryId,s.idempotencyKey,transportScenario,createdAt);
+        a.status=transportScenario!=null&&transportScenario.startsWith("AMBIGUOUS")?AMBIGUOUS:ACCEPTED;
+        s.attempts.add(a);
+        if(AMBIGUOUS.equals(a.status))s.authorityStatus=RECONCILIATION_BLOCKED;
+        return new AttemptResult(a.attemptId,a.deliveryId,a.idempotencyKey,a.status,s.authorityStatus,
+                latestConfirmation(s),s.snapshot(false));
+    }
+
+    public synchronized Snapshot recordReceiptWithoutConfirmation(String effect,String receiptStatus,String createdAt) {
+        DeliveryState s=state(effect);
+        if(s.attempts.isEmpty())throw new IllegalStateException("U06_DELIVERY_ATTEMPT_REQUIRED");
+        Attempt a=s.attempts.get(s.attempts.size()-1);
+        addReceipt(s,a,req(receiptStatus),createdAt);
+        return s.snapshot(false);
+    }
+
+    public synchronized Snapshot resolveConfirmation(String effect,String confirmationStatus,String evidenceRef,String createdAt) {
+        DeliveryState s=state(effect);
+        if(s.receipts.isEmpty()&&!INDETERMINATE.equals(confirmationStatus))
+            throw new IllegalStateException("U06_DELIVERY_RECEIPT_REQUIRED");
+        evaluateConfirmation(s,req(confirmationStatus),req(evidenceRef),createdAt);
+        return s.snapshot(false);
+    }
+
     public synchronized AttemptResult attempt(String effect,String transportScenario,String createdAt) {
         DeliveryState s=state(effect);
         if(!READY.equals(s.intentStatus))throw new IllegalStateException("U06_DELIVERY_INTENT_NOT_READY");
