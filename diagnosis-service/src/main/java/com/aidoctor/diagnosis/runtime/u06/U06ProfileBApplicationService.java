@@ -267,22 +267,36 @@ public final class U06ProfileBApplicationService {
         String waitFp=U06Ids.hash("u06consultwaitfp",r.getConsultationId(),waitEffect,parent,d.getQuestionId(),
                 conf.getDeliveryId(),String.valueOf(r.getExpectedConsultationRowVersion()),"WAITING_USER");
 
-        ConsultationWaitTransitionService.Result wr=consultationWait.establish(
-                new ConsultationWaitTransitionService.Command(waitEffect,parent,r.getConsultationId(),
-                        d.getQuestionId(),conf.getDeliveryId(),waitFp,
-                        U06Ids.hash("u06consultwaitidem",waitEffect,"1"),
-                        r.getExpectedConsultationRowVersion(),
-                        OffsetDateTime.parse(r.getCreatedAt()).toLocalDateTime()));
+        ConsultationWaitTransitionService.Result wr;
+        try {
+            wr=consultationWait.establish(
+                    new ConsultationWaitTransitionService.Command(waitEffect,parent,r.getConsultationId(),
+                            d.getQuestionId(),conf.getDeliveryId(),waitFp,
+                            U06Ids.hash("u06consultwaitidem",waitEffect,"1"),
+                            r.getExpectedConsultationRowVersion(),
+                            OffsetDateTime.parse(r.getCreatedAt()).toLocalDateTime()));
+        } catch (RuntimeException waitFailure) {
+            return new U06ExecutionResult(U06ExecutionResult.RECONCILIATION_REQUIRED,a.getAdmissionId(),parent,
+                    deliveredCommitStatus,conf.getDeliveryId(),waitEffect,null,null,
+                    "U06_CONSULTATION_WAIT_RECONCILIATION_REQUIRED");
+        }
 
         String cp=U06Ids.hash("u06checkpoint",parent,"1");
         String cpFp=U06Ids.hash("u06checkpointfp",cp,r.getThreadId(),r.getRunId(),d.getQuestionId(),
                 conf.getDeliveryId(),String.valueOf(deliveredReadBack.getVersion()),waitEffect);
 
-        U06WaitCoordinator.Result rr=runtimeWait.establish(new U06WaitCoordinator.Command(cp,
-                r.getConsultationId(),r.getThreadId(),r.getRunId(),d.getQuestionId(),
-                "/patient_state/pending_question",selection,conf.getDeliveryEffectId(),parent,
-                conf.getDeliveryId(),conf.getConfirmationEvaluationId(),deliveredReadBack.getVersion(),
-                wr.waitEffectId,r.getDependencyBindingRef(),r.getQuestionPolicyRef(),cpFp,r.getCreatedAt()));
+        U06WaitCoordinator.Result rr;
+        try {
+            rr=runtimeWait.establish(new U06WaitCoordinator.Command(cp,
+                    r.getConsultationId(),r.getThreadId(),r.getRunId(),d.getQuestionId(),
+                    "/patient_state/pending_question",selection,conf.getDeliveryEffectId(),parent,
+                    conf.getDeliveryId(),conf.getConfirmationEvaluationId(),deliveredReadBack.getVersion(),
+                    wr.waitEffectId,r.getDependencyBindingRef(),r.getQuestionPolicyRef(),cpFp,r.getCreatedAt()));
+        } catch (RuntimeException runtimeFailure) {
+            return new U06ExecutionResult(U06ExecutionResult.RECONCILIATION_REQUIRED,a.getAdmissionId(),parent,
+                    deliveredCommitStatus,conf.getDeliveryId(),wr.waitEffectId,cp,null,
+                    "U06_RUNTIME_WAIT_RECONCILIATION_REQUIRED");
+        }
 
         return new U06ExecutionResult(U06ExecutionResult.WAIT_ESTABLISHED,a.getAdmissionId(),parent,
                 deliveredCommitStatus,conf.getDeliveryId(),wr.waitEffectId,rr.checkpointId,rr.eligibilityId,null);
