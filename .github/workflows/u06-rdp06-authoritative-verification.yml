@@ -149,12 +149,26 @@ jobs:
           rc=int(Path("/tmp/u06_regression_rc").read_text().strip())
 
           failures=errors=skips=tests=0
+          skipped_cases=[]
           for p in glob.glob(str(root/"target/surefire-reports/TEST-*.xml")):
               x=ET.parse(p).getroot()
               tests+=int(x.attrib.get("tests","0"))
               failures+=int(x.attrib.get("failures","0"))
               errors+=int(x.attrib.get("errors","0"))
               skips+=int(x.attrib.get("skipped","0"))
+              for tc in x.findall(".//testcase"):
+                  if tc.find("skipped") is not None:
+                      skipped_cases.append({
+                          "classname":tc.attrib.get("classname",""),
+                          "name":tc.attrib.get("name","")
+                      })
+
+          expected_skip_classes={
+            "com.aidoctor.diagnosis.runtime.u03.U03Cd08FrozenClinicalValidationTest"
+          }
+          unexpected_skipped_cases=[
+            x for x in skipped_cases if x["classname"] not in expected_skip_classes
+          ]
 
           spy_data={"enabled":False,"observed_count":-1}
           if spy.exists():
@@ -182,7 +196,10 @@ jobs:
             "regression_failures":failures,
             "regression_errors":errors,
             "regression_skips":skips,
-            "unexpected_skips":skips,
+            "expected_skip_classes":sorted(expected_skip_classes),
+            "skipped_cases":skipped_cases,
+            "unexpected_skips":len(unexpected_skipped_cases),
+            "unexpected_skipped_cases":unexpected_skipped_cases,
             "runtime_observation_artifact_present":obs.exists(),
             "synthetic_adapter_allowlist":[
               "U06SyntheticP01Runtime",
