@@ -1,0 +1,20 @@
+{
+  "schema": "U06_AUTH_PROFILE_REVIEW_GATE_V0_1",
+  "auth_profile_review_id": "U06_AUTH_PROFILE_EQUIVALENCE_REVIEW_20260924_01",
+  "reviewed_auth_profile_digest": "b1aaea818525f6e6c81089d18a8d2ac38d35478a666173de27903c70e4ab77b4",
+  "reviewed_contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
+  "reviewed_contract_manifest_blob_sha": "fec6755eab3709472b571f9317c75c8b50b6efd4",
+  "reviewed_implementation_semantic_sha": "66fa3c078dce5e304e2ada9d6c0df0ff9fbde661",
+  "reviewer_role": "INDEPENDENT_AUTH_PROFILE_AUTHORITY_REVIEW",
+  "independence_marker": "INDEPENDENT_EQUIVALENCE_REVIEW_PASS",
+  "verdict": "PASS",
+  "reviewed_at": "2026-09-24",
+  "independent_review_record_sha": "fc34e793feef838fa4fbb2d3e61b542716979045",
+  "finding_refs": [
+    "B-U06-EVRR-01",
+    "B-U06-EVRR-02",
+    "B-U06-EVRR-03"
+  ],
+  "independent_review_pr": 250,
+  "review_scope": "AUTH_PROFILE_AUTHORITY_AND_CONTRACT_MANIFEST_EQUIVALENCE"
+}

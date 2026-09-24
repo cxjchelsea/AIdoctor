@@ -1,0 +1,85 @@
+{
+  "schema": "U06_EXECUTION_EVIDENCE_MAP_V0_1",
+  "semantics": "Only a passed named test may provide execution evidence for listed case IDs. Absence never implies PASS.",
+  "test_class": "com.aidoctor.diagnosis.runtime.u06.U06ProfileBStructuralTest",
+  "mappings": [
+    {
+      "test_method": "p01UsesSameSyntheticStoreAndExactReplayDoesNotMutateTwice",
+      "case_ids": [
+        "IRR01-V14",
+        "IRR01-V15"
+      ]
+    },
+    {
+      "test_method": "directF1ActivationIsRejected",
+      "case_ids": [
+        "U06-EV-007",
+        "U06-AGG-V-009"
+      ]
+    },
+    {
+      "test_method": "mode1ThenMode2EstablishesSyntheticWaitWithoutExternalIo",
+      "case_ids": [
+        "U06-EV-042",
+        "U06-EV-089",
+        "U06-EV-090"
+      ]
+    },
+    {
+      "test_method": "mode1ExactReplayReattachesAndChangedPayloadFailsClosed",
+      "case_ids": [
+        "U06-EV-046",
+        "U06-EV-047",
+        "IRR01-V14"
+      ]
+    },
+    {
+      "test_method": "invalidSyntheticDeliveryEnvironmentFailsClosedBeforeMutation",
+      "case_ids": [
+        "U06-EV-096"
+      ]
+    },
+    {
+      "test_method": "mode1BlockedSafetyStopsAfterCanonicalCommitWithoutQuestionOrWait",
+      "case_ids": [
+        "U06-EV-102"
+      ]
+    },
+    {
+      "test_method": "mode3SameIdentityChangedEvidenceConflictsAndNeverMutates",
+      "case_ids": [
+        "U06-EV-105"
+      ]
+    },
+    {
+      "test_method": "mode3NeverMutatesClinicalState",
+      "case_ids": [
+        "U06-EV-056"
+      ]
+    },
+    {
+      "test_method": "syntheticDecisionEngineMapsNoResultAndTieFailClosed",
+      "case_ids": [
+        "U06-EV-022",
+        "U06-EV-035"
+      ]
+    },
+    {
+      "test_method": "syntheticDecisionEngineSuppressesCurrentSemanticDuplicate",
+      "case_ids": [
+        "U06-EV-028"
+      ]
+    },
+    {
+      "test_method": "admissionIdentityIgnoresTransportRequestAndTraceMetadata",
+      "case_ids": [
+        "U06-EV-015"
+      ]
+    }
+  ],
+  "unmapped_tests": [
+    "runtimeExceptionTerminalizesParentTraceAsFailed",
+    "selectedMode2MissingRuntimeInputsFailsBeforeAnyMutationOrDelivery",
+    "syntheticDecisionEngineDoesNotInventD04ForC03Failure"
+  ]
+}
