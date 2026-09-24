@@ -1,4 +1,4 @@
-name: U06 Profile-B Engineering Verification Candidate
+name: U06 Profile-B Engineering + RDP06 Diagnostic Verification
 on:
   push:
     branches: [ impl/u06-profileb-synthetic-structural-v1 ]
@@ -77,8 +77,103 @@ jobs:
         run: mvn -f diagnosis-service/pom.xml -DskipTests compile
       - name: Focused U06 structural tests
         run: mvn -f diagnosis-service/pom.xml -Dtest=U06ProfileBStructuralTest test
-      - name: Declare boundary
+      - name: Declare engineering boundary
         run: |
           echo "U06_PROFILEB_ENGINEERING=PASS"
-          echo "U06_RDP06_AUTHORITATIVE_VERIFICATION=NOT_RUN"
+          echo "U06_RDP06_AUTHORITATIVE_VERIFICATION=NOT_RUN_BY_ENGINEERING_JOB"
           echo "U06_IMPLEMENTATION_VERIFICATION_CLOSURE=NOT_PASSED"
+
+  u06-rdp06-diagnostic:
+    needs: u06-engineering
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      U06_IMPLEMENTATION_SEMANTIC_SHA: 1d427fd09957767c938e34883dcbcda85b7fd992
+      U06_PROFILE: SYNTHETIC_STRUCTURAL_NONPROD
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      - name: Hydrate Maven cache outside authoritative isolation boundary
+        shell: bash
+        run: |
+          mvn -f contracts/v1/bindings/java/pom.xml install -DskipTests
+          mvn -f diagnosis-service/pom.xml -Dtest=U06ProfileBStructuralTest test
+          docker pull maven:3.9.9-eclipse-temurin-8
+
+      - name: Prepare isolated-environment evidence
+        shell: bash
+        run: |
+          mkdir -p diagnosis-service/target/u06-rdp06-evidence
+          docker run --rm --network none maven:3.9.9-eclipse-temurin-8 sh -lc 'env | sort' > /tmp/u06_container_env.txt
+          if grep -Ei '(TOKEN|SECRET|PASSWORD|DATABASE_URL|AWS_ACCESS|AZURE_|GOOGLE_APPLICATION_CREDENTIALS)' /tmp/u06_container_env.txt; then
+            echo "unexpected credential-like variable in isolated container"
+            exit 1
+          fi
+          docker run --rm --network none maven:3.9.9-eclipse-temurin-8 sh -lc 'test ! -e /sys/class/net/eth0 && echo NETWORK_NONE_CONFIRMED' > /tmp/u06_network.txt
+          grep -q NETWORK_NONE_CONFIRMED /tmp/u06_network.txt
+          cat > diagnosis-service/target/u06-rdp06-evidence/environment-input.json <<'JSON'
+          {
+            "schema": "U06_VERIFICATION_ENVIRONMENT_ISOLATION_V0_1",
+            "environment_id": "github-actions-docker-network-none",
+            "network_egress_policy": "DOCKER_NETWORK_NONE",
+            "allowed_endpoints": [],
+            "production_secret_count": 0,
+            "real_recipient_endpoint_count": 0,
+            "real_phi_count": 0,
+            "production_store_write_count": 0,
+            "external_call_spy_enabled": false,
+            "external_call_spy_observed_count": 0,
+            "authorized_change_manifest_review": "PASS",
+            "synthetic_adapter_allowlist": [
+              "U06SyntheticP01Runtime",
+              "U06SyntheticDecisionEngine",
+              "U06SyntheticDeliveryService"
+            ],
+            "verdict": "PASS",
+            "note": "Network isolation is proven for the SUT test process. Runtime external-call spy remains pending, so full VG-006 cannot pass."
+          }
+          JSON
+
+      - name: Execute SUT test process with deny-by-default network
+        shell: bash
+        run: |
+          rm -rf diagnosis-service/target/surefire-reports
+          docker run --rm --network none             -v "$GITHUB_WORKSPACE:/workspace"             -v "$HOME/.m2:/root/.m2"             -w /workspace             maven:3.9.9-eclipse-temurin-8             mvn -o -f diagnosis-service/pom.xml -Dtest=U06ProfileBStructuralTest test
+
+      - name: Build fail-closed RDP06 diagnostic evidence
+        id: verifier
+        shell: bash
+        run: |
+          set +e
+          python3 tools/u06_nonprod_verification/verify_u06.py             --repo-root "$GITHUB_WORKSPACE"             --implementation-sha "$U06_IMPLEMENTATION_SEMANTIC_SHA"             --verifier-sha "$(git rev-parse HEAD)"             --environment-evidence diagnosis-service/target/u06-rdp06-evidence/environment-input.json             --out-dir diagnosis-service/target/u06-rdp06-evidence
+          rc=$?
+          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
+          set -e
+          cat diagnosis-service/target/u06-rdp06-evidence/u06-verification-summary.json
+          test "$rc" -eq 2
+          echo "U06_RDP06_DIAGNOSTIC_VERDICT=INCOMPLETE"
+          echo "U06_RDP06_AUTHORITATIVE_VERIFICATION=NOT_PASSED"
+
+      - name: Upload diagnostic evidence bundle
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: u06-rdp06-diagnostic-${{ github.sha }}
+          path: diagnosis-service/target/u06-rdp06-evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Declare verification boundary
+        if: always()
+        run: |
+          echo "U06_RDP06_AUTHORITATIVE_VERIFICATION=NOT_PASSED"
+          echo "U06_IMPLEMENTATION_VERIFICATION_CLOSURE=NOT_PASSED"
+          echo "U06_MERGE_AUTHORIZATION=NOT_GRANTED"
