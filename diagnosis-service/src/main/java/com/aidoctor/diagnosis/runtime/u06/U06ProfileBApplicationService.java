@@ -126,6 +126,9 @@ public final class U06ProfileBApplicationService {
     private U06ExecutionResult mode1(U06ProfileBRequest r,U06AdmissionService.Admission a,
                                      U06SyntheticDecisionBundle d,
                                      U06SyntheticPostF3SafetyBarrier.Evidence safetyEvidence) {
+        if(U06SyntheticDecisionBundle.FAILED.equals(d.getF3OwnerStatus()))
+            return new U06ExecutionResult(U06ExecutionResult.FAILURE_REQUIRED,a.getAdmissionId(),
+                    null,null,null,null,null,null,d.getGapDecisionImpact());
         if(!U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED.equals(d.getF3OwnerStatus())
                 &&!U06SyntheticDecisionBundle.NO_CURRENT_ONLINE_GAP_BASIS_ESTABLISHED.equals(d.getF3OwnerStatus()))
             return new U06ExecutionResult(U06ExecutionResult.MODE1_NO_MUTATION,a.getAdmissionId(),
@@ -194,6 +197,12 @@ public final class U06ProfileBApplicationService {
         String selection=d.getQuestionSelectionEffectId();
         String questionPath="/patient_state/questions/"+d.getQuestionId();
         U06SyntheticP01Runtime.StateView beforeSelection=state.readCurrent();
+
+        if(beforeSelection.exists("/patient_state/pending_question")) {
+            String activeQuestion=beforeSelection.mapString("/patient_state/pending_question","question_id");
+            if(!d.getQuestionId().equals(activeQuestion))
+                throw new IllegalStateException("U06_PENDING_QUESTION_CONFLICT");
+        }
 
         if(beforeSelection.exists(questionPath)) {
             String existingSelection=beforeSelection.mapString(questionPath,"selection_effect_id");

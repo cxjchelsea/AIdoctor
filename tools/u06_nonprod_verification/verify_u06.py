@@ -123,6 +123,9 @@ def compare_runtime_case(case, observation):
         if expected_field == "expected_admission_status" and expected == "ADMITTED_OR_REATTACHED":
             if actual not in ("ADMITTED_OR_REATTACHED", "ADMITTED", "REATTACHED_SAME_ADMISSION"):
                 mismatches.append({"field": expected_field, "expected": expected, "actual": actual})
+        elif expected_field == "expected_question_selection_status" and expected == "NO_SELECTION_OR_FAILED":
+            if actual not in ("NO_SELECTION", "FAILED"):
+                mismatches.append({"field": expected_field, "expected": expected, "actual": actual})
         elif actual != expected:
             mismatches.append({"field": expected_field, "expected": expected, "actual": actual})
 
@@ -284,7 +287,7 @@ def static_aggregate_case(case_id, root, auth, manifest):
     if case_id == "U06-AGG-V-002":
         return static_contains(req, "dependencyBindingType")
     if case_id == "U06-AGG-V-003":
-        return static_contains(admission, "questionPolicyRef", "d04PolicyRef", "REJECTED_POLICY")
+        return static_contains(admission, "getQuestionPolicyRef()", "getD04PolicyRef()", "REJECTED_POLICY")
     if case_id == "U06-AGG-V-004":
         return static_contains(decision, "r.getDependencyBindingType()", "r.getDependencyBindingRef()")
     if case_id == "U06-AGG-V-005":

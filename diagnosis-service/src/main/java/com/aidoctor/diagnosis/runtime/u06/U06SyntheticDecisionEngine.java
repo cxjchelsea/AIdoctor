@@ -104,7 +104,8 @@ public final class U06SyntheticDecisionEngine {
             Map<String,Object> q=(Map<String,Object>)raw;
             if(!semanticKey.equals(String.valueOf(q.get("question_semantic_key"))))continue;
             String status=String.valueOf(q.get("status"));
-            if("SELECTED".equals(status)||"DELIVERED_TO_USER".equals(status)||"ANSWER_RECEIVED".equals(status))
+            if("SELECTED".equals(status)||"DELIVERED_TO_USER".equals(status)
+                    ||"ANSWER_RECEIVED".equals(status)||"USER_UNKNOWN".equals(status))
                 return true;
         }
         return false;

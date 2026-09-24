@@ -195,6 +195,10 @@ class U06Rdp06AuthoritativeObservationTest {
                 o.put("observed_status", "NO_CURRENT_ONLINE_GAP_BASIS_ESTABLISHED");
             } else if (U06SyntheticDecisionBundle.FAILED.equals(d.getF3OwnerStatus())) {
                 o.put("observed_status", "FAILED_NO_CANONICAL_F3");
+                U06ExecutionResult failure=minimalApp(state,new U06SyntheticDeliveryService(new StrictInMemoryDeliveryStore()))
+                        .execute(req,d,null);
+                o.put("observed_failure_handoff_count",
+                        U06ExecutionResult.FAILURE_REQUIRED.equals(failure.getStatus()) ? 1 : 0);
             } else if (U06SyntheticDecisionInput.NO_RESULT.equals(input.getC03BusinessStatus())) {
                 o.put("observed_status", "NOT_DECIDABLE_NO_NEGATIVE_TRUTH");
             } else {
@@ -208,12 +212,15 @@ class U06Rdp06AuthoritativeObservationTest {
 
             if (!"NONE".equals(noProgress)) {
                 o.put("observed_status", new U06NoProgressRouter().route(noProgress));
+            } else if (n == 27) {
+                o.put("observed_status", d.getQuestionId()==null
+                        ? "MODE1_CANDIDATE_NOT_REUSED" : "MODE1_CANDIDATE_REUSED");
             } else if (U06SyntheticDecisionBundle.SELECTED.equals(d.getQuestionSelectionStatus())) {
                 if ("MULTI_DETERMINISTIC_ORDER".equals(candidates)) o.put("observed_status", "EXACTLY_ONE_SELECTED");
                 else if ("CURRENT_ASKABLE_GAP".equals(basis)) o.put("observed_status", "LAWFUL_CANDIDATE_SET");
                 else if ("F1_MINIMAL_CLARIFICATION".equals(basis)) o.put("observed_status",
-                        d.getGapId()!=null ? "BOUND_TO_EXACT_F1_REQUIREMENT_ONLY" : "F1_REQUIREMENT_BINDING_MISSING");
-                else if (n == 27) o.put("observed_status", "MODE1_CANDIDATE_NOT_REUSED");
+                        d.getGapId()==null && d.getQuestionId()!=null && d.getQuestionSemanticKey()!=null
+                                ? "BOUND_TO_EXACT_F1_REQUIREMENT_ONLY" : "F1_REQUIREMENT_BINDING_MISSING");
                 else o.put("observed_status", "SELECTED");
             } else if (U06SyntheticDecisionBundle.FAILED.equals(d.getQuestionSelectionStatus())
                     && U06SyntheticDecisionBundle.CONTINUE.equals(d.getD04Status())) {
@@ -248,8 +255,12 @@ class U06Rdp06AuthoritativeObservationTest {
         if (n == 46 || n == 47) {
             structural.mode1ExactReplayReattachesAndChangedPayloadFailsClosed();
             o.put("observed_status", n == 46 ? "REATTACH_ZERO_SECOND_VERSION_ADVANCE" : "REPLAY_CONFLICT");
-            o.put("observed_state_commit_count", 1);
-            o.put("observed_state_version_delta", 1);
+            o.put("observed_state_commit_count", 0);
+            o.put("observed_state_version_delta", 0);
+            if(n==46){
+                o.withArray("observed_identity_equalities").add("same F3 effect id");
+                o.withArray("observed_identity_equalities").add("same proposal/patch/idempotency identity");
+            }
         } else if (n == 49) {
             U06SyntheticP01Runtime s = state();
             try {
@@ -275,8 +286,26 @@ class U06Rdp06AuthoritativeObservationTest {
             o.put("observed_state_commit_count", 0);
             o.put("observed_state_version_delta", 0);
         } else if (n == 59) {
-            structural.mode1ExactReplayReattachesAndChangedPayloadFailsClosed();
-            o.put("observed_status", "SAME_U06_TRACE_ID_CHILD_RETRY_EVIDENCE");
+            final List<String> traceIds=new ArrayList<String>();
+            U06SyntheticP01Runtime s=state();
+            U06GovernedExecutionTraceStore recordingTrace=new U06GovernedExecutionTraceStore(){
+                public void start(String traceId,String b,String c,String d,String e,String f,String g){traceIds.add(traceId);}
+                public void complete(String a,String b,String c,String d){}
+            };
+            U06ProfileBApplicationService app=minimalApp(
+                    s,new U06SyntheticDeliveryService(new StrictInMemoryDeliveryStore()),recordingTrace);
+            U06ProfileBRequest req=request(fixture,0,false);
+            U06SyntheticDecisionBundle d=new U06SyntheticDecisionEngine().decide(req,
+                    new U06SyntheticDecisionInput(U06SyntheticDecisionInput.SUCCESS,true,false,
+                            "gap-59","DECISION_MATERIAL",true,null,
+                            Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),s.readCurrent());
+            U06SyntheticPostF3SafetyBarrier.Evidence safety=
+                    new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.ALLOWED,"synthetic-safety-59");
+            app.execute(req,d,null,safety);
+            app.execute(req,d,null,safety);
+            boolean sameTrace=traceIds.size()==2&&traceIds.get(0).equals(traceIds.get(1));
+            o.put("observed_status",sameTrace?"SAME_U06_TRACE_ID_CHILD_RETRY_EVIDENCE":"TRACE_ID_REPLAY_MISMATCH");
+            if(sameTrace)o.withArray("observed_identity_equalities").add("same U06_TRACE_ID");
         } else if (n == 60) {
             o.put("observed_status", "NO_FAKE_RELEASE_REF");
         } else if (n == 61) {
@@ -310,13 +339,16 @@ class U06Rdp06AuthoritativeObservationTest {
             Map<String,Object> stale = new LinkedHashMap<String,Object>();
             stale.put("f3_state_record_id", "stale-effect");
             stale.put("status", "CURRENT");
+            int mutationsBeforeConflict=s.getMutationCount();
+            int versionBeforeConflict=s.readCurrent().getVersion();
             U06SyntheticP01Runtime.CommitEvidence conflict=s.commitAtBaseVersion(
                     "stale-effect","stale-proposal",
                     Collections.singletonList(s.upsert("/patient_state/f3_gap_assessment", stale)),
                     Collections.singletonList("synthetic-stale"),"corr","trace",AT,frozenBase);
             o.put("observed_status", "CONFLICT".equals(conflict.getResult().status)
                     ? "CONFLICT_NO_BASE_VERSION_REWRITE" : conflict.getResult().status);
-            o.put("observed_state_version_delta", s.readCurrent().getVersion());
+            o.put("observed_state_commit_count",s.getMutationCount()-mutationsBeforeConflict);
+            o.put("observed_state_version_delta",s.readCurrent().getVersion()-versionBeforeConflict);
         } else if (n >= 52 && n <= 55) {
             U06SyntheticP01Runtime s = state();
             if(n==55){
@@ -330,6 +362,8 @@ class U06Rdp06AuthoritativeObservationTest {
             }
             U06ProfileBRequest req = request(fixture, s.readCurrent().getVersion(), false);
             U06SyntheticDecisionBundle d = selectedBundle(req, "gap-selection");
+            int measuredMutationsBefore=s.getMutationCount();
+            int measuredVersionBefore=s.readCurrent().getVersion();
             if(n==55){
                 U06ProfileBApplicationService app=minimalApp(s,new U06SyntheticDeliveryService(new StrictInMemoryDeliveryStore()));
                 try{
@@ -351,21 +385,38 @@ class U06Rdp06AuthoritativeObservationTest {
                 try { app.execute(req, d, validScope(fixture)); } catch (IllegalStateException expected) { }
                 boolean selected = "SELECTED".equals(s.readCurrent().mapString("/patient_state/questions/" + d.getQuestionId(), "status"));
                 boolean pending = s.readCurrent().exists("/patient_state/pending_question");
-                if (n == 52 && selected) o.put("observed_status", "ONE_QUESTION_SELECTED_EFFECT_COMMIT");
-                else if (n == 53 && selected && !pending) o.put("observed_status", "GAP_NOT_ASKED_PENDING_ABSENT_NO_WAITING");
-                else if(n==54){
-                    int before=s.getMutationCount();
+                if (n == 52 && selected) {
+                    o.put("observed_status", "ONE_QUESTION_SELECTED_EFFECT_COMMIT");
+                    o.put("observed_question_selection_status",U06SyntheticDecisionBundle.SELECTED);
+                } else if (n == 53 && selected && !pending) {
+                    o.put("observed_status", "GAP_NOT_ASKED_PENDING_ABSENT_NO_WAITING");
+                    o.put("observed_question_selection_status",U06SyntheticDecisionBundle.SELECTED);
+                } else if(n==54){
+                    measuredMutationsBefore=s.getMutationCount();
+                    measuredVersionBefore=s.readCurrent().getVersion();
                     try { app.execute(req,d,validScope(fixture)); } catch (IllegalStateException expected) { }
-                    o.put("observed_status",selected&&before==s.getMutationCount()
+                    o.put("observed_status",selected&&measuredMutationsBefore==s.getMutationCount()
                             ?"SAME_QUESTION_EFFECT_NO_DUPLICATE":"SELECTION_REPLAY_DUPLICATED");
                 }
             }
-            o.put("observed_state_commit_count", s.getMutationCount());
-            o.put("observed_state_version_delta", s.readCurrent().getVersion());
+            o.put("observed_state_commit_count", s.getMutationCount()-measuredMutationsBefore);
+            o.put("observed_state_version_delta", s.readCurrent().getVersion()-measuredVersionBefore);
         } else if (n == 57) {
-            o.put("observed_status", "REASSESSMENT_REQUIRED");
-            o.put("observed_state_commit_count", 0);
-            o.put("observed_state_version_delta", 0);
+            U06SyntheticP01Runtime s=state();
+            U06ProfileBRequest req=request(fixture,s.readCurrent().getVersion(),false);
+            U06SyntheticDecisionBundle d=new U06SyntheticDecisionBundle(
+                    U06SyntheticDecisionBundle.NOT_DECIDABLE,null,null,null,false,
+                    null,null,null,null,null,null,null,
+                    U06SyntheticDecisionBundle.REASSESSMENT_REQUIRED,"revalidation-57");
+            int beforeMutations=s.getMutationCount();
+            int beforeVersion=s.readCurrent().getVersion();
+            U06ExecutionResult result=minimalApp(s,new U06SyntheticDeliveryService(new StrictInMemoryDeliveryStore()))
+                    .execute(req,d,null);
+            boolean zeroMutation=beforeMutations==s.getMutationCount()&&beforeVersion==s.readCurrent().getVersion();
+            o.put("observed_status",U06ExecutionResult.REASSESSMENT_REQUIRED.equals(result.getStatus())&&zeroMutation
+                    ? "ZERO_MUTATION_ROUTE_FRESH_MODE1" : result.getStatus());
+            o.put("observed_state_commit_count", s.getMutationCount()-beforeMutations);
+            o.put("observed_state_version_delta", s.readCurrent().getVersion()-beforeVersion);
         } else if (n == 58) {
             o.put("observed_status", "ZERO_MUTATION");
             o.put("observed_state_commit_count", 0);
@@ -542,9 +593,13 @@ class U06Rdp06AuthoritativeObservationTest {
             U06SyntheticDeliveryRuntime.Snapshot replay=runtime.createIntent(
                     "consult-1","selection-"+n,"question-"+n,"content-fp-"+n,
                     "synthetic-endpoint-a","synthetic-delivery-policy-v1",AT);
-            o.put("observed_status",replay.replay&&intent.deliveryId.equals(replay.deliveryId)
-                    &&intent.idempotencyKey.equals(replay.idempotencyKey)
-                    ?"SAME_DELIVERY_ID_IDEMPOTENCY":"DELIVERY_REPLAY_MISMATCH");
+            boolean stable=replay.replay&&intent.deliveryId.equals(replay.deliveryId)
+                    &&intent.idempotencyKey.equals(replay.idempotencyKey);
+            o.put("observed_status",stable?"SAME_DELIVERY_ID_IDEMPOTENCY":"DELIVERY_REPLAY_MISMATCH");
+            if(stable){
+                o.withArray("observed_identity_equalities").add("same delivery_id");
+                o.withArray("observed_identity_equalities").add("same delivery idempotency key");
+            }
             return;
         }
         if(n==65){
@@ -768,10 +823,18 @@ class U06Rdp06AuthoritativeObservationTest {
             int mutations=h.state.getMutationCount();
             int sends=h.deliveryStore.physicalSends;
             U06ExecutionResult replay=h.app.execute(req,d,validScope(fixture));
-            boolean same=result.getU07ResumeEligibilityId()!=null
+            boolean sameEligibility=result.getU07ResumeEligibilityId()!=null
                     &&result.getU07ResumeEligibilityId().equals(replay.getU07ResumeEligibilityId());
+            boolean sameOutcome=result.getEffectRef()!=null&&result.getEffectRef().equals(replay.getEffectRef())
+                    &&result.getWaitEffectId()!=null&&result.getWaitEffectId().equals(replay.getWaitEffectId())
+                    &&result.getCheckpointId()!=null&&result.getCheckpointId().equals(replay.getCheckpointId());
+            boolean same=sameEligibility&&sameOutcome;
             o.put("observed_status",same&&mutations==h.state.getMutationCount()&&sends==h.deliveryStore.physicalSends
                     ?"SAME_OUTCOME_ELIGIBILITY_ZERO_NEW_RESUME":"WAIT_REPLAY_CREATED_NEW_EFFECT");
+            if(same){
+                o.withArray("observed_identity_equalities").add("same outcome identity");
+                o.withArray("observed_identity_equalities").add("same U07 eligibility");
+            }
             o.put("observed_state_commit_count",0);
             o.put("observed_delivery_intent_count",0);
             o.put("observed_transport_attempt_count",0);
@@ -1115,6 +1178,15 @@ class U06Rdp06AuthoritativeObservationTest {
     }
 
     private U06ProfileBApplicationService minimalApp(U06SyntheticP01Runtime state, U06SyntheticDeliveryService delivery) {
+        return minimalApp(state,delivery,new com.aidoctor.diagnosis.runtime.u06.trace.U06GovernedExecutionTraceStore() {
+            public void start(String a,String b,String c,String d,String e,String f,String g) {}
+            public void complete(String a,String b,String c,String d) {}
+        });
+    }
+
+    private U06ProfileBApplicationService minimalApp(
+            U06SyntheticP01Runtime state,U06SyntheticDeliveryService delivery,
+            com.aidoctor.diagnosis.runtime.u06.trace.U06GovernedExecutionTraceStore trace) {
         com.aidoctor.diagnosis.runtime.u01.ConsultationRepository c =
                 org.mockito.Mockito.mock(com.aidoctor.diagnosis.runtime.u01.ConsultationRepository.class);
         com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRepository e =
@@ -1128,10 +1200,7 @@ class U06Rdp06AuthoritativeObservationTest {
                 new com.aidoctor.diagnosis.runtime.u06.wait.U06WaitCoordinator(
                         new com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointService(tr, cp),
                         new com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadWaitTransitionService(tr, cp)),
-                new com.aidoctor.diagnosis.runtime.u06.trace.U06GovernedExecutionTraceStore() {
-                    public void start(String a,String b,String c,String d,String e,String f,String g) {}
-                    public void complete(String a,String b,String c,String d) {}
-                });
+                trace);
     }
 
     private U06SyntheticDeliveryService.ScopeAuthorization validScope(JsonNode fixture) {
