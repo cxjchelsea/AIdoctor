@@ -5,6 +5,7 @@ import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryService;
 import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryRuntime;
 import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01Runtime;
 import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01TestFactory;
+import com.aidoctor.diagnosis.runtime.u06.trace.U06GovernedExecutionTraceStore;
 import com.aidoctor.diagnosis.runtime.u01.ConsultationRecord;
 import com.aidoctor.diagnosis.runtime.u01.ConsultationRepository;
 import com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRecord;
