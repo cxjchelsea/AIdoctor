@@ -450,6 +450,9 @@ def main():
             status="PASS", evidence_type="VERIFIER_SELF_TEST",
             evidence_refs=["expectation-gap-detector"]
         )
+    else:
+        evidence["U06-HG-001"].update(status="FAIL", evidence_type="VERIFIER_SELF_TEST",
+                                      evidence_refs=["expectation-gap-detector"])
 
     def external_detector(e):
         return int(e.get("external_call_spy_observed_count", 0)) > 0
@@ -458,6 +461,9 @@ def main():
             status="PASS", evidence_type="VERIFIER_SELF_TEST",
             evidence_refs=["external-side-effect-detector"]
         )
+    else:
+        evidence["U06-HG-002"].update(status="FAIL", evidence_type="VERIFIER_SELF_TEST",
+                                      evidence_refs=["external-side-effect-detector"])
 
     def scope_detector(profile):
         return profile != "SYNTHETIC_STRUCTURAL_NONPROD"
@@ -466,6 +472,9 @@ def main():
             status="PASS", evidence_type="VERIFIER_SELF_TEST",
             evidence_refs=["synthetic-scope-escape-detector"]
         )
+    else:
+        evidence["U06-HG-003"].update(status="FAIL", evidence_type="VERIFIER_SELF_TEST",
+                                      evidence_refs=["synthetic-scope-escape-detector"])
 
     # 5) Verification gates.
     boundary_violations = hard_boundary(env)
@@ -481,11 +490,23 @@ def main():
             status="PASS", evidence_type="AUTHORITY_BINDING",
             evidence_refs=["u06-contract-manifest.json", "oracle/fixture review gates"]
         )
+    else:
+        evidence["U06-VG-001"].update(
+            status="FAIL", evidence_type="AUTHORITY_BINDING",
+            evidence_refs=["u06-contract-manifest.json", "oracle/fixture review gates"],
+            mismatches=[{"field": "authority_binding", "expected": "PASS", "actual": "FAIL"}],
+        )
 
     if int(env.get("real_phi_count", 0)) == 0 and int(env.get("real_recipient_endpoint_count", 0)) == 0:
         evidence["U06-VG-005"].update(
             status="PASS", evidence_type="ENVIRONMENT",
             evidence_refs=[str(args.environment_evidence)]
+        )
+    else:
+        evidence["U06-VG-005"].update(
+            status="FAIL", evidence_type="ENVIRONMENT",
+            evidence_refs=[str(args.environment_evidence)],
+            mismatches=[{"field": "synthetic_data_boundary", "expected": "zero real PHI/recipients", "actual": "violation"}],
         )
 
     if isolation_ok and spy_ok and not boundary_violations:
@@ -493,25 +514,54 @@ def main():
             status="PASS", evidence_type="ENVIRONMENT_AND_EXTERNAL_CALL_SPY",
             evidence_refs=[str(args.environment_evidence)]
         )
+    else:
+        evidence["U06-VG-006"].update(
+            status="FAIL", evidence_type="ENVIRONMENT_AND_EXTERNAL_CALL_SPY",
+            evidence_refs=[str(args.environment_evidence)],
+            mismatches=[{
+                "field": "isolated_external_call_boundary",
+                "expected": {"isolation": True, "spy": True, "violations": []},
+                "actual": {"isolation": isolation_ok, "spy": spy_ok, "violations": boundary_violations},
+            }],
+        )
 
     if auth.get("profile_a_enabled") is False and auth.get("real_c03_d04_allowed") is False:
         evidence["U06-VG-007"].update(
             status="PASS", evidence_type="AUTH_PROFILE",
             evidence_refs=["u06-auth-profile.json"]
         )
+    else:
+        evidence["U06-VG-007"].update(
+            status="FAIL", evidence_type="AUTH_PROFILE",
+            evidence_refs=["u06-auth-profile.json"],
+            mismatches=[{"field": "profile_a_or_real_dependency_enabled", "expected": False, "actual": True}],
+        )
 
     app_source = root / "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06ProfileBApplicationService.java"
-    if static_contains(app_source, "state.commit", "trace.start", "trace.complete") and static_not_contains(
-            app_source, "ClinicalCdpStateRepositoryAdapter", "CDPManager.updateCDP"):
+    runtime_boundary_ok = static_contains(app_source, "state.commit", "trace.start", "trace.complete") and static_not_contains(
+            app_source, "ClinicalCdpStateRepositoryAdapter", "CDPManager.updateCDP")
+    if runtime_boundary_ok:
         evidence["U06-VG-008"].update(
             status="PASS", evidence_type="STATIC_RUNTIME_BOUNDARY",
             evidence_refs=[str(app_source)]
+        )
+    else:
+        evidence["U06-VG-008"].update(
+            status="FAIL", evidence_type="STATIC_RUNTIME_BOUNDARY",
+            evidence_refs=[str(app_source)],
+            mismatches=[{"field": "runtime_boundary", "expected": "PASS", "actual": "FAIL"}],
         )
 
     if auth.get("live_u07") is False:
         evidence["U06-VG-009"].update(
             status="PASS", evidence_type="AUTH_PROFILE",
             evidence_refs=["u06-auth-profile.json"]
+        )
+    else:
+        evidence["U06-VG-009"].update(
+            status="FAIL", evidence_type="AUTH_PROFILE",
+            evidence_refs=["u06-auth-profile.json"],
+            mismatches=[{"field": "live_u07", "expected": False, "actual": True}],
         )
 
     regression_failures = int(env.get("regression_failures", 0))
