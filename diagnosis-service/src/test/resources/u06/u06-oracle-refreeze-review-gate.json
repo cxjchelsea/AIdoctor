@@ -5,7 +5,7 @@
   "prior_reviewed_oracle_digest": "ac89a1e902bd82c84e39748d76de1807db434aff3bb6e21d44c03aa564a174d7",
   "reviewed_oracle_digest": "9a7ae0b5286bd033e74e28167af523a53d57fccd7694d16e7c76f3da281f234f",
   "reviewed_contract_manifest_digest": "038c07422218f6ab12d312a5b27560e069c32bf1c3d87067ace9a3a95b0a2d22",
-  "reviewed_contract_manifest_blob_sha": "1b53f4413278719efd9e2345fad7e27ec231f704",
+  "reviewed_contract_manifest_blob_sha": "fec6755eab3709472b571f9317c75c8b50b6efd4",
   "reviewed_freeze_head": "66fa3c078dce5e304e2ada9d6c0df0ff9fbde661",
   "independent_review_record_sha": "0a6cbc7d7c6f587d41da64fad969e421fa574e78",
   "independent_review_pr": 247,
@@ -14,5 +14,8 @@
   "semantic_equivalence": "BYTE_EQUAL_AFTER_AUTHORITY_CORE_PROVENANCE_NORMALIZATION",
   "scope": "PROVENANCE_ONLY_NO_ORACLE_CASE_SEMANTIC_CHANGE",
   "verdict": "PASS",
-  "reviewed_at": "2026-09-24"
+  "reviewed_at": "2026-09-24",
+  "contract_manifest_rebound_by_review_id": "U06_AUTH_PROFILE_EQUIVALENCE_REVIEW_20260924_01",
+  "contract_manifest_rebound_review_record_sha": "fc34e793feef838fa4fbb2d3e61b542716979045",
+  "contract_manifest_rebound_scope": "AUTH_PROFILE_DIGEST_ONLY_AUTHORITY_CORE_AND_ORACLE_SEMANTICS_UNCHANGED"
 }
