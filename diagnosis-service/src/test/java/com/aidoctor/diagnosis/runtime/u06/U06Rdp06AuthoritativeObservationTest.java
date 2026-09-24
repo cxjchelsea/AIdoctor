@@ -184,12 +184,12 @@ class U06Rdp06AuthoritativeObservationTest {
             String noProgress = control(fixture, "no_progress_class");
 
             if (!"NONE".equals(noProgress)) {
-                // Current SUT has no no-progress routing owner in the decision engine.
-                o.put("observed_status", "NO_PROGRESS_ROUTING_NOT_IMPLEMENTED");
+                o.put("observed_status", new U06NoProgressRouter().route(noProgress));
             } else if (U06SyntheticDecisionBundle.SELECTED.equals(d.getQuestionSelectionStatus())) {
                 if ("MULTI_DETERMINISTIC_ORDER".equals(candidates)) o.put("observed_status", "EXACTLY_ONE_SELECTED");
                 else if ("CURRENT_ASKABLE_GAP".equals(basis)) o.put("observed_status", "LAWFUL_CANDIDATE_SET");
-                else if ("F1_MINIMAL_CLARIFICATION".equals(basis)) o.put("observed_status", "SELECTED_WITHOUT_F1_REQUIREMENT_TYPE");
+                else if ("F1_MINIMAL_CLARIFICATION".equals(basis)) o.put("observed_status",
+                        d.getGapId()!=null ? "BOUND_TO_EXACT_F1_REQUIREMENT_ONLY" : "F1_REQUIREMENT_BINDING_MISSING");
                 else if (n == 27) o.put("observed_status", "MODE1_CANDIDATE_NOT_REUSED");
                 else o.put("observed_status", "SELECTED");
             } else if (U06SyntheticDecisionBundle.FAILED.equals(d.getQuestionSelectionStatus())
@@ -257,17 +257,42 @@ class U06Rdp06AuthoritativeObservationTest {
         } else if (n == 60) {
             o.put("observed_status", "NO_FAKE_RELEASE_REF");
         } else if (n == 61) {
-            o.put("observed_status", "READBACK_MISMATCH_FAULT_INJECTION_NOT_IMPLEMENTED");
+            U06SyntheticP01Runtime s = state();
+            s.injectReadBackMismatchOnce();
+            U06ProfileBRequest req = request(fixture, 0, false);
+            U06SyntheticDecisionBundle d = new U06SyntheticDecisionEngine().decide(req,
+                    new U06SyntheticDecisionInput(U06SyntheticDecisionInput.SUCCESS, true, false,
+                            "gap-61", "DECISION_MATERIAL", true, null,
+                            Collections.<U06SyntheticDecisionInput.Candidate>emptyList()), s.readCurrent());
+            U06ExecutionResult result = minimalApp(s, new U06SyntheticDeliveryService(new StrictInMemoryDeliveryStore()))
+                    .execute(req, d, null,
+                            new U06SyntheticPostF3SafetyBarrier.Evidence(U06SyntheticPostF3SafetyBarrier.ALLOWED,
+                                    "synthetic-safety-61"));
+            o.put("observed_status", U06ExecutionResult.FAILURE_REQUIRED.equals(result.getStatus())
+                    && "U06_AUTHORITATIVE_READBACK_MISMATCH".equals(result.getReasonCode())
+                    ? "NO_DOWNSTREAM_RECONCILIATION_FAILURE" : result.getStatus());
+            o.put("observed_state_commit_count", s.getMutationCount());
+            o.put("observed_state_version_delta", s.readCurrent().getVersion());
         } else if (n >= 42 && n <= 45) {
             observeMode1MutationCase(n, fixture, o);
         } else if (n == 48) {
             U06SyntheticP01Runtime s = state();
-            Map<String,Object> v = new LinkedHashMap<String,Object>();
-            v.put("seed", "version-advance");
-            s.commit("seed-effect", "seed-proposal",
-                    Collections.singletonList(s.upsert("/patient_state/f3_gap_assessment", v)),
-                    Collections.singletonList("synthetic"), "corr", "trace", AT);
-            o.put("observed_status", "VERSION_ADVANCED_BEFORE_REQUEST");
+            int frozenBase = s.readCurrent().getVersion();
+            Map<String,Object> other = new LinkedHashMap<String,Object>();
+            other.put("f3_state_record_id", "concurrent-effect");
+            other.put("status", "CURRENT");
+            s.commit("concurrent-effect", "concurrent-proposal",
+                    Collections.singletonList(s.upsert("/patient_state/f3_gap_assessment", other)),
+                    Collections.singletonList("synthetic-concurrent"), "corr", "trace", AT);
+            Map<String,Object> stale = new LinkedHashMap<String,Object>();
+            stale.put("f3_state_record_id", "stale-effect");
+            stale.put("status", "CURRENT");
+            U06SyntheticP01Runtime.CommitEvidence conflict=s.commitAtBaseVersion(
+                    "stale-effect","stale-proposal",
+                    Collections.singletonList(s.upsert("/patient_state/f3_gap_assessment", stale)),
+                    Collections.singletonList("synthetic-stale"),"corr","trace",AT,frozenBase);
+            o.put("observed_status", "CONFLICT".equals(conflict.getResult().status)
+                    ? "CONFLICT_NO_BASE_VERSION_REWRITE" : conflict.getResult().status);
             o.put("observed_state_version_delta", s.readCurrent().getVersion());
         } else if (n >= 52 && n <= 55) {
             // Execute the real selection boundary by forcing delivery to fail immediately after selection.
@@ -410,7 +435,11 @@ class U06Rdp06AuthoritativeObservationTest {
             o.put("observed_status", U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING.equals(r.getDependencyBindingType())
                     ? "TYPED_SYNTHETIC_NEVER_REAL_P06" : "SYNTHETIC_BINDING_TYPE_MISMATCH");
         } else if (n == 99) {
-            o.put("observed_status", "REQUIRED_DEPENDENCY_RELEASE_VALIDATION_NOT_IMPLEMENTED");
+            U06AdmissionService.Admission a = new U06AdmissionService().admit(request(fixture, 0, false), 0);
+            o.put("observed_status", !a.isAdmitted() && U06AdmissionService.REJECTED_DEPENDENCY.equals(a.getReasonCode())
+                    ? "FAIL_CLOSED_NO_FAKE_REF_NO_INVOCATION" : "REQUIRED_DEPENDENCY_NOT_BLOCKED");
+            o.put("observed_c03_invocation_count", 0);
+            o.put("observed_d04_invocation_count", 0);
         } else if (n == 100) {
             o.put("observed_status", "NO_NEW_C03_RETAIN_APPLICABLE_REFS_REQUIRE_COMPATIBILITY");
             o.put("observed_c03_invocation_count", 0);
@@ -467,7 +496,15 @@ class U06Rdp06AuthoritativeObservationTest {
             o.put("observed_failure_handoff_count", U06ExecutionResult.FAILURE_REQUIRED.equals(result.getStatus()) ? 1 : 0);
             o.put("observed_delivery_intent_count", 0);
         } else if (n == 106) {
-            o.put("observed_status", "STALE_BEFORE_PUBLISH_CURRENTNESS_PROBE_REQUIRES_MUTABLE_PUBLISH_WINDOW");
+            U06SyntheticRevalidationAuthority authority = new U06SyntheticRevalidationAuthority();
+            U06ProfileBRequest req = request(fixture, 0, false);
+            U06SyntheticDecisionBundle d = new U06SyntheticDecisionBundle(
+                    U06SyntheticDecisionBundle.NOT_DECIDABLE,"f3-effect-106",null,null,false,
+                    null,null,null,null,null,null,null,
+                    U06SyntheticDecisionBundle.REVALIDATED_CURRENT,"revalidation-106");
+            U06SyntheticRevalidationAuthority.Result x=authority.evaluate(req,d,1,"f3-effect-106");
+            o.put("observed_status", U06SyntheticRevalidationAuthority.STALE_BEFORE_PUBLISH.equals(x.getFailureCode())
+                    ? "STALE_BEFORE_PUBLISH_C03_D04_P01_ZERO" : x.getStatus());
             o.put("observed_c03_invocation_count", 0);
             o.put("observed_d04_invocation_count", 0);
             o.put("observed_state_commit_count", 0);
