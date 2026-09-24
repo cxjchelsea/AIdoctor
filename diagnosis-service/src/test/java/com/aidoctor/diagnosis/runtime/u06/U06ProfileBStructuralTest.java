@@ -6,6 +6,7 @@ import com.aidoctor.diagnosis.runtime.u01.ConsultationRepository;
 import com.aidoctor.diagnosis.runtime.u06.delivery.*;
 import com.aidoctor.diagnosis.runtime.u06.state.U06StateValues;
 import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01Runtime;
+import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01TestFactory;
 import com.aidoctor.diagnosis.runtime.u06.trace.U06GovernedExecutionTraceStore;
 import com.aidoctor.diagnosis.runtime.u06.wait.*;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void p01UsesSameSyntheticStoreAndExactReplayDoesNotMutateTwice(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         Map<String,Object> value=new LinkedHashMap<String,Object>();value.put("f3_state_record_id","effect-1");value.put("status","CURRENT");
         List<U06SyntheticP01Runtime.OperationIntent> ops=Collections.singletonList(state.upsert("/patient_state/f3_gap_assessment",value));
         U06SyntheticP01Runtime.CommitEvidence first=state.commit("effect-1","proposal-1",ops,Collections.singletonList("evidence-1"),"corr-1","trace-1",AT);
@@ -45,7 +46,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void mode1ThenMode2EstablishesSyntheticWaitWithoutExternalIo(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         InMemoryDeliveryStore deliveryStore=new InMemoryDeliveryStore();
         U06SyntheticDeliveryService delivery=new U06SyntheticDeliveryService(deliveryStore);
 
@@ -145,7 +146,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void mode1ExactReplayReattachesAndChangedPayloadFailsClosed(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06ProfileBApplicationService app=minimalApp(state);
         U06ProfileBRequest req=request(
                 U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null);
@@ -181,7 +182,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void invalidSyntheticDeliveryEnvironmentFailsClosedBeforeMutation(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         InMemoryDeliveryStore deliveryStore=new InMemoryDeliveryStore();
         U06ProfileBApplicationService app=minimalApp(state,deliveryStore);
         U06ProfileBRequest req=request(
@@ -209,7 +210,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void runtimeExceptionTerminalizesParentTraceAsFailed(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06DeliveryStore exploding=new U06DeliveryStore(){
             public Snapshot reconcileConfirmed(Command command){throw new IllegalStateException("synthetic-delivery-explosion");}
         };
@@ -248,7 +249,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void mode1BlockedSafetyStopsAfterCanonicalCommitWithoutQuestionOrWait(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06ProfileBApplicationService app=minimalApp(state);
         U06ProfileBRequest req=request(
                 U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,U06ProfileBRequest.A1_PRE_READINESS_ROUTING,0,null,null);
@@ -271,7 +272,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void selectedMode2MissingRuntimeInputsFailsBeforeAnyMutationOrDelivery(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         InMemoryDeliveryStore deliveryStore=new InMemoryDeliveryStore();
         U06ProfileBApplicationService app=minimalApp(state,deliveryStore);
         U06ProfileBRequest req=request(
@@ -297,7 +298,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void mode3SameIdentityChangedEvidenceConflictsAndNeverMutates(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06ProfileBApplicationService app=minimalApp(state);
         String currentEffect=establishF3Current(app,state);
 
@@ -324,7 +325,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void mode3NeverMutatesClinicalState(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06ProfileBApplicationService app=minimalApp(state);
         String currentEffect=establishF3Current(app,state);
         int mutationsBefore=state.getMutationCount();
@@ -344,7 +345,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void syntheticDecisionEngineMapsNoResultAndTieFailClosed(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06SyntheticDecisionEngine engine=new U06SyntheticDecisionEngine();
 
         U06SyntheticDecisionBundle noResult=engine.decide(
@@ -371,7 +372,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void syntheticDecisionEngineDoesNotInventD04ForC03Failure(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         U06SyntheticDecisionBundle failed=new U06SyntheticDecisionEngine().decide(
                 request(U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,U06ProfileBRequest.U05_QUESTION_ROUTING,0,"thread-1","run-1"),
                 new U06SyntheticDecisionInput(
@@ -385,7 +386,7 @@ class U06ProfileBStructuralTest {
 
     @Test
     void syntheticDecisionEngineSuppressesCurrentSemanticDuplicate(){
-        U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
+        U06SyntheticP01Runtime state=U06SyntheticP01TestFactory.create("synthetic-store-1","consult-1","cdp-1",CLOCK);
         Map<String,Object> existing=new LinkedHashMap<String,Object>();
         existing.put("question_id","q-old");
         existing.put("question_semantic_key","semantic-dup");
