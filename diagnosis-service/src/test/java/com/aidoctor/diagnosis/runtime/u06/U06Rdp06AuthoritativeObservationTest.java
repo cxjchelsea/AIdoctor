@@ -4,6 +4,18 @@ import com.aidoctor.diagnosis.runtime.u06.delivery.U06DeliveryStore;
 import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryService;
 import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryRuntime;
 import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01Runtime;
+import com.aidoctor.diagnosis.runtime.u01.ConsultationRecord;
+import com.aidoctor.diagnosis.runtime.u01.ConsultationRepository;
+import com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRecord;
+import com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRepository;
+import com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitTransitionService;
+import com.aidoctor.diagnosis.runtime.u06.wait.U06WaitCoordinator;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRecord;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRepository;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRecord;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRepository;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointService;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadWaitTransitionService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -21,6 +33,8 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 /**
  * RDP-06 authoritative observation harness.
@@ -964,6 +978,71 @@ class U06Rdp06AuthoritativeObservationTest {
         if (in == null) throw new IllegalStateException("missing resource " + path);
         try { return JSON.readTree(in); }
         finally { in.close(); }
+    }
+
+    private static final class WaitHarness {
+        final U06SyntheticP01Runtime state=U06SyntheticP01Runtime.create("synthetic-store-u06-v1","consult-1","cdp-1",CLOCK);
+        final StrictInMemoryDeliveryStore deliveryStore=new StrictInMemoryDeliveryStore();
+        final ConsultationRepository consultations=mock(ConsultationRepository.class);
+        final ConsultationWaitEffectRepository waitEffects=mock(ConsultationWaitEffectRepository.class);
+        final RuntimeThreadStateRepository threads=mock(RuntimeThreadStateRepository.class);
+        final RuntimeWaitCheckpointRepository checkpoints=mock(RuntimeWaitCheckpointRepository.class);
+        final AtomicReference<String> lifecycle=new AtomicReference<String>(ConsultationRecord.ACTIVE);
+        final AtomicReference<String> waitEffect=new AtomicReference<String>();
+        final AtomicReference<Long> consultationVersion=new AtomicReference<Long>(Long.valueOf(0));
+        final AtomicReference<ConsultationWaitEffectRecord> waitRecord=new AtomicReference<ConsultationWaitEffectRecord>();
+        final AtomicReference<RuntimeThreadStateRecord> threadRecord=new AtomicReference<RuntimeThreadStateRecord>();
+        final AtomicReference<RuntimeWaitCheckpointRecord> checkpointRecord=new AtomicReference<RuntimeWaitCheckpointRecord>();
+        final ConsultationRecord consultation=mock(ConsultationRecord.class);
+        final AtomicInteger threadLockCalls=new AtomicInteger();
+        boolean failConsultation;
+        boolean failSecondThreadLock;
+        final U06ProfileBApplicationService app;
+
+        WaitHarness(boolean failConsultation,boolean failSecondThreadLock){
+            this.failConsultation=failConsultation;this.failSecondThreadLock=failSecondThreadLock;
+            when(consultation.getLifecycleStatus()).thenAnswer(i->lifecycle.get());
+            when(consultation.getCurrentWaitEffectId()).thenAnswer(i->waitEffect.get());
+            when(consultation.getRowVersion()).thenAnswer(i->consultationVersion.get());
+            doAnswer(i->{lifecycle.set(ConsultationRecord.WAITING_USER);waitEffect.set((String)i.getArgument(0));consultationVersion.set(Long.valueOf(1));return null;})
+                    .when(consultation).enterWaitingUser(anyString());
+            when(consultations.findByIdForUpdate("consult-1")).thenAnswer(i->{
+                if(this.failConsultation)throw new IllegalStateException("synthetic-consultation-transient");
+                return Optional.of(consultation);
+            });
+            when(consultations.saveAndFlush(consultation)).thenReturn(consultation);
+            when(waitEffects.findById(anyString())).thenAnswer(i->{
+                ConsultationWaitEffectRecord x=waitRecord.get();
+                return x!=null&&x.getWaitEffectId().equals(i.getArgument(0))?Optional.of(x):Optional.empty();
+            });
+            when(waitEffects.findByIdempotencyKey(anyString())).thenAnswer(i->{
+                ConsultationWaitEffectRecord x=waitRecord.get();
+                return x!=null&&x.getIdempotencyKey().equals(i.getArgument(0))?Optional.of(x):Optional.empty();
+            });
+            when(waitEffects.saveAndFlush(any(ConsultationWaitEffectRecord.class))).thenAnswer(i->{ConsultationWaitEffectRecord x=i.getArgument(0);waitRecord.set(x);return x;});
+
+            when(threads.findById(anyString())).thenAnswer(i->Optional.ofNullable(threadRecord.get()));
+            when(threads.findByThreadIdForUpdate(anyString())).thenAnswer(i->{
+                int call=threadLockCalls.incrementAndGet();
+                if(this.failSecondThreadLock&&call>=2)return Optional.empty();
+                return Optional.ofNullable(threadRecord.get());
+            });
+            when(threads.saveAndFlush(any(RuntimeThreadStateRecord.class))).thenAnswer(i->{RuntimeThreadStateRecord x=i.getArgument(0);threadRecord.set(x);return x;});
+            when(checkpoints.findById(anyString())).thenAnswer(i->{
+                RuntimeWaitCheckpointRecord x=checkpointRecord.get();
+                return x!=null&&x.getCheckpointId().equals(i.getArgument(0))?Optional.of(x):Optional.empty();
+            });
+            when(checkpoints.saveAndFlush(any(RuntimeWaitCheckpointRecord.class))).thenAnswer(i->{RuntimeWaitCheckpointRecord x=i.getArgument(0);checkpointRecord.set(x);return x;});
+
+            app=new U06ProfileBApplicationService(new U06AdmissionService(),state,new U06SyntheticDeliveryService(deliveryStore),
+                    new ConsultationWaitTransitionService(consultations,waitEffects),
+                    new U06WaitCoordinator(new RuntimeWaitCheckpointService(threads,checkpoints),
+                            new RuntimeThreadWaitTransitionService(threads,checkpoints)),
+                    new com.aidoctor.diagnosis.runtime.u06.trace.U06GovernedExecutionTraceStore(){
+                        public void start(String a,String b,String c,String d,String e,String f,String g){}
+                        public void complete(String a,String b,String c,String d){}
+                    });
+        }
     }
 
     private static final class StrictInMemoryDeliveryStore implements U06DeliveryStore {
