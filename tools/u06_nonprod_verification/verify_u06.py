@@ -514,10 +514,24 @@ def main():
             evidence_refs=["u06-auth-profile.json"]
         )
 
-    if regression_ok and int(env.get("regression_failures", 0)) == 0 and int(env.get("regression_errors", 0)) == 0:
+    regression_failures = int(env.get("regression_failures", 0))
+    regression_errors = int(env.get("regression_errors", 0))
+    unexpected_skips = int(env.get("unexpected_skips", 0))
+    if regression_ok and regression_failures == 0 and regression_errors == 0 and unexpected_skips == 0:
         evidence["U06-VG-010"].update(
             status="PASS", evidence_type="FULL_REGRESSION",
             evidence_refs=[str(args.environment_evidence)]
+        )
+    else:
+        evidence["U06-VG-010"].update(
+            status="FAIL", evidence_type="FULL_REGRESSION",
+            evidence_refs=[str(args.environment_evidence)],
+            mismatches=[
+                {"field": "full_regression_pass", "expected": True, "actual": regression_ok},
+                {"field": "regression_failures", "expected": 0, "actual": regression_failures},
+                {"field": "regression_errors", "expected": 0, "actual": regression_errors},
+                {"field": "unexpected_skips", "expected": 0, "actual": unexpected_skips},
+            ],
         )
 
     # Derived completeness gates happen only after all underlying cases have final status.
