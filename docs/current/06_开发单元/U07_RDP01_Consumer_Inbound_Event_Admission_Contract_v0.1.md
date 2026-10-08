@@ -8,7 +8,8 @@
 > U07 Unit Spec reviewed design: `9c899fdbe2136d88ed1d3bf5c2dd9b6d2b702272`, independent review PR #262
 > Runtime integration reference: `main@6d4fd787600e3a57f01f3e17893e6d98893ac546`
 > Scope: **CONTRACT / PHYSICAL DESIGN CANDIDATE — INDEPENDENT REVIEW REQUIRED**
-> Current status: **SECOND_TARGETED_REMEDIATION_CANDIDATE / PENDING_EXACT_HEAD_INDEPENDENT_RE_REVIEW**
+> Current status: **THIRD_TARGETED_REMEDIATION_CANDIDATE / PENDING_EXACT_HEAD_INDEPENDENT_RE_REVIEW**
+> Independent second targeted re-review PR #269 @ `b7545adb0ef93f51caac415d4cced3612ece6927`: BF-01 CLOSED, BF-03 CONDITIONALLY_RESOLVED; BF-02 OPEN. This revision addresses BF-02 only.
 > Independent targeted re-review PR #268 @ `2ee68ca1f15467ea942915c8ae8dcb05637c8a22`: BF-01 CLOSED; BF-02 and BF-03 OPEN. This document only proposes their second remediation.
 > Independent review PR #267 @ `0a8f75f54a148ebd17243ebc1db529d9ce4d9d6e`: REVISE_REQUIRED / three blockers. This revision does not independently close them.
 >
@@ -156,33 +157,46 @@ storage_idempotency_key = "u07-" + lowercase_hex(SHA256(frame(
 ```
 Every frame item uses UTF-8 length prefix + NFC normalized exact value; no concatenation ambiguities. Key is 68 ASCII chars; caller-supplied token is a stable **opaque** token per logical event, not an auto-generated retry ID. Same trusted scope/token regenerates the same key; different tenant/consultation/profile/type has a different namespace. Hash collision or a pre-existing row with incompatible scoped binding => `IDENTITY_CONFLICT` (never silently allocate a new key). Consent and trusted actor must be validated before derivation.
 
-### 4.3.1 Explicit Foundation consumer / migration impact inventory (BF-U07-RDP01-IR-02)
+### 4.3.1 Foundation compatibility inventory and independently reviewable deferred scan gate (BF-02)
 
-Inventory reference: non-truncated recursive `main@6d4fd787600e3a57f01f3e17893e6d98893ac546` tree (2,634 entries). Exact reviewed file contents are recorded below; this is **a bounded, path-/class-based impact inventory**, not a false claim of full-text search across all 2,634 files. At physical implementation readiness the repository-wide `resolveOrCreate(`, `canonical_business_event`, `payload_digest`, `idempotency_key` reference scan must be executed with an auditable manifest and SHA, and all additional consumer hits must be reconciled. **That pending exhaustive scan is an explicit readiness prerequisite.**
+Evidence source: exact `main@6d4fd787600e3a57f01f3e17893e6d98893ac546`. Its Git tree is non-truncated (2,634 entries), showing the Foundation Java classes, Foundation unit tests, MySQL/Oracle migrations, and U06 wait entities. **Only the named source and schema files below have been directly content-inspected.** GitHub code-search queries at review time returned `incomplete_results=true` and no reliable repository-wide matches; this does **not** establish absence of other consumers. Do not report a complete code-search audit.
 
-| Inventory category | Exact observed baseline | Compatibility conclusion / required later verification |
+| Inspected artifact | Observed contract | V1 decision / effect |
 |---|---|---|
-| Foundation Service | `diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/CanonicalBusinessEventLedger.java` | `resolveOrCreate(eventId,consultationId,eventType,idempotencyKey,payloadDigest)`; compares existing immutable tuple; behavior retained; `@Transactional` race recovery needs DB-backed verification |
-| Foundation entity/repository | `.../foundation/CanonicalBusinessEventRecord.java`, `CanonicalBusinessEventRepository.java` | Event ID primary key and **globally** unique idempotency key; `payload_digest` opaque string, 128 chars; U07-specific 64-hex does not constrain other event types |
-| Existing Foundation unit test | `diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/FoundationRuntimeBaseTest.java` | Uses example `sha256:abc` and `sha256:different`; **do not** introduce Foundation-wide regex `^[0-9a-f]{64}$` or change old fixture expectations |
-| MySQL foundation migration | `diagnosis-service/src/main/resources/db/migration/V2__create_clinical_runtime_foundation.sql` | Existing `canonical_business_event`: `event_id VARCHAR(128) PK`, `idempotency_key VARCHAR(128) UNIQUE`, `payload_digest VARCHAR(128)` |
-| Oracle foundation migration | `diagnosis-service/src/main/resources/db/migration-oracle/V3__create_clinical_runtime_foundation.sql` | Same logical columns / unique constraints with `VARCHAR2`, Oracle naming |
-| U06 wait schema | MySQL `db/migration/V6__add_u06_wait_runtime.sql`; Oracle `db/migration-oracle/V6__add_u06_wait_runtime.sql` | Durable wait/checkpoint/trace provenance already modeled; **no existing U07 canonical side-binding or U06 issuance table evidenced** |
-| U06 eligibility execution | `runtime/u06/wait/U06WaitCoordinator.java`, `U07ResumeEligibilityProjector.java` | Eligibility returned, not independently persisted by these two classes; see BF-03 and upstream amendment |
-| Potential additional consumers | All non-inventoried callers, deployment migration scripts, fixture/provisioners and other modules | `NOT_EXHAUSTIVELY_SEARCHED`; must pass hash-pinned full-source impact scan at RDP-05/aggregate before any implementation authorization; new hits trigger exact design compatibility review |
+| `runtime/foundation/CanonicalBusinessEventLedger.java` | `resolveOrCreate(eventId, consultationId, eventType, idempotencyKey, payloadDigest)`, `@Transactional`, catches duplicate-key errors | Preserve method signature, existing winner-resolution semantics, and no F8 verdict in ledger |
+| `runtime/foundation/CanonicalBusinessEventRecord.java` and `CanonicalBusinessEventRepository.java` | `event_id` PK; `idempotency_key` unique; `payload_digest` opaque `VARCHAR(128)` | No type, length, uniqueness, or regex changes to Foundation |
+| `src/test/java/com/aidoctor/diagnosis/runtime/foundation/FoundationRuntimeBaseTest.java` | Fixture digest examples `sha256:abc` / `sha256:different` and semantic inequality check | U07-specific SHA256 format must not become global Foundation validation rule |
+| `src/main/resources/db/migration/V2__create_clinical_runtime_foundation.sql` | MySQL canonical event table / indexes | Do not rewrite V2; add separate U07 V7 |
+| `src/main/resources/db/migration-oracle/V3__create_clinical_runtime_foundation.sql` | Oracle canonical table/constraints | Do not rewrite V3; add separate U07 V7 |
+| MySQL/Oracle `V6__add_u06_wait_runtime.sql` | Wait effect, Thread, Checkpoint and trace; no evidenced U07 binding | U06 records remain separate; BF-03 owner amendment preserved |
+| U06 wait coordinator/projector files | Deterministic eligibility ID returned, no separate issuance persistence visible | U07 cannot self-issue eligibility; CA-U06-U07-ELIG-ISSUANCE-01 still mandatory |
+| Other Java/Python/SQL/build/fixture/provisioning sources | **NOT FULL-TEXT AUDITED** | No claim of exhaustiveness or unconditional Foundation compatibility |
 
-**Frozen compatibility decision:** preserve original canonical table/schema and existing `resolveOrCreate` call signature. U07 uses only a **new U07-owned** side-binding schema and per-U07 digest/key rules. The chosen V1 design is compatible *at the directly inspected interfaces and migrations*, but **repository-wide compatibility closure remains a separate evidenced readiness check**.
+**Explicit additional gate: `GATE-U07-RDP01-FOUNDATION-REFERENCE-AUDIT-01` (REQUIRED / NOT_PASSED).** Rather than treating a partial search as closed evidence, this third remediation *formally registers* the missing exhaustive impact scan as a **blocking prerequisite to U07 Implementation Readiness**, accepted only after exact-head independent review of this gate definition. This approach is a conditional design closure proposal, not a claim the scan ran.
 
-### 4.3.2 Concrete dual-dialect binding migration / physical schema
+Required future evidence:
+1. Pin the exact candidate integration SHA, then exhaustively scan tracked source/tests/migrations/fixtures/configuration across the repository for `CanonicalBusinessEventLedger`, `resolveOrCreate(`, `CanonicalBusinessEventRecord`, `canonical_business_event`, `payload_digest`, `idempotency_key` and aliases; search must actually traverse file content and report exclusions, files scanned, result counts, tool/command version and exit status.
+2. Produce a SHA-pinned per-hit table (`path:line`, consumer intent, schema/digest/key assumptions, change required yes/no), including direct and dynamically configured persistence/schema migrations when discoverable. Include both DB dialects and non-Java integration scripts. An `incomplete_results` response is **not** an acceptable PASS.
+3. Show before/after `payload_digest` behavior for all observed callers; prove U07 adds no change to their protocol, migration and fixture behavior. Any conflicting consumer => controlled amendment before a positive implementation readiness decision.
+4. Independent evidence-only review confirms complete file coverage and compatibility verdict at exact SHA. No runtime code implementation may begin on an assumption that this audit will later pass.
 
-Append-only new migration files (do not rewrite executed V2/V3/V6):
-- MySQL: `diagnosis-service/src/main/resources/db/migration/V7__add_u07_canonical_event_binding.sql`
-- Oracle: `diagnosis-service/src/main/resources/db/migration-oracle/V7__add_u07_canonical_event_binding.sql`
+The RDP-01 **physical design** selects an additive U07 schema with unchanged Foundation types. Full source compatibility is gated explicitly and not misrepresented as currently verified.
 
-Names are **planned migration paths**, not existing files. Each must create the following equivalent logical schema (abbreviated design DDL; actual scripts require syntax/DB validation):
+### 4.3.2 Exactly one V1 atomic storage model (BF-02)
+
+**Selected V1:** `SINGLE_DB_INLINE_SYNTHETIC_V1`. Persist complete immutable **canonical binding bytes** and, for PROFILE-B USER_ANSWER, the **synthetic answer payload bytes** in a dedicated U07-owned relational binding row *inside the same database transaction* as the Foundation `canonical_business_event` row. `RESUME_REQUEST` stores no new answer bytes; it references a previously committed canonical USER_ANSWER event. Neither an external object store nor an external payload-ref service is part of V1 commit or data authority. The formerly proposed “external refs first, inline bytes if unavailable” alternative is **withdrawn**.
+
+For V1:
+- `protected_binding_ref` and `binding_payload_ref` are **opaque logical handles resolved only to bytes in this same committed U07 relational row**, not external URLs. Handle schema: `u07db:v1:<storage_idempotency_key>:binding` and `u07db:v1:<storage_idempotency_key>:answer` (answer handle only for USER_ANSWER). These are opaque server-issued logical IDs; access always requires trusted scope validation, and are never sufficient for direct lookup without authorization.
+- The logical handles are deterministic from the **stable** scoped idempotency key (not incoming alias event ID). Once the Foundation winner is known, they resolve by its immutable canonical_event_id. Thus same-key aliases reproduce identical ref inputs for the already-closed BF-01 fingerprint scheme.
+- For a synthetic answer, authorized ingress obtains payload **in memory only**, validates byte length, digest and environment, constructs a canonical payload frame and writes it into the binding row. Encryption at rest is required by the authorized synthetic store/DB protection profile; per-row encryption may be used only if ciphertext and key-ref are stored inside the same committed row and the plaintext digest is checked independently. No raw patient PHI is permitted.
+- `binding_fingerprint` equals the digest of exactly the 21 immutable fields in §5.1. `canonical_binding_bytes` is a canonical binary frame of those fields. Its persisted digest MUST equal `binding_fingerprint`. `answer_payload_digest` remains the distinct trusted digest of the synthetic answer bytes and is checked on each reread.
+- Zero external writes; no “persist answer first, ledger later” successful path, no cross-DB fallback, no background repair of an uncommitted foreign blob. Oversized payload => `BLOCKED_PAYLOAD_INTEGRITY` before admission, not fallback to another store.
+- Payload-ref contract consumption by later U02 requires an owner-approved controlled interface at RDP-03/04/05; merely storing synthetic bytes does not send them to U02 or make them Clinical Truth.
+
+**MySQL planned append-only migration** `diagnosis-service/src/main/resources/db/migration/V7__add_u07_canonical_event_binding.sql` (design DDL, not executed):
 
 ```sql
--- MySQL V7 DDL proposal
 CREATE TABLE u07_canonical_event_binding (
   canonical_event_id VARCHAR(128) NOT NULL,
   contract_version VARCHAR(64) NOT NULL,
@@ -193,64 +207,107 @@ CREATE TABLE u07_canonical_event_binding (
   parent_wait_effect_id VARCHAR(128) NOT NULL,
   binding_fingerprint CHAR(64) NOT NULL,
   payload_digest VARCHAR(128) NOT NULL,
-  binding_payload_ref VARCHAR(256) NOT NULL,
-  protected_binding_ref VARCHAR(256) NOT NULL,
+  canonical_binding_bytes LONGBLOB NOT NULL,
+  synthetic_answer_bytes LONGBLOB NULL,
+  answer_payload_digest VARCHAR(128) NULL,
+  payload_format_version VARCHAR(64) NOT NULL,
   created_at TIMESTAMP NOT NULL,
   PRIMARY KEY (canonical_event_id),
-  CONSTRAINT fk_u07_binding_canonical_event
+  CONSTRAINT fk_u07_binding_event
     FOREIGN KEY (canonical_event_id) REFERENCES canonical_business_event(event_id),
-  INDEX idx_u07_binding_wait (consultation_id,parent_wait_effect_id,question_id)
+  KEY idx_u07_binding_wait (consultation_id, parent_wait_effect_id, question_id)
 );
--- Oracle: VARCHAR2(n CHAR), CHAR(64 CHAR), TIMESTAMP,
--- CONSTRAINT pk_u07_binding PRIMARY KEY (canonical_event_id),
--- CONSTRAINT fk_u07_binding_event FOREIGN KEY (canonical_event_id)
--- REFERENCES canonical_business_event(event_id),
--- CREATE INDEX idx_u07_binding_wait ON u07_canonical_event_binding(...)
 ```
 
-`protected_binding_ref` points to an immutable, access-controlled U07 binding payload holding **all §5.1 fields**; unlike a truncated table, the full binding must be durably verifiable. `binding_payload_ref` is the controlled immutable event payload reference. Both references must be created in the **same authorized synthetic state/store boundary**, and must resolve immutably before commit; no untrusted URL/raw PHI. Database storage of the full binding as a canonical byte/blob column in this same transaction is the **V1 selected option** if ref-store durability cannot be atomically established, rather than a two-store half-commit. A future large-object implementation must demonstrate atomicity before authorized implementation.
+**Oracle planned append-only migration** `diagnosis-service/src/main/resources/db/migration-oracle/V7__add_u07_canonical_event_binding.sql` (design DDL, not executed):
 
-Dialect obligations: Oracle table/constraint names within configured identifier limits; existing global unique key remains only in Foundation; no new global uniqueness on `question_id` (different canonical candidates go to F8/RDP-03); index for query, not business verdict; immutable binding row after commit (no UPDATE that rewrites fingerprint/payload), enforce at repository/service privilege and audit; FK means no orphan side binding; any missing binding after a supposedly committed canonical event is quarantined and never forwarded to F8.
+```sql
+CREATE TABLE u07_canonical_event_binding (
+  canonical_event_id VARCHAR2(128 CHAR) NOT NULL,
+  contract_version VARCHAR2(64 CHAR) NOT NULL,
+  storage_idempotency_key VARCHAR2(128 CHAR) NOT NULL,
+  event_type VARCHAR2(64 CHAR) NOT NULL,
+  consultation_id VARCHAR2(128 CHAR) NOT NULL,
+  question_id VARCHAR2(128 CHAR) NOT NULL,
+  parent_wait_effect_id VARCHAR2(128 CHAR) NOT NULL,
+  binding_fingerprint CHAR(64 CHAR) NOT NULL,
+  payload_digest VARCHAR2(128 CHAR) NOT NULL,
+  canonical_binding_bytes BLOB NOT NULL,
+  synthetic_answer_bytes BLOB,
+  answer_payload_digest VARCHAR2(128 CHAR),
+  payload_format_version VARCHAR2(64 CHAR) NOT NULL,
+  created_at TIMESTAMP NOT NULL,
+  CONSTRAINT pk_u07_canonical_binding PRIMARY KEY (canonical_event_id),
+  CONSTRAINT fk_u07_binding_event FOREIGN KEY (canonical_event_id)
+    REFERENCES canonical_business_event(event_id)
+);
+CREATE INDEX idx_u07_binding_wait ON u07_canonical_event_binding
+  (consultation_id, parent_wait_effect_id, question_id);
+```
 
-### 4.3.3 Concrete transaction / retry-as-new-transaction topology
+Only **one authoritative durable representation**: the bytes in `u07_canonical_event_binding`. No parallel authoritative external ref-store, and no separate `u07_answer_payload` table. Logical handles and metadata are deterministic projections of this committed row. MySQL/Oracle byte/BLOB support, dialect correctness, DB privilege and operational limits must be confirmed by authorized integration tests; no tests have been run by this document.
+
+**Physical invariants:**
+- Canonical event FK non-null & PK unique, so a binding cannot exist without its Foundation row.
+- No second canonical binding row for the same original event ID. `event_type` and `canonical_binding_bytes` immutable after commit; authorization at repository/service layer prohibits update/delete of already committed binding (DB privilege/triggers may harden this at implementation).
+- `USER_ANSWER`: `synthetic_answer_bytes` and `answer_payload_digest` required, checked against canonical frame and Foundation payload digest. `RESUME_REQUEST`: both NULL; `target_answer_event_id` encoded within `canonical_binding_bytes` and verified against original USER_ANSWER owner row. This event-type conditional must be validated by adapter and tested at DB boundary.
+- A new event ID with existing scoped idempotency key must retrieve original canonical row/binding, compare full canonical binding bytes and payload digest and return `REATTACHED_TO_CANONICAL` only if equal.
+- The synthetic payload may be discarded later only after a separately governed retention/fact-handoff decision; admission transaction cannot partially purge data while preserving an apparently usable answer. Data minimization and purge policy require RDP-05/clinical privacy authority for any future PROFILE-A.
+- V7 names are illustrative repository paths, not claim of committed migration. The existing Foundation V2/V3/V6 migrations remain unmodified.
+
+### 4.3.3 Single-DB transaction and collision recovery topology
 
 ```text
-U07InboundAdapter
- -> preledger authorized scope/payload validation (read-only, fail closed)
- -> U07AdmissionTransactionCoordinator @Transactional(REQUIRED)
-      -> CanonicalBusinessEventLedger.resolveOrCreate (joins SAME transaction)
-      -> upsert only-if-absent U07CanonicalEventBinding + exact immutable equality
-      -> flush BOTH, check rollbackOnly == false
-    -> transaction COMMIT
- -> after commit: fresh authoritative business-state snapshot
- -> only then enqueue/submit admission context to F8 RDP-02
+trusted synthetic ingress (scope + payload validated in memory)
+  -> compute event payload digest, scoped key, canonical binding bytes
+  -> U07AdmissionTransactionCoordinator @Transactional(REQUIRED)
+       -> Foundation CanonicalBusinessEventLedger.resolveOrCreate joins SAME DB transaction
+       -> INSERT immutable U07 binding row (inline canonical bytes + synthetic answer bytes)
+          or SELECT existing committed matching canonical binding
+       -> flush all writes and validate rollback-only status
+     -> outer transaction COMMIT (event + U07 binding visible together)
+  -> only after COMMIT: authoritative business wait re-read
+  -> only then: F8 admission/decision port
 
-exception / integrity constraint violation / rollbackOnly:
- -> no F8, no success response
- -> rollback transaction entirely
- -> U07CanonicalWinnerReconciler @Transactional(REQUIRES_NEW)
-      -> re-read Foundation winner by event ID / global scoped key
-      -> validate whole side binding and trusted scope
-      -> distinguish (winner+binding) valid replay from
-         (winner absent) safe new attempt or (winner without binding) QUARANTINE
- -> if retry allowed, new transaction; else fail-closed
+unique-key race / flush error / transaction rollback-only / commit unknown:
+  -> never call F8 or claim successful admission
+  -> rollback complete outer transaction
+  -> U07WinnerReconciler in genuinely distinct @Transactional(REQUIRES_NEW)
+       -> re-read committed Foundation winner and binding row
+       -> scope + payload digest + all canonical binding bytes compare
+       -> matching => same canonical identity; conflict => fail closed
+       -> absent => safe new outer transaction attempt only when authorized
+       -> winner without matching binding => QUARANTINE / repair under owner review
 ```
 
-`REQUIRES_NEW` must cross an actual transactional proxy boundary; self-invocation is forbidden. `save` without `flush` or `saveAndFlush` is not proof a uniqueness violation has surfaced. `CanonicalBusinessEventLedger` catches `DataIntegrityViolationException` within its own `@Transactional`; U07 must not mistake its catch-and-lookup behavior for proof that a database transaction remained usable. Verify MySQL and Oracle separately for auto-flush, rollback-only, isolation and winner-query visibility in authorized database integration tests; this design review does not mark tests PASS.
+The existing `CanonicalBusinessEventLedger` catches `DataIntegrityViolationException` before re-reading, but some JPA/DB combinations mark its transaction rollback-only; the consumer MUST NOT trust that method's catch branch as safe. The outer transaction is independently checked and any uniqueness exception triggers an entirely new transaction. `REQUIRES_NEW` must be invoked across a real proxy boundary, never self-invoked. `saveAndFlush`, transaction completion callback / commit outcome and read-after-write visibility are mandatory verification points.
 
-Transaction-outcome matrix:
+**Design-only crash/replay matrix**
 
-| State | Admission response | Durable condition |
+| Case | Durable result | Decision |
 |---|---|---|
-| Both rows committed | `ADMITTED_FOR_F8` or exact reattach after owner check | same scoped key and entire U07 immutable binding |
-| Ledger insert flushed, binding insert failed | fail closed | both rolled back; never success |
-| Unique race caused rollback-only | fail closed; optional post-rollback separate read/retry | no F8 from poisoned transaction |
-| Existing winner and full binding equal | reattach original ID | no new event/effect |
-| Existing winner, side-binding missing | quarantine | no accepted new binding fabricated from retry |
-| Existing winner, different full binding | identity conflict | no overwrite or alternative new key fallback |
-| Database unavailable / commit unknown | indeterminate; reconcile by exact identity in new transaction | never optimistic ACCEPTED |
+| Scope/payload rejected before transaction | neither row committed | no F8 |
+| Crash after Foundation insert but before U07 binding write | outer transaction rollback | no orphan committed canonical record |
+| Crash after binding write before commit | outer transaction rollback | no partial authoritative answer |
+| Commit succeeded but response lost | both rows durable | retry maps same scoped key to original winner |
+| Unique-key race marks rollback-only | no partial admission; fresh transaction reads winner | no blind retry inside failed transaction |
+| Winner row but missing binding due to legacy/corruption | quarantine | no newly inferred binding from retry |
+| Reused key changed answer, Question, scope or wait provenance | conflict | no overwrite, no second effect |
+| Missing DB / unknown commit result | uncertain; separate scoped read later | no optimistic success |
 
-**Compatibility condition at authorization:** if either MySQL or Oracle schema/transaction topology cannot satisfy these requirements, return `NOT_READY` and require an independently reviewed controlled amendment; do not silently switch to eventual consistency.
+This is an **implementation candidate physical design**, not verified JPA/DB behavior. Both MySQL and Oracle transaction constraints, migration ordering, VARCHAR/CHAR/BLOB behavior, conditional null requirements, proxy interception and recovery must pass actual authorized integration tests before implementation verification closure.
+
+### 4.3.4 Remaining mandatory gates, strictly distinguished
+
+| Gate | Current state | When needed |
+|---|---|---|
+| `GATE-U07-RDP01-FOUNDATION-REFERENCE-AUDIT-01` | REQUIRED / NOT_PASSED | **Before positive aggregate U07 Implementation Readiness / Authorization**; full SHA-pinned code/fixture/migration inventory |
+| MySQL+Oracle V7 DDL equivalence and DB transaction / race tests | NOT_RUN | Authorized implementation verification; design review must first accept physical schema |
+| U07-RDP-01 exact-head independent design review | PENDING | Before RDP-01 design is considered accepted |
+| `CA-U06-U07-ELIG-ISSUANCE-01` | REQUIRED / NOT_AUTHORIZED | U06 upstream contract amendment + independent review + verified evidence before U07 Implementation Readiness |
+| RDP-02/03/04/05/06 | OPEN | Downstream U07 contract, compatibility, evidence design chain |
+
+The **audit gate is a blocking external readiness dependency**, not a device for changing its status to PASSED in this author document. If the independent reviewer requires exhaustive code consumer evidence *before* RDP-01 design closure, keep BF-02 OPEN and execute the audit; do not label it closed merely because the obligation is named.
 
 ### 4.4 Side-binding atomicity
 
@@ -516,13 +573,13 @@ U07InboundAdapter
 
 - 同一 `event_id`/key 的 admission 操作串行化或依赖已验证的唯一键竞争回读；不向 F8 发两份独立命令。
 - 对一个 parent wait + Question，同轮不同 event IDs 应通过 `wait_answer_claim` 或等价版本化排他机制保证**最多一个在 apply 路径可胜出**；RDP-03 必须冻结 durable claim/lock 的 authority、lease/fencing 和并发冲突行为。RDP-01 只限定 admission 不抢先批准 apply。
-- 规范 event+binding **必须处于同一数据源、同一 ACID outer transaction**；ledger 与 binding 全部提交前禁止 F8。跨库、outbox-only、best-effort 或 `CANONICAL_BINDING_PENDING` 自动继续均 **OUT_OF_SCOPE / REQUIRES_CONTROLLED_AMENDMENT**。unique race 导致 rollback-only 时新事务读取胜者并完整校验，不在受污染事务内继续。
+- **唯一 V1 模式**：Foundation event + U07 canonical binding bytes + PROFILE-B synthetic answer bytes **必须处于同一数据源、同一 ACID outer transaction**；ledger 与 inline binding row 全部提交前禁止 F8。逻辑 payload refs 仅解析该已提交 DB 行，非外部对象存储。跨库、outbox-only、best-effort 或 `CANONICAL_BINDING_PENDING` 自动继续均 OUT_OF_SCOPE。unique race 使事务 rollback-only 时，先完整回滚，再从不同事务读取胜者并校验。
 - 固定唯一约束：event_id PK、idempotency_key UNIQUE（Foundation 已有）；额外 `canonical_event_id` UNIQUE binding；`target_answer_event_id` FK/权威引用校验。若采用新业务 claim 唯一键必须和 RDP-03 协调，不能临时侵入 F3/Clinical State owner。
 - canonical ledger 的 `resolveOrCreate` 当前在同 key 不同 event_id 时会以 idempotency key 匹配返回 winner，但其 `requireSame` 验证字段有限；U07 必须在返回之后再校验**完整 side-binding**。
 - Identity conflict 永不被降级为「新事件重试」；数据库 unique race 不允许被当成 ACCEPTED。
 
 **Physical design acceptance gaps requiring independent review**：
-1. `payload_digest` **原语义保持事件负载摘要**、U07 私有 binding_fingerprint 与 scope-key 方案的代码消费者/迁移证据；禁止悄然替换基础列含义。
+1. Foundation `payload_digest` 原语义保持事件负载摘要；本轮已冻结 U07-only inline binding bytes、同库事务与两方言 DDL。完整跨仓消费者/测试/迁移证据由明确的 **GATE-U07-RDP01-FOUNDATION-REFERENCE-AUDIT-01** 阻塞实现授权，不得宣称扫描已完成。
 2. 前置安全验证与 canonical identity commit 的并发时序。
 3. existing Foundation JPA transaction/race behavior 在 unique constraint 下是否能继续查询胜者（需实现期数据库集成验证；不在设计阶段宣称 PASS）。
 4. Side-binding 原子性及不可变约束。
@@ -606,7 +663,7 @@ Above are **design assertions**. Physical fixtures/runner, exact thresholds and 
 BF-U07-RDP01-IR-01
   Original canonical ID versus request alias and fingerprint inputs are now explicitly separated; re-review must verify T03/T04/T05/V1–V8. RESUME_REQUEST reference policy still requires Phase 8/9 equivalence check.
 BF-U07-RDP01-IR-02
-  Physical dual-dialect V7 binding migration, bounded code/fixture/migration inventory, outer transaction / rollback-isolated reconciliation now specified in §4.3.1–4.3.3. Repository-wide search & database tests are explicit future authorization gates, not claimed evidence.
+  Third targeted remediation §4.3.1–4.3.4: one INLINE relational authoritative canonical binding/answer representation, two concrete dialect designs and outer transaction/recovery topology; unresolved exhaustive compatibility search is explicitly separated into mandatory, independently reviewable GATE-U07-RDP01-FOUNDATION-REFERENCE-AUDIT-01, not falsely claimed PASSED.
 BF-U07-RDP01-IR-03
   Confirmed existing V6 wait/checkpoint/trace records and the absence of an issuance record in examined U06 code; mandatory controlled amendment CA-U06-U07-ELIG-ISSUANCE-01 now freezes new U06-owned issuance query contract before U07 implementation; no hash-only historical Resume.
 BF-U07-RDP01-IR-04
@@ -620,7 +677,8 @@ BF-U07-RDP01-IR-06
 Until an exact-head independent design review passes these questions:
 ```text
 B-U07-RG-01 = DESIGN_CANDIDATE / NOT_CLOSED
-U07-RDP-01 = SECOND_TARGETED_REMEDIATION_CANDIDATE / READY_FOR_INDEPENDENT_RE_REVIEW, NOT FROZEN
+U07-RDP-01 = THIRD_TARGETED_REMEDIATION_CANDIDATE / READY_FOR_INDEPENDENT_RE_REVIEW, NOT FROZEN
+GATE-U07-RDP01-FOUNDATION-REFERENCE-AUDIT-01 = REQUIRED / NOT_PASSED
 CA-U06-U07-ELIG-ISSUANCE-01 = REQUIRED_UPSTREAM_AMENDMENT / NOT_DESIGNED_OR_AUTHORIZED
 BF-U07-RDP01-IR-01..03 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
 U07 Implementation Readiness = NOT_READY
