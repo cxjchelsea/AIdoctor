@@ -52,8 +52,15 @@ class StaticProducerTests(unittest.TestCase):
     def setUp(self):
         self.archive, self.snapshots, self.inventory = fixture()
 
+    def run_project(self, archive=None, snapshots=None):
+        archive = self.archive if archive is None else archive
+        snapshots = self.snapshots if snapshots is None else snapshots
+        with unittest.mock.patch.object(producer, "TRUSTED_ARCHIVE_SHA256", digest(archive)), \
+             unittest.mock.patch.object(producer, "TRUSTED_INVENTORY_SHA256", digest(zipfile.ZipFile(io.BytesIO(archive)).read("foundation-exact-head-inventory.json"))):
+            return producer.project(archive, snapshots)
+
     def test_success_is_source_only_with_complete_transitive_graph(self):
-        r = producer.project(self.archive, self.snapshots)
+        r = self.run_project()
         self.assertEqual(r["status"], "SOURCE_ONLY")
         self.assertEqual(r["effective_manager"], "UNKNOWN")
         self.assertFalse(r["spring_context_executed"])
@@ -64,8 +71,8 @@ class StaticProducerTests(unittest.TestCase):
         self.assertEqual([x["status"] for x in r["nodes"] if x["name"].startswith("U07")], ["NOT_IMPLEMENTED", "NOT_IMPLEMENTED"])
 
     def test_deterministic_json_digest(self):
-        a = canonical_json(producer.project(self.archive, self.snapshots))
-        b = canonical_json(producer.project(self.archive, dict(reversed(list(self.snapshots.items())))))
+        a = canonical_json(self.run_project())
+        b = canonical_json(self.run_project(snapshots=dict(reversed(list(self.snapshots.items())))))
         self.assertEqual(a, b)
         self.assertEqual(digest(a), digest(b))
 
@@ -85,28 +92,51 @@ class StaticProducerTests(unittest.TestCase):
         snapshots = dict(self.snapshots)
         snapshots.pop(next(iter(snapshots)))
         with self.assertRaises(EvidenceError):
-            producer.project(self.archive, snapshots)
+            self.run_project(snapshots=snapshots)
 
     def test_tampered_source_and_spoofed_blob_fail(self):
         snapshots = dict(self.snapshots)
         p = next(iter(snapshots))
         snapshots[p] += b"// tamper"
         with self.assertRaises(EvidenceError):
-            producer.project(self.archive, snapshots)
+            self.run_project(snapshots=snapshots)
         inventory = dict(self.inventory)
         inventory["matches"] = [dict(x) for x in inventory["matches"]]
         inventory["matches"][0]["file_git_blob"] = "0" * 40
         with self.assertRaises(EvidenceError):
-            producer.project(self._rearchive(inventory), self.snapshots)
+            self.run_project(archive=self._rearchive(inventory))
 
     def test_missing_or_duplicate_edge_fails_closed(self):
         p = producer.ROOT + producer.FILES["CDPManager"]
-        for change in (lambda s: s.replace("cdpVersionService.createInitialVersion(", "noop("),
-                       lambda s: s.replace("cdpVersionService.createInitialVersion(", "cdpVersionService.createInitialVersion( cdpVersionService.createInitialVersion(")):
+        for change in (lambda v: v.replace("cdpVersionService.createInitialVersion(", "noop("),
+                       lambda v: v.replace("cdpVersionService.createInitialVersion(", "cdpVersionService.createInitialVersion( cdpVersionService.createInitialVersion(")):
             snapshots = dict(self.snapshots)
             snapshots[p] = change(snapshots[p].decode()).encode()
-            with self.assertRaises(EvidenceError):
-                producer.project(self.archive, snapshots)
+            inv = json.loads(json.dumps(self.inventory))
+            updated = snapshots[p]
+            for record in inv["file_inventory"]:
+                if record["path"] == p:
+                    record["sha256"] = digest(updated)
+                    record["bytes"] = len(updated)
+            blob = hashlib.sha1(b"blob " + str(len(updated)).encode() + b"\\0" + updated).hexdigest()
+            for record in inv["matches"]:
+                if record["path"] == p:
+                    record["file_sha256"] = digest(updated)
+                    record["file_git_blob"] = blob
+            with self.assertRaisesRegex(EvidenceError, "missing or duplicate direct edge"):
+                self.run_project(archive=self._rearchive(inv), snapshots=snapshots)
+
+    def test_frozen_digest_rejects_plausible_forged_archive(self):
+        inv = json.loads(json.dumps(self.inventory))
+        inv["file_inventory"][-1]["sha256"] = "f" * 64
+        with self.assertRaisesRegex(EvidenceError, "TRUSTED_ARCHIVE_DIGEST_MISMATCH"):
+            producer.project(self._rearchive(inv), self.snapshots)
+
+    def test_frozen_digest_rejects_plausible_path_spoof(self):
+        inv = json.loads(json.dumps(self.inventory))
+        inv["file_inventory"][-1]["path"] = "forged/alternative.txt"
+        with self.assertRaisesRegex(EvidenceError, "TRUSTED_ARCHIVE_DIGEST_MISMATCH"):
+            producer.project(self._rearchive(inv), self.snapshots)
 
     def test_fake_manager_positive_authority_rejected(self):
         with self.assertRaises(EvidenceError):
@@ -119,13 +149,13 @@ class StaticProducerTests(unittest.TestCase):
 
     def test_no_network_or_subprocess_calls(self):
         with unittest.mock.patch("socket.socket", side_effect=AssertionError("network forbidden")), unittest.mock.patch("subprocess.run", side_effect=AssertionError("process forbidden")):
-            producer.project(self.archive, self.snapshots)
+            self.run_project()
 
     def test_output_path_cannot_overwrite_existing(self):
         with tempfile.TemporaryDirectory() as temp:
             p = Path(temp) / "out.json"
             p.write_text("existing")
-            with unittest.mock.patch("sys.argv", ["producer", "--archive", "missing.zip", "--snapshots-dir", temp, "--output", str(p)]):
+            with unittest.mock.patch("sys.argv", ["producer", "--archive", "missing.zip", "--snapshots-dir", temp, "--artifact-dir", temp]):
                 with self.assertRaises(SystemExit):
                     producer.main()
             self.assertEqual(p.read_text(), "existing")
