@@ -6,7 +6,8 @@
 > Upstream RDP-01: PR #266 @ `4f98e950f6d7dfedd7c046dedfc9db7e52135b04` (design conditionally accepted in PR #270 @ `d43ac7fa1b6d65e8db27a5a316ee650f8137e4e2`)
 > Runtime integration reference: `main@6d4fd787600e3a57f01f3e17893e6d98893ac546`
 > Scope: **F8 OWNER / BUSINESS VERDICT / PRECEDENCE / DECISION DURABILITY PHYSICAL DESIGN CANDIDATE**
-> Status: **DESIGN_CANDIDATE / READY_FOR_INDEPENDENT_DESIGN_REVIEW / NOT_FROZEN**
+> Status: **TARGETED_REMEDIATION_CANDIDATE / PENDING_EXACT_HEAD_INDEPENDENT_RE_REVIEW / NOT_FROZEN**
+> Independent review PR #272 @ `8ce3c2ca140674c2e723b4c40e8a37ed25371216`: REVISE_REQUIRED / BF-U07-RDP02-IR-01 and IR-02. This amendment is an author-side proposal, not independent closure.
 >
 > This document does not authorize U07 implementation, merge, source changes, production, PROFILE-A, live user answers, PHI, patient traffic, or external side effects.
 
@@ -170,7 +171,7 @@ Apply following ordered table, stopping at first **proved** condition. When nece
 | Order | Condition on authoritative evidence | Verdict | Why |
 |---|---|---|---|
 | P1 | Another answer **already APPLIED** for the same exact consultation+Question+parent wait and proven *same answer content equivalence* | **DUPLICATE** | Completed prior effect wins, including after Question/Consultation lifecycle moved on |
-| P2 | U15 committed wait expiry or authoritative Question/answer window ended before this event's **trusted first ingress time** | **EXPIRED** | Explicit expiry cannot be hidden by a later generic mismatch |
+| P2 | U15 expiry committed before **first fenced F8 decision commit**, or authoritative Question/window deadline reached by that commit | **EXPIRED** | Timely ingress alone does not reserve a resumed business right; §5.1 |
 | P3 | U15 committed cancel/terminal-other, or Question superseded *without expiry*, with no proved P1 duplicate | **REJECTED** | Wrong life-cycle authority, no ordinary resume |
 | P4 | Consultation, Question, Pending Question, parent wait, authenticated actor/scope or delivery provenance do not match | **REJECTED** | Wrong binding cannot be repaired through Runtime |
 | P5 | Another **different** answer already owns a terminal winning F8 ACCEPTED claim for the same wait, but apply is not complete | **DEFER (F8_COMPETING_WINNER_PENDING)**, **not DUPLICATE** | Await outcome; a pending winner could fail or be cancelled; do not falsely claim already applied |
@@ -182,9 +183,43 @@ Apply following ordered table, stopping at first **proved** condition. When nece
 
 **P1 before P2/P3** is only for an independently proven already-applied identical answer to preserve idempotent status. The response is a reference to original processing, **not** new patient continuation. A late, first-ever answer with no applied identical winner is still EXPIRED if deadline passed. A terminally cancelled wait with no prior identical APPLIED winner is REJECTED; an expired wait uses EXPIRED where owner source proves expiry.
 
-**Expiry clock rule:** evaluate authoritative expiry decision and its effective instant, **server-trusted first durable ingress timestamp** of original canonical answer, and authoritative causal commit order. Do not rely on user-controlled `occurred_at` to backdate a late answer. If event and U15 expiry race in an unorderable manner, **DEFER for same-wait serialized/fenced evaluation**, never silently prefer ACCEPTED. Historical duplicate check P1 is still authoritative even if status is now terminal.
+### 5.1 Frozen first-verdict temporal semantics (BF-U07-RDP02-IR-01)
 
-**Precedence of terminal states:** EXPIRED requires positive U15/Question expiry proof; CANCELLED is REJECTED; SUPERSEDED without expiry is REJECTED; malformed scope is RDP-01 BLOCKED; owner unavailable is DEFER, not EXPIRED.
+**Selected V1 rule: decision-commit eligibility, not historical receipt-only eligibility.** The first F8 verdict requires the wait/question and any explicit U15 deadline to be valid at the **serialized F8 decision commit point**, even if the original event reached RDP-01 while the wait was still active. A timely receipt is preserved as evidence of arrival but **does not reserve future authority to resume**. The only path for an earlier lawful ACCEPTED is Tier 0 immutable decision reattachment; later new effects remain controlled by RDP-03 terminal fencing. This is a conservative policy candidate for PROFILE-B only and requires compatibility review against frozen Phase 8/9 and U15 business policy.
+
+Trusted inputs and order:
+- `t_ingress`: server timestamp persisted once with the *original canonical event* in Foundation `received_at`; incoming retry timestamp / client `occurred_at` is **never** authoritative. RDP-01 must prove it maps to the committed canonical record.
+- `t_decision`: DB-authoritative transaction time / commit ordering reference for the **first F8 decision**, not an unsynchronized application clock sample.
+- `deadline`: effective U15/F3 authoritative expiry instant and policy version; `terminal_commit_version`: durable terminalization order at the same Consultation fence.
+- For `t_decision >= deadline`, an explicit expiry with positive owner evidence is **EXPIRED**, regardless of `t_ingress`; if authoritative cancellation (not expiry) won before F8 commit, **REJECTED**. If both expiry and cancellation are visible, **EXPIRED takes priority only when an authoritative expiry event or deadline is proved**; otherwise cancellation yields REJECTED.
+- A timestamp equality `t_decision == deadline` is already expired (half-open legal window `[opened_at, deadline)`); the shared fence's terminal commit order decides whether F8's transaction could lawfully commit before that boundary. Timestamp equality by itself is not proof of causal ordering.
+- If time-source skew, deadline provenance or commit ordering cannot be determined consistently, **DEFER**, with no business verdict; never accept solely from `t_ingress < deadline`.
+
+Deterministic race table:
+
+| Trusted ingress | U15/F3 event | First F8 claim/commit | First verdict | Apply authorization |
+|---|---|---|---|---|
+| before deadline | none through F8 commit | before deadline, fenced current WAITING_USER | ACCEPTED | subsequent P01/P02/RDP-03 fresh fence required |
+| **T1** timely | **T2 expiry** committed | **T3 after T2** | **EXPIRED** | none; timely arrival does not override expiry |
+| **T1** timely | **T2 cancel** committed | **T3 after T2** | **REJECTED / CANCELLED** | none |
+| timely | F8 commits ACCEPTED first | U15 expires or cancels later | historical ACCEPTED unchanged | later effects disallowed or governed recovery under RDP-03 |
+| new ID/key after wait expired | owner expired | after deadline | EXPIRED unless a proved prior APPLIED identical answer triggers Tier 1 P1 DUPLICATE | no effects |
+| exact event replay | expiry/cancel later | any time | original durable verdict (Tier 0) | only read/reconcile; later effects separately fenced |
+| competing F8 and U15 based on same prior version | whichever acquires **Consultation row lock** commits first | loser refreshes/retries | F8 first ACCEPTED only if before deadline; U15 first EXPIRED/REJECTED | never two ordinary applies |
+| timestamps equal; causal ordering not proven | concurrent expiry and decision | not orderable | DEFER | none |
+| historical identical already APPLIED new event | U15 later terminal | after terminal | DUPLICATE by P1 with original applied reference only | none |
+
+**Tier 1 P2 updated:** EXPIRED when the answer window expired **by the fenced first F8 decision commit**, including `t_ingress < deadline <= t_decision`, not only when expiry precedes ingress. P3 follows for committed non-expiry U15 cancellation; P4 mismatch is evaluated only after authoritative expiry/cancel evidence; a failed owner read is DEFER not REJECTED. Tier 0 and a strictly proven P1 historical duplicate take precedence as specified, **without authorizing new Runtime effects**.
+
+Business-effective time is *not* inferred from a stale `received_at`, client `occurred_at`, or an untrusted clock. Strict decision-commit semantics are a design policy, not a claim that U15 has already implemented this barrier.
+
+### 5.2 First verdict vs later effect authorization
+
+1. **First F8 commit**: require coherent owner snapshot, absence of committed U15 terminalization, valid authoritative deadline, versioned claim and durable decision under one fence.
+2. **Previously ACCEPTED**: preserve historical verdict even after U15 expiry/cancel; it does **not** permit ordinary resume without a new RDP-03/P01 effect-stage version/fence check. If terminal owner won before apply, mark downstream `EFFECT_BLOCKED_BY_TERMINAL` (not a new F8 verdict), route U14/U15 governance.
+3. **Previously APPLIED**: return original applied identity/decision for same-event replay; for a new *provably equivalent* answer return DUPLICATE with zero new effects. Do not blindly serve stale clinical conclusions.
+4. **Unordered owner evidence**: `F8_EVALUATION_DEFERRED` remains operational, not a fifth business result.
+
 
 ## 6. Complete decision matrix for critical combinations
 
@@ -263,10 +298,58 @@ trace_ref
 
 Uniqueness:
 - PK `decision_id`, UNIQUE `canonical_answer_event_id`; exactly one F8 decision per canonical answer.
-- To prevent two independent ACCEPTED winners, a separate `F8WaitAnswerAuthority` row keyed by `(consultation_id, question_id, parent_delivered_wait_effect_id)` records `winner_canonical_event_id`, `winner_decision_id`, `winner_state`, `authority_row_version`. Row must be serialized/locked with the relevant governed wait state and terminalization fencing, or must rely on a reviewed equivalent CAS/unique winning claim shared with RDP-03. **F8 is allowed to select the business winner; it does not write Clinical State or claim APPLIED.**
+- To prevent two independent ACCEPTED winners, `F8WaitAnswerAuthority` keyed by `(consultation_id, question_id, parent_delivered_wait_effect_id)` records `winner_canonical_event_id`, `winner_decision_id`, `winner_state`, `authority_row_version`. **Chosen V1:** acquire the existing `clinical_consultation` row lock first, then the F8 claim row, with U15 sharing that barrier as required by §8.1.1. No alternative unilateral F8-only lock grants authority. **F8 selects a business winner but never writes Clinical State or APPLIED.**
 - A pending winner remains authoritative pending successful or governed terminal reconciliation; new event cannot declare a second winner merely because original Runtime is slow/unavailable. A rollback/discard of an ACCEPTED winner is never inferred; explicit U14/U15/P01 authority required.
 - Unique constraints + optimistic CAS/serialized lock prevent two F8 winners at the same wait; the real DB adapter/locking/fencing design must be jointly reviewed in RDP-03 and RDP-05 before implementation.
 - F8 decision plus winning claim must be durably atomic for ACCEPTED; non-ACCEPTED decisions must be individually idempotent with decision-key uniqueness; never publish ACCEPTED before claim durability.
+
+### 8.1.1 Exact shared owner lock, fencing and mandatory U15 bridge (BF-U07-RDP02-IR-02)
+
+**Chosen synthetic V1 serialization primitive: the authoritative `clinical_consultation` row's `PESSIMISTIC_WRITE` lock and `row_version`**, not an independent F8-only row lock. Reviewed main contains `ConsultationRepository.findByIdForUpdate(consultationId)` and `ConsultationRecord.rowVersion @Version`; `ConsultationWaitTransitionService.establish` uses `@Transactional(isolation=SERIALIZABLE)` with this row lock for WAITING_USER. These are **evidence of an existing Consultation lock primitive**, **not evidence that U15 termination uses it**. Actual U15 integration is **NOT_DEMONSTRATED**.
+
+**Mandatory upstream physical dependency `CA-U07-RDP02-U15-SHARED-FENCE-01` = REQUIRED / NOT_DESIGNED / NOT_AUTHORIZED.** U15's expiry, cancel, supersession and terminal transition (including authoritative deadline/lifecycle owners) must participate in the same serial lock/version barrier **before** implementing F8, or a controlled independently reviewed owner-equivalent mechanism must replace this proposed V1. F8 must not invent or write U15 terminal facts. If U15 uses a different DB/transaction manager or external authority that cannot join this fence, RDP-02 V1 is **NOT_APPLICABLE / U07 NOT_READY**; no optimistic ACCEPTED.
+
+One outer, same-data-source transaction for F8 first decision:
+
+```text
+@Transactional(isolation=SERIALIZABLE)
+  LOCK clinical_consultation by ConsultationRepository.findByIdForUpdate(id)
+    -> read consultation.row_version, current_wait_effect_id, lifecycle_status
+    -> read F3 question/pending owner snapshots + versions
+    -> read verified U06 wait and eligibility evidence
+    -> read U15 terminal/deadline owner fact + terminal_version
+    -> LOCK F8WaitAnswerAuthority by (consultation_id,question_id,parent_wait_id)
+       in deterministic key order, INSERT sentinel if absent under Consultation lock
+    -> read F8DecisionLedger original/other applied-winner under lock
+    -> recompute §5 Tier-0/Tier-1 with DB time, versioned owner facts
+    -> commit immutable F8 decision and same-wait claim atomically
+  COMMIT; only after success is F8 ACCEPTED visible
+```
+
+U15 must acquire **the same Consultation lock before modifying** any authoritative terminal/deadline authority for that wait, commit a monotonically increasing terminal generation and cause a verified Consultation version or fence-generation advance in the same atomic unit. A mere `SELECT` of U15 state **without shared serialization** is insufficient. The detailed U15 adapter/version and any F3 owner-side cross-store dependency are to be covered by the above controlled amendment and RDP-05; this RDP cannot self-authorize changes to U15.
+
+Required frozen persisted context:
+
+```text
+F8FencedDecisionAuthority {
+  consultation_id, consultation_row_version_before, consultation_row_version_at_claim,
+  current_wait_effect_id, question_id, parent_delivered_wait_effect_id,
+  f3_question_owner_ref + version, pending_question_state_ref + clinical_version,
+  u15_terminal_owner_ref + terminal_version + effective_deadline + committed_generation,
+  f8_claim_generation (monotonic, compare-and-swap),
+  canonical_answer_event_id, decision_id, claim_lock_order_ref, transaction_commit_ref
+}
+```
+
+- **Lock ordering**: Consultation row first; Question/F3 and U15 owner snapshots read/lock by approved deterministic owner order; F8WaitAnswerAuthority row next; F8DecisionLedger last. Any owner that cannot honor this serialization makes first ACCEPTED **DEFER / DEPENDENCY_BLOCKED**, not an unprotected winner.
+- **F8 row CAS**: `f8_claim_generation` strictly monotonically increases; the first ACCEPTED binds winner ID and observed Consultation/U15 generations. New competing event sees the pending winner and receives operational DEFER. A normal timeout does **not** release or reassign a winning claim.
+- **U15 first**: its version/terminal record wins Consultation serialization; subsequent F8 sees terminal owner fact and issues EXPIRED or REJECTED, not ACCEPTED.
+- **F8 first**: F8 commits a lawfully ACCEPTED claim while wait valid; later U15 may terminate and advances fence version; RDP-03 downstream apply refuses old-generation authority and triggers governed reconciliation without rewriting F8 ACCEPTED.
+- **Stale simultaneous readers**: both must re-read after winning Consultation lock; loser never commits from earlier row_version.
+- **DB rollback-only**: terminate transaction with zero F8 decision/claim; new independently proxied transaction reads committed outcome, no phantom winner or second decision.
+- **Crash with ACCEPTED but P02 never finishes**: preserve durable winner; no unilateral F8 release, no second winner. U14/U15/authorized owner must provide explicit durable terminal reconciliation/correction, if permissible. RDP-03 governs remaining effect attempts.
+
+The cross-owner fence is a design precondition, not asserted implemented. `CA-U07-RDP02-U15-SHARED-FENCE-01` must receive independent design, owner equivalence, physical version proof, both dialect integration checks, and explicit authorization before U07 can be implementation-ready.
 
 ### 8.2 Two-phase evaluation/commit protocol
 
@@ -275,15 +358,15 @@ read RDP-01 immutable canonical event binding
   + read authoritative owner state + prior applied answer effects
   + read authoritative U15 terminal/expiry
 → calculate candidate verdict with §5 precedence
-→ acquire exclusive same-wait decision authority / versioned CAS
-→ re-read versions / expiry / winner under fenced authority
+→ acquire authoritative Consultation row lock FIRST and F8 same-wait claim lock next (§8.1.1)
+→ re-read versions / U15 terminal generation / expiry / winner under COMMON owner fence
 → persist F8 decision and winner atomically, or return deferred/conflict
 → commit
 → downstream P02 permitted only if decision persisted ACCEPTED and
    CURRENT governance barrier independently passes
 ```
 
-If primary state and F8 decision live in different stores, this physical design is not applicable without independently accepted reconciliation and fencing design. No stale snapshot can win a race.
+If primary state, U15 terminal authority and F8 decision live in different stores/lock domains, this proposed V1 design is NOT_APPLICABLE until a separately approved controlled amendment proves equivalent owner-level fencing. An F8-local CAS alone cannot block U15. No stale snapshot may win.
 
 ### 8.3 Crash windows
 
@@ -338,9 +421,16 @@ Design-only, to be integrated into RDP-06:
 | F8-T24 | already APPLIED identical answer after Question superseded/expired | DUPLICATE by P1, no new ordinary effect |
 | F8-T25 | prior ACCEPTED but not APPLIED, now wait cancelled | preserve historical ACCEPTED; block pending new effects by RDP-03 terminal fencing |
 | F8-T26 | user-supplied occurred_at before deadline, server first ingress after expiration | EXPIRED; no backdating |
+| F8-T28 | ingress T1 before expiry T2, first F8 commit T3 after expiry | EXPIRED; not ACCEPTED or generic REJECTED |
+| F8-T29 | ingress T1, U15 cancel T2, F8 commit T3 | REJECTED/CANCELLED |
+| F8-T30 | first F8 ACCEPTED committed, then U15 expiry before P01 apply | historical ACCEPTED retained, later apply blocked |
+| F8-T31 | same instant deadline and first F8 commit without order proof | DEFER, no verdict |
+| F8-T32 | original APPLIED identical event, U15 terminal, new canonical event after expiry | DUPLICATE with no effect |
+| F8-T33 | same prior Consultation version F8 vs U15 competing locks | one serial winner, loser rechecks |
+| F8-T34 | known U15 terminal, F8 owner lock not integrated | BLOCKED_DEPENDENCY / no ACCEPTED |
 | F8-T27 | typed owner evidence unavailable | operational defer; no fifth business verdict |
 
-No actual tests are executed in this document. For all cases assert **zero forbidden Clinical State mutations / P02 resume / U02 handoff** unless independently authorized and the necessary later gates pass.
+No actual tests are executed in this document. §5.1/§8.1.1 and F8-T28..34 expand the original precedence and fencing oracles. For all cases assert **zero forbidden Clinical State mutations / P02 resume / U02 handoff** unless independently authorized and the necessary later gates pass.
 
 ## 11. Cross-RDP contract compatibility matrix
 
@@ -364,6 +454,9 @@ CA-U06-U07-ELIG-ISSUANCE-01
 
 F8DecisionLedgerV1 + F8WaitAnswerAuthority
   = DESIGN_PROPOSED / IMPLEMENTATION_NOT_AUTHORIZED
+
+CA-U07-RDP02-U15-SHARED-FENCE-01
+  = REQUIRED_UPSTREAM_AMENDMENT / NOT_DESIGNED_OR_AUTHORIZED
 
 RDP-03 decision/claim/effect atomicity + U15 terminal fencing
   = REQUIRED_FUTURE_DESIGN
@@ -403,13 +496,23 @@ IR-U07-RDP02-06
 IR-U07-RDP02-07
   Are conditional RDP-01 design closure and U06 issuance amendment
   preserved as blocking implementation prerequisites?
+
+IR-U07-RDP02-08
+  Does decision-commit temporal precedence for T1<T2<T3 honor frozen U15/Phase 9 policy,
+  and is shared Consultation fencing mandatory rather than assumed present?
+
+IR-U07-RDP02-09
+  Is CA-U07-RDP02-U15-SHARED-FENCE-01 a sufficient registered prerequisite
+  without claiming the U15 owner has already joined the barrier?
 ```
 
 ## 13. Readiness and next governed step
 
 ```text
 B-U07-RG-02 = RDP-02 DESIGN_CANDIDATE / NOT_CLOSED
-U07-RDP-02 = READY_FOR_INDEPENDENT_DESIGN_REVIEW / NOT_FROZEN
+U07-RDP-02 = TARGETED_REMEDIATION_CANDIDATE / READY_FOR_INDEPENDENT_RE_REVIEW / NOT_FROZEN
+BF-U07-RDP02-IR-01..02 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
+CA-U07-RDP02-U15-SHARED-FENCE-01 = REQUIRED / NOT_AUTHORIZED
 U07-RDP-01 = CONDITIONALLY_ACCEPTED_DESIGN / PENDING_AGGREGATE_COMPATIBILITY
 
 U07 Implementation Readiness = NOT_READY
