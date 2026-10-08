@@ -56,7 +56,24 @@ Repository main tree contains `runtime/u01`–`runtime/u06` directories but no d
 
 ## 4. Formal blocker register
 
-All six categories are **P0 readiness design blockers**: required before a positive Implementation Readiness decision. This does not mean defects were found in the already-PASS Unit Spec.
+The six B-U07-RG-01..06 entries are **OPEN readiness workstreams / implementation prerequisites**, not six proven missing Runtime implementations. A readiness prerequisite is blocking until its **design gate** is closed; this classification does not assign uniform defect severity or contradict the PASS Unit Spec.
+
+Classification vocabulary:
+- **Kind:** `CONTRACT_DESIGN_REQUIRED` (exact typed semantics), `PHYSICAL_DESIGN_REQUIRED` (components, persistent interfaces and atomic boundaries), `RUNTIME_CAPABILITY_VERIFICATION_REQUIRED` (establish present/partial/missing by code and tests), `IMPLEMENTATION_REQUIRED_LATER` (work under subsequent authorization).
+- **Evidence strength:** `DIRECTLY_DEFERRED_IN_UNIT_SPEC`; `DIRECTLY_OBSERVED_IN_CODE`; `NOT_YET_VERIFIED`. Mixed entries distinguish direct observation from still-unverified claims.
+- **Runtime status:** `PRESENT_REUSABLE` (observed relevant asset), `PRESENT_PARTIAL` (observed subset, full capability not established), `NOT_ASSESSED`, or `CONFIRMED_MISSING` **only** after an exhaustive documented negative check. Status is per relevant dependency, not a claim about the whole platform.
+- **Design closure:** independently PASS-reviewed RDP contract/physical design plus an aggregate compatibility assessment; runnable implementation evidence belongs to a separate later verification gate.
+
+| Blocker | Kind | Evidence strength | Runtime evidence status | Contract/physical design closure artifact | Later obligation |
+|---|---|---|---|---|---|
+| B-U07-RG-01 | CONTRACT_DESIGN_REQUIRED + PHYSICAL_DESIGN_REQUIRED + IMPLEMENTATION_REQUIRED_LATER | DIRECTLY_DEFERRED_IN_UNIT_SPEC; DIRECTLY_OBSERVED_IN_CODE for generic ledger | CanonicalBusinessEventLedger: PRESENT_REUSABLE; U07 admission: NOT_ASSESSED as complete capability | Independently PASS-reviewed RDP-01 inbound schema, canonical identity/admission and replay conflict matrix | Build U07 ingress/adapter and exercise concurrency/replay |
+| B-U07-RG-02 | CONTRACT_DESIGN_REQUIRED + PHYSICAL_DESIGN_REQUIRED + IMPLEMENTATION_REQUIRED_LATER | DIRECTLY_DEFERRED_IN_UNIT_SPEC; NOT_YET_VERIFIED for complete F8 implementation | F8 U07 owner and decision executor: NOT_ASSESSED | Independently PASS-reviewed RDP-02 complete precedence/authority/transition table | Implement F8 and run race/precedence cases |
+| B-U07-RG-03 | CONTRACT_DESIGN_REQUIRED + PHYSICAL_DESIGN_REQUIRED + RUNTIME_CAPABILITY_VERIFICATION_REQUIRED + IMPLEMENTATION_REQUIRED_LATER | DIRECTLY_DEFERRED_IN_UNIT_SPEC; NOT_YET_VERIFIED for cross-effect atomicity | P01/K09/F3 integration and U07 apply choreography: NOT_ASSESSED | Independently PASS-reviewed RDP-03 authority/K09 patch, CAS/effect-ID and crash-reconciliation design | Implement authorized bridge, commit and replay tests |
+| B-U07-RG-04 | CONTRACT_DESIGN_REQUIRED + PHYSICAL_DESIGN_REQUIRED + RUNTIME_CAPABILITY_VERIFICATION_REQUIRED + IMPLEMENTATION_REQUIRED_LATER | DIRECTLY_DEFERRED_IN_UNIT_SPEC; DIRECTLY_OBSERVED_IN_CODE for wait reservation | U06 wait checkpoint: PRESENT_PARTIAL relative to U07 P02 needs; full P02 resume: NOT_ASSESSED | Independently PASS-reviewed RDP-04 P02 commands/results, checkpoint repair, durable U02 handoff and crash windows | Implement authorized resume/handoff and run recovery tests |
+| B-U07-RG-05 | CONTRACT_DESIGN_REQUIRED + PHYSICAL_DESIGN_REQUIRED + RUNTIME_CAPABILITY_VERIFICATION_REQUIRED + IMPLEMENTATION_REQUIRED_LATER | DIRECTLY_DEFERRED_IN_UNIT_SPEC; NOT_YET_VERIFIED for all P01/P02/P05/P06 physical adapters | Registry/capability completeness: NOT_ASSESSED; individual known upstream assets in reuse inventory | Independently PASS-reviewed RDP-05 dependency manifest, owner/adapter map and version/applicability table, with explicit evidence-backed status per dependency | Authorized missing wiring/adapter implementation plus integration tests |
+| B-U07-RG-06 | CONTRACT_DESIGN_REQUIRED + PHYSICAL_DESIGN_REQUIRED + IMPLEMENTATION_REQUIRED_LATER | DIRECTLY_DEFERRED_IN_UNIT_SPEC; NOT_YET_VERIFIED for U07 executable runner | U07 runner and oracle implementation: NOT_ASSESSED | Independently PASS-reviewed RDP-06 oracle/fixture/runner **design** and executable-test implementation plan | Implement, execute and independently verify pinned-head evidence later |
+
+All six entries are **open at this initial readiness gate** because their reviewed unit-specific design/physical contracts are not yet accepted; no row by itself proves `CONFIRMED_MISSING` Runtime capability. Evidence-status verification must be strengthened during each RDP and aggregate review before authorizing any shared-runtime changes.
 
 ### B-U07-RG-01 — Consumer Inbound / Canonical Event Admission
 
@@ -69,7 +86,11 @@ All six categories are **P0 readiness design blockers**: required before a posit
 4. Validation order for auth/scope, malformed event, replay conflict, terminal/cancelled/expired state, and payload retention/PHI boundaries.
 5. Physical controller/consumer + durable ledger transaction placement and test seams.
 
-**Acceptance:** RDP-01 reviewed schemas + adapter design + deterministic identity table + conflict/replay matrix; rejected admission yields zero runtime resume, zero P01 mutation and zero U02 handoff; simultaneous same-key requests resolve to one canonical event.
+**Design target (not evidence of an executed test):** RDP-01 reviewed schemas + adapter design + deterministic identity table + conflict/replay matrix; rejected admission yields zero runtime resume, zero P01 mutation and zero U02 handoff; simultaneous same-key requests resolve to one canonical event.
+**Design/readiness closure (RDP-01):** canonical event admission schemas, stable identity formula and replay/scope matrices; independent PASS on exact design head. This closes the *design gap only*, not implementation verification.
+
+**Later post-authorization evidence:** U07 inbound implementation plus concurrency/replay and zero-effect negative tests. Do not demand implementation test PASS to close RDP-01 design.
+
 
 ### B-U07-RG-02 — F8 Business Resume Decision
 
@@ -82,7 +103,11 @@ All six categories are **P0 readiness design blockers**: required before a posit
 4. Stable ACCEPTED decision reference and its durability: Runtime failure cannot rewrite ACCEPTED to REJECTED.
 5. Controlled compatibility with U15 expiry/cancel truth, with no unauthorized lifecycle takeover.
 
-**Acceptance:** total/ordered F8 decision table with race and precedence tests; exactly one authoritative outcome; F8 never reads checkpoint health as business-validity verdict; replay preserves first historical ACCEPTED when relevant.
+**Design target (not evidence of an executed test):** total/ordered F8 decision table with race and precedence tests; exactly one authoritative outcome; F8 never reads checkpoint health as business-validity verdict; replay preserves first historical ACCEPTED when relevant.
+**Design/readiness closure (RDP-02):** F8 decision authority, exhaustive ordered precedence and durable outcome/ref schema; independent PASS. This closes the *design gap only*, not implementation verification.
+
+**Later post-authorization evidence:** F8 executor and decision-table/race tests. Do not demand implementation test PASS to close RDP-02 design.
+
 
 ### B-U07-RG-03 — State Ownership / Mutation / Idempotent Apply / Trace
 
@@ -95,7 +120,11 @@ All six categories are **P0 readiness design blockers**: required before a posit
 4. Stable effect IDs, canonical event + business decision + runtime + F3 + P01 + U02 trace/provenance keys.
 5. Persisted apply journal/APPLIED evidence and reconciliation protocol when crash occurs after any individual effect; concurrent competing answers on same wait.
 
-**Acceptance:** reviewed mutation/authority matrix, transition graph, durable effect journal, optimistic concurrency contract and crash-by-crash replay table; no dual APPLIED effects; no direct U07 Clinical Truth write.
+**Design target (not evidence of an executed test):** reviewed mutation/authority matrix, transition graph, durable effect journal, optimistic concurrency contract and crash-by-crash replay table; no dual APPLIED effects; no direct U07 Clinical Truth write.
+**Design/readiness closure (RDP-03):** K09/P01/F3 owner matrix, typed patch/CAS, effect journal, APPLIED/ACTIVE/PendingQuestion choreography and crash design; independent PASS. This closes the *design gap only*, not implementation verification.
+
+**Later post-authorization evidence:** governed mutations, journaling, recovery and invariant tests. Do not demand implementation test PASS to close RDP-03 design.
+
 
 ### B-U07-RG-04 — P02 Runtime Resume / Checkpoint / Downstream
 
@@ -109,7 +138,11 @@ All six categories are **P0 readiness design blockers**: required before a posit
 5. Durable U02 handoff, idempotent delivery/acknowledgement, Scheduler entry semantics, U14 failure and U15 cancellation/expiry ownership.
 6. No U05/U08 shortcut and no accidental second U02 interpretation for same accepted answer.
 
-**Acceptance:** end-to-end crash/recovery table with distinct Business and Runtime results; verified repair vs incompatibility policy; one durable U02 intent per applied event; failure never invents Clinical Facts.
+**Design target (not evidence of an executed test):** end-to-end crash/recovery table with distinct Business and Runtime results; verified repair vs incompatibility policy; one durable U02 intent per applied event; failure never invents Clinical Facts.
+**Design/readiness closure (RDP-04):** P02 commands/results, compatibility, historical binding rules, repair/fencing, durable U02 handoff and downstream failure design; independent PASS. This closes the *design gap only*, not implementation verification.
+
+**Later post-authorization evidence:** resume/rehydrate implementation and full crash/replay tests. Do not demand implementation test PASS to close RDP-04 design.
+
 
 ### B-U07-RG-05 — Capability / Dependency / Applicability
 
@@ -122,7 +155,11 @@ All six categories are **P0 readiness design blockers**: required before a posit
 4. Explicit fail-closed behavior for missing dependencies, invalid scopes, cross-consultation / cross-tenant refs, unsupported contracts and profile violations.
 5. No new clinical LLM or knowledge dependencies introduced without controlled semantic amendment.
 
-**Acceptance:** reviewed versioned dependency/compatibility manifest and concrete call graph; each required capability has a deterministic implementation owner, test double and integration test; missing P02 does not fall back to blind workflow resume.
+**Design target (not evidence of an executed test):** reviewed versioned dependency/compatibility manifest and concrete call graph; each required capability has a deterministic implementation owner, test double and integration test; missing P02 does not fall back to blind workflow resume.
+**Design/readiness closure (RDP-05):** versioned dependency/applicability manifest with per-adapter code evidence and reviewed change allowlist; independent PASS. This closes the *design gap only*, not implementation verification.
+
+**Later post-authorization evidence:** authorized adapter/wiring work and integration validation. Do not demand implementation test PASS to close RDP-05 design.
+
 
 ### B-U07-RG-06 — Verification / Durable Evidence
 
@@ -135,9 +172,22 @@ All six categories are **P0 readiness design blockers**: required before a posit
 4. Runner entrypoint, deterministic reproducibility, negative assertions (zero PHI, zero live/external IO, zero unintended writes), coverage threshold and fail-closed evaluator.
 5. Durable evidence bundle, provenance, checksums, trusted execution environment, CI status and independent evidence-only review handoff.
 
-**Acceptance:** runner + oracle + fixtures + manifest approved; all required cases pass on pinned implementation SHA with independently reviewable durable artifact; no test-only fixture promoted to real-patient authorization.
+**Design target (not evidence of an executed test):** runner + oracle + fixtures + manifest approved; the RDP-06 **design** freezes expected outputs and negative assertions, and describes the executable evidence to be produced **after implementation authorization**; no test-only fixture may be promoted to real-patient authorization.
+**Design/readiness closure (RDP-06):** oracle and fixture schemas, case/negative assertion matrix, runner/manifest *design*, environment and later implementation plan; independent PASS. This closes the *design gap only*, not implementation verification.
 
-## 5. Dependency / closure sequence
+**Later post-authorization evidence:** implement/run authoritative verifier, durable bundle and independent evidence-only review. Do not demand implementation test PASS to close RDP-06 design.
+
+
+## 5. Independent review finding remediation trace
+
+| Independent finding | Targeted remediation | Status at this commit |
+|---|---|---|
+| IR-U07-01 | RDP-06 design closure now explicitly excludes implementation-SHA run results; later verification and evidence-only review remain mandatory | REMEDIATED_FOR_REVIEW / NOT_INDEPENDENTLY_RE-REVIEWED |
+| IR-U07-02 | Each RDP now has a type/evidence/Runtime-status/closure table and separate later execution duties; no blanket P0 or inferred missing Runtime capability | REMEDIATED_FOR_REVIEW / NOT_INDEPENDENTLY_RE-REVIEWED |
+
+The original independent verdict `REVISE_REQUIRED` is **not overwritten** by author-side remediation. Only a targeted independent re-review of this exact new head may close IR-U07-01/02.
+
+## 6. Dependency / closure sequence
 
 ```text
 RDP-01 canonical event/admission
@@ -157,7 +207,7 @@ Explicit Implementation Authorization Decision
 
 RDP-03 and RDP-04 may be designed in parallel but must be jointly reconciled before any authorization.
 
-## 6. Separate findings: not blockers on U07 Unit Spec
+## 7. Separate findings: not blockers on U07 Unit Spec
 
 - `NB-U07-01`: same semantic answer + new business event ID — resolve via RDP-01/02.
 - `NB-U07-02`: APPLIED/ACTIVE/PendingQuestion/F3/U02 exact ordering — resolve via RDP-03/04.
@@ -165,12 +215,13 @@ RDP-03 and RDP-04 may be designed in parallel but must be jointly reconciled bef
 - U06 projector and Foundation ledger are **reusable upstream assets**, not proof of complete U07.
 - A PASS of the independent Unit Spec review is not a PASS of RDP-01..06 or Production Readiness.
 
-## 7. Decision
+## 8. Decision
 
 ```text
 U01-U06 completed within their accepted non-production baseline = SUPPORTED BY MAIN MERGE LINEAGE
 U07 Unit Spec Independent Design Review = PASS / CLOSED (PR #262 review record)
-U07 RDP-01..06 = OPEN / REQUIRED
+U07 RDP-01..06 = OPEN_DESIGN / REQUIRED (not six proven Runtime defects)
+IR-U07-01 / IR-U07-02 = REMEDIATED_FOR_TARGETED_RE_REVIEW / NOT_CLOSED
 U07 Aggregate Physical Compatibility = NOT_REVIEWED
 U07 Implementation Readiness = NOT_READY
 U07 Implementation Authorization = NOT_GRANTED
@@ -178,4 +229,4 @@ U07 Formal Implementation = NOT_STARTED AS GOVERNED UNIT
 Production / PROFILE-A / live / real-patient = BLOCKED
 ```
 
-**Next concrete work:** U07-RDP-01 Consumer Inbound / Event Admission Contract, using this review as the blocker baseline, followed by RDP-02 through RDP-06. Do not start U07 code or merge any PR solely on this assessment.
+**Next formal gate:** U07 Initial Readiness Targeted Independent Re-Review of this exact amended head. Only after PASS should U07-RDP-01 Consumer Inbound / Event Admission Contract proceed, followed by RDP-02 through RDP-06. Do not start U07 code or merge any PR solely on this assessment.
