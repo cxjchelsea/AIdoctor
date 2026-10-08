@@ -118,7 +118,7 @@ class StaticProducerTests(unittest.TestCase):
                 if record["path"] == p:
                     record["sha256"] = digest(updated)
                     record["bytes"] = len(updated)
-            blob = hashlib.sha1(b"blob " + str(len(updated)).encode() + b"\\0" + updated).hexdigest()
+            blob = hashlib.sha1(b"blob " + str(len(updated)).encode() + b"\0" + updated).hexdigest()
             for record in inv["matches"]:
                 if record["path"] == p:
                     record["file_sha256"] = digest(updated)
