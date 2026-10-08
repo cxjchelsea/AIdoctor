@@ -102,10 +102,14 @@ def main() -> None:
     parser.add_argument("--snapshots-dir", required=True, help="root with six exact-head Java source snapshots")
     parser.add_argument("--artifact-dir", required=True, help="pre-existing isolated evidence output directory")
     args = parser.parse_args()
-    src_dir = Path(args.snapshots_dir).resolve(strict=True)
-    artifact_dir = Path(args.artifact_dir).resolve(strict=True)
+    # Detect symlinked boundary *before* resolve() removes the link evidence.
+    input_paths = [Path(args.snapshots_dir).absolute(), Path(args.artifact_dir).absolute(), Path(args.archive).absolute()]
+    if any(part.is_symlink() for raw in input_paths for part in [raw, *raw.parents]):
+        raise SystemExit("FAIL_CLOSED: symlinked input/output boundary")
+    src_dir = input_paths[0].resolve(strict=True)
+    artifact_dir = input_paths[1].resolve(strict=True)
     output = artifact_dir / "tier0-source-projection.json"
-    archive_path = Path(args.archive).resolve()
+    archive_path = input_paths[2].resolve()
     if (not artifact_dir.is_dir() or artifact_dir == src_dir or src_dir in artifact_dir.parents
             or Path(__file__).resolve().parent in artifact_dir.parents
             or artifact_dir == archive_path.parent or output.exists() or output.is_symlink()):
