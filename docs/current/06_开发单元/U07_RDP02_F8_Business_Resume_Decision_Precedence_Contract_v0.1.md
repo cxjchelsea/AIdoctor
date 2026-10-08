@@ -6,7 +6,8 @@
 > Upstream RDP-01: PR #266 @ `4f98e950f6d7dfedd7c046dedfc9db7e52135b04` (design conditionally accepted in PR #270 @ `d43ac7fa1b6d65e8db27a5a316ee650f8137e4e2`)
 > Runtime integration reference: `main@6d4fd787600e3a57f01f3e17893e6d98893ac546`
 > Scope: **F8 OWNER / BUSINESS VERDICT / PRECEDENCE / DECISION DURABILITY PHYSICAL DESIGN CANDIDATE**
-> Status: **TARGETED_REMEDIATION_CANDIDATE / PENDING_EXACT_HEAD_INDEPENDENT_RE_REVIEW / NOT_FROZEN**
+> Status: **SECOND_TARGETED_REMEDIATION_CANDIDATE / PENDING_EXACT_HEAD_INDEPENDENT_RE_REVIEW / NOT_FROZEN**
+> Targeted re-review PR #273 at `0346ffe7701bc441fef1c7ad48e1fcd231c5be31` found BF-U07-RDP02-IR-01 OPEN (clock/commit linearization) and BF-02 conditional resolution with mandatory U15 shared fence. This revision is an author-side candidate, not a review closure.
 > Independent review PR #272 @ `8ce3c2ca140674c2e723b4c40e8a37ed25371216`: REVISE_REQUIRED / BF-U07-RDP02-IR-01 and IR-02. This amendment is an author-side proposal, not independent closure.
 >
 > This document does not authorize U07 implementation, merge, source changes, production, PROFILE-A, live user answers, PHI, patient traffic, or external side effects.
@@ -132,6 +133,8 @@ trusted_scope_ref
 decision_policy_version
 decision_input_fingerprint
 decided_at
+  decision_effective_at                   # certified primary DB finalization statement time
+  time_authority_ref + db_clock_precision
 trace_ref
 effects_permitted = true only for ACCEPTED and valid RDP-03 later fencing
 runtime_resumable = UNKNOWN              # F8 never sets true
@@ -171,7 +174,7 @@ Apply following ordered table, stopping at first **proved** condition. When nece
 | Order | Condition on authoritative evidence | Verdict | Why |
 |---|---|---|---|
 | P1 | Another answer **already APPLIED** for the same exact consultation+Question+parent wait and proven *same answer content equivalence* | **DUPLICATE** | Completed prior effect wins, including after Question/Consultation lifecycle moved on |
-| P2 | U15 expiry committed before **first fenced F8 decision commit**, or authoritative Question/window deadline reached by that commit | **EXPIRED** | Timely ingress alone does not reserve a resumed business right; §5.1 |
+| P2 | U15 expiry confirmed before first F8 fenced finalization, or authoritative Question/window deadline reached **at the persisted final conditional DB statement time** `t_f8_linearize` | **EXPIRED** | Clock threshold evaluated atomically at §5.1 business linearization, independent of eventual physical COMMIT |
 | P3 | U15 committed cancel/terminal-other, or Question superseded *without expiry*, with no proved P1 duplicate | **REJECTED** | Wrong life-cycle authority, no ordinary resume |
 | P4 | Consultation, Question, Pending Question, parent wait, authenticated actor/scope or delivery provenance do not match | **REJECTED** | Wrong binding cannot be repaired through Runtime |
 | P5 | Another **different** answer already owns a terminal winning F8 ACCEPTED claim for the same wait, but apply is not complete | **DEFER (F8_COMPETING_WINNER_PENDING)**, **not DUPLICATE** | Await outcome; a pending winner could fail or be cancelled; do not falsely claim already applied |
@@ -183,39 +186,51 @@ Apply following ordered table, stopping at first **proved** condition. When nece
 
 **P1 before P2/P3** is only for an independently proven already-applied identical answer to preserve idempotent status. The response is a reference to original processing, **not** new patient continuation. A late, first-ever answer with no applied identical winner is still EXPIRED if deadline passed. A terminally cancelled wait with no prior identical APPLIED winner is REJECTED; an expired wait uses EXPIRED where owner source proves expiry.
 
-### 5.1 Frozen first-verdict temporal semantics (BF-U07-RDP02-IR-01)
+### 5.1 Chosen V1 first-verdict linearization: fenced DB statement time (BF-U07-RDP02-IR-01)
 
-**Selected V1 rule: decision-commit eligibility, not historical receipt-only eligibility.** The first F8 verdict requires the wait/question and any explicit U15 deadline to be valid at the **serialized F8 decision commit point**, even if the original event reached RDP-01 while the wait was still active. A timely receipt is preserved as evidence of arrival but **does not reserve future authority to resume**. The only path for an earlier lawful ACCEPTED is Tier 0 immutable decision reattachment; later new effects remain controlled by RDP-03 terminal fencing. This is a conservative policy candidate for PROFILE-B only and requires compatibility review against frozen Phase 8/9 and U15 business policy.
+**One selected enforceable policy:** the business validity instant of a *new* F8 decision is the **authoritative database timestamp of a named finalization statement** executed while the Consultation/U15 common serialization lock is held, *not* the later physical transaction COMMIT wall-clock instant. Call it `t_f8_linearize`. This instant is sampled **once**, from the same primary DB authority as the Consultation row, at the **final decision statement** after all owner reads/locks/revalidation, and is persisted as `decision_effective_at` in `F8DecisionLedgerV1`. If the transaction eventually commits, that statement becomes the logical F8 decision point; if transaction rolls back, **no linearized business decision exists**. A delayed COMMIT never invents a second/retroactive decision moment.
 
-Trusted inputs and order:
-- `t_ingress`: server timestamp persisted once with the *original canonical event* in Foundation `received_at`; incoming retry timestamp / client `occurred_at` is **never** authoritative. RDP-01 must prove it maps to the committed canonical record.
-- `t_decision`: DB-authoritative transaction time / commit ordering reference for the **first F8 decision**, not an unsynchronized application clock sample.
-- `deadline`: effective U15/F3 authoritative expiry instant and policy version; `terminal_commit_version`: durable terminalization order at the same Consultation fence.
-- For `t_decision >= deadline`, an explicit expiry with positive owner evidence is **EXPIRED**, regardless of `t_ingress`; if authoritative cancellation (not expiry) won before F8 commit, **REJECTED**. If both expiry and cancellation are visible, **EXPIRED takes priority only when an authoritative expiry event or deadline is proved**; otherwise cancellation yields REJECTED.
-- A timestamp equality `t_decision == deadline` is already expired (half-open legal window `[opened_at, deadline)`); the shared fence's terminal commit order decides whether F8's transaction could lawfully commit before that boundary. Timestamp equality by itself is not proof of causal ordering.
-- If time-source skew, deadline provenance or commit ordering cannot be determined consistently, **DEFER**, with no business verdict; never accept solely from `t_ingress < deadline`.
+**Necessary clock contract:** use a database expression that returns the **actual current primary DB clock at statement execution** (not transaction-start time or client/JVM time), at documented timestamp precision. SQL expressions differ by dialect, and no expression is silently presumed: the MySQL and Oracle implementation mappings must be independently verified in RDP-05 and database integration tests (including transaction-start vs statement-time behavior). If only a transaction-start-frozen clock is available, or DB clock provenance/precision cannot be verified, return `F8_TIME_AUTHORITY_UNAVAILABLE` (operational DEFER, **no ACCEPTED**) and mark U07 `NOT_READY`.
 
-Deterministic race table:
+**Physical finalization requirement:** the `t_f8_linearize` reading and immutable verdict persistence must happen in **one final SQL statement** with an owner-fenced decision predicate (e.g., INSERT ... SELECT/conditional write using a DB statement-current-time expression and deadline predicate), or an independently equivalent atomic DB statement whose timestamp and qualification cannot diverge. Merely invoking a timestamp query and then performing an unconstrained INSERT later is **not sufficient**. The statement must also enforce the observed U15 terminal generation/current-wait F8 claim authority under the held Consultation lock; any predicate mismatch yields no ACCEPTED and an authoritative re-read/re-evaluation. A subsequent database COMMIT persists that verdict or rolls it back, and is not itself a new time validation. **No F8 ACCEPTED may be published before commit.** This is a V1 design requirement, not a claim that the existing repositories already support conditional inserts.
 
-| Trusted ingress | U15/F3 event | First F8 claim/commit | First verdict | Apply authorization |
-|---|---|---|---|---|
-| before deadline | none through F8 commit | before deadline, fenced current WAITING_USER | ACCEPTED | subsequent P01/P02/RDP-03 fresh fence required |
-| **T1** timely | **T2 expiry** committed | **T3 after T2** | **EXPIRED** | none; timely arrival does not override expiry |
-| **T1** timely | **T2 cancel** committed | **T3 after T2** | **REJECTED / CANCELLED** | none |
-| timely | F8 commits ACCEPTED first | U15 expires or cancels later | historical ACCEPTED unchanged | later effects disallowed or governed recovery under RDP-03 |
-| new ID/key after wait expired | owner expired | after deadline | EXPIRED unless a proved prior APPLIED identical answer triggers Tier 1 P1 DUPLICATE | no effects |
-| exact event replay | expiry/cancel later | any time | original durable verdict (Tier 0) | only read/reconcile; later effects separately fenced |
-| competing F8 and U15 based on same prior version | whichever acquires **Consultation row lock** commits first | loser refreshes/retries | F8 first ACCEPTED only if before deadline; U15 first EXPIRED/REJECTED | never two ordinary applies |
-| timestamps equal; causal ordering not proven | concurrent expiry and decision | not orderable | DEFER | none |
-| historical identical already APPLIED new event | U15 later terminal | after terminal | DUPLICATE by P1 with original applied reference only | none |
+Temporal / causal inputs:
 
-**Tier 1 P2 updated:** EXPIRED when the answer window expired **by the fenced first F8 decision commit**, including `t_ingress < deadline <= t_decision`, not only when expiry precedes ingress. P3 follows for committed non-expiry U15 cancellation; P4 mismatch is evaluated only after authoritative expiry/cancel evidence; a failed owner read is DEFER not REJECTED. Tier 0 and a strictly proven P1 historical duplicate take precedence as specified, **without authorizing new Runtime effects**.
+- `t_ingress`: the original Foundation canonical event's persisted, server-generated `received_at`; evidence of arrival only. Transport retries and client `occurred_at` cannot backdate validity.
+- `t_f8_linearize`: primary DB statement-effective instant when the final conditional decision row is inserted under the shared Consultation/U15 lock, persisted immutably with the decision and its policy/precision/DB authority reference.
+- `deadline`: authoritative F3/U15 effective expiry instant and version, independently verified against the same trusted time domain. A conversion of different clock domains without certified bounded skew is `DEFER`.
+- `u15_terminal_generation`: current committed owner terminal/cancellation/supersession epoch read under the shared lock. It is an authority separate from clock expiry; the clock can cross a deadline even if no U15 write occurred.
 
-Business-effective time is *not* inferred from a stale `received_at`, client `occurred_at`, or an untrusted clock. Strict decision-commit semantics are a design policy, not a claim that U15 has already implemented this barrier.
+**Exactly defined outcome:**
+1. Tier 0 prior *committed* verdict replay wins identity precedence, returning the original verdict without re-evaluating present time; RDP-03 still independently guards any new effect.
+2. For first verdict, proven identical already-APPLIED event of the same wait uses Tier 1 P1 DUPLICATE (zero effects), even after expiry.
+3. Otherwise, **expiry** if `t_f8_linearize >= deadline` with verifiable authoritative deadline (half-open legal interval `[opened_at, deadline)`), **even if `t_ingress < deadline` and even if no U15 write has occurred**. If a committed U15 expiry fact exists, it also proves expiry.
+4. If no expiry applies but authoritative U15 cancellation or non-expiry terminal/supersession occurred before finalization, REJECTED.
+5. Only `t_f8_linearize < deadline`, no owner terminal, coherent Question/Pending/wait versions and no other F8 winner can result in ACCEPTED; the conditional decision insert itself checks this.
+6. If the same-source DB clock, authoritative deadline, commit/owner order or predicate outcome is indeterminate, **DEFER** without an F8 verdict. Do not default to ACCEPTED or generic REJECTED.
+
+**Important semantic boundary:** A transaction that finalizes ACCEPTED at 10:00:59.999 and physically COMMITs at 10:01:00.050 is logically ACCEPTED **at 10:00:59.999** if and only if (a) its final conditional statement acquired the Consultation/U15 shared fence, (b) authoritative deadline is 10:01:00.000 in the certified DB clock domain, and (c) the transaction successfully commits. This does **not** permit later Runtime/APPLIED effects at 10:01:00.050: those require a fresh owner/currentness check under RDP-03 and may be blocked by expiry. Unlike the previous wording, `commit_at >= deadline` alone does **not** retroactively invalidate a statement-linearized business decision. If governance instead mandates physical-commit-time eligibility, that is a **different policy** requiring a reviewed database commit-time enforcement mechanism and explicit controlled amendment; V1 does not pretend to provide one.
+
+| Situation | Serialized finalization instant | First F8 outcome | Consequence |
+|---|---|---|---|
+| T1 ingress before deadline; U15 expiry T2 committed; F8 statement T3 after T2 | T3 at/after deadline | EXPIRED | no ordinary Resume |
+| T1 ingress; U15 cancellation T2 committed; F8 statement T3 after T2, no expiry | T3 after cancel epoch | REJECTED / CANCELLED | no ordinary Resume |
+| Ingress before deadline; **DB final conditional statement before deadline; COMMIT after deadline** | before deadline, **under shared fence** | historical ACCEPTED if commit succeeds | later effects re-fence; no retroactive rewrite |
+| Statement starts before deadline but deadline reached **before conditional evaluation at statement-current time** | at/after deadline | EXPIRED | no ACCEPTED |
+| Deadline reached with **no U15 writer**, F8 statement executes afterward | at/after deadline | EXPIRED | lock alone does not defeat clock passage |
+| U15 acquires shared Consultation lock and commits first | final F8 observes terminal generation | EXPIRED or REJECTED by typed terminal authority | no ACCEPTED |
+| F8 finalizes and commits first; U15 later terminalizes | first F8 before valid deadline | original ACCEPTED retained | subsequent effects governed and may be blocked |
+| Same exact instant as deadline in certified precision | `t_f8_linearize == deadline` | EXPIRED | half-open interval |
+| Clock domain/precision or cross-owner ordering unknown | no valid final statement authority | operational DEFER | zero effects |
+| Original canonical event replay after expiration | Tier 0 prior verdict | original verdict | no new effects |
+| New canonical event identical to already-APPLIED same-wait answer after U15 | Tier 1 P1 prior effect confirmed | DUPLICATE | history-only, zero effects |
+
+**F8's commit outcome and the business decision effective instant are distinct evidence.** If commit outcome is unknown, re-read `F8DecisionLedgerV1` by canonical event ID and claimant generation in a new transaction. No guessed decision time or optimistic ACCEPTED is allowed. MySQL/Oracle precision and expression behavior are required integration evidence; this document only freezes the behavior the adapters must prove.
+
 
 ### 5.2 First verdict vs later effect authorization
 
-1. **First F8 commit**: require coherent owner snapshot, absence of committed U15 terminalization, valid authoritative deadline, versioned claim and durable decision under one fence.
+1. **First F8 finalization**: while owner lock is held, atomically enforce deadline using the trusted statement-current DB clock `t_f8_linearize` and a versioned terminal/winner predicate in the conditional decision write; `ACCEPTED` is visible only if the subsequent transaction COMMIT succeeds. COMMIT clock time is not the business decision instant.
 2. **Previously ACCEPTED**: preserve historical verdict even after U15 expiry/cancel; it does **not** permit ordinary resume without a new RDP-03/P01 effect-stage version/fence check. If terminal owner won before apply, mark downstream `EFFECT_BLOCKED_BY_TERMINAL` (not a new F8 verdict), route U14/U15 governance.
 3. **Previously APPLIED**: return original applied identity/decision for same-event replay; for a new *provably equivalent* answer return DUPLICATE with zero new effects. Do not blindly serve stale clinical conclusions.
 4. **Unordered owner evidence**: `F8_EVALUATION_DEFERRED` remains operational, not a fifth business result.
@@ -321,9 +336,11 @@ One outer, same-data-source transaction for F8 first decision:
     -> LOCK F8WaitAnswerAuthority by (consultation_id,question_id,parent_wait_id)
        in deterministic key order, INSERT sentinel if absent under Consultation lock
     -> read F8DecisionLedger original/other applied-winner under lock
-    -> recompute §5 Tier-0/Tier-1 with DB time, versioned owner facts
-    -> commit immutable F8 decision and same-wait claim atomically
-  COMMIT; only after success is F8 ACCEPTED visible
+    -> recompute §5 Tier-0/Tier-1 under owner lock; validate policy versions
+    -> FINAL conditional decision/claim write samples t_f8_linearize using primary DB
+       STATEMENT-CURRENT clock, atomically predicates deadline/terminal epoch/winner
+    -> persist decision_effective_at = t_f8_linearize + verified owner evidence
+  COMMIT atomically; only after successful COMMIT is F8 ACCEPTED visible
 ```
 
 U15 must acquire **the same Consultation lock before modifying** any authoritative terminal/deadline authority for that wait, commit a monotonically increasing terminal generation and cause a verified Consultation version or fence-generation advance in the same atomic unit. A mere `SELECT` of U15 state **without shared serialization** is insufficient. The detailed U15 adapter/version and any F3 owner-side cross-store dependency are to be covered by the above controlled amendment and RDP-05; this RDP cannot self-authorize changes to U15.
@@ -360,8 +377,10 @@ read RDP-01 immutable canonical event binding
 → calculate candidate verdict with §5 precedence
 → acquire authoritative Consultation row lock FIRST and F8 same-wait claim lock next (§8.1.1)
 → re-read versions / U15 terminal generation / expiry / winner under COMMON owner fence
-→ persist F8 decision and winner atomically, or return deferred/conflict
-→ commit
+→ issue final CONDITIONAL DB statement which atomically samples t_f8_linearize and
+   predicates effective deadline, current terminal epoch and winner generation
+→ persist F8 decision_effective_at and winning claim atomically or DEFER/EXPIRED
+→ commit (durability only, NOT a new decision-effective time)
 → downstream P02 permitted only if decision persisted ACCEPTED and
    CURRENT governance barrier independently passes
 ```
@@ -428,9 +447,16 @@ Design-only, to be integrated into RDP-06:
 | F8-T32 | original APPLIED identical event, U15 terminal, new canonical event after expiry | DUPLICATE with no effect |
 | F8-T33 | same prior Consultation version F8 vs U15 competing locks | one serial winner, loser rechecks |
 | F8-T34 | known U15 terminal, F8 owner lock not integrated | BLOCKED_DEPENDENCY / no ACCEPTED |
+| F8-T35 | DB conditional final statement at 10:00:59.999, deadline 10:01:00.000, COMMIT at 10:01:00.050 | ACCEPTED historically if commit succeeds; later effects independently fence; no false commit-time EXPIRED |
+| F8-T36 | separate DB time SELECT before deadline, unconditional INSERT after deadline | forbidden implementation; cannot claim ACCEPTED |
+| F8-T37 | U15 never writes, but deadline crosses before final conditional SQL statement | EXPIRED; Consultation lock cannot freeze clock |
+| F8-T38 | final statement sees t_f8_linearize exactly equal to deadline | EXPIRED, half-open window |
+| F8-T39 | transaction-start DB clock frozen despite elapsed time | DB clock unfit => DEFER/NOT_READY; no ACCEPTED |
+| F8-T40 | DB clock unknown precision or mismatched F3/U15 time domain | DEFER; no verdict/effects |
+| F8-T41 | decision conditional insert succeeds but transaction commit outcome unknown | re-query unique F8 decision and claimant under new transaction; no optimistic ACCEPTED |
 | F8-T27 | typed owner evidence unavailable | operational defer; no fifth business verdict |
 
-No actual tests are executed in this document. §5.1/§8.1.1 and F8-T28..34 expand the original precedence and fencing oracles. For all cases assert **zero forbidden Clinical State mutations / P02 resume / U02 handoff** unless independently authorized and the necessary later gates pass.
+No actual tests are executed in this document. §5.1/§8.1.1 and F8-T28..41 cover temporal linearization, expiry/cancel, concurrent claim, and crash oracles. MySQL/Oracle statement-clock semantics and the ability to express the atomic conditional write must be proven before implementation authorization. For all cases assert **zero forbidden Clinical State mutations / P02 resume / U02 handoff** unless independently authorized and the necessary later gates pass.
 
 ## 11. Cross-RDP contract compatibility matrix
 
@@ -504,13 +530,23 @@ IR-U07-RDP02-08
 IR-U07-RDP02-09
   Is CA-U07-RDP02-U15-SHARED-FENCE-01 a sufficient registered prerequisite
   without claiming the U15 owner has already joined the barrier?
+
+IR-U07-RDP02-10
+  Does the chosen t_f8_linearize final conditional DB statement separate logical
+  first-verdict time from physical COMMIT, including deadline-crossing inside txn?
+
+IR-U07-RDP02-11
+  Are MySQL/Oracle per-statement clocks proven independent of transaction start,
+  and do unknown clock/precision cases fail closed rather than create ACCEPTED?
 ```
 
 ## 13. Readiness and next governed step
 
 ```text
 B-U07-RG-02 = RDP-02 DESIGN_CANDIDATE / NOT_CLOSED
-U07-RDP-02 = TARGETED_REMEDIATION_CANDIDATE / READY_FOR_INDEPENDENT_RE_REVIEW / NOT_FROZEN
+U07-RDP-02 = SECOND_TARGETED_REMEDIATION_CANDIDATE / READY_FOR_SECOND_INDEPENDENT_RE_REVIEW / NOT_FROZEN
+BF-U07-RDP02-IR-01 = REMEDIATED_FOR_SECOND_RE_REVIEW / NOT_CLOSED
+BF-U07-RDP02-IR-02 = CONDITIONAL_DESIGN_RESOLUTION / U15_UPSTREAM_PENDING
 BF-U07-RDP02-IR-01..02 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
 CA-U07-RDP02-U15-SHARED-FENCE-01 = REQUIRED / NOT_AUTHORIZED
 U07-RDP-01 = CONDITIONALLY_ACCEPTED_DESIGN / PENDING_AGGREGATE_COMPATIBILITY
