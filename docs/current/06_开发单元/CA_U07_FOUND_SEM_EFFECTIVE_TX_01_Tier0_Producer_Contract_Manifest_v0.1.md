@@ -42,7 +42,7 @@ python tools/u07_foundation_tx_topology/static_projection.py \
   --artifact-dir /isolated-evidence-out
 ```
 
-The caller-provided snapshot directory mirrors the six `diagnosis-service/src/main/java/...` paths. The program does not clone, run Git, open sockets or connect to a database. `--output` is a **pre-existing isolated artifact directory**, separate from snapshots, the producer directory and the input archive's directory. The fixed output is `tier0-source-projection.json` inside this directory; existing output is not overwritten and symlinked boundaries are rejected. Producer prints only the `SOURCE_ONLY` projection's SHA-256.
+The caller-provided snapshot directory mirrors the six `diagnosis-service/src/main/java/...` paths. The program does not clone, run Git, open sockets or connect to a database. `--artifact-dir` is a **pre-existing isolated artifact directory**, separate from snapshots, the producer directory and the input archive's directory. The fixed output is `tier0-source-projection.json` inside this directory; existing output is not overwritten and symlinked boundaries are rejected. Producer prints only the `SOURCE_ONLY` projection's SHA-256.
 
 Output: canonical sorted UTF-8 JSON with `schema`, `status=SOURCE_ONLY`, `source_head`, `source_tree`, `input_archive_sha256`, `input_inventory_sha256`, verified `sources` list (`source_path`, SHA-256, Git blob), declared `nodes`, declared `edges` with paths/line numbers, explicit `effective_manager=UNKNOWN`, `entity_manager_factory=UNKNOWN`, `datasource=UNKNOWN`, `spring_context_executed=false`, `database_access=false`, and `limitations`. Proposed U07 admission/binding nodes = `NOT_IMPLEMENTED`. No positive configured-manager, proxy identity, transaction owner, JDBC enlistment, actual COMMIT or U07 atomicity statements.
 
@@ -56,7 +56,7 @@ U01ConsultationService → ConsultationRepository.save
 U01ConsultationService → ClinicalRunCoordinator
 ```
 
-Each Java source is inspected for its known method's declared `@Transactional` annotation only; this does **not** mean that advice is applied. If the exact call expression is absent, repeated, or altered, producer returns `FAIL_CLOSED` rather than fabricating a relation. Dynamic/reflection/external consumer coverage remains `UNKNOWN` even after lexical inventory completeness passes.
+Each Java source first passes through a conservative Java lexical masking pass (line/block comments, strings, character literals and text blocks); unterminated literals/comments fail closed, and offsets/newlines remain stable. The source-only parser then inspects its known method's declared `@Transactional` annotation; this does **not** mean that advice is applied. If the exact call expression is absent, repeated, or altered, producer returns `FAIL_CLOSED` rather than fabricating a relation. Dynamic/reflection/external consumer coverage remains `UNKNOWN` even after lexical inventory completeness passes.
 
 ## 4. Independent Oracle / fixture and negative proof requirements
 
@@ -64,14 +64,22 @@ A **separately reviewed exact-source snapshot package** is needed for accepting 
 
 ## 5. Validation, status and governance
 
-**Targeted remediation validation (local mirrored code, not yet independently SHA-reconciled exact GitHub HEAD):** `python -m unittest -v test_static_projection` = **12 passed**. Two forged-input tests use the unfalsified frozen digest; the isolated-output symlink negative test explicitly verifies CLI rejection; the missing/duplicate-edge cases repack a self-consistent synthetic inventory with updated source SHA-256/Git blob and assert the *semantic* edge error rather than a generic hash failure. The real PR #297 archive SHA-256, extracted JSON SHA-256 and 2,112-entry inventory schema also validate locally. Python syntax validation succeeded. These local results are **not** asserted as an exact-GitHub-HEAD CI test run, and do not independently close RF-U07-FOUND-T0-IMPL-01. These results **do not** verify an actual six-snapshot output until those independent raw sources are supplied and checked. Any missing source snapshot must remain a hard failure. No CI workflow is created in this implementation scope.
+**Second targeted remediation + exact-HEAD evidence:** PR #307 exposed annotation false positives from `@Transactional` inside Java block/line comments and string literals. D0-01 now masks Java line/block comments, double-quoted strings, character literals, and Java text blocks **before** declared-annotation and call-edge matching, preserving newline offsets; malformed unterminated constructs return `UNCLOSED_JAVA_COMMENT_OR_LITERAL`. D0-03 adds adversarial comment/string/text-block and unclosed-literal tests. The implemented lexer remains a limited source-only parser, not a full Java AST.
 
+**Executable test provenance:** independently reconciled *byte-identical* local Python source files to the new PR #305 Git Blob SHAs (`static_projection.py=45fd3b336a7ac8797f19714dca111292aba3840e`, `static_schema.py=cc7eaa06199da8194ea4d19eb7fe53ea1f4b4f87`, `test_static_projection.py=36731fadf8c9c574b326549084a29d19f2249478`), then executed `python -m unittest discover -p 'test_*.py' -v` using Python 3.13.5 **15 passed / 0 failed**. The source-file Git Blob and SHA-256 values were separately recorded; these are local execution evidence for exact Python blobs, **not an independent reviewer verdict** or full CI pass. There is no Spring/JVM/database execution.
+
+**Original artifact integrity:** exact frozen archive SHA-256 `0ab0682aa9d14f08573a53d47c4ad54c0cdba2955747b749431901b82e694089`, JSON SHA-256 `b28d72868833a8c109938025a6077dd6799924e89e31a34572c4d186f5bcf077` (2,112 tracked paths, 256 lexical matches).
+
+**Independently retrieved exact-main source Oracle:** six Java sources were fetched at immutable `main@6d4fd787...` and verified by GitHub Blob identities. Static source inspection established six singly occurring declared call edges: U01→Ledger L52, U01→CDPManager L66, CDPManager→CDPVersionService L70, U01→RuntimeBinding L68, U01→ClinicalRun L85, U01→ConsultationRepository.save L83. All six known methods have declared `@Transactional`. An independent **expected SOURCE_ONLY Oracle** (not producer CLI output) was generated from these independently retrieved source facts plus the verified inventory SHA map; expected Oracle SHA256 `2894806f159c18a9c24918e058473c6581ac7c9d7719fe2718d08f5aac765ea9`. This does **not** establish Spring proxy, manager, database/COMMIT or missing dynamic/external consumers.
+
+**Remaining evidence limitation:** the six entire raw Java files were inspected individually from GitHub, but have not yet been packaged as a byte-exact local six-snapshot directory and fed through the **actual producer CLI**. The Oracle JSON is **not** equivalent to a successful six-snapshot producer execution. `RF-U07-FOUND-T0-IMPL-02` therefore remains **OPEN** pending deterministic CLI projection and byte-level independent comparison. No CI workflow has been added; no implementation closure or merge grant is implied.
 ```text
-Tier0 candidate = TARGETED_REMEDIATED_FOR_INDEPENDENT_RE_REVIEW
+Tier0 candidate = SECOND_TARGETED_REMEDIATION_COMPLETE / INDEPENDENT_RE_REVIEW_PENDING
 BF-U07-FOUND-T0-IMPL-01 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
 BF-U07-FOUND-T0-IMPL-02 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
-RF-U07-FOUND-T0-IMPL-01 = OPEN / EXACT_GITHUB_HEAD_TEST_EVIDENCE_PENDING
-RF-U07-FOUND-T0-IMPL-02 = OPEN / REAL_SIX_SOURCE_PROJECTION_PENDING
+BF-U07-FOUND-T0-RE-01 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
+RF-U07-FOUND-T0-IMPL-01 = EXACT_PYTHON_BLOBS_15_TESTS_PASSED / INDEPENDENT_ACCEPTANCE_PENDING
+RF-U07-FOUND-T0-IMPL-02 = OPEN / SIX_SOURCE_CLI_EXECUTION_NOT_ATTESTED
 Tier0 evidence schema = SOURCE_ONLY
 Tier0 exact-main full six-snapshot projection = NOT_EXECUTED / INPUT_SNAPSHOTS_NOT_PACKAGED
 Tier0 independent implementation review = PENDING
