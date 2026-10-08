@@ -175,7 +175,7 @@ U07 accepted canonical answer + authoritative delivered Question
 ```
 
 The *question status names are design values to reconcile against frozen F3 contracts*; a generic U07 mapper must not unilaterally pick `ANSWERED` for an ambiguous response or create clinical facts. An answer may be present without all Gap needs satisfied. A new F3 answer-consumption contract is **REQUIRED**, not proven implemented. `CA-U07-RDP03-F3-ANSWER-BRIDGE-01 = REQUIRED / NOT_AUTHORIZED
-CA-U07-RDP03-P01-U15-SHARED-COMMIT-FENCE-01 = REQUIRED / NOT_AUTHORIZED` must either confirm reuse of approved F3 ownership or amend it under independent review before implementation.
+CA-U07-RDP03-F3-ANSWER-BRIDGE-01 = REQUIRED / NOT_AUTHORIZED` must either confirm reuse of approved F3 ownership or amend it under independent review before implementation.
 
 ### 7.2 Pending Question exact consume
 
@@ -466,6 +466,7 @@ P05 trace persistence failure before a required owner mutation => **fail-closed*
 | U07-A03-25 | same wait answer payload digest but other Question | no cross-Question effect deduplication |
 | U07-A03-26 | PHI-bearing payload/production profile | blocked; synthetic-only |
 | U07-A03-27 | trace evidence missing before required commit | fail-closed or owner-authorized recovery; no fake commit |
+| U07-A03-28 | replay old ACCEPTED after U15 expiry | historical verdict unchanged, no unauthorized new effect |
 | U07-A03-29 | stage C F3/Question/Pending single P01 patch, exact same-root retry | one Clinical version advance, one durable owner effect and identical replay proof |
 | U07-A03-30 | stage C P01 guard sees U15 cancellation committed between intent and transaction | no P01 mutation; no APPLIED; F8 historical ACCEPTED retained |
 | U07-A03-31 | U15 cancels after C but before D | C preserved as authority; D blocked, owner-led correction only |
@@ -476,7 +477,6 @@ P05 trace persistence failure before a required owner mutation => **fail-closed*
 | U07-A03-36 | P02 or U02 remote response lost | owner lookup/replay with stable request/handoff ID, no new physical identity |
 | U07-A03-37 | P01 separate transaction manager cannot join Consultation/U15 guard | V1 NOT_APPLICABLE and readiness blocked |
 | U07-A03-38 | shared Consultation lock held; deadline passes before final P01 conditional statement | stage C/D/E rejects new mutation on certified DB statement-time predicate |
-| U07-A03-28 | replay old ACCEPTED after U15 expiry | historical verdict unchanged, no unauthorized new effect |
 
 All cases are **unexecuted design oracles**. Future RDP-06 must attach exact migration/source SHAs, executable tests, negative-side-effect proofs, both DB dialect evidence and independently checked provenance.
 
