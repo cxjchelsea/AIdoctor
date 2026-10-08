@@ -8,7 +8,8 @@
 > U07 Unit Spec reviewed design: `9c899fdbe2136d88ed1d3bf5c2dd9b6d2b702272`, independent review PR #262
 > Runtime integration reference: `main@6d4fd787600e3a57f01f3e17893e6d98893ac546`
 > Scope: **CONTRACT / PHYSICAL DESIGN CANDIDATE — INDEPENDENT REVIEW REQUIRED**
-> Current status: **TARGETED_REMEDIATION_CANDIDATE / PENDING_EXACT_HEAD_INDEPENDENT_RE_REVIEW**
+> Current status: **SECOND_TARGETED_REMEDIATION_CANDIDATE / PENDING_EXACT_HEAD_INDEPENDENT_RE_REVIEW**
+> Independent targeted re-review PR #268 @ `2ee68ca1f15467ea942915c8ae8dcb05637c8a22`: BF-01 CLOSED; BF-02 and BF-03 OPEN. This document only proposes their second remediation.
 > Independent review PR #267 @ `0a8f75f54a148ebd17243ebc1db529d9ce4d9d6e`: REVISE_REQUIRED / three blockers. This revision does not independently close them.
 >
 > Does NOT authorize implementation, merge, production, real patient traffic, external I/O, PROFILE-A, PHI, direct F1 activation, or U07 Runtime resume.
@@ -155,7 +156,101 @@ storage_idempotency_key = "u07-" + lowercase_hex(SHA256(frame(
 ```
 Every frame item uses UTF-8 length prefix + NFC normalized exact value; no concatenation ambiguities. Key is 68 ASCII chars; caller-supplied token is a stable **opaque** token per logical event, not an auto-generated retry ID. Same trusted scope/token regenerates the same key; different tenant/consultation/profile/type has a different namespace. Hash collision or a pre-existing row with incompatible scoped binding => `IDENTITY_CONFLICT` (never silently allocate a new key). Consent and trusted actor must be validated before derivation.
 
-**Compatibility inventory status:** verified code examined: `CanonicalBusinessEventLedger.java`, `CanonicalBusinessEventRecord.java`, `CanonicalBusinessEventRepository.java`; existing method expects `payloadDigest` to be a stable immutable string and checks equality, with no typed business meaning. No evidence from those three classes requires replacing Foundation semantics. **Repository-wide consumer and migration/test-fixture inventory remains unverified** and is a mandatory RDP-05/aggregate-readiness check; this design commits to backward compatibility and forbids release/implementation authorization without that inventory. If another consumer has a conflicting assumption, a new U07-specific adapter/side-record must preserve Foundation semantics rather than mutating its table.
+### 4.3.1 Explicit Foundation consumer / migration impact inventory (BF-U07-RDP01-IR-02)
+
+Inventory reference: non-truncated recursive `main@6d4fd787600e3a57f01f3e17893e6d98893ac546` tree (2,634 entries). Exact reviewed file contents are recorded below; this is **a bounded, path-/class-based impact inventory**, not a false claim of full-text search across all 2,634 files. At physical implementation readiness the repository-wide `resolveOrCreate(`, `canonical_business_event`, `payload_digest`, `idempotency_key` reference scan must be executed with an auditable manifest and SHA, and all additional consumer hits must be reconciled. **That pending exhaustive scan is an explicit readiness prerequisite.**
+
+| Inventory category | Exact observed baseline | Compatibility conclusion / required later verification |
+|---|---|---|
+| Foundation Service | `diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/CanonicalBusinessEventLedger.java` | `resolveOrCreate(eventId,consultationId,eventType,idempotencyKey,payloadDigest)`; compares existing immutable tuple; behavior retained; `@Transactional` race recovery needs DB-backed verification |
+| Foundation entity/repository | `.../foundation/CanonicalBusinessEventRecord.java`, `CanonicalBusinessEventRepository.java` | Event ID primary key and **globally** unique idempotency key; `payload_digest` opaque string, 128 chars; U07-specific 64-hex does not constrain other event types |
+| Existing Foundation unit test | `diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/FoundationRuntimeBaseTest.java` | Uses example `sha256:abc` and `sha256:different`; **do not** introduce Foundation-wide regex `^[0-9a-f]{64}$` or change old fixture expectations |
+| MySQL foundation migration | `diagnosis-service/src/main/resources/db/migration/V2__create_clinical_runtime_foundation.sql` | Existing `canonical_business_event`: `event_id VARCHAR(128) PK`, `idempotency_key VARCHAR(128) UNIQUE`, `payload_digest VARCHAR(128)` |
+| Oracle foundation migration | `diagnosis-service/src/main/resources/db/migration-oracle/V3__create_clinical_runtime_foundation.sql` | Same logical columns / unique constraints with `VARCHAR2`, Oracle naming |
+| U06 wait schema | MySQL `db/migration/V6__add_u06_wait_runtime.sql`; Oracle `db/migration-oracle/V6__add_u06_wait_runtime.sql` | Durable wait/checkpoint/trace provenance already modeled; **no existing U07 canonical side-binding or U06 issuance table evidenced** |
+| U06 eligibility execution | `runtime/u06/wait/U06WaitCoordinator.java`, `U07ResumeEligibilityProjector.java` | Eligibility returned, not independently persisted by these two classes; see BF-03 and upstream amendment |
+| Potential additional consumers | All non-inventoried callers, deployment migration scripts, fixture/provisioners and other modules | `NOT_EXHAUSTIVELY_SEARCHED`; must pass hash-pinned full-source impact scan at RDP-05/aggregate before any implementation authorization; new hits trigger exact design compatibility review |
+
+**Frozen compatibility decision:** preserve original canonical table/schema and existing `resolveOrCreate` call signature. U07 uses only a **new U07-owned** side-binding schema and per-U07 digest/key rules. The chosen V1 design is compatible *at the directly inspected interfaces and migrations*, but **repository-wide compatibility closure remains a separate evidenced readiness check**.
+
+### 4.3.2 Concrete dual-dialect binding migration / physical schema
+
+Append-only new migration files (do not rewrite executed V2/V3/V6):
+- MySQL: `diagnosis-service/src/main/resources/db/migration/V7__add_u07_canonical_event_binding.sql`
+- Oracle: `diagnosis-service/src/main/resources/db/migration-oracle/V7__add_u07_canonical_event_binding.sql`
+
+Names are **planned migration paths**, not existing files. Each must create the following equivalent logical schema (abbreviated design DDL; actual scripts require syntax/DB validation):
+
+```sql
+-- MySQL V7 DDL proposal
+CREATE TABLE u07_canonical_event_binding (
+  canonical_event_id VARCHAR(128) NOT NULL,
+  contract_version VARCHAR(64) NOT NULL,
+  storage_idempotency_key VARCHAR(128) NOT NULL,
+  event_type VARCHAR(64) NOT NULL,
+  consultation_id VARCHAR(128) NOT NULL,
+  question_id VARCHAR(128) NOT NULL,
+  parent_wait_effect_id VARCHAR(128) NOT NULL,
+  binding_fingerprint CHAR(64) NOT NULL,
+  payload_digest VARCHAR(128) NOT NULL,
+  binding_payload_ref VARCHAR(256) NOT NULL,
+  protected_binding_ref VARCHAR(256) NOT NULL,
+  created_at TIMESTAMP NOT NULL,
+  PRIMARY KEY (canonical_event_id),
+  CONSTRAINT fk_u07_binding_canonical_event
+    FOREIGN KEY (canonical_event_id) REFERENCES canonical_business_event(event_id),
+  INDEX idx_u07_binding_wait (consultation_id,parent_wait_effect_id,question_id)
+);
+-- Oracle: VARCHAR2(n CHAR), CHAR(64 CHAR), TIMESTAMP,
+-- CONSTRAINT pk_u07_binding PRIMARY KEY (canonical_event_id),
+-- CONSTRAINT fk_u07_binding_event FOREIGN KEY (canonical_event_id)
+-- REFERENCES canonical_business_event(event_id),
+-- CREATE INDEX idx_u07_binding_wait ON u07_canonical_event_binding(...)
+```
+
+`protected_binding_ref` points to an immutable, access-controlled U07 binding payload holding **all §5.1 fields**; unlike a truncated table, the full binding must be durably verifiable. `binding_payload_ref` is the controlled immutable event payload reference. Both references must be created in the **same authorized synthetic state/store boundary**, and must resolve immutably before commit; no untrusted URL/raw PHI. Database storage of the full binding as a canonical byte/blob column in this same transaction is the **V1 selected option** if ref-store durability cannot be atomically established, rather than a two-store half-commit. A future large-object implementation must demonstrate atomicity before authorized implementation.
+
+Dialect obligations: Oracle table/constraint names within configured identifier limits; existing global unique key remains only in Foundation; no new global uniqueness on `question_id` (different canonical candidates go to F8/RDP-03); index for query, not business verdict; immutable binding row after commit (no UPDATE that rewrites fingerprint/payload), enforce at repository/service privilege and audit; FK means no orphan side binding; any missing binding after a supposedly committed canonical event is quarantined and never forwarded to F8.
+
+### 4.3.3 Concrete transaction / retry-as-new-transaction topology
+
+```text
+U07InboundAdapter
+ -> preledger authorized scope/payload validation (read-only, fail closed)
+ -> U07AdmissionTransactionCoordinator @Transactional(REQUIRED)
+      -> CanonicalBusinessEventLedger.resolveOrCreate (joins SAME transaction)
+      -> upsert only-if-absent U07CanonicalEventBinding + exact immutable equality
+      -> flush BOTH, check rollbackOnly == false
+    -> transaction COMMIT
+ -> after commit: fresh authoritative business-state snapshot
+ -> only then enqueue/submit admission context to F8 RDP-02
+
+exception / integrity constraint violation / rollbackOnly:
+ -> no F8, no success response
+ -> rollback transaction entirely
+ -> U07CanonicalWinnerReconciler @Transactional(REQUIRES_NEW)
+      -> re-read Foundation winner by event ID / global scoped key
+      -> validate whole side binding and trusted scope
+      -> distinguish (winner+binding) valid replay from
+         (winner absent) safe new attempt or (winner without binding) QUARANTINE
+ -> if retry allowed, new transaction; else fail-closed
+```
+
+`REQUIRES_NEW` must cross an actual transactional proxy boundary; self-invocation is forbidden. `save` without `flush` or `saveAndFlush` is not proof a uniqueness violation has surfaced. `CanonicalBusinessEventLedger` catches `DataIntegrityViolationException` within its own `@Transactional`; U07 must not mistake its catch-and-lookup behavior for proof that a database transaction remained usable. Verify MySQL and Oracle separately for auto-flush, rollback-only, isolation and winner-query visibility in authorized database integration tests; this design review does not mark tests PASS.
+
+Transaction-outcome matrix:
+
+| State | Admission response | Durable condition |
+|---|---|---|
+| Both rows committed | `ADMITTED_FOR_F8` or exact reattach after owner check | same scoped key and entire U07 immutable binding |
+| Ledger insert flushed, binding insert failed | fail closed | both rolled back; never success |
+| Unique race caused rollback-only | fail closed; optional post-rollback separate read/retry | no F8 from poisoned transaction |
+| Existing winner and full binding equal | reattach original ID | no new event/effect |
+| Existing winner, side-binding missing | quarantine | no accepted new binding fabricated from retry |
+| Existing winner, different full binding | identity conflict | no overwrite or alternative new key fallback |
+| Database unavailable / commit unknown | indeterminate; reconcile by exact identity in new transaction | never optimistic ACCEPTED |
+
+**Compatibility condition at authorization:** if either MySQL or Oracle schema/transaction topology cannot satisfy these requirements, return `NOT_READY` and require an independently reviewed controlled amendment; do not silently switch to eventual consistency.
 
 ### 4.4 Side-binding atomicity
 
@@ -338,6 +433,55 @@ All business owner reads must be consistent at a versioned logical snapshot or e
 
 The `VERIFIED_HISTORICAL_REATTACHABLE` status is **not** a way to admit a revoked/terminated wait and does not claim checkpoint can be recovered; it only records that the *same lawful wait* still has affirmative business owner evidence and verifiable original eligibility. Missing checkpoint alone cannot turn business ACCEPTED into REJECTED, while absence of positive authoritative business evidence is not permission.
 
+### 6.2.2 Physical provenance reconciliation / required U06 controlled amendment (BF-U07-RDP01-IR-03)
+
+**Existing physically queryable facts on main (confirmed in code + V6 migrations):**
+
+| Artifact | Query key / persistent fields | What it does / does not prove |
+|---|---|---|
+| `clinical_consultation_wait_effect` (V6 MySQL/Oracle), `ConsultationWaitEffectRepository` | `parent_delivered_wait_effect_id` UNIQUE, `wait_effect_id`, `consultation_id`, `question_id`, `delivery_id`, `effect_status=COMMITTED`, `committed_row_version` | Proves authoritative Consultation WAITING_USER child effect if still current; not issuance |
+| `clinical_runtime_thread_state` / `RuntimeThreadStateRepository` | `thread_id`, `consultation_id` UNIQUE, `current_run_id`, `current_wait_checkpoint_id`, `current_wait_effect_id`, `runtime_status`, `row_version` | If `AWAITING_USER` + same wait refs, proves persisted thread entry; no historical transition log after state overwritten |
+| `clinical_runtime_wait_checkpoint` / `RuntimeWaitCheckpointRepository` | `checkpoint_id` PK, `question_delivered_wait_effect_id` UNIQUE, `thread_id`, `run_id`, `question_id`, `delivery_confirmation_ref`, `consultation_wait_effect_id`, `clinical_state_version`, `dependency_binding_ref` | Proves stored checkpoint relation **when record exists**; may disappear/stale and is not itself business truth |
+| `u06_governed_execution_trace` | `trace_id` PK, `consultation_id`, `lifecycle_status`, `outcome_status` | Operational trace alone does **not** prove eligibility issuance; no `eligibility_id` column |
+| `U06WaitCoordinator.establish` and `U07ResumeEligibilityProjector.project` | in-memory `Result.eligibilityId` = `U06Ids.hash("u07elig", parent_wait_effect_id, checkpoint_id, "1")` after `enterAwaitingUser` | Deterministic ID *may be recomputed*, but neither class persists an immutable issuance statement |
+
+**Decision:** do not claim existing main implements a queryable eligibility issuance authority. BF-03 is resolved at design level by **explicitly registering REQUIRED upstream controlled amendment `CA-U06-U07-ELIG-ISSUANCE-01`**, a prerequisite to positive U07 implementation readiness. U07 RDP-01 does **not** implement or invent this U06 authority.
+
+Required new U06-owned durable record/query contract (logical, review candidate):
+```text
+U06EligibilityIssuanceV1 {
+  eligibility_id (PK),
+  parent_wait_effect_id (UNIQUE per active wait),
+  consultation_id, question_id, pending_question_ref,
+  checkpoint_id, thread_id, run_id,
+  committed_consultation_wait_effect_id, consultation_row_version,
+  original_question_delivery_confirmation_ref,
+  u06_wait_parent_effect_ref,
+  original_clinical_state_version, historical_binding_ref,
+  thread_awaiting_user_row_version,
+  issuance_contract_version = "u06-u07-elig-issuance-v1",
+  issuer_authority_ref = U06,
+  issued_at, immutable_fingerprint
+}
+lookup(parent_wait_effect_id, eligibility_id) -> VERIFIED_ISSUED | MISSING | CONFLICT
+```
+
+Issuance write is permitted **only after** the U06-controlled `enterAwaitingUser` transaction has durably committed, with the exact same committed wait provenance and row version. Retried issuance is idempotent on parent effect and exact fingerprint; any ambiguous commit is reconciled from the authoritative source. The U06 amendment must freeze its own issuance transaction/outbox/recovery protocol for the crash between thread AWAITING_USER and issuance, and its MySQL/Oracle schema. U07 never writes this record or backdates an issuance.
+
+**Missing/stale Checkpoint policy (explicit):**
+- If `U06EligibilityIssuanceV1` is durable, and business owner Question/Consultation/PendingQuestion/U15 facts all remain valid, U07 may mark `VERIFIED_HISTORICAL_REATTACHABLE` **even if the runtime checkpoint record has disappeared**, based on historically issued immutable refs; the checkpoint compatibility/rehydration remains P02 RDP-04.
+- If original issuance is **MISSING**, even if current Thread says `AWAITING_USER` and `U06Ids.hash` can be recomputed, U07 returns `DEFERRED_AUTHORITY_UNAVAILABLE` or `BLOCKED_PROVENANCE` with a U06 owner repair referral. U07 cannot fabricate issuance by reading the current request.
+- If original issuance exists but current waiting state has become superseded/cancelled/expired, route to F8 with authoritative terminal evidence; no ordinary resume effect.
+- If issuance was never created because `enterAwaitingUser` never committed, no ordinary U07 Resume occurs. The U06 amendment must decide and record repair/terminal behavior in its own owner boundary.
+
+**Required independent design gate before implementation authorization:** `CA-U06-U07-ELIG-ISSUANCE-01` detailed design + owner-equivalence check + exact-head independent review + controlled approval + verified MySQL/Oracle compatibility + U06 regression impact review. Until those artifacts exist, U07 RDP-01 may be accepted as a **conditional design contract**, but U07 overall Implementation Readiness remains NOT_READY and the historical positive resume branch is **NOT_PHYSICALLY_AVAILABLE**. This conditional readiness dependency must be carried into RDP-05 and aggregate readiness, not silently waived.
+
+New negative test cases:
+- `T12C`: checkpoint deleted, valid **durable issuance** + current business wait -> U07 business provenance verified, P02 repair needed; no fake Business REJECTED.
+- `T12D`: same inputs except issuance record missing -> no ordinary U07 admission; hash recomputation cannot replace issuance.
+- `T12E`: U06 Thread reached AWAITING_USER but crashed before issuance durability -> U06 owner repair required; U07 does not mint eligibility.
+- `T12F`: forged issuance_id with old checkpoint / mismatched parent effect -> conflict, zero F8 resume/Runtime effects.
+
 ### 6.3 Ingress disposition (not business verdict)
 
 ```text
@@ -462,9 +606,9 @@ Above are **design assertions**. Physical fixtures/runner, exact thresholds and 
 BF-U07-RDP01-IR-01
   Original canonical ID versus request alias and fingerprint inputs are now explicitly separated; re-review must verify T03/T04/T05/V1–V8. RESUME_REQUEST reference policy still requires Phase 8/9 equivalence check.
 BF-U07-RDP01-IR-02
-  Foundation payload_digest retained as payload-only; U07 binding digest separate; shared ACID transaction and namespace key frozen. Independent review must verify consumer inventory/transaction applicability rather than presume database tests.
+  Physical dual-dialect V7 binding migration, bounded code/fixture/migration inventory, outer transaction / rollback-isolated reconciliation now specified in §4.3.1–4.3.3. Repository-wide search & database tests are explicit future authorization gates, not claimed evidence.
 BF-U07-RDP01-IR-03
-  Business wait provenance evidence and original eligibility issuance are mandatory; F8/one-winner apply still owned by RDP-02/03. Independent review must confirm fail-closed checkpoint-loss and no-eligibility rules.
+  Confirmed existing V6 wait/checkpoint/trace records and the absence of an issuance record in examined U06 code; mandatory controlled amendment CA-U06-U07-ELIG-ISSUANCE-01 now freezes new U06-owned issuance query contract before U07 implementation; no hash-only historical Resume.
 BF-U07-RDP01-IR-04
   Can eligibility currentness be established independently of a mere parent-effect/checkpoint hash, preserving checkpoint-failure separation?
 BF-U07-RDP01-IR-05
@@ -476,7 +620,8 @@ BF-U07-RDP01-IR-06
 Until an exact-head independent design review passes these questions:
 ```text
 B-U07-RG-01 = DESIGN_CANDIDATE / NOT_CLOSED
-U07-RDP-01 = TARGETED_REMEDIATION_CANDIDATE / READY_FOR_INDEPENDENT_RE_REVIEW, NOT FROZEN
+U07-RDP-01 = SECOND_TARGETED_REMEDIATION_CANDIDATE / READY_FOR_INDEPENDENT_RE_REVIEW, NOT FROZEN
+CA-U06-U07-ELIG-ISSUANCE-01 = REQUIRED_UPSTREAM_AMENDMENT / NOT_DESIGNED_OR_AUTHORIZED
 BF-U07-RDP01-IR-01..03 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
 U07 Implementation Readiness = NOT_READY
 U07 Implementation Authorization = NOT_GRANTED
