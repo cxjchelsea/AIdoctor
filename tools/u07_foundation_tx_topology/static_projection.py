@@ -105,7 +105,7 @@ def main() -> None:
     src_dir = Path(args.snapshots_dir).resolve(strict=True)
     artifact_dir = Path(args.artifact_dir).resolve(strict=True)
     output = artifact_dir / "tier0-source-projection.json"
-    archive_path = Path(args.archive).resolve(strict=True)
+    archive_path = Path(args.archive).resolve()
     if (not artifact_dir.is_dir() or artifact_dir == src_dir or src_dir in artifact_dir.parents
             or Path(__file__).resolve().parent in artifact_dir.parents
             or artifact_dir == archive_path.parent or output.exists() or output.is_symlink()):
