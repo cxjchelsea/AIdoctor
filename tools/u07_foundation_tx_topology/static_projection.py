@@ -12,7 +12,8 @@ import re
 import zipfile
 from pathlib import Path
 
-from static_schema import EvidenceError, canonical_json, digest, make_result, verify_inventory, verify_source_snapshot
+from static_schema import (EvidenceError, TRUSTED_ARCHIVE_SHA256, TRUSTED_INVENTORY_SHA256,
+                           canonical_json, digest, make_result, verify_inventory, verify_source_snapshot)
 
 ROOT = "diagnosis-service/src/main/java/com/aidoctor/diagnosis/"
 FILES = {
@@ -43,6 +44,8 @@ def _member_tx(text: str, method: str) -> bool:
 def project(archive: bytes, snapshots: dict[str, bytes]) -> dict:
     if not isinstance(archive, bytes):
         raise EvidenceError("archive bytes required")
+    if digest(archive) != TRUSTED_ARCHIVE_SHA256:
+        raise EvidenceError("TRUSTED_ARCHIVE_DIGEST_MISMATCH")
     with zipfile.ZipFile(__import__("io").BytesIO(archive), "r") as z:
         names = z.namelist()
         if sorted(names) != sorted(["foundation-exact-head-inventory.json", "foundation-matches.tsv", "foundation-summary.md"]):
@@ -50,6 +53,8 @@ def project(archive: bytes, snapshots: dict[str, bytes]) -> dict:
         if len(set(names)) != len(names) or any(z.getinfo(x).file_size > 15000000 for x in names):
             raise EvidenceError("unsafe evidence archive")
         inventory_raw = z.read("foundation-exact-head-inventory.json")
+    if digest(inventory_raw) != TRUSTED_INVENTORY_SHA256:
+        raise EvidenceError("TRUSTED_INVENTORY_DIGEST_MISMATCH")
     inventory = json.loads(inventory_raw)
     by_path = verify_inventory(inventory)
     if set(snapshots) != {ROOT + name for name in FILES.values()}:
@@ -95,16 +100,22 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Offline, source-only Foundation topology projection")
     parser.add_argument("--archive", required=True, help="verified original Foundation scan ZIP")
     parser.add_argument("--snapshots-dir", required=True, help="root with six exact-head Java source snapshots")
-    parser.add_argument("--output", required=True, help="new output JSON outside source tree")
+    parser.add_argument("--artifact-dir", required=True, help="pre-existing isolated evidence output directory")
     args = parser.parse_args()
     src_dir = Path(args.snapshots_dir).resolve(strict=True)
-    output = Path(args.output).resolve()
-    if output.exists() or src_dir == output or src_dir in output.parents or Path(__file__).resolve().parent in output.parents:
-        raise SystemExit("FAIL_CLOSED: unsafe output location")
+    artifact_dir = Path(args.artifact_dir).resolve(strict=True)
+    output = artifact_dir / "tier0-source-projection.json"
+    archive_path = Path(args.archive).resolve(strict=True)
+    if (not artifact_dir.is_dir() or artifact_dir == src_dir or src_dir in artifact_dir.parents
+            or Path(__file__).resolve().parent in artifact_dir.parents
+            or artifact_dir == archive_path.parent or output.exists() or output.is_symlink()):
+        raise SystemExit("FAIL_CLOSED: unsafe isolated artifact directory")
+    # Never write through a symlink to an unapproved filesystem target.
+    if any(p.is_symlink() for p in [artifact_dir, *artifact_dir.parents, src_dir, archive_path]):
+        raise SystemExit("FAIL_CLOSED: symlinked input/output boundary")
     try:
         snapshots = {ROOT + p: (src_dir / ROOT / p).read_bytes() for p in FILES.values()}
-        result = project(Path(args.archive).read_bytes(), snapshots)
-        output.parent.mkdir(parents=True, exist_ok=True)
+        result = project(archive_path.read_bytes(), snapshots)
         with output.open("xb") as f:
             f.write(canonical_json(result))
         print("SOURCE_ONLY projection_sha256=" + digest(output.read_bytes()))
