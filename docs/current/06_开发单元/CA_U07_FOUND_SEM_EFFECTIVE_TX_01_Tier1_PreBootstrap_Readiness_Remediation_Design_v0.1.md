@@ -4,7 +4,8 @@
 > Design baseline: `main@86e8843197091c8c8172b7e4213537a31bdf0654` (Tier-0 four-file-only merge PR #313)  
 > Design authority: PR #300 @ `09736a2764a7ea5ba640fbc82bd87bc403ad0b52`; independent conditional design acceptance PR #302; integration readiness PR #303 @ `00c81cb4f7ddda60d1f846063030cca9a3131f38`.  
 > Existing Tier-0: PR #311 closure, PR #317 merged-main verification, PR #318 bounded offline verification.  
-> **Status: DESIGN_CANDIDATE / INDEPENDENT_DESIGN_REVIEW_REQUIRED.** No Tier-1 implementation, execution, environment grant, production access, JDBC, migration, or merge authorization.
+> Targeted amendment: PR #320 independent review @ `a8407ee46de90d0906cf1268a71b1b5b410d8089`: BF-U07-FOUND-PB-IR-01..03 and RF-U07-FOUND-PB-IR-01/02. This file is the author remediation candidate at a **new exact HEAD**; all review findings stay OPEN pending targeted independent re-review.  
+> **Status: TARGETED_DESIGN_REMEDIATED / INDEPENDENT_RE_REVIEW_REQUIRED.** No Tier-1 implementation, execution, environment grant, production access, JDBC, migration, or merge authorization.
 
 ## 1. Problem and authority boundaries
 
@@ -32,13 +33,23 @@ This remediation targets **BF-U07-FOUND-TX-INT-01, -02, -03** and the required o
 **Lifecycle phases (each persists evidence before proceeding):**
 - P0 authority: pinned HEAD/tree, immutable runner image and dependency digests, synthetic profile manifest, human Security + Foundation/U01 permission evidence, sandbox capability attestation.
 - P1 preventive boundary: establish namespaces/egress/IPC/filesystem/credential denial and verify policy under the intended OS, runner and identity **before JVM**.
-- P2 *non-Spring* adversarial canaries: deliberately attempt DNS, IPv4/IPv6, loopback, Unix socket to inaccessible host paths, metadata endpoint, external filesystem writes and disallowed subprocess/network paths. Expected: all disallowed with recorded attempts, zero successful contacts. These canaries are isolated tests of the sandbox policy and must not point at actual databases or production destinations.
+- P2 *non-Spring* adversarial canaries in a **separate SANDBOX_CANARY child process and disposable sandbox instance**: deliberately attempt DNS, IPv4/IPv6, loopback, Unix socket to synthetic/inaccessible targets, metadata-shaped synthetic endpoint, disallowed filesystem writes and prohibited child-process routes. No real DB/production IP, hostname or socket. Expected denial/recorded attempts and zero successful contacts in the canary instance; this is **a negative isolation test, not a Spring diagnostic run**.
 - P3 attempt-coverage: preinstalled pre-JVM instrumentation/guard coverage manifest for Java socket/HTTP, DriverManager, connection pools/DataSource, JDBC, Hibernate metadata, Flyway, Redis/Nacos, lifecycle/@PostConstruct, scheduling/event/async, file mutation and spawned children. Coverage of native/JNI/reflection and uninstrumented pathways = explicit UNKNOWN. Instrumentation **cannot substitute** for OS prevention.
-- P4 attest: immutable deny-policy hash, process UID/capability proof, attempt counters, scratch volume policy, timestamp, runner image digest and guard/coverage evidence. If any prerequisite cannot be demonstrated: `NOT_EXECUTABLE_UNDER_READ_ONLY_SCOPE`; DO NOT create JVM.
-- P5 only after **separate implementation/execution authorization** may the probe run. An attempted forbidden effect at startup is `CONTEXT_UNSAFE`, even if kernel blocks its completion. No retry using relaxed network, company dev profile, secrets, actual Oracle or unreviewed overrides.
+- P4 attest and separate phase: terminate/destroy the **SANDBOX_CANARY** process, writable scratch, and namespace; create a **fresh independently attested SPRING_DIAGNOSTIC** sandbox with the same pinned deny-policy hash, no inherited process/file descriptor, no allowlist exception for canaries, independent monitoring counters beginning at zero, fresh sandbox instance ID, monotonic sealed phase-switch timestamp and process lineage. The immutable canary result and diagnostic result are stored separately. If any prerequisite, teardown, counter reset, independent attestation or phase-origin attribution cannot be demonstrated: `NOT_EXECUTABLE_UNDER_READ_ONLY_SCOPE`; DO NOT create JVM.
+- P5 only after **separate implementation/execution authorization** may the probe run in the **SPRING_DIAGNOSTIC** instance. Every forbidden attempted effect attributable to this instance/startup is `CONTEXT_UNSAFE`, including blocked attempts. Unattributable mixed-phase attempts or absent counters are `INCOMPLETE_EVIDENCE` / NOT_EXECUTABLE, never zero. Canary attempts are **not** whitelisted during Spring startup and **cannot** be subtracted from Spring counters. No retry using relaxed network, company dev profile, secrets, actual Oracle or unreviewed overrides.
 - P6 destroy isolated process and writable scratch; retain only redacted audit bundle.
 
-**Evidence:** `sandbox_policy_sha256`, `pre_jvm_attestation`, `canary_matrix`, `attempt_coverage_manifest`, `blocked_attempts`, `successful_contacts`, `unobserved_surfaces[]`, `scratch_write_manifest`, `teardown_attestation`, `owner_grant_refs[]`. Missing monitor coverage is `INCOMPLETE_EVIDENCE`, not zero.
+**Evidence:** `sandbox_policy_sha256`, `pre_jvm_attestation`, `canary_matrix`, `attempt_coverage_manifest`, `blocked_attempts`, `successful_contacts`, `unobserved_surfaces[]`, `scratch_write_manifest`, `teardown_attestation`, `owner_grant_refs[]`. Additional required origin proof: `phase=SANDBOX_CANARY|SPRING_DIAGNOSTIC`, `instance_id`, `sandbox_policy_digest`, `process_lineage_digest`, `monotonic_phase_boundary`, `canary_teardown_digest`, `diagnostic_fresh_attestation`, `diagnostic_counter_origin=ZERO`. Missing monitor coverage is `INCOMPLETE_EVIDENCE`, not zero.
+
+### 3.1 Frozen phase-local negative Oracle (PB-IR-01)
+
+| Phase | Expected attempts | Successful forbidden effects | Disposition |
+|---|---|---|---|
+| `SANDBOX_CANARY` separate instance | Deliberately denied canary attempts, provenance attached | **ZERO** | `ISOLATION_POLICY_PASS` only when every required denied attempt is evidenced; any success = `ISOLATION_POLICY_FAIL` |
+| `SPRING_DIAGNOSTIC` fresh instance | **ZERO** forbidden attempts from JVM or children | **ZERO** | Candidate for `CONTEXT_CONFIRMED` only when independent representativeness and resolver checks also pass; any forbidden attempt = `CONTEXT_UNSAFE` |
+| Mixed/ambiguous origin, inherited counters/FD or broken teardown | UNKNOWN | UNKNOWN | `INCOMPLETE_EVIDENCE` / `NOT_EXECUTABLE_UNDER_READ_ONLY_SCOPE`, never PASS |
+
+**Runner feasibility prerequisite (RF-PB-IR-01):** before Stage A1 authorization identify exact runner OS/kernel, rootless UID mapping, user/network/mount/PID namespace permissions, firewall/egress enforcement or equivalent host policy, container runtime features, Unix socket mount restrictions, DNS/metadata prevention, child-process containment, read-only cache and sandbox cleanup. Require Security ownership and executable non-Spring negative canaries on the **chosen runner**, not an assumed GitHub-hosted CI capability. If a shell script cannot enforce these controls under the runner identity, fail closed or propose a separately reviewed different runner; never elevate privileges silently.
 
 **Acceptance for design:** Security independent reviewer agrees enforcement primitives are implementable on selected OS and runner; canary negative cases and eventual pre-JVM evidence are specified as exact Oracle outputs. **Acceptance for implementation/execution must be a later gate**, requiring runnable non-Spring sandbox demonstration and the above signed evidence.
 
@@ -49,14 +60,22 @@ This remediation targets **BF-U07-FOUND-TX-INT-01, -02, -03** and the required o
 - **R2-A offline no-JVM:** parse pinned application config, dependency graph, auto-configuration candidates, `@Configuration`/`@Bean` and relevant annotated sources. Identify each initialization route: Flyway, Hibernate metadata, pool, Redis, Nacos discovery, health, Web/Actuator, @PostConstruct, listener, scheduled/async, filesystem and outbound clients. This generates a candidate dependency/effect graph, NEVER a context-confirmed claim.
 - **R2-B sandbox-first candidate bootstrap:** only after INT-01 boundary and separate execution authority, create an isolated test-only context with minimal reviewed overrides. Guards remain active before bean initialization. If bootstrap cannot safely complete, fail closed instead of forcing it.
 
-### 4.2 Override impact contract
+### 4.2 Independent target-topology reference (PB-IR-02)
+
+A test context cannot self-certify `configured same manager` merely because its own BeanDefinitions agree with its own observation. Before any Spring diagnostic startup, an **independent provenance reviewer** freezes a `target_reference_manifest` for the **specified nonpatient target profile** from: (a) exact source and annotated bean/configuration declarations; (b) full, immutable property-source origin and precedence records, including any unresolved external config source as UNKNOWN; (c) Maven resolved dependency/classpath and Spring auto-configuration condition inputs; (d) independently admissible prior effective Bean/advisor/manager/EMF/DS observations **if such a no-I/O authority record already exists**. Unknown actual profile values, external Nacos properties or condition outcomes remain UNKNOWN; do not fetch them through network, assume dev settings or invent BeanFactory outcomes.
+
+For each owner edge, freeze `target_method; property_origin_digest; bean_definition_candidate_digest; effective_condition_expected_or_UNKNOWN; advisor_expected_or_UNKNOWN; interceptor_default_expected_or_UNKNOWN; effective_manager_expected_or_UNKNOWN; emf_expected_or_UNKNOWN; datasource_expected_or_UNKNOWN; evidence_authority`. Separately record the observed test-context graph and all test-only overrides. A comparison succeeds only where both sides have **independent, same-profile, same-version, noncircular evidence of effective selection** (not merely candidate source declarations) and every relevant method/proxy/advisor/manager/EMF/DS condition is unchanged. `UNKNOWN` on either side or substituted resolver-affecting beans forces `REPRESENTATIVENESS_NOT_PROVEN`; `SOURCE_ONLY` remains the proper claim if there is no such independently admissible reference.
+
+The reference manifesto and comparator Oracle are versioned **before** probe observations and their SHA-256 signatures included in the bundle. Reviewer checks that the independent target baseline was not derived from the output it is asked to validate. A safe context that uses a no-connect DataSource/EMF substitute may prove instrumentation behavior **only**: it cannot pass E01–E05 for the untouched target. `CONFIGURED_SAME_MANAGER` is possible only if an independently justified effective-manager reference exists without forbidden contact; if it does not, a truthful negative result is expected.
+
+### 4.3 Override impact contract
 
 For **every** proposed override record:
 `property_or_bean; original_value_or_unknown; test_value; reason; source_condition; changed_bean_definitions; advisor_delta; transaction_interceptor_delta; manager_delta; emf_delta; datasource_delta; affected_edges; observed_evidence; independent_reviewer`.
 
 Examples **are candidates, not approved modifications**: `spring.flyway.enabled=false`, `spring.jpa.hibernate.ddl-auto=none`, scheduling/runner/event suppressors. Never assume those properties prevent initial database metadata access. Replacing a DataSource/EMF/manager, disabling relevant autoconfiguration, or altering selected transaction advisor requires `REPRESENTATIVENESS_NOT_PROVEN` for untouched-context E01–E05. A test-only no-connect stub can demonstrate test-harness mechanics but cannot prove the target configuration's effective manager.
 
-### 4.3 Verdict lattice
+### 4.4 Verdict lattice
 
 1. `NOT_EXECUTABLE_UNDER_READ_ONLY_SCOPE`: preventive isolation or safe startup cannot be established; do not start/continue.
 2. `CONTEXT_UNSAFE`: any attempted forbidden resource access, including blocked attempt; abort and quarantine evidence.
@@ -86,7 +105,21 @@ Pin Maven resolved Spring Framework 5.x component jar/source hashes with the act
 
 A static comparator/pure fixture exercise can be separately scoped before Spring bootstrap, but results remain `COMPARATOR_UNIT_ONLY`.
 
-### 5.2 Independently frozen Oracle candidates (all NOT_EXECUTED)
+### 5.2 Stage A2 exact comparator fixture and authority freeze (PB-IR-03)
+
+**Proposed future Stage A2 allowlist (all NOT_AUTHORIZED):**
+- `D1-04 diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/topology/U07EffectiveManagerResolver.java` — implementation under test only.
+- `D1-04-T diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/topology/U07EffectiveManagerResolverTest.java` — separate synthetic test driver and assertions.
+- `D1-04-O tools/u07_foundation_tx_topology/oracle/stage_a2_cases.json` — *independent* synthetic expected-value manifest authored, reviewed and SHA-pinned **before** implementation/tests.
+- `D1-04-M tools/u07_foundation_tx_topology/oracle/stage_a2_dependency_manifest.json` — exact dependency-tree and local artifact SHA256/coordinates, offline classpath provenance and fixture-schema version.
+
+Those extra paths are a **controlled amendment candidate** to PR #303's earlier D1-01..07 list; **not** automatically authorized by this document. Separate exact-diff design acceptance must precede any bounded Stage A2 implementation authorization. POM changes, additional helper files, CI workflow execution and network dependency fetching are explicitly prohibited absent a new amendment.
+
+Frozen fixture record (JSON schema proposal): `case_id; fixture_id; fixture_sha256; source_ref; target_method; proxy_kind; caller_edge_mode; advisor_order; transaction_attribute; manager_candidates; method_qualifier; configured_default; configurer_binding; emf_ds_map; property_origin_digest; expected_effective_attr; expected_selected_manager_or_UNKNOWN; expected_proxy_outcome; expected_E01_E05; expected_failure_code; framework_classpath_sha256`. All fields must be synthetic/non-PHI, and `UNKNOWN` must be representable per expected field.
+
+**Independent Oracle authority:** author/reviewer of `stage_a2_cases.json` must be distinct from comparator implementation source; expected results cannot be generated by the implementation or from observed test output. Before coding, an independent reviewer verifies that Spring 5.x *resolved artifacts* are pinned by actual local Maven dependency tree/classpath and jar SHA256; fixed Boot 2.7.8 alone is insufficient. Oracle truth is evaluated against actual pinned Spring transaction interceptor/source semantics and mixed-manager negative conditions. Stage A2 tests may execute only under later explicit **synthetic comparator unit** authorization without Spring ApplicationContext boot, business method invocation or JDBC, and with offline preverified dependencies. If those boundaries cannot be met, return `A2_NOT_READY`.
+
+### 5.3 Independently frozen Oracle candidates (all NOT_EXECUTED)
 
 | Case | Synthetic configuration | Required output |
 |---|---|---|
@@ -115,7 +148,7 @@ Future candidate staged authorization:
 |---|---|---|
 | Stage A1 | `D1-01 tools/u07_foundation_tx_topology/sandbox/deny_network.sh` | Non-JVM sandbox policy/attestation only; OS/runner-specific enforcement with independent Security review; no Spring startup |
 | Stage A1 | `D1-02 tools/u07_foundation_tx_topology/sandbox/bootstrap_guard_manifest.json` | Typed attempted-effect surfaces and source/config hashes; missing coverage fail-closed |
-| Stage A2 | `D1-04 diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/topology/U07EffectiveManagerResolver.java` | Comparator logic + separately reviewed purely synthetic oracle. No production methods invoked, no Spring context bootstrap, no DB. If tests require new files beyond D1 list, exact-diff amendment before grant. |
+| Stage A2 | `D1-04`, proposed additions `D1-04-T`, `D1-04-O`, `D1-04-M` exactly as §5.2 | Synthetic comparator + independently pre-frozen Oracle/test driver/dependency manifest only. **New files require separate controlled exact-diff amendment and authorization before creation.** No context/JDBC/DB, and no unbounded helper files. |
 | Stage B | `D1-03 .../U07EffectiveManagerTopologyProbeTest.java` | Real-context observation only if isolation + representativeness and owner permissions pass |
 | Stage B | `D1-05 .../U07TopologyRedactionOracleTest.java` | Redaction, proxy resolution and failure-precedence checks |
 | Stage B | `D1-06 tools/u07_foundation_tx_topology/evidence/verify_bundle.py` | Signed evidence verification; no secrets |
@@ -130,10 +163,10 @@ Future candidate staged authorization:
 | Gate | Independent evidence required | Fail closed |
 |---|---|---|
 | PB-G01 baseline | HEAD/tree/POM/Tier0 hashes; diff = one design file | SHA drift/unreviewed extra diff |
-| PB-G02 isolation | selected OS/runner, OS sandbox mechanism and restricted identity, canary plan for IPv4/IPv6/DNS/loopback/Unix/metadata/files | preventive denial not demonstrable |
+| PB-G02 isolation | selected OS/runner, concrete kernel enforcement/UID capabilities, **separate canary and diagnostic instances**, per-phase counter/provenance + non-Spring negative canary Oracle | denied canary attempt counted as Spring safety proof, origin ambiguous, or preventive denial not demonstrable |
 | PB-G03 attempted effects | full interception/coverage mapping incl. pre-bean paths and child processes | any unobserved surface -> INCOMPLETE_EVIDENCE |
-| PB-G04 no-side-effect context | startup route inventory and exact override impact; no actual startup in this design | relevant topology changed -> REPRESENTATIVENESS_NOT_PROVEN |
-| PB-G05 resolver fidelity | R0–R9 + independent TX-R01..R12 actual pinned-framework comparator | ambiguous manager or proxy -> UNKNOWN |
+| PB-G04 no-side-effect context | independent **pre-observation** target-reference manifest/property origins/auto-config conditions, startup inventory, per-override impact | circular test-baseline comparison, unknown target or changed topology -> REPRESENTATIVENESS_NOT_PROVEN |
+| PB-G05 resolver fidelity | R0–R9; independently SHA-frozen TX-R01..12 expected Oracle, exact synthetic fixture/test/manifest paths, offline pinned Spring Framework 5.x jar/classpath proof | unknown classpath/extra files/ambiguous method-manager proxy -> UNKNOWN or A2_NOT_READY |
 | PB-G06 evidence/data | synthetic-only, no PHI/secrets, redaction, access/log retention | UNKNOWN PRIVACY -> BLOCKED |
 | PB-G07 authority | Security + Foundation/U01 owner grant, later separate exact-diff implementation/execution decision | absent grant -> NOT_AUTHORIZED |
 | PB-G08 independent review | no self-certification, accepted finding-by-finding evidence & exact head | no independent reviewer -> PENDING |
@@ -151,13 +184,14 @@ Future candidate staged authorization:
 | RF-U07-FOUND-TX-INT-01 | explicit Security + Foundation/U01 authorizations, profile/privacy/retention | REQUIRED / NOT_GRANTED |
 | RF-U07-FOUND-TX-INT-02/03 | Tier0/source-only boundary and exact-diff denylist unchanged | REQUIRED / CONTINUED |
 
-Next **authorized review type**, not implementation: `Tier-1 Pre-Bootstrap Readiness Remediation Independent Design Review` anchored to this exact author HEAD/blob. Review must decide `PASS / REVISE_REQUIRED` on R1–R3, the OS canary model, representativeness versus override truth, independence of TX-R Oracle, and staged exact-diff allowlist. If accepted, separately seek narrowly bounded Stage A design/readiness and implementation authorization; Stage B and actual Tier-1 Spring context remain blocked until independently proven prerequisites.
+Next **permitted review type**, not implementation: `Tier-1 Pre-Bootstrap Targeted Independent Design Re-Review` anchored to this **new** exact author HEAD/blob. Review must decide `PASS / REVISE_REQUIRED` on R1–R3, the OS canary model, representativeness versus override truth, independence of TX-R Oracle, and staged exact-diff allowlist. If accepted, separately seek narrowly bounded Stage A design/readiness and implementation authorization; Stage B and actual Tier-1 Spring context remain blocked until independently proven prerequisites.
 
 ## 9. Decision and non-grants
 
 ```text
 CA-U07-FOUND-SEM-EFFECTIVE-TX-01 PREBOOT REMEDIATION DESIGN
-= DESIGN_CANDIDATE / INDEPENDENT_REVIEW_PENDING
+= TARGETED_DESIGN_REMEDIATED / INDEPENDENT_RE_REVIEW_PENDING
+BF-U07-FOUND-PB-IR-01..03 = REMEDIATION_PROPOSED / NOT_CLOSED
 
 BASELINE = 86e8843197091c8c8172b7e4213537a31bdf0654
 TIER0 = VERIFIED / MERGED / SOURCE_ONLY
