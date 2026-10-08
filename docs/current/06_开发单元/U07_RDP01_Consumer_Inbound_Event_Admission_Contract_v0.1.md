@@ -640,12 +640,21 @@ P05 trace 只记录发生了什么，不能替代 Foundation event ledger 或 F8
 | T14 | cancelled Consultation race | versioned recheck before downstream apply | no stale state write |
 | T15 | unauthenticated, wrong tenant or real recipient | BLOCKED_AUTHORIZATION | zero ledger successful admission / zero PHI |
 | T16 | payload digest mismatch / inaccessible ref | BLOCKED_PAYLOAD_INTEGRITY | no raw answer in trace |
-| T17 | crash after ledger before binding | quarantined pending + deterministic repair | no F8 call |
+| T17 | Foundation canonical-event INSERT/FLUSH completed but U07 binding INSERT fails or process crashes **before the shared outer COMMIT** | SAME transaction ROLLBACK; **zero durable Foundation events and zero U07 bindings**; retry uses the same scoped identity in a fresh authorized transaction | no F8, P02, P01 or U02 effect; verify both owner tables after rollback |
+| T17-LEGACY-ORPHAN | Foundation winner is **already durably committed** but U07 binding is missing because of pre-existing legacy/corrupt data (not a normal V1 crash) | QUARANTINE / owner-reviewed repair required; no fabricated binding from retry bytes | no new F8 admission or downstream effect |
 | T18 | competing submissions same wait | both candidate identities may exist | at most one downstream apply (RDP-03 proof) |
 | T19 | high-concurrency same idempotency key | one canonical winner | no false success if persistence fails |
 | T20 | target answer accepted but runtime failed | RESUME_REQUEST reattaches historical target | does not rewrite ACCEPTED to REJECTED |
 
 Above are **design assertions**. Physical fixtures/runner, exact thresholds and durable evidence belong to RDP-06 and post-authorization implementation verification. A reviewed test plan is not a passed runtime test.
+
+### Aggregate Controlled Amendment: CA-U07-AGG-ADMISSION-T17-ORACLE-01
+
+The only normal V1 authoritative admission success is **one COMMIT of Foundation canonical event and U07 inline binding bytes**. A Foundation INSERT or JPA FLUSH is not a transaction COMMIT. For `U07-RDP01-T17` and `U07-VG-006`, inject failure between Foundation row FLUSH and binding INSERT/FLUSH or before outer COMMIT; prove via new transaction readback that **neither row was persisted**. This is a required atomicity negative test, not a quarantined pending event.
+
+An existing durably committed Foundation winner without a matching binding is separately `U07-RDP01-T17-LEGACY-ORPHAN`: **quarantine**, no re-creation of original binding from current retry content, no F8. Its provenance must explicitly show a preexisting committed orphan, not a normal new-path failure. Exact expected results and both MySQL/Oracle fixtures must follow these two mutually exclusive branches.
+
+Status: `CA-U07-AGG-ADMISSION-T17-ORACLE-01 = DESIGN_REMEDIATED / NOT_AUTHORIZED / PENDING_INDEPENDENT_AGGREGATE_RE_REVIEW`. Foundation audit remains NOT_PASSED, and no schema/runtime repair code is authorized by this contract.
 
 ## 12. Cross-RDP contract dependencies and explicit handoff
 

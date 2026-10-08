@@ -154,7 +154,7 @@ The separate `U07TraceabilityMatrixV1` must be independently reviewed and machin
 
 ## 6. Mandatory U07 first-class oracle catalog
 
-Each row is a **design-only requirement**; IDs `U07-VG-001..060` are reserved for future executable cases. Expected assertions must include exact root/owner state and **negative side-effect counters**, not merely response codes.
+Each row is a **design-only requirement**; IDs `U07-VG-001..060` are reserved for future executable cases. Separately named required aggregate cases `U07-VG-006-LEGACY-ORPHAN` and `U07-VG-AGG-01..10` extend this catalog; they are not an excuse to reduce the base 60. Expected assertions must include exact root/owner state and **negative side-effect counters**, not merely response codes.
 
 ### RDP-01 — Admission and canonical binding
 
@@ -165,7 +165,8 @@ Each row is a **design-only requirement**; IDs `U07-VG-001..060` are reserved fo
 | U07-VG-003 | same protected identity but changed payload/scope | conflict, zero F8/P02/P01/U02 effects |
 | U07-VG-004 | RESUME_REQUEST references original accepted answer | same target answer/root, no second content or independent F8 verdict |
 | U07-VG-005 | RESUME_REQUEST missing/conflicting target | typed unresolved/conflict; no manufactured USER_ANSWER |
-| U07-VG-006 | ledger insert commits but side-binding fails | both rollback; no partially admitted canonical event |
+| U07-VG-006 | Foundation canonical INSERT/FLUSH succeeds but U07 binding INSERT or outer transaction fails **before shared COMMIT** | both Foundation event and U07 binding roll back; zero durable rows, zero F8/P02/P01/U02 effects; independently read both tables in new transaction |
+| U07-VG-006-LEGACY-ORPHAN | independently seeded **preexisting committed** Foundation winner has no U07 binding (legacy/corrupt state), not produced by ordinary V1 partial commit | quarantine with no forged binding, no F8/P02/P01/U02 effects; original winner remains an anomaly for owner-led reconciliation |
 | U07-VG-007 | projected U06 eligibility hash without authoritative issuance | no accepted admission; original issuance must be proven |
 | U07-VG-008 | same key two concurrent writers, original exact payload | unique canonical owner ID, collision reconciliation, no duplicate side binding |
 | U07-VG-009 | existing original wait delivery not confirmed or parent provenance missing | blocked owner provenance, zero novel effects |
@@ -249,7 +250,10 @@ Use controlled barriers and deterministic fault injection, not random sleep-only
 
 | Boundary | Fault/race required | Invariant |
 |---|---|---|
-| Foundation event+side-binding | exception before second insert or before COMMIT | no canonical-only success row |
+| Foundation event+side-binding | INSERT/FLUSH Foundation row followed by binding failure **before outer COMMIT** | both roll back; same-root zero new authoritative rows in either table |
+| Pre-existing Foundation orphan | independently seed a **previously committed** winner without binding before test ingress | quarantine existing orphan; no fabrication of binding or F8 entry |
+| P02 owner B1 shared-grant COMMIT | U15-first/grant-first, missing U07 B0 intent, Thread CAS mismatch, grant or owner journal write failure, unknown commit | atomic Thread claim + `RESTORE_START_AUTHORIZED` journal + grant or **none**; no B2 before committed B1 owner readback |
+| P02 B2 inert restore | crash after B1 and before parked result; owner result unreadable or delayed | same immutable grant, original Thread/Run and parked owner state reconciled; no second external execution |
 | F8 first verdict | U15 cancel/expire before vs after final conditional statement | correct precedence, historical ACCEPTED immutable |
 | F8 time | transaction-start before deadline, statement after | no acceptance from transaction-start-stale clock |
 | P02 restore grant | U15-first vs grant-first vs unknown COMMIT | no start absent durable grant; grant only inert restoration |
@@ -267,7 +271,7 @@ Use controlled barriers and deterministic fault injection, not random sleep-only
 
 ## 8. Dual-dialect database verification (MySQL and Oracle)
 
-Separate ephemeral migration/test environments for MySQL and Oracle. Each required case must list which dialects apply. At minimum the concurrency, deadline and atomicity cases `VG-006,008,015..020,021..032,037..039,043..045,051..053,057,059` require both dialects at authoritative gate; unit mock outcomes do not count.
+Separate ephemeral migration/test environments for MySQL and Oracle. Each required case must list which dialects apply. At minimum the concurrency, deadline and atomicity cases `U07-VG-006`, `U07-VG-006-LEGACY-ORPHAN`, `U07-VG-008`, `U07-VG-015..020`, `U07-VG-021..032`, `U07-VG-037..039`, `U07-VG-043..045`, `U07-VG-051..053`, `U07-VG-057`, `U07-VG-059`, and the additional B0/B1/B2 owner-transaction cases in §8.1 require both dialects at authoritative gate; unit mock outcomes do not count.
 
 Evidence per dialect:
 1. actual database product/version, driver, isolation level, transaction manager identity, migration checksum, primary DB identity, clock expression and **observed statement-current vs transaction-start** behavior at precision boundary;
@@ -278,6 +282,25 @@ Evidence per dialect:
 6. same frozen semantics across both dialects; where a dialect cannot implement chosen timing/transaction/fencing, status NOT_APPLICABLE / NOT_READY pending controlled design amendment. A MySQL-only pass cannot authorize Oracle.
 
 DB source logs and connection metadata must avoid PHI; data export contains sanitized synthetic refs/digests, not credentials.
+
+### 8.1 Aggregate controlled-amendment authoritative oracle additions
+
+`CA-U07-AGG-P02-START-GRANT-TX-01` and `CA-U07-AGG-ADMISSION-T17-ORACLE-01` add mandatory **design-only** branches, distinct from the base `U07-VG-001..060` scenario catalog. Before a machine-readable Oracle may be approved, the independently reviewed traceability matrix must map `U07-RDP01-T17` to `U07-VG-006`, map `U07-RDP01-T17-LEGACY-ORPHAN` to `U07-VG-006-LEGACY-ORPHAN`, and map these B0/B1/B2 cases to the original `P02-T*` resume-grant recovery and `U07-VG-037..041` families. This prevents treating a normal rollback and a preexisting committed orphan as equivalent.
+
+| Additional case | Injection / authority source | Required expected owner result |
+|---|---|---|
+| U07-VG-AGG-01 | U07 B0 intent absent, P02 B1 called | no owner start grant/Thread claim or physical restore; BLOCKED_PROVENANCE |
+| U07-VG-AGG-02 | B0 committed, U15 terminal wins Consultation lock before B1 | no Thread/journal/grant COMMIT; zero B2 restore |
+| U07-VG-AGG-03 | B1 writes Thread claim; P02 owner journal INSERT fails before shared COMMIT | **both** Thread claim and grant roll back, no restore |
+| U07-VG-AGG-04 | B1 Thread+journal writes succeed but grant insert fails before shared COMMIT | **all three** B1 rows roll back, no restore |
+| U07-VG-AGG-05 | B1 COMMIT outcome unknown | re-read same owner Thread, journal and grant; zero physical start until coherent committed B1 proven |
+| U07-VG-AGG-06 | B1 grant-first then U15 terminal, before B2 | only same approved inert B2 restore may park; C/D/E/F barred |
+| U07-VG-AGG-07 | B1 committed, B2 parked-result status UNKNOWN / retry | same root/Run/owner readback reconciled; no second novel restore/tool/node |
+| U07-VG-AGG-08 | P02 Thread or grant ledger cannot join guard transaction manager | NOT_READY / BLOCKED_PHYSICAL, no optimistic bridge |
+| U07-VG-AGG-09 | Foundation INSERT/FLUSH before binding fails prior COMMIT | zero durable rows in both owner tables after rollback (VG-006) |
+| U07-VG-AGG-10 | preseed committed legacy Foundation orphan missing binding | quarantine, no newly fabricated binding or F8 effect (VG-006-LEGACY-ORPHAN) |
+
+**No runnable tests were created or executed.** Machine oracle entries must bind one fixture/owner-policy version, exact expected post-transaction row counts, P02 grant/journal/Thread identities and zero forbidden downstream effects; MySQL/Oracle separate physical evidence required. A changed RDP blob invalidates earlier Oracle/Fixture/manifest review proofs until new exact-head authority has been established.
 
 ## 9. Independent expectation oracle and fixture review gates
 

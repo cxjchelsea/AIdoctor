@@ -182,7 +182,7 @@ If A and B cannot be positively proven: output **INCOMPATIBLE** or **INSUFFICIEN
 ## 6. P02 operation claim, runtime transitions and concurrency
 
 **Proposed new physical components, not existing main code:**
-- P02ResumeJournalV1 (stable ID unique, root/wait unique, request fingerprint, owner thread row_version, original checkpoint, selected Path A/B, phase, owner fence, runtime result and trace).
+- P02ResumeJournalV1 (stable ID unique, root/wait unique, request fingerprint, owner thread row_version, original checkpoint, selected Path A/B, phase, owner fence, runtime result and trace). **The grant-facing owner journal row MUST be co-located with Runtime Thread and the U15/P02 start-grant ledger in the shared guard DB for B1; the inert restore and its later owner result are distinct execution work, not part of the grant transaction.**
 - P02ResumeThreadTransitionService, RuntimeResumeCompatibilityEvaluator, RuntimeRehydrationAuthority, P02RunContinuationResultStore.
 
 ~~~text
@@ -215,7 +215,7 @@ or → UNKNOWN_COMMIT / RECONCILIATION_REQUIRED
 Physical constraints:
 - One stable resume identity owns one Thread/Run/wait continuation; same canonical retry attaches, different effect cannot claim same wait.
 - The authoritative Thread row uses PESSIMISTIC_WRITE / @Version, but U07 **must add** governed transition status and replay receipts; U06 only implements reserve and enter-awaiting.
-- **Lock order:** shared Consultation/U15 guard FIRST for first physical claim, then Runtime Thread row, then checkpoint/owner journal and effect keys in deterministic order. U15/F3 owner bridges must agree or V1 NOT_READY.
+- **B0/B1/B2 order:** U07 Stage-B request/intent B0 must COMMIT first under the shared guard DB; P02 B1 takes Consultation/U15 guard FIRST, Runtime Thread SECOND, then journal/grant/checkpoint keys and atomically commits Thread claim + `RESTORE_START_AUTHORIZED` + grant. P02 B2 executes *only inert restoration* after authoritative B1 readback and persists parked owner result. U15/F3 bridges must agree or V1 NOT_READY.
 - Do not hold a DB transaction across an external runtime executable step or tool call. Before invocation, persist the exact operation identity and fencing token; after execution, reconcile outcome against persisted owner evidence.
 - **Do not substitute a precheck for start authorization:** the durable U15-shared restore-only grant (§6.1) decides the order against U15 termination. If U15 wins before grant, zero physical restoration. If grant wins first, only the identical bounded *inert* restore to a parked cursor may finish; later business execution and Stage C require separate authority. Unknown grant COMMIT forbids first physical start.
 - Unknown physical execution result must be resolved from P02 owner journal plus durable runtime result; **never rerun unclassified steps**. An original unknown tool effect cannot be reissued merely to “recover the checkpoint.”
@@ -239,7 +239,9 @@ P02ExecutionStartGrantV1 {
 }
 ~~~
 
-**Atomic owner grant transaction:** acquire same Consultation/U15 PESSIMISTIC_WRITE lock FIRST, then original Runtime Thread row, then P02 journal/claim; revalidate F8 winner, current wait/Question, U15 terminal generation, same-domain certified deadline and P02 compatibility/proof. CAS both the P02 owner phase `RESTORE_START_AUTHORIZED` and one durable grant under the **same physical guard database/transaction manager**. U15 terminalization MUST hold the same Consultation lock and advance terminal generation. Mere pre-grant read/check is invalid. If the physical P02 store cannot participate in the same transaction, V1 NOT_APPLICABLE / NOT_READY.
+**Atomic P02 owner grant transaction = RDP-03 B1 (CA-U07-AGG-P02-START-GRANT-TX-01):** U07 has already committed B0 immutable Stage-B request intent in shared guard DB. P02 owner performs B1: acquire Consultation/U15 `PESSIMISTIC_WRITE` lock FIRST; then original P02-owned Runtime Thread row; then P02-owned journal and grant rows in deterministic order. Revalidate F8 original winner, source wait/Question, U15 terminal generation and same-domain deadline, Thread row_version, original checkpoint/reconstruction proof and versioned owner permissions. **In one guard DB transaction/COMMIT**, CAS P02 Thread to restore-claimed state and P02ResumeJournalV1 to `RESTORE_START_AUTHORIZED` and persist unique `P02ExecutionStartGrantV1.AUTHORIZED_RESTORE_ONLY`. All three records are P02-authority writes despite physically sharing the Consultation/U15 database; the U07 coordinator cannot mutate P02 owner truth. U15 terminalization holds the identical Consultation lock. Grant COMMIT UNKNOWN requires re-query of **all three rows** under same stable request identity before B2. If any P02 Thread, journal or grant participant is on a separate DB/transaction manager, this V1 is NOT_APPLICABLE / NOT_READY; never imply distributed atomicity.
+
+**B2 independent inert runtime operation:** after durable B1 proof, execute a finite no-side-effect restore/rehydrate **outside** that transaction, landing parked as `RESUMED_READY_BUT_NOT_DISPATCHED`, record P02 owner result/readback (same original root and continuation identity). Runtime/result persistence may use a later P02-owned transaction, but cannot replace the B1 grant or write F8/P01/Consultation/U02 facts. U07 Stage B advances only on verified parked P02 owner receipt, not B1 grant or an in-memory callback. Unknown result is reconciled with P02 owner status; never restart an unclassified physical effect.
 
 **Required race outcomes:**
 - U15 terminal commits **before grant** => BLOCKED_TERMINAL, no physical restore, no new post-wait work; F8 historical ACCEPTED remains.
@@ -248,6 +250,22 @@ P02ExecutionStartGrantV1 {
 - Never hold a DB transaction open across external Runtime work. It serializes the **authorization**, not wall-clock physical execution. Restore must remain side-effect-free; external-effect start must use independently authorized later gate.
 
 **New required controlled amendment:** `CA-U07-RDP04-P02-EXECUTION-START-FENCE-01 = REQUIRED / NOT_AUTHORIZED / NOT_IMPLEMENTED`, including U15 consent, transaction co-location, owner grant replay, MySQL/Oracle clock/lock verification and cancellation observation.
+
+### 6.1.1 Aggregate owner transaction / recovery split
+
+```text
+RDP03 B0: U07 stage-B request intent committed [guard DB]
+     -> P02 B1: Consultation/U15 lock -> Thread owner row -> P02 journal -> grant
+        COMMIT {THREAD_CLAIMED, RESTORE_START_AUTHORIZED, GRANT_RESTORE_ONLY}
+     -> P02 B2: owner-controlled inert restore outside transaction
+        -> durable RESUMED_READY_BUT_NOT_DISPATCHED readback
+     -> U07 RDP03 B: RESUMED_VERIFIED exact owner result
+     -> C/D/E/F still separately fenced
+```
+
+The B1 grant is a **start permission** only; B2 completion is **not** proven by the grant. If B0 is missing, B1 cannot mint its own canonical root. If B1 is missing or commit UNKNOWN, B2 cannot begin before authoritative readback. If B1 exists and B2 result is unknown, reconcile the *same* P02 operation/journal/Thread/parked-result identity with zero speculative second tool or Run. A U15 terminal event after B1 can allow at most the same already granted inert B2 restoration under U15's separately approved bounded policy; C/D/E/F remain blocked.
+
+The chosen topology is a **conditional physical design**, not an assertion of existing P02 schema or co-located transaction managers. `CA-U07-AGG-P02-START-GRANT-TX-01` remains NOT_AUTHORIZED, with independent re-review and MySQL/Oracle crash/race evidence required.
 
 ### 6.2 Mandatory parked landing barrier (BF-U07-RDP04-IR-02)
 

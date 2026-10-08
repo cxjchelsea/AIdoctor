@@ -167,7 +167,7 @@ Every mutable authority is bound by: `owner_namespace`, `authority_version_or_ep
 |---|---|---|
 | ADMISSION_PRE / canonical event commit | Foundation canonical grants and P06 scope/producer profile, authoritative U06 issuance | same owner DB transaction **only if co-located**, otherwise owner-issued version-fenced authorization |
 | F8 final conditional decision | F8 policy revision, U15 generation/Consultation row, U06 original wait/issuance owner | same guard-DB lock/statement-current time for F8+U15; independently fenced U06 provenance |
-| P02 start-grant commit | P02 Thread/Run/checkpoint/recipe authority, P06 Registry/Harness binding, U15 start-grant policy and current terminal epoch | P02/U15 common transactional CAS, **plus** P06/Registry signed version or commit-time verified lease; no stale precheck |
+| P02 B1 restore-start grant COMMIT | U07 B0 request intent, P02 owner Thread row, P02ResumeJournal grant-phase state, P02ExecutionStartGrant, checkpoint/recipe proof, P06 Registry/Harness, U15 owner policy/epoch | ONE guard-DB atomic CAS/COMMIT for P02 Thread claim + journal `RESTORE_START_AUTHORIZED` + U15 restore-only grant, Consultation lock FIRST; independently verified P06 signed version/lease. B2 physical restore is *after* B1 and cannot execute without authoritative owner readback |
 | Stage C P01 owner mutation COMMIT | F3 Question/Gap owner release and Question version, K09/P01 producer+field grants and Clinical State base version, P06 scope, U15 terminal generation and deadline | shared P01/Consultation transaction for state+U15; **F3/P06/grant owner version must also be verified at this final mutation** by owner-fenced CAS or approved stable lease |
 | Stage D Consultation ACTIVE COMMIT | Consultation lifecycle owner/version, U15 generation and Stage C result | shared guard owner transaction with exact C owner result and current lifecycle policy |
 | Stage E APPLIED+Outbox COMMIT | U07 journal generation, Consultation/U15 version, current policy for APPLIED and Stage B/C/D owner receipts | same guard-DB transaction; immutable prior-stage receipts individually read back |
@@ -206,7 +206,7 @@ Every mutable authority is bound by: `owner_namespace`, `authority_version_or_ep
 
 ## 8. Selected physical transaction and temporal authority contract
 
-**One selected design topology, no implicit fallback:** `SINGLE_GUARD_DB_STAGED_SAGA_V1`, inherited from RDP-03. The primary DB / transaction manager for authoritative Consultation/U15 owner row, F8 winner, U07 binding (RDP-01), P01 stage-C Clinical State commit guard, ApplyJournal/Outbox E, and P02 restore-start grant must be demonstrably compatible with the selected **same transaction manager and Consultation row lock**. The P02 physical restoration work and external U02 transport happen outside DB transactions, but their **grants** are committed in the correct shared-guard transaction first.
+**One selected design topology, no implicit fallback:** `SINGLE_GUARD_DB_STAGED_SAGA_V1`, inherited from RDP-03. The primary DB / transaction manager for authoritative Consultation/U15 owner row, F8 winner, U07 binding (RDP-01), P01 stage-C Clinical State commit guard, ApplyJournal/Outbox E, and P02 restore-start grant must be demonstrably compatible with the selected **same transaction manager and Consultation row lock**. **P02 owner Thread row, P02ResumeJournal grant-facing phase and the U15-governed P02 restore-start grant must all join the same shared-guard DB transaction in RDP-03/RDP-04 B1**; the U07 B0 request intent commits beforehand. Only P02 B2 inert physical restoration and verified parked result occur later outside B1. U02 transport likewise operates outside its Stage-F grant transaction. P02's logical Runtime ownership is unchanged despite physical database co-location.
 
 RDP-01 requires same-transaction Foundation event + inline binding. F8 first-decision uses statement-current DB time. Stage C requires ONE owner-authorized P01 patch and ONE Clinical version; D Consultation ACTIVE; E APPLIED and unique Outbox in one COMMIT; P02 start grant and F U02 dispatch grant each independently ordered against U15 terminalization.
 
@@ -215,6 +215,26 @@ RDP-01 requires same-transaction Foundation event + inline binding. F8 first-dec
 **Fail closed if any of**: transaction-manager co-location cannot be proven; DB dialect offers only unsound time predicate; P01 patch commits independently; U15 does not acquire identical row lock; P02 start and U02 dispatch grants cannot join the shared guard; producer adapters bypass central parked barrier. This V1 is **NOT_APPLICABLE / NOT_READY**, no “best effort” saga or alternate SQL timing without Controlled Amendment + independent review.
 
 **Lock order:** Consultation/U15 row → canonical winner/apply root as required → P02 Thread → checkpoint/journal/effect/outbox (deterministic sorted order per transaction); transaction participants that do not need Thread must omit that lock but cannot acquire it before Consultation if they later need Consultation. RDP-05 does not authorize a long database lock across Runtime restoration or network calls.
+
+### 8.1 Aggregate P02 start-grant topology and admission crash applicability
+
+`CA-U07-AGG-P02-START-GRANT-TX-01` selects **one** topology, not an optional alternate. Resource ledger:
+
+| Resource | Physical / transaction requirement | Owner |
+|---|---|---|
+| U07 Stage B0 intent/root | prior guard-DB COMMIT, same immutable resume identity | U07 |
+| Consultation/U15 row/version | lock FIRST in B1 and all U15 terminal commits | Consultation/U15 |
+| P02 Runtime Thread claim | shared guard DB and **same B1 transaction**; lock SECOND | P02 |
+| P02ResumeJournal grant-phase row | shared guard DB, same B1 COMMIT | P02 |
+| P02ExecutionStartGrantV1 | same B1 COMMIT as Thread/journal | P02 grant adapter with U15 owner approval |
+| B2 Runtime restore + parked owner result | after B1 COMMIT, independent inert owner execution/result/readback | P02 |
+| RDP-03 C/D/E/F effects | independent later guarded stages and separate authorizations | respective owner |
+
+**Version/ownership proof:** co-location does not transfer P02 semantic permission to U07 or imply one transaction across actual Runtime, P01 or U02 side effects. If Thread/journal/grant cannot enlist in exactly one primary guard-DB transaction, mark `BLOCKED_PHYSICAL / U07 NOT_READY`, and require a separately reviewed replacement. B1 uncertain COMMIT must reconcile all owner-phase rows; B2 unknown result must reconcile same root before retry. Mandatory negative evidence covers U15-first, grant-first, missing B0, journal write failure and Thread version conflict.
+
+`CA-U07-AGG-ADMISSION-T17-ORACLE-01` requires two **different** evidence roles: `ATOMIC_PRE_COMMIT_ROLLBACK` (Foundation INSERT/FLUSH before binding fails, zero committed rows) and `LEGACY_ORPHAN_QUARANTINE` (preexisting committed winner missing binding, no F8). The selected RDP-01 one-COMMIT model must never label a normal pre-commit crash as a committed orphan.
+
+Both CAs remain `DESIGN_REMEDIATED / NOT_AUTHORIZED / PENDING_INDEPENDENT_AGGREGATE_RE_REVIEW`; this contract does not mark physical verification passed.
 
 ## 9. Binding/profile/authority envelope
 
