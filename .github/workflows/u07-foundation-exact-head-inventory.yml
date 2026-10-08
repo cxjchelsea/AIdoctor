@@ -1,0 +1,50 @@
+name: U07 Foundation Exact-HEAD Source Inventory (evidence only)
+
+on:
+  pull_request:
+    branches:
+      - review/u07-foundation-targeted-independent-rereview-v1
+    paths:
+      - 'tools/u07_foundation_audit/**'
+      - '.github/workflows/u07-foundation-exact-head-inventory.yml'
+      - 'docs/current/06_开发单元/U07_Foundation_Exhaustive_Source_Inventory_Evidence_v0.1.md'
+
+permissions:
+  contents: read
+
+jobs:
+  source-inventory:
+    name: All tracked source lexical inventory (not a gate PASS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AUDITED_MAIN_SHA: 6d4fd787600e3a57f01f3e17893e6d98893ac546
+    steps:
+      - name: Checkout audit tools from PR HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: audit-tools
+          persist-credentials: false
+      - name: Checkout immutable audited main source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.AUDITED_MAIN_SHA }}
+          fetch-depth: 0
+          path: audited-main
+          persist-credentials: false
+      - name: Run full exact-head tracked source lexical inventory
+        run: |
+          set -euo pipefail
+          python3 audit-tools/tools/u07_foundation_audit/exhaustive_inventory.py \
+            --source-dir audited-main \
+            --expected-head "$AUDITED_MAIN_SHA" \
+            --output-dir foundation-evidence
+      - name: Upload source inventory and digest evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: u07-foundation-exact-head-source-inventory
+          path: foundation-evidence/
+          if-no-files-found: warn
+          retention-days: 30
