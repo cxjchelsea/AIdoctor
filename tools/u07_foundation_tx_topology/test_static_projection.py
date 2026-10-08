@@ -126,6 +126,33 @@ class StaticProducerTests(unittest.TestCase):
             with self.assertRaisesRegex(EvidenceError, "missing or duplicate direct edge"):
                 self.run_project(archive=self._rearchive(inv), snapshots=snapshots)
 
+    def test_annotation_in_comment_or_string_is_not_declaration(self):
+        misleading = [
+            "/*\n@Transactional\npublic Object start(String input) {}\n*/",
+            "// @Transactional\n// public Object start(String input) {}\n",
+            'String value = "@Transactional\\npublic Object start(";',
+            'String value = """\n@Transactional\npublic Object start(String input)\n""";',
+            "char q = '\\''; /* @Transactional public Object start(String x) */",
+        ]
+        for sample in misleading:
+            code = producer._java_code_only(sample)
+            self.assertFalse(producer._member_tx(code, "start"), sample)
+        real = "@Transactional\npublic Object start(String x) {}"
+        self.assertTrue(producer._member_tx(producer._java_code_only(real), "start"))
+        self.assertFalse(producer._member_tx(producer._java_code_only(real), "openRun"))
+
+    def test_comment_or_string_call_cannot_count_as_real_edge(self):
+        suspicious = "/* cdpVersionService.createInitialVersion( */\n" \
+                     'String x = "cdpVersionService.createInitialVersion(";'
+        clean = producer._java_code_only(suspicious)
+        import re
+        self.assertIsNone(re.search(producer.EDGES[2][2], clean))
+
+    def test_unterminated_java_comment_or_literal_fails_closed(self):
+        for sample in ("/* @Transactional\npublic Object start(", '"@Transactional', "char ch = 'x"):
+            with self.assertRaisesRegex(EvidenceError, "UNCLOSED_JAVA_COMMENT_OR_LITERAL"):
+                producer._java_code_only(sample)
+
     def test_frozen_digest_rejects_plausible_forged_archive(self):
         inv = json.loads(json.dumps(self.inventory))
         inv["file_inventory"][-1]["sha256"] = "f" * 64
