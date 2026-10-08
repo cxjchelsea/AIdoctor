@@ -4,7 +4,8 @@
 > Design scope: P02 durable runtime restoration, checkpoint compatibility, recovery, runtime owner fencing, U02 handoff transport boundary, trace and negative-effect oracles
 > Parent design: RDP-01 and RDP-02 = CONDITIONALLY_ACCEPTED_DESIGN; RDP-03 = CONDITIONALLY_ACCEPTED_DESIGN after independent re-review [PR #279](https://github.com/cxjchelsea/AIdoctor/pull/279), exact review commit 885cb49c681685036df18bc94759857b467c53e0
 > Runtime/source inspection baseline: main@6d4fd787600e3a57f01f3e17893e6d98893ac546
-> Status: **DESIGN_CANDIDATE / READY_FOR_INDEPENDENT_DESIGN_REVIEW / NOT_FROZEN**
+> Status: **TARGETED_REMEDIATION_CANDIDATE / PENDING_TARGETED_INDEPENDENT_RE_REVIEW / NOT_FROZEN**
+> Prior independent review PR #281 @ `b8816272f1d032515164329644194901eded06aa`: REVISE_REQUIRED, 3 blockers. Author-side remediation is not independent closure.
 > This document does not authorize implementation, schema migration, merge, runtime activation, external U02 delivery, PHI, PROFILE-A or real patients.
 
 ---
@@ -115,17 +116,53 @@ Only COMPATIBLE_CHECKPOINT or separately certified REHYDRATE_ELIGIBLE may initia
 
 - Checkpoint contains independently proven executable continuation image (program counter/task state, frozen workflow/registry/capability versions, stable pending operation identity, runtime data required for deterministic continuation) with an integrity digest.
 - P02 verifies it equals the original U06 wait provenance, then atomically claims the exact Thread/Run for the same P02 request under owner-level lock/CAS.
-- Resume to the **post-user-wait boundary** only; no replay of U06 delivery, Question selection or previously executed tools, and no inference of U02 facts.
+- Restore **into the parked and non-executing landing barrier** `RESUMED_READY_BUT_NOT_DISPATCHED` at the post-user-wait boundary, not to a runnable scheduler position. Even if original cursor points to a Tool/U02, no post-wait node or side effect executes before its independently authorized business gate (§6.2).
 - If current main metadata checkpoint lacks executable content, **Path A NOT_APPLICABLE**.
 
 ### Path B — bounded historical rehydration
 
 Only when all are present:
 - U06 original authoritative delivered-wait and eligibility issuance, original answer binding, original **approved deterministic reconstruction recipe**, immutable historical dependency snapshots or verifiable owner references, version-compatible runtime/scheduler state, and complete replay-safety classification for prior steps.
-- Owner-approved reconstruction must derive the execution context at the waiting boundary **without replaying external effects** or silently changing the original Question/answer. It may reuse original run identity or authoritatively record a versioned continuation run linked one-to-one with original run; fresh IDs are never invented per retry.
-- Before rehydrate, P02 must prove source provenance, exact compatibility/semantic equivalence, and original pending tool effects are known complete or explicitly non-replayed. If any step is UNKNOWN or relies on unverified prior tool effects, **no rehydrate**.
+- Owner-approved reconstruction must derive the execution context at the waiting boundary **without replaying external effects** or silently changing the original Question/answer. Unique continuation Run ID = hash("p02-u07-continuation-v1", original_run_id, root_resume_effect_id, approved_recipe_version), recorded one-to-one with original Run; never randomized on retry. It lands parked with no business-node execution.
+- Before rehydrate, P02 MUST validate the full owner-certified `P02RehydrateProofV1` (§5.1), including all original potential external effects and positive owner completion/non-execution evidence. Missing proof, UNKNOWN, PARTIAL_SUCCESS or unsettled in-flight effects => **no rehydrate**; a recipe name or metadata-only checkpoint is not sufficient.
 - B requires **CA-U07-RDP04-P02-REHYDRATE-OWNER-01 = REQUIRED / NOT_AUTHORIZED** to approve P02 authority, reconstruction schema, proof and recovery source. The current U06 wait metadata alone does not satisfy this recipe.
 
+### 5.1 Owner-certified historical rehydration proof (BF-U07-RDP04-IR-03)
+
+**Frozen V1 contract; owner signatures/receipts are prerequisites, not assertions of existing code:**
+
+~~~text
+P02RehydrateProofV1 {
+  proof_version, owner = P02, owner_proof_commit_ref,
+  stable_p02_resume_request_id, root_resume_effect_id,
+  original_consultation_id, original_thread_id, original_run_id,
+  original_checkpoint_id?, original_wait_effect_id, original_eligibility_issuance_ref,
+  original_canonical_answer_event_id, immutable_original_plan_ref + plan_digest,
+  frozen_wait_cursor_ref + cursor_digest, source_runtime_state_digest,
+  runtime_harness_scheduler_workflow_registry_policy_contract_version_vector,
+  immutable_historical_binding_refs + fingerprint,
+  approved_recipe_id + recipe_digest + recipe_version,
+  effect_manifest_digest + manifest_coverage_proof,
+  previous_effects[] = {
+    stable_effect_id, original_step_id, owner_namespace,
+    effect_fingerprint, physical_attempt_id?, owner_completion_authority_ref,
+    outcome = COMMITTED | PROVEN_NOT_EXECUTED,
+    replay_policy = NEVER_REISSUE, terminal_receipt_ref + receipt_digest
+  },
+  continuation_run_id = hash('p02-u07-continuation-v1', original_run_id,
+                             root_resume_effect_id, recipe_version),
+  expected_parked_state_digest, expected_landing_cursor_digest,
+  owner_verification_receipts + source_snapshot_epoch
+}
+~~~
+
+**Complete effect-manifest requirement:** cover every original executed, in-flight or potentially external-effect-bearing step up to the wait cursor, including nested Tool/Skill/Workflow physical attempts. Each entry must have an owner-verifiable COMMITTED or PROVEN_NOT_EXECUTED terminal receipt; absence, silence in Trace/logs, PARTIAL_SUCCESS, UNKNOWN, timed out or unsettled effects are not evidence of replay safety. Known committed effects remain historical facts and are NEVER reissued. Missing any one original step/effect => `INSUFFICIENT_EVIDENCE`, zero reconstruction or side effects.
+
+**Owner validation:** P02 validates original plan/cursor/proof, P06/Registry validates historical version and bindings, original Tool/Skill/Workflow completion owner validates every manifest entry, U06 validates issued wait evidence, U15 verifies terminal fence, and Clinical State authority validates version refs. A Trace entry cannot replace an owner completion receipt. If any owner authority unavailable => fail closed; if conflicting authoritative facts => quarantine, no `REHYDRATE_ELIGIBLE`.
+
+Before rehydrating, persist the immutable proof digest + one stable continuation Run identity in P02 journal under original resume root. Rebuild only side-effect-free parked context using an approved deterministic recipe; compare restored state and cursor against the two expected digests. Crash/retry reconciles the same identity/proof/owner receipts; no second continuation Run, new recipe or history replay. A mismatch => RECONCILIATION_REQUIRED, not RESUMED_VERIFIED.
+
+**Physical blocker:** `CA-U07-RDP04-P02-REHYDRATE-OWNER-01` remains REQUIRED / NOT_AUTHORIZED; the existing U06 metadata checkpoint does not prove the above capabilities.
 ### Path C — governed failure
 
 If A and B cannot be positively proven: output **INCOMPATIBLE** or **INSUFFICIENT_EVIDENCE** with owner reason, preserve original F8 ACCEPTED, protect same-wait winner/ApplyJournal, and route U14/P02 owner recovery. Do **not** create another Question, synthesize U06 issuance, clear Clinical Pending, set Consultation ACTIVE, or handoff to U02.
@@ -157,6 +194,8 @@ P02ResumeJournalV1 {
  selected_path, current_status,
  owner_thread_row_version, owner_resume_generation,
  consultation_u15_fence_version, runtime_continuation_run_id?,
+ execution_start_grant_id?, start_grant_generation?, start_grant_policy_version?,
+ landing_barrier_status?, landing_cursor_digest?, rehydrate_proof_digest?,
  runtime_result_id?, runtime_result_digest?, trace_ref, failure_reason
 }
 ~~~
@@ -164,8 +203,10 @@ P02ResumeJournalV1 {
 Owner runtime phases:
 ~~~text
 NONE → INTENT_DURABLE → CLAIMED
-     → RESTORING_OR_REHYDRATING
-     → RESUMED_VERIFIED
+     → RESTORE_START_AUTHORIZED
+     → RESTORING_OR_REHYDRATING  # side-effect free
+     → RESUMED_READY_BUT_NOT_DISPATCHED
+     → RESUMED_VERIFIED  # durable parked receipt/readback
      → OBSERVED_BY_U07_APPLY
 or → BLOCKED_OWNER / INCOMPATIBLE / INSUFFICIENT_EVIDENCE
 or → UNKNOWN_COMMIT / RECONCILIATION_REQUIRED
@@ -176,10 +217,57 @@ Physical constraints:
 - The authoritative Thread row uses PESSIMISTIC_WRITE / @Version, but U07 **must add** governed transition status and replay receipts; U06 only implements reserve and enter-awaiting.
 - **Lock order:** shared Consultation/U15 guard FIRST for first physical claim, then Runtime Thread row, then checkpoint/owner journal and effect keys in deterministic order. U15/F3 owner bridges must agree or V1 NOT_READY.
 - Do not hold a DB transaction across an external runtime executable step or tool call. Before invocation, persist the exact operation identity and fencing token; after execution, reconcile outcome against persisted owner evidence.
-- If U15 terminalizes after claim but before physical execution, a fresh owner-authorized execution-start fence must block new Run actions. If U15 terminalizes while the execution is in flight, owner control must cancel/suspend/fence subsequent effects; completion may be logged, but is not authorization to apply Clinical State.
+- **Do not substitute a precheck for start authorization:** the durable U15-shared restore-only grant (§6.1) decides the order against U15 termination. If U15 wins before grant, zero physical restoration. If grant wins first, only the identical bounded *inert* restore to a parked cursor may finish; later business execution and Stage C require separate authority. Unknown grant COMMIT forbids first physical start.
 - Unknown physical execution result must be resolved from P02 owner journal plus durable runtime result; **never rerun unclassified steps**. An original unknown tool effect cannot be reissued merely to “recover the checkpoint.”
 - Pre-existing Runtime task cancellation/preemption/safety barrier cannot be downgraded by U07.
 
+### 6.1 U15-serialized restore-only execution-start grant (BF-U07-RDP04-IR-01)
+
+**One selected policy: U15_FENCED_RESTORE_ONLY_START_GRANT_V1.** The grant is NOT an authority to execute a post-wait business step, Tool, model, Clinical effect or U02 delivery. It grants only finite, side-effect-free cursor restoration and durable parked state creation. It is separate from RDP-03 U15 Outbox dispatch grant.
+
+~~~text
+P02ExecutionStartGrantV1 {
+  grant_id = hash('u07-p02-restore-start-v1', stable_p02_resume_request_id, policy_version),
+  stable_p02_resume_request_id, root_resume_effect_id, consultation_id,
+  original_thread_id, original_run_id, parent_wait_effect_id,
+  original_checkpoint_id?, immutable_request_fingerprint,
+  selected_path + checkpoint_or_proof_digest, scope_ref,
+  u15_terminal_generation, consultation_row_version, runtime_thread_row_version,
+  policy_version, owner_start_generation,
+  status = AUTHORIZED_RESTORE_ONLY | BLOCKED_TERMINAL | RECONCILIATION_REQUIRED,
+  owner_commit_ref, grant_effective_at
+}
+~~~
+
+**Atomic owner grant transaction:** acquire same Consultation/U15 PESSIMISTIC_WRITE lock FIRST, then original Runtime Thread row, then P02 journal/claim; revalidate F8 winner, current wait/Question, U15 terminal generation, same-domain certified deadline and P02 compatibility/proof. CAS both the P02 owner phase `RESTORE_START_AUTHORIZED` and one durable grant under the **same physical guard database/transaction manager**. U15 terminalization MUST hold the same Consultation lock and advance terminal generation. Mere pre-grant read/check is invalid. If the physical P02 store cannot participate in the same transaction, V1 NOT_APPLICABLE / NOT_READY.
+
+**Required race outcomes:**
+- U15 terminal commits **before grant** => BLOCKED_TERMINAL, no physical restore, no new post-wait work; F8 historical ACCEPTED remains.
+- Grant commits **before later U15 terminal** => only the *same already-authorized inert restoration* may reach the parked landing barrier; U15 records the outstanding grant and prevents subsequent C/D/E/business execution according to owner rules. It is not a standing Run or clinical continuation authorization. If U15 cannot approve this finite grant-first policy, fail readiness.
+- Grant COMMIT unknown or owner evidence mismatched => read grant and journal by stable ID in a new authoritative transaction; **no first physical start until durable grant is proven**. Worker crash reattaches original grant; no new grant ID or speculative repeated restore.
+- Never hold a DB transaction open across external Runtime work. It serializes the **authorization**, not wall-clock physical execution. Restore must remain side-effect-free; external-effect start must use independently authorized later gate.
+
+**New required controlled amendment:** `CA-U07-RDP04-P02-EXECUTION-START-FENCE-01 = REQUIRED / NOT_AUTHORIZED / NOT_IMPLEMENTED`, including U15 consent, transaction co-location, owner grant replay, MySQL/Oracle clock/lock verification and cancellation observation.
+
+### 6.2 Mandatory parked landing barrier (BF-U07-RDP04-IR-02)
+
+**V1 landing status = RESUMED_READY_BUT_NOT_DISPATCHED** with persisted original/continuation run, stable resume ID, exact frozen cursor/state digests, P02 owner receipt and Thread row version. `RESUMED_VERIFIED` means the Runtime can safely continue **but remains parked**, NOT that downstream workflow steps have executed.
+
+**Dispatcher-wide safety guard** must apply to all direct node execution, scheduler continuation, callbacks, retry recovery, tool/model invocation and any side-effect adapter. A restored cursor pointing at U02, Tool, AI/LLM, Clinical mutation or a new workflow step is not an execution permit:
+
+~~~text
+before ANY executable business node / tool / model / external side effect:
+  if Runtime Thread is RESUMED_READY_BUT_NOT_DISPATCHED:
+      BLOCK (P02_LANDING_BARRIER_NO_EXECUTE)
+  require separately authorized post-landing continuation capability
+  re-check applicable U15/Safety/owner fence for this particular effect
+~~~
+
+**Permitted before RDP-03 Stage C:** exact checkpoint/proof read, version/digest validation, immutable no-effect deterministic in-memory restore, parked cursor persistence and P02 owner receipt readback. **Zero** post-wait business nodes, model/tool calls, U02 sends, notifications or Clinical State mutations regardless of original program counter. If any executor path cannot honor the guard, both Path A/B NOT_APPLICABLE and U07 NOT_READY.
+
+**V1 post-landing routing** is exclusively RDP-03 owner-governed Stage C (single F3/P01), Stage D Consultation ACTIVE, Stage E APPLIED+Outbox and Stage F U15-approved U02 handoff. These are **coordinator-owned independent stages**, not automatic scheduler-next-node actions. Any general resumed workflow node beyond this bounded path requires a new approved `P02PostLandingContinuationAuthorizationV1` after verified C/D/E and current safety/U15 policy. Until then leave Thread parked. No authority is implied by F8 ACCEPTED or parked RESUMED_VERIFIED.
+
+**Physical blocker:** `CA-U07-RDP04-P02-LANDING-BARRIER-01 = REQUIRED / NOT_AUTHORIZED / NOT_IMPLEMENTED` for globally enforced dispatcher/callback checks, parked Thread state/storage, negative effect tests and recovery consistency.
 ## 7. Exact P02 result contract and stage-B handoff to RDP-03
 
 ~~~text
@@ -199,7 +287,7 @@ P02ResumeResultV1 {
 }
 ~~~
 
-**RESUMED_VERIFIED** requires durable owner result, matching original wait/run, valid continuation identity, reconciled pending step results and a readback proving the Thread/Run state. **ALREADY_RESUMED** is a read-only replay of the same root with original result evidence; no further execution. If P02 can only establish “metadata checkpoint exists”, it cannot return RESUMED_VERIFIED.
+**RESUMED_VERIFIED** requires durable owner result, matching original wait/run, valid continuation identity, reconciled pending step results, and a readback proving Thread/Run is **parked at `RESUMED_READY_BUT_NOT_DISPATCHED` under the dispatcher-wide no-business-execution barrier**. It is *safe restoration readiness*, not downstream business-node execution. **ALREADY_RESUMED** is a read-only replay of the same root with original result evidence; no further execution. If P02 can only establish “metadata checkpoint exists”, it cannot return RESUMED_VERIFIED.
 
 RDP-03 may progress stage B only on RESUMED_VERIFIED or ALREADY_RESUMED **with exact owner-result proof** and fresh C-stage U15/Clinical owner fence. It cannot treat a P02 timeout, provisional COMPATIBLE, metadata-only checkpoint or in-memory callback as stage B success. F8 historical decision remains unchanged on all result statuses.
 
@@ -209,12 +297,18 @@ RDP-03 may progress stage B only on RESUMED_VERIFIED or ALREADY_RESUMED **with e
 |---|---|---|
 | Original F8 ACCEPTED but no P02 request intent | derive same ID, owner-claim when U15 still authorizes | new F8 verdict |
 | P02 request intent committed, caller crashed | reattach same P02 journal/root | second operation identity |
-| Thread CLAIMED but before runtime executes | read matching claim/status, verify start fence, execute once | blind new Run |
+| Thread CLAIMED before restoration | acquire/reconcile U15-guarded restore-only start grant | bare precheck followed by unsafe start |
 | Executable checkpoint corrupt/missing after claim | INSUFFICIENT_EVIDENCE / owner repair if approved | fake RESUMED_VERIFIED |
 | Rehydrate prepared before owner commit | on restart inspect durable continuation identity and recipe hash | redo unclassified effects |
 | Runtime restored but owner result not persisted | read Thread/Run durable runtime state; if effect unknown → UNKNOWN_COMMIT | claim success from log |
 | P02 owner result committed but U07 stage B not acked | return same RESUMED_VERIFIED and reconcile ApplyJournal | second restoration |
-| U15 terminal before P02 physical start | BLOCKED_OWNER and no newly executed steps | force Resume |
+| U15 terminal before durable restore-start grant | BLOCKED_OWNER; zero physical restoration | force Resume |
+| Restore-only grant commits before U15 terminal, worker starts later | only same bounded inert restore may park; C/D/E blocked | treating grant as business execution permit |
+| Start grant commit unknown | re-query same grant; zero first physical work before committed grant proven | optimistic start |
+| Restored cursor points to Tool/U02 before Stage C | parked dispatcher rejects every node/side effect | early tool, model, Clinical or U02 calls |
+| Partial journal projection after restore | authoritative parked Thread and P02 owner receipt readback | second restore or automatic scheduler resume |
+| Rehydrate proof missing plan/cursor or effect manifest receipt | INSUFFICIENT_EVIDENCE; no rebuild | inventing equivalent execution history |
+| Prior tool effect UNKNOWN or PARTIAL_SUCCESS | reject rehydrate; owner reconciliation only | replaying unclassified external effect |
 | U15 terminal during P02 execution | cancel/suspend/fence subsequent steps; owner result recorded; RDP-03 C blocks | pretend Clinical State applied |
 | P01 C fails after P02 RESUMED_VERIFIED | preserve runtime fact, journal blocked/recover via U14/P01 | revert F8 ACCEPTED or force C |
 | Consultation D or APPLIED E blocked | do not reenter external P02; reconcile owner stages | double runtime resume |
@@ -297,7 +391,9 @@ Trace must distinguish requested, claimed, physical executed, committed, verifie
 | CA-U07-RDP03-F3-ANSWER-BRIDGE-01 | REQUIRED / NOT_AUTHORIZED | F3 owner Question/Gap/Pending authorization |
 | CA-U07-RDP03-P01-U15-SHARED-COMMIT-FENCE-01 | REQUIRED / NOT_AUTHORIZED | P01 Clinical patch shares Consultation/U15 commit-time fence |
 | CA-U07-RDP03-U15-DISPATCH-GRANT-01 | REQUIRED / NOT_AUTHORIZED | U15 approves grant-first vs terminal ordering and bounded later send |
-| CA-U07-RDP04-P02-REHYDRATE-OWNER-01 | REQUIRED / NOT_AUTHORIZED | exact owner rehydrate recipe, executable state and replay safety |
+| CA-U07-RDP04-P02-REHYDRATE-OWNER-01 | REQUIRED / NOT_AUTHORIZED | complete owner-certified original plan/cursor/effect manifest and replay safety |
+| CA-U07-RDP04-P02-EXECUTION-START-FENCE-01 | REQUIRED / NOT_AUTHORIZED | U15-shared atomic restore-only start grant and grant-first policy proof |
+| CA-U07-RDP04-P02-LANDING-BARRIER-01 | REQUIRED / NOT_AUTHORIZED | dispatcher-wide parked no-business-execution barrier with durable Thread/readback |
 | CA-U07-RDP04-U02-CONSUMER-IDEMPOTENCY-01 | REQUIRED / NOT_AUTHORIZED | U02 scope/admission, stable handoff ID, receipt query, typed retry semantics |
 | P02 Thread/Run/Checkpoint resume physical APIs | NOT_IMPLEMENTED / NOT_VERIFIED | runtime state migration, resumable payload, owner lock/CAS, result receipts |
 | RDP-05 cross-provider compatibility | FUTURE DESIGN | chosen DB topologies, dialect-specific time/fence, registry, ownership, P02 execution semantics |
@@ -342,8 +438,20 @@ No “conditional design acceptance” removes any of these gates.
 | P02-T30 | Runtime metadata-only resume falsely marked complete | verification fails, no RDP-03 Stage C |
 | P02-T31 | DB guard cannot be shared for physical claim/starting stage | NOT_APPLICABLE/NOT_READY, no optimistic resume |
 | P02-T32 | remote result committed, duplicate request arrives | same stable owner result, zero repeated side effects |
+| P02-T33 | U15 terminal before restore-start grant | no grant, no physical restore |
+| P02-T34 | restore-only grant commits before U15, worker starts afterward | one inert restore to parked barrier, no C/D/E/business node |
+| P02-T35 | grant COMMIT unknown | no physical restore until original durable grant proven |
+| P02-T36 | restored cursor at Tool/U02 | dispatcher-wide landing gate blocks all external/model/tool/U02 actions |
+| P02-T37 | recovery callback tries to bypass parked Thread | central dispatcher refuses business execution |
+| P02-T38 | P02 RESUMED_VERIFIED before Stage C | parked readback; no post-wait business node or U02 delivery |
+| P02-T39 | historical rehydrate proof missing original plan/cursor digest or effect receipt | INSUFFICIENT_EVIDENCE, zero rehydrate |
+| P02-T40 | prior tool physical effect UNKNOWN or PARTIAL_SUCCESS | no rehydrate, no external replay |
+| P02-T41 | reconstruct continuation Run then crash | original derived Run ID/proof reused, no second Run |
+| P02-T42 | restored digest mismatches signed expected parked digest | quarantine, not RESUMED_VERIFIED |
+| P02-T43 | U15 owner denies finite restore-only grant policy | V1 NOT_APPLICABLE / NOT_READY |
+| P02-T44 | worker attempts general post-landing scheduler continuation without new authorization | blocked; RDP-03 governed phases unaffected |
 
-These are **32 unexecuted design oracles**; RDP-06 must later supply runnable tests, actual DB evidence, negative outbound-call assertions, provenance and exact owner receipts.
+These are **44 unexecuted design oracles**; RDP-06 must later supply runnable tests, actual DB evidence, negative outbound-call assertions, provenance and exact owner receipts.
 
 ## 14. Independent review questions
 
@@ -358,12 +466,17 @@ IR-U07-RDP04-07  Is U02 consumer replay/ack proof separate from producer outbox 
 IR-U07-RDP04-08  Are all new/inherited controlled amendments explicit blockers?
 IR-U07-RDP04-09  Is runtime physical lock/order and execution-start fence implementable against current main, or explicitly NOT_READY?
 IR-U07-RDP04-10  Do F8/P02/ApplyJournal/Outbox/P05 have non-overlapping authority and consistent stable IDs?
+IR-U07-RDP04-11  Can U15 terminal and physical restore be ordered by a durable grant and owner-approved finite inert grant-first rule?
+IR-U07-RDP04-12  Is the parked Runtime barrier enforced for scheduler, callbacks and all executable side effects?
+IR-U07-RDP04-13  Does complete P02RehydrateProofV1 require source plan/cursor and positive owner receipts for every prior effect?
+IR-U07-RDP04-14  Are start-grant and landing-barrier controlled amendments retained as readiness blockers?
 ~~~
 
 ## 15. Formal candidate outcome / next step
 
 ~~~text
-U07-RDP-04 = DESIGN_CANDIDATE / READY_FOR_INDEPENDENT_DESIGN_REVIEW / NOT_FROZEN
+U07-RDP-04 = TARGETED_REMEDIATION_CANDIDATE / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW / NOT_FROZEN
+BF-U07-RDP04-IR-01..03 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
 B-U07-RG-04 = OPEN / NOT_CLOSED
 U07-RDP-01 = CONDITIONALLY_ACCEPTED_DESIGN
 U07-RDP-02 = CONDITIONALLY_ACCEPTED_DESIGN
@@ -376,6 +489,8 @@ CA-U07-RDP03-F3-ANSWER-BRIDGE-01 = REQUIRED / NOT_AUTHORIZED
 CA-U07-RDP03-P01-U15-SHARED-COMMIT-FENCE-01 = REQUIRED / NOT_AUTHORIZED
 CA-U07-RDP03-U15-DISPATCH-GRANT-01 = REQUIRED / NOT_AUTHORIZED
 CA-U07-RDP04-P02-REHYDRATE-OWNER-01 = REQUIRED / NOT_AUTHORIZED
+CA-U07-RDP04-P02-EXECUTION-START-FENCE-01 = REQUIRED / NOT_AUTHORIZED
+CA-U07-RDP04-P02-LANDING-BARRIER-01 = REQUIRED / NOT_AUTHORIZED
 CA-U07-RDP04-U02-CONSUMER-IDEMPOTENCY-01 = REQUIRED / NOT_AUTHORIZED
 
 U07 Implementation Readiness = NOT_READY
@@ -383,4 +498,4 @@ U07 Implementation Authorization = NOT_GRANTED
 Production / PROFILE-A / PHI / real patients = BLOCKED
 ~~~
 
-**Next gate: U07-RDP-04 Independent Design Review** against an exact HEAD. It must check the real metadata-only checkpoint gap, bounded executable replay-safety contract, stable continuation/claim under U15, and strict Stage E/F handoff ownership. No code, migrations, merge, external send or production activation is authorized here.
+**Next gate: U07-RDP-04 Targeted Independent Design Re-Review** against the amended exact HEAD. It must check the real metadata-only checkpoint gap, bounded executable replay-safety contract, stable continuation/claim under U15, and strict Stage E/F handoff ownership. No code, migrations, merge, external send or production activation is authorized here.
