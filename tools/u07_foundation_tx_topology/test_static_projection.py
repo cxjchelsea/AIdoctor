@@ -160,6 +160,19 @@ class StaticProducerTests(unittest.TestCase):
                     producer.main()
             self.assertEqual(p.read_text(), "existing")
 
+    def test_symlinked_artifact_dir_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            snapshots = base / "snapshots"
+            snapshots.mkdir()
+            artifact = base / "artifact"
+            artifact.mkdir()
+            link = base / "artifact-link"
+            link.symlink_to(artifact, target_is_directory=True)
+            with unittest.mock.patch("sys.argv", ["producer", "--archive", "missing.zip", "--snapshots-dir", str(snapshots), "--artifact-dir", str(link)]):
+                with self.assertRaisesRegex(SystemExit, "symlinked input/output boundary"):
+                    producer.main()
+
     @staticmethod
     def _rearchive(inventory):
         buf = io.BytesIO()
