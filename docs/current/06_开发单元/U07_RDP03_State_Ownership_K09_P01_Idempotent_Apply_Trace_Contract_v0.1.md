@@ -5,7 +5,8 @@
 > Upstream RDP-01: [PR #266](https://github.com/cxjchelsea/AIdoctor/pull/266) — conditionally design-accepted in [PR #270](https://github.com/cxjchelsea/AIdoctor/pull/270)
 > Upstream RDP-02: [PR #271](https://github.com/cxjchelsea/AIdoctor/pull/271) @ `3fe93aa2cacd2eb76e94984ae56a0967ac634ac5` — conditionally design-accepted in [PR #275](https://github.com/cxjchelsea/AIdoctor/pull/275) @ `56f28c286951ec1ec79a59aec5be776391017020`
 > Source reference: `main@6d4fd787600e3a57f01f3e17893e6d98893ac546` (bounded directly inspected artifacts only)
-> Status: **TARGETED_REMEDIATION_CANDIDATE / PENDING_INDEPENDENT_RE_REVIEW / NOT_FROZEN**
+> Status: **SECOND_TARGETED_REMEDIATION_CANDIDATE / PENDING_SECOND_INDEPENDENT_RE_REVIEW / NOT_FROZEN**
+> Prior targeted independent re-review: [PR #278](https://github.com/cxjchelsea/AIdoctor/pull/278) @ `fc961a778fb1099c2e6c37540fa47f374182b67b` = REVISE_REQUIRED. This author-side amendment targets `BF-U07-RDP03-TR-01`, `BF-U07-RDP03-TR-02` and §15 dependency registration; neither design blocker is independently closed.
 > Independent design review [PR #277](https://github.com/cxjchelsea/AIdoctor/pull/277) @ `253032f718d85a0bbbb073ccbaee0d04adf961e7`: REVISE_REQUIRED. Three design blockers addressed by this author-side amendment; none independently CLOSED.
 > Scope: **STATE OWNER / EFFECT CLAIM / K09-P01 PROPOSAL / APPLY / COMPENSATION / TRACE DESIGN ONLY**
 > No Runtime implementation, merge, PHI, PROFILE-A, clinical production, live patients, or external side-effect authorization.
@@ -137,10 +138,10 @@ NOT_STARTED
   → CLAIMED
   → WAITING_RUNTIME_COMPATIBILITY
   → RUNTIME_RESUMED_VERIFIED
-  → F3_OWNER_EFFECT_COMMITTED
-  → PENDING_CONSUMED_COMMITTED
+  → F3_P01_ANSWER_AND_PENDING_COMMITTED    # ONE owner transaction / ONE Clinical version
   → CONSULTATION_ACTIVE_COMMITTED
   → APPLIED_WITH_DURABLE_U02_INTENT     # one journal/outbox DB transaction
+  → U02_HANDOFF_DISPATCH_AUTHORIZED     # immutable same-wait U15 grant; §10.2 F
   → U02_HANDOFF_DISPATCHED
   → U02_HANDOFF_ACKNOWLEDGED (downstream progress only)
 
@@ -151,6 +152,8 @@ Any stage
 **APPLIED criteria:** a single atomic journal/outbox transaction (§10.2 Tx E) may record `APPLIED_WITH_DURABLE_U02_INTENT` only after positive authoritative evidence of the **same** root effect for (a) successful/reconciled P02 resume, (b) F3-owned Question/Gap answer consequence when applicable, (c) P01-proven Pending Question consume and (d) Consultation ACTIVE transition with matching previous wait ref and committed version. No trace or effect-journal status alone can establish any of these facts. U02 fact commit is **not** required for U07 APPLIED. **In selected V1 there is no committed APPLIED stage without the identically committed unique U02 outbox intent**; delivery/consumer ACK can occur later, but U07 ordinary workflow closure remains contingent on the appropriate durable handoff confirmation. Independent P02 success or Consultation ACTIVE is insufficient to set APPLIED.
 
 If F3/Question mutation is NOT_APPLICABLE by owner decision (not an absent owner), persist typed owner evidence. Every mandatory step is either proven committed or proven inapplicable; `UNKNOWN`, `FAILED`, runtime `INCOMPATIBLE` and blocked state cannot be elevated into APPLIED.
+
+Stage C is **one indivisible authoritative P01 mutation**: Question, applicable Gap and Pending-consume evidence are projections of **the same** `P01 CommitResult`, identical `proposal_id`, `effect_id`, `clinical_state_version_after_c` and owner readback. A journal/UI/Trace containing only one subfield does **not** license a second P01 patch: re-read the unique owner commit and repair the incomplete projection. There are no independently committed `F3_OWNER_EFFECT_COMMITTED` or `PENDING_CONSUMED_COMMITTED` milestones in V1.
 
 Status of F8 historical `ACCEPTED` never mutates into `REJECTED` due to a P02 or P01 failure.
 
@@ -303,8 +306,11 @@ U07ApplyJournalV1 {
  f8_decision_id, f8_claim_generation, consultation_id, question_id,
  parent_wait_effect_id, claim_generation, apply_stage_generation,
  frozen_u15_terminal_generation, current_stage,
- p02_request_id + result_ref, f3_p01_proposal_id + commit_ref,
- clinical_state_version_after_c, consultation_active_effect_id + owner_version,
+ p02_request_id + result_ref,
+ stage_c_single_p01_effect_id + proposal_id + commit_result_ref,
+ stage_c_single_clinical_state_version + owner_readback_fingerprint,
+ stage_c_question_projection_ref? + pending_projection_ref?,
+ consultation_active_effect_id + owner_version,
  u02_handoff_effect_id, outbox_ref, failure_class, trace_ref,
  created_at, updated_at
 }
@@ -313,8 +319,10 @@ U07U02HandoffOutboxV1 {
  canonical_answer_event_id, immutable_answer_payload_ref + digest,
  exact_question_parent_wait_refs, source_clinical_state_version,
  f8_decision_ref, p02_result_ref, applied_effect_refs, scope_ref,
- status = PENDING | CLAIMED | DELIVERED | ACKNOWLEDGED | RECONCILE_REQUIRED,
- dispatch_generation, consumer_idempotency_key,
+ status = PENDING | DISPATCH_AUTHORIZED | DISPATCH_STARTED | DELIVERED | ACKNOWLEDGED | BLOCKED_TERMINAL | RECONCILE_REQUIRED,
+ dispatch_generation, dispatch_grant_id?, dispatch_grant_owner_fence_version?,
+ dispatch_grant_issued_at?, dispatch_grant_root_ref?,
+ dispatch_policy_version?, consumer_idempotency_key,
  consumer_acceptance_ref?, created_at, updated_at
 }
 ```
@@ -327,13 +335,23 @@ Neither table is claimed to exist on main. Storage = same guard DB and transacti
 
 **B: P02.** Persist stage-B request identity in guard DB **before external P02 invocation**, then invoke RDP-04 with same stable operation ID. Unknown call outcome requires P02 authoritative lookup. Only committed P02 success evidence advances to `RUNTIME_RESUMED_VERIFIED`. F8 remains ACCEPTED even if P02 ultimately fails.
 
-**C: Single K09/P01 commit.** Persist C-stage intent and F3 owner decision/proposal identity before commit. Actual *owner mutation transaction* must (1) acquire the Consultation/U15 guard row lock FIRST, (2) revalidate F8 winner, U15 fence, Consultation WAITING_USER/current wait and Question/Pending owner versions, (3) verify P02 authority, (4) execute **one versioned P01 StatePatch** covering F3 Question/Gap + Pending consume and durable effect receipt under the same primary DB transaction, (5) commit. P01 transaction must be a true participant in this transaction manager; a separate HTTP/local synthetic P01 that commits elsewhere is **NOT_APPLICABLE**. The P01 authorized field/producer bridge and serial lock participation must be verified by RDP-05/06. Readback afterward must prove the exact root; otherwise `RECONCILIATION_REQUIRED`, not success.
+**C: Single K09/P01 commit.** Persist C-stage intent and F3 owner decision/proposal identity before commit. Actual *owner mutation transaction* must (1) acquire the Consultation/U15 guard row lock FIRST, (2) revalidate F8 winner, U15 fence, Consultation WAITING_USER/current wait and Question/Pending owner versions, (3) verify P02 authority, (4) execute **one versioned P01 StatePatch** covering F3 Question/Gap + Pending consume and durable effect receipt under the same primary DB transaction, (5) commit. P01 transaction must be a true participant in this transaction manager; a separate HTTP/local synthetic P01 that commits elsewhere is **NOT_APPLICABLE**. The P01 authorized field/producer bridge and serial lock participation must be verified by RDP-05/06. Readback afterward must prove the exact root, **the single P01 CommitResult and one Clinical version increment**; otherwise `RECONCILIATION_REQUIRED`, not success. Question/Gap and Pending are non-independent projections of this ONE outcome. Partial journal acknowledgement (e.g. Question projection received but Pending projection absent) triggers re-read of the **same P01 effect ID and commit result**, never a second K09 patch or extra Clinical version advance.
 
 **D: Consultation ACTIVE.** Persist D-stage intent; in a new transaction lock Consultation/U15 and verify all C owner readback/versions, same root/wait and no terminal generation change. Commit ACTIVE owner change **and its unique owner-effect evidence in one transaction**; readback and stage journal reconciliation follow. If terminal owner won before D commit, block D without falsifying prior C.
 
 **E: Mandatory APPLIED + outbox atomic write.** Persist E intent stage in the journal while under shared lock. In **one physical guard DB transaction**, re-read all positive owner evidence (B/C/D), CAS `apply_stage_generation`, and insert `U07U02HandoffOutboxV1` with `handoff_effect_id = u02_handoff_effect_id` **in the same COMMIT that writes journal state `APPLIED_WITH_DURABLE_U02_INTENT`**. If duplicate row exists with matching immutable fingerprint, reconcile; mismatch = conflict/quarantine. Partial commit, missing outbox with APPLIED, or ambiguous result means fail closed and reconciliation, not a fresh handoff. Publication must happen only after committed outbox.
 
-**F: Handoff dispatch.** RDP-04 outbox worker claims PENDING by CAS and delivers the **same** effect ID to U02. At-least-once network dispatch is acceptable *only with* independently verified U02 idempotent acceptance/replay query. ACK-lost → query same receipt or retry same ID, not generate another answer/fact. `ACKNOWLEDGED` does not mean Clinical Fact commit. Consumer-level exactly-once clinical effect requires its own U02/P01 proof, not inferred from this outbox.
+**F: Handoff dispatch. Chosen V1 policy = FENCED_DURABLE_DISPATCH_GRANT_V1 (BF-U07-RDP03-TR-02).** A merely committed APPLIED + outbox PENDING row is **never** sufficient to transmit to U02. The sole permitted first-send authorization is a durable, non-transferable, single-root **dispatch grant** created under the authoritative Consultation/U15 guard; the U15 owner must approve its lifecycle policy under the controlled `CA-U07-RDP03-U15-DISPATCH-GRANT-01` before implementation.
+
+Under **one same guard-DB transaction**, the RDP-04 dispatcher acquires `clinical_consultation` PESSIMISTIC_WRITE lock FIRST, re-reads U15 terminal generation + certified deadline, confirms F8 winner/root, Consultation and current owner stage, validates committed `APPLIED_WITH_DURABLE_U02_INTENT` and exact PENDING outbox row, then atomically CAS-es PENDING→`DISPATCH_AUTHORIZED` and persists `dispatch_grant_id = hash("u07-u02-dispatch-grant-v1", u02_handoff_effect_id, approved_policy_version)`, grant owner fence generation, scope and policy version. The grant may be created **only if U15 authoritatively allows outbound delivery at this serialization point**. U15 terminalization must obtain the **same Consultation lock**; hence:
+
+- **U15 terminal wins BEFORE grant transaction:** outbox PENDING→`BLOCKED_TERMINAL` under the guard, no grant, **zero U02 sends**; F8 ACCEPTED and the already-completed APPLIED record are not rewritten. Escalate durable owner reconciliation. If any terminal/deadline evidence is missing, fail closed to `RECONCILE_REQUIRED` and prohibit send.
+- **Grant commits BEFORE later U15 terminalization:** the grant is a *committed, already-authorized dispatch initiation*, not a new future permission. The explicit V1 U15 policy must treat this grant as irrevocable for **the same immutable answer effect** and record its presence when terminalizing. It permits only retry/query of that already authorized handoff ID, no additional/new business decisions or clinical mutations. If U15 policy cannot honor this exact irreversible-before-terminal rule, this V1 **NOT_APPLICABLE / NOT_READY**; never silently choose a post-terminal send policy.
+- **Race between grant COMMIT and network send:** linearize *dispatch authorization*, not external delivery. A committed grant defines the one bounded in-flight operation; if U15 terminates after the grant but before TCP send, the worker may continue only that same grant/effect under the approved rule. Do not pretend a DB lock extends across a network call. A failed/unknown grant COMMIT requires DB reconciliation **before** sending; do not speculate that a grant exists.
+- **After durable grant:** worker marks `DISPATCH_STARTED` under same outbox identity, uses stable `consumer_idempotency_key = u02_handoff_effect_id`, sends at-least-once to U02, and persists delivered/ACK evidence. Crash/ACK loss → re-read the same grant and query/retry the same consumer ID; never mint new grant or answer fact. An ungranted PENDING row can never move directly to DISPATCH_STARTED.
+- **U02 Clinical Truth:** U02 independently validates admission/consumer idempotency and owns facts; the grant is a transport authorization, not a Clinical Fact commit or an override of U02/U15 safety policy. No real transport may operate until the U02 authorization/consumer contract is separately verified.
+
+This is **one chosen policy**, not optional pre-send checks vs unconditional snapshot delivery. Explicit additional prerequisite `CA-U07-RDP03-U15-DISPATCH-GRANT-01 = REQUIRED / NOT_AUTHORIZED / NOT_IMPLEMENTED` covers U15 owner consent to grant issuance, after-grant irrevocability semantics, and RDP-04 consumer/dispatcher authorization. No such capability is asserted on current main.
 
 ### 10.3 Explicit terminal-fence commit predicate (BF-U07-RDP03-IR-03)
 
@@ -353,7 +371,7 @@ COMMIT (success or rollback-only; UNKNOWN → fresh exact-effect reconciliation)
 
 Physical COMMIT is protected against a concurrently committed U15 mutation by this common lock, **provided P01 and U15 actually share the same transaction manager**. Owner-visible deadline passage without a U15 writer is also independently checked using certified primary DB **statement-current time** in C/D/E's final conditional mutation statement; the original RDP-02 statement-linearization rule is not silently repurposed as indefinite APPLIED permission. All deadline+time-domain details and MySQL/Oracle atomic conditional expression mapping must be proved. A precheck alone does not authorize a late write.
 
-If U15 commits first → C/D/E must block new ordinary mutations; F8 prior ACCEPTED stays historical. If C commits first then U15 → C state is historical owner truth; D/E blocked; owner-governed reconciliation, no invented rollback or second winner. If D commits first then U15 → D owner truth preserved; E/F must not claim normal business delivery without separately reviewed terminal currentness. All uncertain commit/replay outcomes use immutable root evidence, not optimistic APPLIED.
+If U15 commits first → C/D/E must block new ordinary mutations; F8 prior ACCEPTED stays historical. If C commits first then U15 → C state is historical owner truth; D/E blocked; owner-governed reconciliation, no invented rollback or second winner. If D commits first then U15 → D owner truth preserved; E cannot mint APPLIED/outbox after terminal. If E already committed before U15, **F still requires a fenced dispatch grant**; U15 wins before grant => BLOCKED_TERMINAL with no send. Grant wins before U15 => only the irrevocable same-effect handoff may finish, subject to explicitly authorized U15 dispatch-grant policy (§10.2 F). All uncertain commit/replay outcomes use immutable root evidence, not optimistic APPLIED.
 
 **Physical dependency:** `CA-U07-RDP03-P01-U15-SHARED-COMMIT-FENCE-01 = REQUIRED / NOT_AUTHORIZED / NOT_IMPLEMENTED`. It extends (not silently satisfies) `CA-U07-RDP02-U15-SHARED-FENCE-01` with exact P01 same-transaction participation and deadline/fence predicates. RDP-05 must verify Consultation/P01/F3/U15 resource locality; otherwise V1 is NOT_APPLICABLE and Implementation Readiness remains NOT_READY.
 
@@ -371,7 +389,11 @@ If U15 commits first → C/D/E must block new ordinary mutations; F8 prior ACCEP
 | **E journal APPLIED succeeds, outbox insert fails** | **same transaction rolls back both**; no lost handoff |
 | E COMMIT unknown | fresh transaction inspect journal and outbox by stable root/handoff IDs; no optimistic APPLIED |
 | APPLIED committed, outbox dispatch not started | durable PENDING outbox drives recovery |
-| Outbox dispatched, U02 receipt/ACK lost | retry/query same consumer idempotency; no second handoff ID |
+| Outbox dispatched, U02 receipt/ACK lost | reattach durable dispatch grant; retry/query same consumer idempotency; no second handoff ID |
+| Outbox PENDING; U15 terminalizes before dispatch-grant claim | under same Consultation lock block grant and mark BLOCKED_TERMINAL; zero U02 sends |
+| Dispatch grant transaction commits; U15 later terminalizes before network send | under explicitly approved U15 irrevocable-grant policy, same grant and handoff ID only may finish; no new business effect |
+| Grant commit outcome UNKNOWN / worker crashes before network call | query persisted grant/outbox by stable ID before sending; no new grant or optimistic dispatch |
+| No U15 dispatch grant capability / U02 consumer replay proof | DISPATCH_BLOCKED / U07 NOT_READY, no network sends |
 | U15 terminalizes between C precheck and actual P01 commit | impossible to pass stage C guard if U15 acquired Consultation lock first; physical mismatch blocks implementation |
 | U15 terminalizes between C and D | block D; retain C; owner correction only |
 | U15 terminalizes between D and E | E checks current terminal fence; no APPLIED/outbox publication; owner reconciliation |
@@ -381,8 +403,8 @@ If U15 commits first → C/D/E must block new ordinary mutations; F8 prior ACCEP
 ### 10.5 Invariants and physical-evidence gap
 
 - No arbitrary compensation: correction of committed Question/Pending or Consultation facts requires F3/P01/Consultation owner authorization and a new explicit effect; do not erase historical evidence.
-- No global exactly-once transport claim: producer outbox ensures one logical handoff intent, U02 acceptance must be idempotent and verified.
-- No `APPLIED` without same-commit durable unique U02 intent; no handoff before APPLIED commit; no new state mutation after a U15 terminal win.
+- No global exactly-once transport claim: producer outbox ensures one logical handoff intent; a **separate, committed U15-authorized dispatch grant** is required to transmit; U02 acceptance must be idempotent and verified.
+- No `APPLIED` without same-commit durable unique U02 intent; no handoff before APPLIED commit **or without F grant**; no new ordinary state mutation after a U15 terminal win. The only post-terminal outbound continuation permitted is the same effect's **pre-terminal committed grant** under explicitly approved U15 policy.
 - Stage progression is CAS monotonic; a journal `APPLIED` is **not itself proof** of clinical fact commit or owner state; readback refs must be verified.
 
 This is an *exact selected V1 design*, not proof of actual one-DB P01/Consultation/U15 colocation, atomic patch support, dialect-specific SQL or existing consumer idempotency. These are **hard readiness blockers**, not optional enhancements.
@@ -430,6 +452,7 @@ P05 trace persistence failure before a required owner mutation => **fail-closed*
 | Consultation ACTIVE transition + same-root replay | NOT_IMPLEMENTED | same guard DB owner API, one-commit effect receipt, DB and concurrency evidence |
 | RDP-04 P02 resume / U02 handoff | FUTURE DESIGN | runtime success/recovery/outbox owner contracts |
 | `CA-U07-RDP03-P01-U15-SHARED-COMMIT-FENCE-01` | REQUIRED / NOT_AUTHORIZED / NOT_IMPLEMENTED | same-DB/transaction-manager Consultation lock + P01 and U15 commit-time/clock fence proof |
+| `CA-U07-RDP03-U15-DISPATCH-GRANT-01` | REQUIRED / NOT_AUTHORIZED / NOT_IMPLEMENTED | U15 consent to irrevocable-before-terminal transport grant, shared guard claim, RDP-04 worker and U02 consumer replay proof |
 | RDP-05 dual-dialect / atomicity / registry | FUTURE DESIGN | prove selected SINGLE_GUARD_DB_STAGED_SAGA_V1 and MySQL/Oracle conditional statement/clock tests |
 | RDP-06 verification | FUTURE DESIGN | exact-head oracles, four gate/evidence stages |
 
@@ -454,7 +477,7 @@ P05 trace persistence failure before a required owner mutation => **fail-closed*
 | U07-A03-13 | P01 successful exact replay | zero additional Clinical version increment |
 | U07-A03-14 | P02 failure after F8 ACCEPTED | F8 remains ACCEPTED, no APPLIED |
 | U07-A03-15 | P02 resume succeeded then crash | reconcile same P02 owner result, not second resume |
-| U07-A03-16 | Question mutation committed then crash | same-root owner-effect readback, no second Question mutation |
+| U07-A03-16 | Stage C single Question/Gap/Pending P01 transaction committed then coordinator crashes | recover ONE P01 effect/CommitResult and ONE Clinical version/readback; no second patch |
 | U07-A03-17 | Pending consumed before ACTIVE then U15 cancel | block ACTIVE; protected reconciliation |
 | U07-A03-18 | Consultation ACTIVE already from different effect | terminal conflict, no overwrite |
 | U07-A03-19 | committed owner effects, crash before APPLIED | reconcile all exact refs, one APPLIED |
@@ -477,6 +500,13 @@ P05 trace persistence failure before a required owner mutation => **fail-closed*
 | U07-A03-36 | P02 or U02 remote response lost | owner lookup/replay with stable request/handoff ID, no new physical identity |
 | U07-A03-37 | P01 separate transaction manager cannot join Consultation/U15 guard | V1 NOT_APPLICABLE and readiness blocked |
 | U07-A03-38 | shared Consultation lock held; deadline passes before final P01 conditional statement | stage C/D/E rejects new mutation on certified DB statement-time predicate |
+| U07-A03-39 | Stage C Question projection was journaled; Pending projection not yet observed, but P01 CommitResult committed both atomically | fetch same P01 CommitResult/clinical version/readback; repair projection, **zero new P01 mutation** |
+| U07-A03-40 | Stage C P01 transaction rolled back after partial in-memory Question projection | no durable Question/Pending owner effect; journal cannot claim any C commit |
+| U07-A03-41 | E APPLIED+outbox PENDING; U15 terminates **before F dispatch-grant claim** | F fails closed BLOCKED_TERMINAL; zero outbound U02 send |
+| U07-A03-42 | F grant committed first, then U15 terminates before physical network send | same committed grant may finish under explicitly approved U15 policy; new grant/other effect forbidden |
+| U07-A03-43 | F grant COMMIT unknown; worker attempted delivery | must re-read grant by stable ID; no outbound send until committed grant proven |
+| U07-A03-44 | U15 owner cannot implement irrevocable dispatch-grant policy or consumer cannot prove idempotent acceptance | selected V1 NOT_APPLICABLE / NOT_READY, no network dispatch |
+| U07-A03-45 | dispatched grant ACK lost after U15 terminal | query/retry identical handoff effect/grant only; never create new clinical fact identity |
 
 All cases are **unexecuted design oracles**. Future RDP-06 must attach exact migration/source SHAs, executable tests, negative-side-effect proofs, both DB dialect evidence and independently checked provenance.
 
@@ -498,13 +528,17 @@ IR-U07-RDP03-12  Is one F3-authorized P01 Question/Gap/Pending patch truly atomi
 IR-U07-RDP03-13  Does Tx E commit APPLIED and unique outbox PENDING in the same guard DB transaction, with exact crash recovery?
 IR-U07-RDP03-14  Does U15 terminalization fence stage C/D/E **inside** owner commit and include independent statement-time deadline checks?
 IR-U07-RDP03-15  Are both new and inherited controlled amendments explicitly blocking Implementation Readiness?
+IR-U07-RDP03-16  Is Stage C exactly one P01 CommitResult/state version despite delayed/partial journal sub-projections?
+IR-U07-RDP03-17  Does F require an authorized shared-fence dispatch grant, and does the selected irrevocable-grant policy cover U15 racing between claim and network send?
+IR-U07-RDP03-18  Is the U15 dispatch-grant controlled amendment an explicit unresolved upstream authorization prerequisite?
 ```
 
 ## 15. Formal candidate status / next gate
 
 ```text
-U07-RDP-03 = TARGETED_REMEDIATION_CANDIDATE / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW / NOT_FROZEN
-BF-U07-RDP03-IR-01..03 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
+U07-RDP-03 = SECOND_TARGETED_REMEDIATION_CANDIDATE / READY_FOR_SECOND_TARGETED_INDEPENDENT_RE_REVIEW / NOT_FROZEN
+BF-U07-RDP03-IR-01..03 = CONDITIONAL_DESIGN_RESOLUTION / PHYSICAL_DEPENDENCIES_PENDING
+BF-U07-RDP03-TR-01..02 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
 B-U07-RG-03 = OPEN / NOT_CLOSED
 U07-RDP-01 = CONDITIONALLY_ACCEPTED_DESIGN
 U07-RDP-02 = CONDITIONALLY_ACCEPTED_DESIGN
@@ -513,10 +547,12 @@ GATE-U07-RDP01-FOUNDATION-REFERENCE-AUDIT-01 = REQUIRED / NOT_PASSED
 CA-U06-U07-ELIG-ISSUANCE-01 = REQUIRED / NOT_AUTHORIZED
 CA-U07-RDP02-U15-SHARED-FENCE-01 = REQUIRED / NOT_AUTHORIZED
 CA-U07-RDP03-F3-ANSWER-BRIDGE-01 = REQUIRED / NOT_AUTHORIZED
+CA-U07-RDP03-P01-U15-SHARED-COMMIT-FENCE-01 = REQUIRED / NOT_AUTHORIZED
+CA-U07-RDP03-U15-DISPATCH-GRANT-01 = REQUIRED / NOT_AUTHORIZED
 
 U07 Implementation Readiness = NOT_READY
 U07 Implementation Authorization = NOT_GRANTED
 Production / PROFILE-A / PHI / real-patient = BLOCKED
 ```
 
-Next gate: **U07-RDP-03 Targeted Independent Design Re-Review** against this amended exact design HEAD. Check §9–10 for one enforceable physical topology, terminal-fenced stage C/D/E owner commits, and atomic APPLIED+outbox. Require positive independent confirmation before closing BF-01..03. No runtime edits, merge, patient flows, clinical activation, or authorization under this document.
+Next gate: **U07-RDP-03 Second Targeted Independent Design Re-Review** against this amended exact HEAD. Check that Stage C has ONE committed P01 milestone and owner receipt; verify that F handoff grant orders U15 termination versus authorization without treating a DB lock as a network lock. Physical prerequisites remain blocking after any design-level PASS. No runtime edits, merge, patient flows, clinical activation, or authorization under this document.
