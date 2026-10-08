@@ -8,7 +8,8 @@
 > U07 Unit Spec reviewed design: `9c899fdbe2136d88ed1d3bf5c2dd9b6d2b702272`, independent review PR #262
 > Runtime integration reference: `main@6d4fd787600e3a57f01f3e17893e6d98893ac546`
 > Scope: **CONTRACT / PHYSICAL DESIGN CANDIDATE — INDEPENDENT REVIEW REQUIRED**
-> Verdict at creation: **DESIGN_CANDIDATE / NOT_YET_INDEPENDENTLY_REVIEWED**
+> Current status: **TARGETED_REMEDIATION_CANDIDATE / PENDING_EXACT_HEAD_INDEPENDENT_RE_REVIEW**
+> Independent review PR #267 @ `0a8f75f54a148ebd17243ebc1db529d9ce4d9d6e`: REVISE_REQUIRED / three blockers. This revision does not independently close them.
 >
 > Does NOT authorize implementation, merge, production, real patient traffic, external I/O, PROFILE-A, PHI, direct F1 activation, or U07 Runtime resume.
 
@@ -107,7 +108,7 @@ RESUME_REQUEST
 canonical_event_id (FK to foundation canonical event)
 contract_version
 consultation_id / event_type
-business_event_id / idempotency_key
+originating_business_event_id (first persisted canonical event_id only) / storage_idempotency_key
 question_id / pending_question_ref
 parent_wait_effect_id / resume_eligibility_id
 thread_id / run_id / checkpoint_id?
@@ -117,36 +118,117 @@ target_answer_event_id?
 actor_binding_ref / scope_authorization_ref
 bound_profile / environment / channel
 created_at / received_at
-binding_fingerprint
+binding_fingerprint (U07-owned; excludes request alias id, transport attempt and received time)
 binding_schema_version
 trace_ref
 ```
 
 约束：one canonical event -> one immutable binding; 绑定字段发生冲突时 fail-closed；基础 Event Ledger 与 side-record 的同一事务/可修复原子写入必须在物理设计核查中进一步证明。持久化失败不能进入 F8 或对外形成成功确认。
 
-**重要物理缺口：** 当前基础表的 `payload_digest` 用于 `sameCanonicalInput`；它必须代表完整**受保护业务绑定摘要**，而不是仅对答案文本做 digest。候选约定：
-- `USER_ANSWER`: `payload_digest = canonical_binding_fingerprint`，其中包含独立的 `answer_payload_digest`。
-- `RESUME_REQUEST`: `payload_digest = canonical_binding_fingerprint`，其中含 `target_answer_event_id`，无新回答内容。
-- 必须验证既有非 U07 消费者对 `payload_digest` 的兼容性；若已冻结语义限定为原始负载摘要，则采用新增 versioned binding digest 列/桥接层，禁止悄然复用。该项列为 targeted review 检查点。
+### 4.3 Frozen Foundation compatibility (remediation BF-U07-RDP01-IR-02)
+
+**Chosen V1: Preserve Foundation `payload_digest` semantic as the fingerprint of the canonical immutable event payload. Do NOT redefine or migrate this column into an entire binding digest.** A separate U07-owned `binding_fingerprint` checks Question, wait provenance, scope and other protected context. Foundation `sameCanonicalInput` remains unchanged.
+
+Canonical *event payload* digest uses versioned `SHA-256` of immutable canonical event payload fields:
+- `USER_ANSWER`: event type, answer_payload_ref, trusted answer_payload_digest, canonical payload schema version.
+- `RESUME_REQUEST`: event type, target_answer_event_id, canonical payload schema version; **no new answer body**.
+- Neither payload digest nor binding digest contains incoming alias business_event_id, transport_attempt_id or received_at.
+
+`CanonicalBusinessEventRecord.payload_digest` stays a 64-character lower-case SHA-256 hexadecimal value, well inside `VARCHAR(128)`. The `U07CanonicalEventBinding.binding_fingerprint` is a *distinct* 64-character digest described in §5. No Foundation DB column or semantic change is part of this RDP design.
+
+**Storage choices are frozen:** one relational database transaction with the existing canonical_business_event row and one `u07_canonical_event_binding` row; `canonical_event_id` is its unique PK and FK. U07 V1 does **not** adopt cross-database `CANONICAL_BINDING_PENDING` as an alternate successful path. Outer U07 admission coordinator invokes the Foundation ledger and writes the side-binding under the **same physical transaction**. No F8 handoff/success response until both writes have committed. If the two repositories are not demonstrably on one transaction manager/data source at implementation readiness, this design is NOT_APPLICABLE and requires a reviewed physical amendment (not an implicit best-effort fallback).
+
+**Race/rollback rule:** `CanonicalBusinessEventLedger.resolveOrCreate` is `@Transactional` and catches `DataIntegrityViolationException`. Under some JPA/SQL database semantics a failed flush/unique-key violation marks the transaction rollback-only, so the in-transaction `findBy...` fallback cannot be assumed to work. U07's outer coordinator must treat a transaction marked rollback-only, any persist exception, or missing side-binding as **failure with no admission**; after rollback, a separately scoped **new transaction** may re-read the committed winner, check the complete binding and retry idempotently. No use of a potentially poisoned transaction to finalize admission. This is a **design obligation**, not proof the current Foundation catch path is safe. Exact implementation approach (transaction interceptor placement/new transaction retry and DB isolation) requires physical review and authorized integration tests.
+
+**Global storage idempotency key** (≤128 ASCII chars) is frozen as:
+```text
+storage_idempotency_key = "u07-" + lowercase_hex(SHA256(frame(
+  "u07-storage-key-v1",
+  trusted_environment_id,
+  trusted_profile_id,
+  trusted_tenant_scope_id,
+  trusted_consultation_id,
+  trusted_actor_scope_id,
+  event_type,
+  ingress_supplied_stable_idempotency_token
+)))
+```
+Every frame item uses UTF-8 length prefix + NFC normalized exact value; no concatenation ambiguities. Key is 68 ASCII chars; caller-supplied token is a stable **opaque** token per logical event, not an auto-generated retry ID. Same trusted scope/token regenerates the same key; different tenant/consultation/profile/type has a different namespace. Hash collision or a pre-existing row with incompatible scoped binding => `IDENTITY_CONFLICT` (never silently allocate a new key). Consent and trusted actor must be validated before derivation.
+
+**Compatibility inventory status:** verified code examined: `CanonicalBusinessEventLedger.java`, `CanonicalBusinessEventRecord.java`, `CanonicalBusinessEventRepository.java`; existing method expects `payloadDigest` to be a stable immutable string and checks equality, with no typed business meaning. No evidence from those three classes requires replacing Foundation semantics. **Repository-wide consumer and migration/test-fixture inventory remains unverified** and is a mandatory RDP-05/aggregate-readiness check; this design commits to backward compatibility and forbids release/implementation authorization without that inventory. If another consumer has a conflicting assumption, a new U07-specific adapter/side-record must preserve Foundation semantics rather than mutating its table.
+
+### 4.4 Side-binding atomicity
+
+`U07CanonicalEventBinding` stores **originating** `canonical_event_id` only, never overwrites this with retry aliases. Immutable fields may be checked against the incoming request's immutable payload/business binding, but may not require incoming alias ID equal original canonical ID. If an attempted alias needs an audit trail, it lives in a separate append-only `U07CanonicalEventAliasAudit` keyed by (canonical_event_id, request_alias_id, attempt correlation); this audit is not a second business event, and audit failure cannot authorize new effects.
+
+Binding consistency requires checking:
+1. Foundation owner row's consultation_id, event_type, **global storage idempotency key**, payload_digest.
+2. Binding row's corresponding canonical_event_id plus full `binding_fingerprint` equality.
+3. All scope/trust references and payload-ref integrity against verified trusted context; no unverified client-supplied scope.
+
+Any missing binding row after a committed Foundation record is a **quarantine / no F8 / no admission** condition; repair must be limited to uniquely reproducible, independently verified original binding evidence. Never infer missing protected metadata merely from the current client retry.
 
 ## 5. Identity, fingerprint and canonicalization
 
-**区别三个身份：**
+### 5.0 Identity authority table (remediation BF-U07-RDP01-IR-01)
 
-1. `business_event_id` = 调用端/可信 ingress 分配的业务提交身份；同一行为的传输重试保持同一 ID。
-2. `idempotency_key` = 客户端/可信 adapter 稳定提供的提交幂等键；Foundation 能将不同 transport event ID、同一幂等键映射为同一 canonical record；要求 scope 唯一性，不允许跨患者混用。
-3. `canonical_event_id` = 已提交 Foundation ledger 的 eventId；可能通过 event ID 或 idempotency key 查回；必须是权威 identity，不另造第二事件真相。
+| Name | Meaning | Immutable persisted? | Fingerprint input? |
+|---|---|---|---|
+| `business_event_id` on *first submitted request* | Original event ID, becomes Foundation `canonical_event_id` if it wins insertion | Yes, as original canonical ID | **NO**; address/reference only |
+| `business_event_id` on later request with same scoped key | Incoming request/transport **alias** (never a second canonical business identity) | Optional append-only alias-audit entry; not the canonical binding | **NO** |
+| `transport_attempt_id`, `correlation_id`, `trace_parent_ref` | Transport/observability | Audit only | **NO** |
+| `ingress_supplied_stable_idempotency_token` | Same logical operation across retries | Stored as protected key identity; no raw token in logs | Key derivation input, **not** binding fingerprint |
+| `storage_idempotency_key` | Globally namespaced Foundation idempotency key in §4.3 | Yes | **NO** (compared directly) |
+| `canonical_event_id` | Foundation's original winning `event_id` | Yes | **NO** (FK, compared directly) |
+| `payload_digest` | SHA-256 of immutable **event payload** in §4.3 | Yes | **YES**, as a single input |
+| `binding_fingerprint` | Digest of immutable U07 business/owner bindings listed below | Yes | N/A |
 
-### 5.1 Fingerprint canonical bytes
+Same storage key with different incoming ID maps to the old canonical winner **only if** Foundation fields and full U07 binding compare equal. The alias is never written into the original `U07CanonicalEventBinding.originating_business_event_id`. If an incoming alias ID is already a separate Foundation PK with different key, the event-ID lookup takes precedence and leads to `IDENTITY_CONFLICT`, not an alternate reattachment.
 
-候选算法 `U07-EVENT-BINDING-FP-V1`：
+### 5.1 Exact canonical binding fingerprint: `U07-EVENT-BINDING-FP-V1`
 
-- 将必填值做 NFC、字段级规范化（UTC 时间格式、枚举大写、固定字符编码），**禁止**对答案正文进行丢失语义的空格/标点折叠。
-- 排序字段并作长度前缀编码的 UTF-8 binary frame；加入 `u07-event-binding-v1` domain separator 和 `contract_version`。
-- 对完整可信持久绑定（scope, consultation, parent wait, question, pending ref, event type, answer/ref or target, historical state binding）形成版本化 SHA-256 fingerprint；原文不进入日志。
-- `transport_attempt_id`、request arrival time、trace span 等重试变化字段不参与身份指纹。
-- `occurred_at` 在提交时一次冻结，后续重试必须复用；如果同一 ID 回放带不同 occurred_at，标记 protected-field conflict。是否将 occurred_at 作为摘要字段需与现有表一致性验证；不能让网络重试时间改变规范事件身份。
-- 不使用纯 answer text hash 作为全局业务事件 ID；防止跨不同 Question/Consultation 的合法同文本答案被错误合并。答案 payload digest 应由受控存储生成且采用具备抗猜测保护的机制（例如含秘密密钥的 HMAC），不对外公开。
+Normalize values using Unicode NFC and field-specific strict parsers; stable binary framing `frame(name, length, UTF8(value))` in the exact field order below; prefix with `u07-event-binding-v1`. Digest is lower-case hexadecimal SHA-256. **Never normalize away any answer text semantics** (answer body is not part of this frame; only trusted opaque digest/ref). Exact included fields, in order:
+
+1. `contract_version`
+2. `event_type`
+3. `trusted_environment_id`
+4. `trusted_profile_id`
+5. `trusted_tenant_scope_id`
+6. `trusted_consultation_id`
+7. `trusted_actor_scope_id`
+8. `question_id`
+9. `pending_question_ref`
+10. `parent_wait_effect_id`
+11. `resume_eligibility_id`
+12. `thread_id`
+13. `run_id`
+14. `checkpoint_id` (nullable encoded as **typed NULL**, not empty string)
+15. `expected_clinical_state_version` (canonical decimal)
+16. `answer_payload_ref` (USER_ANSWER only; typed NULL otherwise)
+17. `answer_payload_digest` (USER_ANSWER only; typed NULL otherwise)
+18. `target_answer_event_id` (RESUME_REQUEST only; typed NULL otherwise)
+19. `scope_authorization_ref`
+20. `actor_binding_ref`
+21. `payload_digest` from Foundation
+
+Explicitly **EXCLUDED**: incoming `business_event_id` whether original/alias, `canonical_event_id`, stable idempotency token, derived storage idempotency key, `transport_attempt_id`, request arrival/received timestamp, `occurred_at`, trace/correlation data, attempt count, snapshot read/check times. `occurred_at` remains an immutable event-level business assertion **for the original canonical event**, stored separately once; retries with different `occurred_at` are not allowed to rewrite history and are handled as request-identity conflict **only when proven that they claim to be the same original event**. Alias retries do not change or overwrite original occurred_at, even if network timestamp differs. This distinction preserves permitted same-key aliases without hidden timestamp false conflicts.
+
+**Comparison algorithm**: `canonical incoming payload` -> compute Foundation payload_digest -> derive storage key -> find/create Foundation winner -> immutable side-binding fingerprint check -> either `REATTACHED_TO_CANONICAL` or `IDENTITY_CONFLICT`. Side binding comparison uses fields (1)–(21), **never compares request alias to original ID**.
+
+Deterministic identity test vectors (symbolic frame expected relations pending code tests):
+
+| Vector | Canonical event ID | Global key | Binding data | Expected payload/binding equality | Admission |
+|---|---|---|---|---|---|
+| V1 | A | K | B | baseline | new canonical A |
+| V2 | A | K | B | equal to V1 | reattach A |
+| V3 | **alias B** | K | B | **equal to V1** | reattach A; B only alias audit |
+| V4 | alias B | K | changed Question | binding unequal | IDENTITY_CONFLICT |
+| V5 | alias B | K | changed answer digest | payload+binding unequal | IDENTITY_CONFLICT |
+| V6 | alias B | K | changed tenant/profile/consultation | global namespace key different; old requested key cannot cross | BLOCKED_AUTHORIZATION or IDENTITY_CONFLICT |
+| V7 | C | new K2 | same answer and Question as A | distinct canonical event | F8 determines duplicate/other verdict; one-winner apply RDP-03 |
+| V8 | C | K | same payload but different provenance | binding unequal | IDENTITY_CONFLICT |
+
+Numeric hash vectors require a reviewed reference fixture and exact byte serialization implementation in RDP-06; the authority relation and field order are frozen here at design level.
 
 ### 5.2 Replay rules
 
@@ -210,6 +292,52 @@ validation_reason_codes[]
 - `RUNTIME_RECONCILIATION_REQUIRED` 不自动产生 Business REJECTED；Runtime checkpoint 兼容性仍属 RDP-04。
 - `TEMPORARILY_UNAVAILABLE` / `INVALID_PROVENANCE` fail-closed 不执行副作用；前者可重试、后者进入安全审计/正式裁决，不能当成事实不存在。
 
+### 6.2.1 Authoritative wait provenance and historical reattachment (remediation BF-U07-RDP01-IR-03)
+
+A projected U06 `resume_eligibility_id` is **never self-authenticating**. RDP-01 must assemble a read-only, versioned evidence set before labelling business wait provenance verified:
+
+| Required evidence | Authoritative owner/source | Must match |
+|---|---|---|
+| Question delivered state and delivery confirmation | F3/U06 committed Question state and U06 confirmed delivery record | `Question=DELIVERED_TO_USER`, same delivery identity, immutable selection/ref |
+| Current Pending Question | P01/G2 committed Clinical State | same Question/pending ref/consultation and committed state version |
+| Consultation WAITING_USER | governed Consultation lifecycle owner | consultation ID, lifecycle version, not terminal/active unexpectedly |
+| Delivered-wait parent effect | U06 durable parent wait effect ledger + child commit refs | same parent effect, delivery and Consultation WAITING child, trace lineage |
+| U15 cancel/expire/supersede authority | U15 / lifecycle/F3 authoritative terminal record | no incompatible authoritative terminal effect and no superseding wait |
+| Original eligibility issuance | U06 durable eligibility output/trace/reference **with authoritative origin binding** | original eligibility ID, parent effect, original checkpoint ID, thread/run |
+| Clinical/historical bindings | P01 Clinical State version + P06 historical scope/binding refs | same waiting interaction and historically compatible bound governance |
+| Thread/checkpoint evidence | P02 Runtime state/Checkpoint store | **diagnostic only** for runtime readiness; not business-validity authority |
+
+Snapshot contract:
+```text
+U07AuthoritativeWaitEvidence {
+  consultation_id, question_id, pending_question_ref, parent_wait_effect_id,
+  delivery_confirmation_ref, question_state_ref + version,
+  clinical_state_ref + version, consultation_lifecycle_ref + version,
+  u15_terminal_status_ref + version,
+  u06_parent_effect_ref + child_commits,
+  original_eligibility_issuance_ref, historical_bound_context_ref,
+  runtime_thread_ref?, runtime_checkpoint_ref?, snapshot_read_epoch,
+  evidence_status, trace_refs[]
+}
+```
+
+All business owner reads must be consistent at a versioned logical snapshot or else return `DEFERRED_AUTHORITY_UNAVAILABLE`; never combine incompatible owner versions into a fabricated valid wait. F8 must revalidate owner versions; RDP-03 P01/apply uses CAS/fencing and rechecks U15 terminalization before effect commit. Observation-only RDP-01 does not mutate U06/F3/U15 facts.
+
+**Outcome/handoff table**:
+
+| Business evidence | Original U06 eligibility | Runtime evidence | RDP-01 disposition | Next |
+|---|---|---|---|---|
+| all committed delivered-wait facts current, no terminal effect | original issuance verified | AWAITING_USER + checkpoint | VERIFIED_CURRENT + ADMITTED_FOR_F8 | F8 decides business result; accepted only then P02 |
+| same authoritative live business wait + stable original eligibility | verified original issuance | checkpoint now missing/stale | VERIFIED_HISTORICAL_REATTACHABLE + RUNTIME_RECONCILIATION_REQUIRED hint | F8 first, then P02 reconstruct or governed failure; no automatic REJECTED |
+| same business wait established, **Thread never reached AWAITING_USER / no issuance** | **absent** | incomplete wait | DEFERRED_AUTHORITY_UNAVAILABLE / RECONCILIATION_REQUIRED | only U06/P02 authorized wait repair can later issue eligibility; U07 **cannot** invent historical eligibility |
+| delivery not confirmed or parent child commits missing | any | any | BLOCKED_PROVENANCE | zero F8-resume/effects; consult U06 owner |
+| Question superseded / Consultation terminal / U15 expired | any | any | BUSINESS_CONTEXT_MISMATCH_CANDIDATE with owner reason | F8 RDP-02 evaluates historical DUPLICATE / EXPIRED / REJECTED without new effects |
+| owner state temporarily inaccessible / versions non-coherent | any | any | DEFERRED_AUTHORITY_UNAVAILABLE | retry fresh snapshot, zero effects |
+| eligibility hash supplied, no authoritative issuance/effect chain | unverified | even compatible checkpoint | BLOCKED_PROVENANCE | no F8/resume |
+| historical bindings differ and approved migration absent | original exists | runtime uncertain | F8 source refs preserved; runtime compatibility **not** approved by RDP-01 | RDP-04 determines rehydrate/INCOMPATIBLE, no silent latest release |
+
+The `VERIFIED_HISTORICAL_REATTACHABLE` status is **not** a way to admit a revoked/terminated wait and does not claim checkpoint can be recovered; it only records that the *same lawful wait* still has affirmative business owner evidence and verifiable original eligibility. Missing checkpoint alone cannot turn business ACCEPTED into REJECTED, while absence of positive authoritative business evidence is not permission.
+
 ### 6.3 Ingress disposition (not business verdict)
 
 ```text
@@ -244,13 +372,13 @@ U07InboundAdapter
 
 - 同一 `event_id`/key 的 admission 操作串行化或依赖已验证的唯一键竞争回读；不向 F8 发两份独立命令。
 - 对一个 parent wait + Question，同轮不同 event IDs 应通过 `wait_answer_claim` 或等价版本化排他机制保证**最多一个在 apply 路径可胜出**；RDP-03 必须冻结 durable claim/lock 的 authority、lease/fencing 和并发冲突行为。RDP-01 只限定 admission 不抢先批准 apply。
-- 规范 event+binding 写入的事务边界：首选同一 ACID 单元，`ledger row` 先创建、`binding row` 同事务保存并校验；若跨库，则必须持久记录 `CANONICAL_BINDING_PENDING` 并拒绝进入 F8，直到经审查的恢复完成；禁止在部分写成功时回复 canonical admission succeeded。
+- 规范 event+binding **必须处于同一数据源、同一 ACID outer transaction**；ledger 与 binding 全部提交前禁止 F8。跨库、outbox-only、best-effort 或 `CANONICAL_BINDING_PENDING` 自动继续均 **OUT_OF_SCOPE / REQUIRES_CONTROLLED_AMENDMENT**。unique race 导致 rollback-only 时新事务读取胜者并完整校验，不在受污染事务内继续。
 - 固定唯一约束：event_id PK、idempotency_key UNIQUE（Foundation 已有）；额外 `canonical_event_id` UNIQUE binding；`target_answer_event_id` FK/权威引用校验。若采用新业务 claim 唯一键必须和 RDP-03 协调，不能临时侵入 F3/Clinical State owner。
 - canonical ledger 的 `resolveOrCreate` 当前在同 key 不同 event_id 时会以 idempotency key 匹配返回 winner，但其 `requireSame` 验证字段有限；U07 必须在返回之后再校验**完整 side-binding**。
 - Identity conflict 永不被降级为「新事件重试」；数据库 unique race 不允许被当成 ACCEPTED。
 
 **Physical design acceptance gaps requiring independent review**：
-1. `payload_digest` 兼容性/是否需要新增字段。
+1. `payload_digest` **原语义保持事件负载摘要**、U07 私有 binding_fingerprint 与 scope-key 方案的代码消费者/迁移证据；禁止悄然替换基础列含义。
 2. 前置安全验证与 canonical identity commit 的并发时序。
 3. existing Foundation JPA transaction/race behavior 在 unique constraint 下是否能继续查询胜者（需实现期数据库集成验证；不在设计阶段宣称 PASS）。
 4. Side-binding 原子性及不可变约束。
@@ -263,7 +391,8 @@ U07InboundAdapter
 |---|---|---|
 | 准入前 schema/auth 失败 | 无 canonical event 创建；允许新合法请求 | zero Runtime/P01/U02 |
 | 负载已存、ledger 未提交 | 受控未引用 payload 回收；重试同身份 | 不泄露 PHI，不假成功 |
-| ledger 已提交、binding 未就绪 | 严格 quarantine / reconcile | 不调用 F8；不得把缺失 binding 当合法空值 |
+| 单一事务提交前崩溃（ledger 已 flush、binding 未写） | 整笔事务回滚；重试后另起事务 | 无可见孤立 ledger、无 F8 调用 |
+| 发现历史或异常数据里 ledger 已持久但 binding 缺失 | quarantine / 不授予准入，人工或受审权威补偿 | 禁止按当前重试参数伪造旧 binding |
 | binding 已提交、F8 尚未接收 | 重试 reattach canonical record、重新权威快照 | 不造第二 event effect |
 | F8 正在处理 | 查询/幂等附着原 decision | 不生成竞争性 ACCEPTED |
 | 同 event ID 改答案/Question | identity conflict；留审计 | 不改历史绑定 |
@@ -290,17 +419,23 @@ P05 trace 只记录发生了什么，不能替代 Foundation event ledger 或 F8
 |---|---|---|---|
 | U07-RDP01-T01 | PROFILE-B synthetic valid USER_ANSWER + current wait | ADMITTED_FOR_F8 | F8 not pre-decided, no Runtime resume |
 | T02 | same event and key replay | REATTACHED_TO_CANONICAL | no new canonical row/effect |
-| T03 | different event ID, same key and binding | REATTACHED_TO_CANONICAL | same winner + no second decision |
+| T03 | different event ID alias, same scoped key, **same fields 1–21** | REATTACHED_TO_CANONICAL | original canonical ID retained; alias excluded from digest |
 | T04 | same event ID but changed answer digest | IDENTITY_CONFLICT | no overwrite |
-| T05 | same key but changed question or scope | IDENTITY_CONFLICT | no cross-binding |
+| T05 | same key but changed question/answer binding | IDENTITY_CONFLICT | no cross-binding |
+| T05A | same alias + key but changed answer payload digest | IDENTITY_CONFLICT | no overwrite of original payload |
+| T05B | different trusted tenant/scope + raw same client key | distinct global namespaced key / blocked cross-scope reference | no cross-tenant identity leak |
 | T06 | new event ID/key, same answer and same wait | ADMITTED_FOR_F8 / F8_REVIEW_REQUIRED | RDP-01 does not assert DUPLICATE |
 | T07 | identical answer for distinct Questions | separate canonical events | no global answer-hash dedup |
 | T08 | RESUME_REQUEST valid target | TARGET_REATTACHED | no new answer effect |
 | T09 | RESUME_REQUEST target absent/wrong consultation | UNRESOLVED_TARGET / BLOCKED_PROVENANCE | no Runtime resume |
 | T10 | RESUME_REQUEST includes new answer payload | BLOCKED_SCHEMA | no event effect |
 | T11 | old/superseded/expired business context | F8 review with typed snapshot reason | RDP-01 does not pre-empt F8 precedence |
-| T12 | missing/stale checkpoint but valid current business wait | RUNTIME_RECONCILIATION_REQUIRED context | no fake business REJECTED |
-| T13 | missing U06 authoritative delivered confirmation | BLOCKED_PROVENANCE or F8 mismatch candidate | no fabricated delivery |
+| T12 | missing/stale checkpoint, verified original eligibility and authoritative still-current business wait | VERIFIED_HISTORICAL_REATTACHABLE + RUNTIME_RECONCILIATION_REQUIRED hint | no fake business REJECTED; P02 owns repair |
+| T12A | Thread never AWAITING_USER, no eligibility issuance | DEFERRED_AUTHORITY_UNAVAILABLE pending U06/P02 repair | no fabricated eligibility |
+| T12B | hash matches but no authoritative U06 issuance | BLOCKED_PROVENANCE | no F8/no resume |
+| T13 | missing U06 authoritative delivered confirmation | BLOCKED_PROVENANCE | no fabricated delivery |
+| T13A | revoked wait / U15 expired | BUSINESS_CONTEXT_MISMATCH_CANDIDATE with owner evidence | F8 owns EXPIRED/REJECTED precedence |
+| T13B | source owner temporarily unavailable / incoherent versions | DEFERRED_AUTHORITY_UNAVAILABLE | no side effect; retry owner read |
 | T14 | cancelled Consultation race | versioned recheck before downstream apply | no stale state write |
 | T15 | unauthenticated, wrong tenant or real recipient | BLOCKED_AUTHORIZATION | zero ledger successful admission / zero PHI |
 | T16 | payload digest mismatch / inaccessible ref | BLOCKED_PAYLOAD_INTEGRITY | no raw answer in trace |
@@ -325,11 +460,11 @@ Above are **design assertions**. Physical fixtures/runner, exact thresholds and 
 
 ```text
 BF-U07-RDP01-IR-01
-  Is RESUME_REQUEST-as-reference compatible with Phase 8/9 and any previously frozen event semantics?
+  Original canonical ID versus request alias and fingerprint inputs are now explicitly separated; re-review must verify T03/T04/T05/V1–V8. RESUME_REQUEST reference policy still requires Phase 8/9 equivalence check.
 BF-U07-RDP01-IR-02
-  Are Foundation payload_digest and full side-binding fingerprint compatible without breaking other consumers?
+  Foundation payload_digest retained as payload-only; U07 binding digest separate; shared ACID transaction and namespace key frozen. Independent review must verify consumer inventory/transaction applicability rather than presume database tests.
 BF-U07-RDP01-IR-03
-  Is same semantic answer/new ID delegated to F8 in a way that guarantees one winning apply and no accidental duplicate resume?
+  Business wait provenance evidence and original eligibility issuance are mandatory; F8/one-winner apply still owned by RDP-02/03. Independent review must confirm fail-closed checkpoint-loss and no-eligibility rules.
 BF-U07-RDP01-IR-04
   Can eligibility currentness be established independently of a mere parent-effect/checkpoint hash, preserving checkpoint-failure separation?
 BF-U07-RDP01-IR-05
@@ -341,7 +476,8 @@ BF-U07-RDP01-IR-06
 Until an exact-head independent design review passes these questions:
 ```text
 B-U07-RG-01 = DESIGN_CANDIDATE / NOT_CLOSED
-U07-RDP-01 = READY_FOR_INDEPENDENT_DESIGN_REVIEW, NOT FROZEN
+U07-RDP-01 = TARGETED_REMEDIATION_CANDIDATE / READY_FOR_INDEPENDENT_RE_REVIEW, NOT FROZEN
+BF-U07-RDP01-IR-01..03 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
 U07 Implementation Readiness = NOT_READY
 U07 Implementation Authorization = NOT_GRANTED
 ```
