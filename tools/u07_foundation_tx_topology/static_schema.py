@@ -8,6 +8,9 @@ from pathlib import PurePosixPath
 
 SOURCE_HEAD = "6d4fd787600e3a57f01f3e17893e6d98893ac546"
 SOURCE_TREE = "1bfe776f76c986d4e6199a9b820f2cc20773a181"
+# Independent PR #298 / run 37736999966, artifact 11531528615 (not from caller JSON).
+TRUSTED_ARCHIVE_SHA256 = "0ab0682aa9d14f08573a53d47c4ad54c0cdba2955747b749431901b82e694089"
+TRUSTED_INVENTORY_SHA256 = "b28d72868833a8c109938025a6077dd6799924e89e31a34572c4d186f5bcf077"
 ALLOWED_STATES = frozenset({"SOURCE_ONLY", "UNKNOWN", "NOT_IMPLEMENTED"})
 FORBIDDEN_KEYS = frozenset({"configured_same_manager", "context_confirmed", "physical_transaction", "jdbc_url", "password", "secret", "patient_id", "tenant_id"})
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
