@@ -5,7 +5,8 @@
 > Upstream RDP-01: [PR #266](https://github.com/cxjchelsea/AIdoctor/pull/266) — conditionally design-accepted in [PR #270](https://github.com/cxjchelsea/AIdoctor/pull/270)
 > Upstream RDP-02: [PR #271](https://github.com/cxjchelsea/AIdoctor/pull/271) @ `3fe93aa2cacd2eb76e94984ae56a0967ac634ac5` — conditionally design-accepted in [PR #275](https://github.com/cxjchelsea/AIdoctor/pull/275) @ `56f28c286951ec1ec79a59aec5be776391017020`
 > Source reference: `main@6d4fd787600e3a57f01f3e17893e6d98893ac546` (bounded directly inspected artifacts only)
-> Status: **DESIGN_CANDIDATE / READY_FOR_INDEPENDENT_DESIGN_REVIEW / NOT_FROZEN**
+> Status: **TARGETED_REMEDIATION_CANDIDATE / PENDING_INDEPENDENT_RE_REVIEW / NOT_FROZEN**
+> Independent design review [PR #277](https://github.com/cxjchelsea/AIdoctor/pull/277) @ `253032f718d85a0bbbb073ccbaee0d04adf961e7`: REVISE_REQUIRED. Three design blockers addressed by this author-side amendment; none independently CLOSED.
 > Scope: **STATE OWNER / EFFECT CLAIM / K09-P01 PROPOSAL / APPLY / COMPENSATION / TRACE DESIGN ONLY**
 > No Runtime implementation, merge, PHI, PROFILE-A, clinical production, live patients, or external side-effect authorization.
 
@@ -139,15 +140,15 @@ NOT_STARTED
   → F3_OWNER_EFFECT_COMMITTED
   → PENDING_CONSUMED_COMMITTED
   → CONSULTATION_ACTIVE_COMMITTED
-  → APPLIED
-  → U02_HANDOFF_ENQUEUED
+  → APPLIED_WITH_DURABLE_U02_INTENT     # one journal/outbox DB transaction
+  → U02_HANDOFF_DISPATCHED
   → U02_HANDOFF_ACKNOWLEDGED (downstream progress only)
 
 Any stage
   → BLOCKED_TERMINAL / BLOCKED_CONFLICT / RECONCILIATION_REQUIRED
 ```
 
-**APPLIED criteria:** positive authoritative evidence of the **same** root effect for (a) successful/reconciled P02 resume, (b) F3-owned Question/Gap answer consequence when applicable, (c) P01-proven Pending Question consume and (d) Consultation ACTIVE transition with matching previous wait ref and committed version. No trace or effect-journal status alone can establish any of these facts. U02 fact commit is **not** required for U07 APPLIED, but durable one-time U02 handoff eligibility is required before U07 declares workflow closure; `APPLIED` may precede independently delivered handoff but requires durable, crash-repairable intent in the chosen choreography.
+**APPLIED criteria:** a single atomic journal/outbox transaction (§10.2 Tx E) may record `APPLIED_WITH_DURABLE_U02_INTENT` only after positive authoritative evidence of the **same** root effect for (a) successful/reconciled P02 resume, (b) F3-owned Question/Gap answer consequence when applicable, (c) P01-proven Pending Question consume and (d) Consultation ACTIVE transition with matching previous wait ref and committed version. No trace or effect-journal status alone can establish any of these facts. U02 fact commit is **not** required for U07 APPLIED. **In selected V1 there is no committed APPLIED stage without the identically committed unique U02 outbox intent**; delivery/consumer ACK can occur later, but U07 ordinary workflow closure remains contingent on the appropriate durable handoff confirmation. Independent P02 success or Consultation ACTIVE is insufficient to set APPLIED.
 
 If F3/Question mutation is NOT_APPLICABLE by owner decision (not an absent owner), persist typed owner evidence. Every mandatory step is either proven committed or proven inapplicable; `UNKNOWN`, `FAILED`, runtime `INCOMPATIBLE` and blocked state cannot be elevated into APPLIED.
 
@@ -173,7 +174,8 @@ U07 accepted canonical answer + authoritative delivered Question
  → K09 proposal issued only with verified F3 owner authorization
 ```
 
-The *question status names are design values to reconcile against frozen F3 contracts*; a generic U07 mapper must not unilaterally pick `ANSWERED` for an ambiguous response or create clinical facts. An answer may be present without all Gap needs satisfied. A new F3 answer-consumption contract is **REQUIRED**, not proven implemented. `CA-U07-RDP03-F3-ANSWER-BRIDGE-01 = REQUIRED / NOT_AUTHORIZED` must either confirm reuse of approved F3 ownership or amend it under independent review before implementation.
+The *question status names are design values to reconcile against frozen F3 contracts*; a generic U07 mapper must not unilaterally pick `ANSWERED` for an ambiguous response or create clinical facts. An answer may be present without all Gap needs satisfied. A new F3 answer-consumption contract is **REQUIRED**, not proven implemented. `CA-U07-RDP03-F3-ANSWER-BRIDGE-01 = REQUIRED / NOT_AUTHORIZED
+CA-U07-RDP03-P01-U15-SHARED-COMMIT-FENCE-01 = REQUIRED / NOT_AUTHORIZED` must either confirm reuse of approved F3 ownership or amend it under independent review before implementation.
 
 ### 7.2 Pending Question exact consume
 
@@ -245,83 +247,145 @@ Every new proposed mutation must pass:
 
 Frozen P01 commit field privileges, patch operators, version and schema compatibility require explicit U07 readiness verification. Clinical State commit can advance version **only when an authorized new effect actually commits**. Same event replay never manufactures another version increment.
 
-## 9. Consultation WAITING_USER → ACTIVE owner transition
+## 9. Consultation WAITING_USER → ACTIVE and the chosen cross-resource topology
 
-Chosen candidate: **Consultation lifecycle owner transition under the same `findByIdForUpdate` Consultation row fence** shared with RDP-02/U15. The existing `ConsultationRecord.enterWaitingUser` is one-directional U06 functionality; a U07-specific owner transition and immutable effect/journal are **NOT_IMPLEMENTED**.
+**Selected V1 = `SINGLE_GUARD_DB_STAGED_SAGA_V1` (one physical design, not options).**
+
+The workflow is a durable **staged saga**, with P02 owner execution independently reconciled, and F3/P01 owner commits followed by Consultation ACTIVE owner commit. There is **no transaction that spans P02 Runtime, Clinical State, Consultation and U02 delivery**. However, every *Clinical State or Consultation mutating stage* requires a proven, **same primary relational database and transaction manager** containing:
+- authoritative `clinical_consultation` row/lock and terminal-fence generation shared by U15;
+- P01/G2 Clinical State commit guard and the F3-governed Question/Gap/Pending Question data needed for **one atomic P01 patch**;
+- U07 ApplyJournal, F8 wait winner reference, and the unique U02 outbox record.
+
+P02 itself remains an external/runtime owner, not artificially enlisted into this DB transaction. U02 consumer is not assumed to share the DB. This selection is **conditional physical design only**: current inspected code establishes Consultation lock and a U06 synthetic StateCommitter *pattern*, **not** actual P01/U15 storage co-location or transaction manager compatibility. If P01/Consultation/U15/Journal are in distinct databases, **this V1 is NOT_APPLICABLE / U07 NOT_READY**, not “fall back to a loose saga” or emulate a distributed lock with a stale pre-check. Any alternative needs its own controlled amendment and independent review before implementation.
+
+### 9.1 Frozen owner-resource map
+
+| Step | Owner and transaction authority | Intent-before-effect and commit proof |
+|---|---|---|
+| A — root claim | U07 coordinator; shared guard DB with Consultation row lock | append immutable root/claim intent, unique `wait_apply_authority_key`, committed stage generation and F8 winner binding |
+| B — P02 resume | P02 runtime authority; independent transaction and RDP-04 reconciliation | durable P02 command/request identity before invoking; exact P02 owner result/restore evidence afterward; unknown outcome must query P02, never blind replay |
+| C — F3 Question/Gap + Pending consume | **one F3-owner-approved K09 StatePatch**, executed by P01/G2 **under same guard DB transaction + Consultation/U15 lock**, one Clinical version advance | stage-C intent + immutable F3 decision and K09 proposal committed before new mutation; one P01 authoritative CommitResult and readback bound to same effect/root |
+| D — Consultation ACTIVE | Consultation lifecycle owner; separate staged transaction in same guard DB with lock and terminal epoch | prior D-intent, P01/F3 readback, compare exact WAITING_USER + wait ref + owner versions, ACTIVE owner effect committed with Consultation row version |
+| E — APPLIED + U02 outbox | U07 coordinator; **one guard DB transaction** writing terminal ApplyJournal stage and unique durable outbox intent | no APPLIED without unique outbox; one `u02_handoff_effect_id` and immutable payload reference |
+| F — U02 delivery/ACK | RDP-04 transport/U02 owner outside guard DB | dispatch outbox using same stable idempotency key; record target U02 receipt/ACK; clinical fact interpretation stays U02 |
+
+**Transaction C is not two owner writes:** F3 owns the *semantic* Question/Gap transition and authorizes its decision; P01 owns the **single** authoritative K09 patch containing F3 Question, conditional Gap, and exact Pending Question CAS updates. This does not reassign F3 ownership to U07. The F3 bridge and P01 producer grant are **required upstream amendments** and must prove combined field permission, patch atomicity and readback. No cross-database F3 effect write can run out-of-band as a second authoritative Question mutation.
+
+### 9.2 Resume Consultation owner command
 
 ```text
 ConsultationResumeTransitionCommandV1 {
-  consultation_id,
-  exact_expected_lifecycle = WAITING_USER,
-  exact_expected_current_wait_effect_id,
-  expected_consultation_row_version,
-  expected_u15_terminal_generation,
-  f8_accepted_decision_ref,
-  root_resume_effect_id,
-  p02_resume_success_ref,
-  f3_owner_effect_commit_ref,
-  pending_consume_commit_ref
+ consultation_id, exact_expected_lifecycle = WAITING_USER,
+ exact_expected_current_wait_effect_id, expected_consultation_row_version,
+ expected_u15_terminal_generation, expected_apply_stage_generation,
+ f8_accepted_decision_ref, root_resume_effect_id,
+ p02_resume_success_ref, f3_p01_owner_commit_ref,
+ pending_consume_commit_ref, consultation_active_effect_id
 }
 ```
 
-Inside owner-governed transaction, Consultation row must still be WAITING_USER with the same parent wait and winner root; verify U15/Question currentness and positive P01/F3 readback. Transition to ACTIVE and clear/consume `current_wait_effect_id` **only on authorized owner commit**, with stable `consultation_active_effect_id`. If already ACTIVE from same root, exact replay; if ACTIVE from a different cause, fail closed. A `WAITING_USER` row may not be forcibly activated solely because P02 returned RESUMED.
+D is legal only after verified P02 and stage C commit/readback. In the Consultation owner transaction, lock the same `clinical_consultation` row, validate current wait ref/status, F8 winner identity, committed U15 terminal generation and exact previous clinical owner effect. Change `WAITING_USER -> ACTIVE`, consume `current_wait_effect_id` through the authorized owner method, and commit a durable `consultation_active_effect_id` as a **same transaction** effect-evidence row. An exact same-root replay returns original effect; ACTIVE for another reason is CONFLICT.
 
-If Clinical State and Consultation do not share one atomic resource manager, exact ordering/compensation of Pending Question consume and ACTIVE transition must be designed as a **durable saga with write-ahead intent and reconciliation**, **not claimed atomic**. This is a blocking **physical design decision for RDP-03 review / RDP-05**; distributed transactions cannot be assumed available. The system must fence any new wait/answer while partially reconciled.
+The existing `ConsultationRecord.enterWaitingUser` **does not implement D**. The new transition and atomic owner-evidence row require independent contract/DB verification; no automatic activation after a P02 success.
 
-## 10. Cross-owner apply topology and crash-safe journal
+### 9.3 Partial-stage irrevocability
 
-### 10.1 Proposed V1 authority journal
+Once stage C has committed, its authoritative Clinical State is **not presumed reversible**. If U15 terminalizes before stage D, mark saga `BLOCKED_TERMINAL_AFTER_C`, preserve C owner truth, inhibit D/E/F and raise U14/F3/P01 owner reconciliation. Do not reopen a new Question/Wait, fake an automatic rollback or grant a second winner. Only explicit owner-governed correction actions may compensate; such actions require separate stable IDs and authorization.
+
+## 10. Selected durable saga, U15 fencing, and APPLIED/outbox closure
+
+### 10.1 Required journal/outbox structure
 
 ```text
 U07ApplyJournalV1 {
  root_resume_effect_id PK,
- wait_apply_authority_key UNIQUE,
- canonical_answer_event_id, f8_decision_id, f8_claim_generation,
- consultation_id, question_id, parent_wait_effect_id,
- current_stage, stage_generation,
- p02_runtime_result_ref,
- f3_answer_effect_id + commit_ref,
- pending_consume_effect_id + commit_ref,
- consultation_active_effect_id + commit_ref,
- u02_handoff_effect_id + enqueue_ref,
- current_owner_version_refs,
- first_seen_at, updated_at, failure_class, trace_ref
+ wait_apply_authority_key UNIQUE, canonical_answer_event_id,
+ f8_decision_id, f8_claim_generation, consultation_id, question_id,
+ parent_wait_effect_id, claim_generation, apply_stage_generation,
+ frozen_u15_terminal_generation, current_stage,
+ p02_request_id + result_ref, f3_p01_proposal_id + commit_ref,
+ clinical_state_version_after_c, consultation_active_effect_id + owner_version,
+ u02_handoff_effect_id, outbox_ref, failure_class, trace_ref,
+ created_at, updated_at
+}
+U07U02HandoffOutboxV1 {
+ handoff_effect_id UNIQUE, root_resume_effect_id UNIQUE,
+ canonical_answer_event_id, immutable_answer_payload_ref + digest,
+ exact_question_parent_wait_refs, source_clinical_state_version,
+ f8_decision_ref, p02_result_ref, applied_effect_refs, scope_ref,
+ status = PENDING | CLAIMED | DELIVERED | ACKNOWLEDGED | RECONCILE_REQUIRED,
+ dispatch_generation, consumer_idempotency_key,
+ consumer_acceptance_ref?, created_at, updated_at
 }
 ```
 
-All stage transitions are monotonic, CAS on `stage_generation`, and persisted before performing/retrying next stage. Never use an in-memory boolean, trace-only record, or Foundation effect-ledger entry as definitive evidence of completed clinical mutation. The journal's **wait uniqueness constraint** enforces one root apply; its presence alone is not proof of owner effects.
+Neither table is claimed to exist on main. Storage = same guard DB and transaction manager as Consultation/U15 owner data. Outbox record must be encrypted/scope-protected as applicable, contain **only authorized references**, not raw answer text or new Clinical Fact.
 
-### 10.2 Transaction boundaries (proposed, not verified)
+### 10.2 Exact stage transaction protocol
 
-- **Tx A**: F8 immutable ACCEPTED/claim already durably committed by RDP-02. U07 claims existing same-wait ApplyJournal root under Consultation/U15 fence; no P01 mutation yet.
-- **Tx B**: P02 runtime resume is executed/resolved under RDP-04. Record durable P02 authority result, and only report RESUMED_VERIFIED with P02 owner evidence.
-- **Tx C**: F3 owner lifecycle decision and P01 patch/commit/readback; expected Pending Question version. If F3 and P01 can atomically commit the required Question/Pending fields, use one review-approved K09 patch; otherwise independently fenced owner actions + journaled compensation needed.
-- **Tx D**: Consultation lifecycle owner transitions ACTIVE through same Consultation/U15 lock and readback.
-- **Tx E**: reconcile APPLIED, persist **unique U02 handoff intent** and outbox claim, subsequently deliver/ack via RDP-04 approved transport.
+**A: Claim.** Under Consultation/U15 common row lock, validate durable F8 ACCEPTED with winner+generation, legal wait and source refs. Persist unique root claim and stage-A intent in guard DB. If existing root returns same fingerprint, reconcile existing journal. Another root for same wait → blocked. U15 can terminalize only through shared lock.
 
-**Mandatory atomicity question:** APPLIED vs U02 handoff outbox must be in the same durable transactional resource, **or** implementation must provide a previously accepted crash-proof write-ahead stage that reconstructs the exact one handoff after APPLIED. No “APPLIED with lost answer” success. The exact physical topology is an **open RDP-03 independent review question**, and readiness cannot pass before one option is frozen with owner consent.
+**B: P02.** Persist stage-B request identity in guard DB **before external P02 invocation**, then invoke RDP-04 with same stable operation ID. Unknown call outcome requires P02 authoritative lookup. Only committed P02 success evidence advances to `RUNTIME_RESUMED_VERIFIED`. F8 remains ACCEPTED even if P02 ultimately fails.
 
-No external side effects, real clinical handoff or PHI flows are permitted in this design phase.
+**C: Single K09/P01 commit.** Persist C-stage intent and F3 owner decision/proposal identity before commit. Actual *owner mutation transaction* must (1) acquire the Consultation/U15 guard row lock FIRST, (2) revalidate F8 winner, U15 fence, Consultation WAITING_USER/current wait and Question/Pending owner versions, (3) verify P02 authority, (4) execute **one versioned P01 StatePatch** covering F3 Question/Gap + Pending consume and durable effect receipt under the same primary DB transaction, (5) commit. P01 transaction must be a true participant in this transaction manager; a separate HTTP/local synthetic P01 that commits elsewhere is **NOT_APPLICABLE**. The P01 authorized field/producer bridge and serial lock participation must be verified by RDP-05/06. Readback afterward must prove the exact root; otherwise `RECONCILIATION_REQUIRED`, not success.
 
-### 10.3 Crash / retry matrix
+**D: Consultation ACTIVE.** Persist D-stage intent; in a new transaction lock Consultation/U15 and verify all C owner readback/versions, same root/wait and no terminal generation change. Commit ACTIVE owner change **and its unique owner-effect evidence in one transaction**; readback and stage journal reconciliation follow. If terminal owner won before D commit, block D without falsifying prior C.
 
-| Window | Required reconciliation | Forbidden |
-|---|---|---|
-| F8 ACCEPTED before U07 effect claim | acquire/reconcile unique root and current U15 fence | second F8 ACCEPTED |
-| Apply journal CLAIMED before P02 | query same P02 owner resume status; one resume | blind P02 replay |
-| P02 resume finished before journal ack | reconcile P02 exact committed result | assuming not resumed and rerunning |
-| F3 owner effect committed before journal ack | lookup F3/P01 CommitResult and authoritative readback | second owner mutation |
-| Pending Question consumed before ACTIVE | preserve same root and block competing wait; resume governed remaining effect | clearing another Question |
-| Consultation ACTIVE before APPLIED mark | read Consultation owner effect and P01 state; finalize only when all evidence aligns | pretending P01 committed |
-| APPLIED before outbox persisted | **must be impossible by atomic outbox or have durable recoverable intention before APPLIED** | losing the answer |
-| Outbox persisted before send | repeat same message/effect identity | producing new U02 handoff ID |
-| U02 accepted but response lost | use target idempotency/receipt, not re-send as new fact | second U02 fact commit |
-| U15 terminalizes during partial resume | block further ordinary effects and begin governed recovery; retain F8 original decision | force ACTIVE or rewrite F8 |
-| Commit outcome UNKNOWN | inspect owner state/journal under fresh transaction | optimistic APPLIED |
+**E: Mandatory APPLIED + outbox atomic write.** Persist E intent stage in the journal while under shared lock. In **one physical guard DB transaction**, re-read all positive owner evidence (B/C/D), CAS `apply_stage_generation`, and insert `U07U02HandoffOutboxV1` with `handoff_effect_id = u02_handoff_effect_id` **in the same COMMIT that writes journal state `APPLIED_WITH_DURABLE_U02_INTENT`**. If duplicate row exists with matching immutable fingerprint, reconcile; mismatch = conflict/quarantine. Partial commit, missing outbox with APPLIED, or ambiguous result means fail closed and reconciliation, not a fresh handoff. Publication must happen only after committed outbox.
 
-### 10.4 Safety and side-effect policy
+**F: Handoff dispatch.** RDP-04 outbox worker claims PENDING by CAS and delivers the **same** effect ID to U02. At-least-once network dispatch is acceptable *only with* independently verified U02 idempotent acceptance/replay query. ACK-lost → query same receipt or retry same ID, not generate another answer/fact. `ACKNOWLEDGED` does not mean Clinical Fact commit. Consumer-level exactly-once clinical effect requires its own U02/P01 proof, not inferred from this outbox.
 
-Before *every* novel clinical-state mutation or external U02 delivery, the current U15 cancel/expiry and same-wait F8 winner must be verified at the correct owner fence. If U15 expires between F8 ACCEPTED and P01 apply, no new ordinary effect. If cancellation happens **after a subset of owner mutations**, freeze continuation and route owner-led reconciliation; do not imply a perfect rollback if writes already committed. Never convert partially applied answers into a new ordinary waiting session.
+### 10.3 Explicit terminal-fence commit predicate (BF-U07-RDP03-IR-03)
+
+**Chosen guard:** a **shared Consultation row `PESSIMISTIC_WRITE` lock + monotonic `u15_terminal_generation` / Consultation `row_version`** across F8, U15 terminalization, stage C P01 commit, D Consultation transition and E APPLIED/outbox commit. The *mutation's transaction* must own this lock and compare generation **at commit**, not only an earlier RDP-03 admission or stage intent. U15 must lock and advance the same owner barrier in its own terminalization commit. This is a **proposed prerequisite**, not an observed U15 feature.
+
+For every stage C/D/E:
+```text
+LOCK Consultation shared guard
+  → owner facts fresh: consultation.status, current_wait_effect_id,
+    f8_winner_ref, u15_terminal_generation, stage_generation
+  → requires no authoritative expired/cancelled/superseded barrier
+  → verify P01 owner/current Clinical version (C/D)
+  → execute stage-specific mutation in SAME guarded transaction
+  → persist owner receipt + generation/currentness witness
+COMMIT (success or rollback-only; UNKNOWN → fresh exact-effect reconciliation)
+```
+
+Physical COMMIT is protected against a concurrently committed U15 mutation by this common lock, **provided P01 and U15 actually share the same transaction manager**. Owner-visible deadline passage without a U15 writer is also independently checked using certified primary DB **statement-current time** in C/D/E's final conditional mutation statement; the original RDP-02 statement-linearization rule is not silently repurposed as indefinite APPLIED permission. All deadline+time-domain details and MySQL/Oracle atomic conditional expression mapping must be proved. A precheck alone does not authorize a late write.
+
+If U15 commits first → C/D/E must block new ordinary mutations; F8 prior ACCEPTED stays historical. If C commits first then U15 → C state is historical owner truth; D/E blocked; owner-governed reconciliation, no invented rollback or second winner. If D commits first then U15 → D owner truth preserved; E/F must not claim normal business delivery without separately reviewed terminal currentness. All uncertain commit/replay outcomes use immutable root evidence, not optimistic APPLIED.
+
+**Physical dependency:** `CA-U07-RDP03-P01-U15-SHARED-COMMIT-FENCE-01 = REQUIRED / NOT_AUTHORIZED / NOT_IMPLEMENTED`. It extends (not silently satisfies) `CA-U07-RDP02-U15-SHARED-FENCE-01` with exact P01 same-transaction participation and deadline/fence predicates. RDP-05 must verify Consultation/P01/F3/U15 resource locality; otherwise V1 is NOT_APPLICABLE and Implementation Readiness remains NOT_READY.
+
+### 10.4 Crash/reconciliation table
+
+| Crash/race | Frozen response |
+|---|---|
+| A committed, crash before B | one journal claim; reattach P02 same request |
+| B request emitted, P02 outcome unknown | P02 owner lookup by request ID, no second physical resume |
+| P02 completed, B receipt missing | reconcile P02 result, write same B evidence |
+| C effect commit succeeds but ack lost | query P01 exact commit and authoritative Clinical State readback; no second version advance |
+| D intent committed, U15 terminalizes before D | D transaction sees newer terminal generation → blocked; C retained |
+| D ACTIVE owner-effect commit succeeds, journal write lost | read Consultation/effect ID, reconcile stage; no second ACTIVE |
+| **E outbox insert succeeds, E journal APPLIED write fails** | **same transaction rolls back both**; no orphan outbox/false APPLIED |
+| **E journal APPLIED succeeds, outbox insert fails** | **same transaction rolls back both**; no lost handoff |
+| E COMMIT unknown | fresh transaction inspect journal and outbox by stable root/handoff IDs; no optimistic APPLIED |
+| APPLIED committed, outbox dispatch not started | durable PENDING outbox drives recovery |
+| Outbox dispatched, U02 receipt/ACK lost | retry/query same consumer idempotency; no second handoff ID |
+| U15 terminalizes between C precheck and actual P01 commit | impossible to pass stage C guard if U15 acquired Consultation lock first; physical mismatch blocks implementation |
+| U15 terminalizes between C and D | block D; retain C; owner correction only |
+| U15 terminalizes between D and E | E checks current terminal fence; no APPLIED/outbox publication; owner reconciliation |
+| Two roots racing same wait | unique wait key + shared lock preserve first F8 winner/root; loser blocked |
+| Different DB/transaction manager detected | V1 NOT_APPLICABLE / NOT_READY, no optimistic partial mutate |
+
+### 10.5 Invariants and physical-evidence gap
+
+- No arbitrary compensation: correction of committed Question/Pending or Consultation facts requires F3/P01/Consultation owner authorization and a new explicit effect; do not erase historical evidence.
+- No global exactly-once transport claim: producer outbox ensures one logical handoff intent, U02 acceptance must be idempotent and verified.
+- No `APPLIED` without same-commit durable unique U02 intent; no handoff before APPLIED commit; no new state mutation after a U15 terminal win.
+- Stage progression is CAS monotonic; a journal `APPLIED` is **not itself proof** of clinical fact commit or owner state; readback refs must be verified.
+
+This is an *exact selected V1 design*, not proof of actual one-DB P01/Consultation/U15 colocation, atomic patch support, dialect-specific SQL or existing consumer idempotency. These are **hard readiness blockers**, not optional enhancements.
 
 ## 11. P05 Trace / evidence contract
 
@@ -362,10 +426,11 @@ P05 trace persistence failure before a required owner mutation => **fail-closed*
 | RDP-02 F8 business decision | CONDITIONALLY_ACCEPTED | physical atomic conditional SQL and same-wait winner proof |
 | `CA-U07-RDP02-U15-SHARED-FENCE-01` | REQUIRED / NOT_AUTHORIZED | U15 owner uses approved shared Consultation/U15 fencing |
 | `CA-U07-RDP03-F3-ANSWER-BRIDGE-01` | REQUIRED / NOT_AUTHORIZED | exact F3 owner answer/Question/Gap/Pending policy and permissions |
-| U07 producer/path authorization, K09/P01 readback | NOT_VERIFIED | schema/field/owner/CAS tests and source authority |
-| Consultation ACTIVE transition + same-root replay | NOT_IMPLEMENTED | owner API, DB and concurrency evidence |
+| U07 producer/path authorization, single K09 StatePatch and P01 readback | NOT_VERIFIED | F3-authorized combined Question/Gap/Pending mutation; schema/field/owner/CAS tests, exact same-transaction guard evidence |
+| Consultation ACTIVE transition + same-root replay | NOT_IMPLEMENTED | same guard DB owner API, one-commit effect receipt, DB and concurrency evidence |
 | RDP-04 P02 resume / U02 handoff | FUTURE DESIGN | runtime success/recovery/outbox owner contracts |
-| RDP-05 dual-dialect / atomicity / registry | FUTURE DESIGN | explicit chosen physical topology and per-dialect tests |
+| `CA-U07-RDP03-P01-U15-SHARED-COMMIT-FENCE-01` | REQUIRED / NOT_AUTHORIZED / NOT_IMPLEMENTED | same-DB/transaction-manager Consultation lock + P01 and U15 commit-time/clock fence proof |
+| RDP-05 dual-dialect / atomicity / registry | FUTURE DESIGN | prove selected SINGLE_GUARD_DB_STAGED_SAGA_V1 and MySQL/Oracle conditional statement/clock tests |
 | RDP-06 verification | FUTURE DESIGN | exact-head oracles, four gate/evidence stages |
 
 **No standalone RDP-03 design PASS removes any of these implementation blockers.**
@@ -393,14 +458,24 @@ P05 trace persistence failure before a required owner mutation => **fail-closed*
 | U07-A03-17 | Pending consumed before ACTIVE then U15 cancel | block ACTIVE; protected reconciliation |
 | U07-A03-18 | Consultation ACTIVE already from different effect | terminal conflict, no overwrite |
 | U07-A03-19 | committed owner effects, crash before APPLIED | reconcile all exact refs, one APPLIED |
-| U07-A03-20 | APPLIED/outbox interrupted | no lost handoff; atomic/recoverable unique intent |
-| U07-A03-21 | U02 ack lost | one logical U02 handoff / no duplicate Clinical Fact |
+| U07-A03-20 | APPLIED/outbox interrupted | Tx E atomic rollback-or-commit together; never APPLIED without PENDING outbox |
+| U07-A03-21 | U02 ack lost | retry/query stable consumer idempotency ID; no **claim** of exactly-once Clinical Fact absent U02 evidence |
 | U07-A03-22 | concurrent U15/F8/U07 apply | shared fence respects owner terminal commit order |
-| U07-A03-23 | Clinical State and Consultation separate DBs | fail readiness until governed saga topology proven |
+| U07-A03-23 | Clinical State/P01 and Consultation in separate DB or transaction manager | selected V1 NOT_APPLICABLE / NOT_READY; no fallback to unfenced loose saga |
 | U07-A03-24 | F3 bridge or U15 shared fence not authorized | design-only; implementation blocked |
 | U07-A03-25 | same wait answer payload digest but other Question | no cross-Question effect deduplication |
 | U07-A03-26 | PHI-bearing payload/production profile | blocked; synthetic-only |
 | U07-A03-27 | trace evidence missing before required commit | fail-closed or owner-authorized recovery; no fake commit |
+| U07-A03-29 | stage C F3/Question/Pending single P01 patch, exact same-root retry | one Clinical version advance, one durable owner effect and identical replay proof |
+| U07-A03-30 | stage C P01 guard sees U15 cancellation committed between intent and transaction | no P01 mutation; no APPLIED; F8 historical ACCEPTED retained |
+| U07-A03-31 | U15 cancels after C but before D | C preserved as authority; D blocked, owner-led correction only |
+| U07-A03-32 | U15 cancels after D but before E | E blocked with no APPLIED/outbox; retain D owner evidence |
+| U07-A03-33 | Tx E outbox INSERT succeeded but journal APPLIED update fails | single DB transaction rolls back both |
+| U07-A03-34 | Tx E APPLIED update succeeded but outbox INSERT fails | single DB transaction rolls back both |
+| U07-A03-35 | Tx E commit unknown | independently query both journal/outbox same stable IDs, no optimism |
+| U07-A03-36 | P02 or U02 remote response lost | owner lookup/replay with stable request/handoff ID, no new physical identity |
+| U07-A03-37 | P01 separate transaction manager cannot join Consultation/U15 guard | V1 NOT_APPLICABLE and readiness blocked |
+| U07-A03-38 | shared Consultation lock held; deadline passes before final P01 conditional statement | stage C/D/E rejects new mutation on certified DB statement-time predicate |
 | U07-A03-28 | replay old ACCEPTED after U15 expiry | historical verdict unchanged, no unauthorized new effect |
 
 All cases are **unexecuted design oracles**. Future RDP-06 must attach exact migration/source SHAs, executable tests, negative-side-effect proofs, both DB dialect evidence and independently checked provenance.
@@ -418,12 +493,18 @@ IR-U07-RDP03-07  Are U15 common fence, U06 issuance and RDP-01 Foundation audit 
 IR-U07-RDP03-08  Does P05 record sufficient owner evidence without using Trace as clinical truth?
 IR-U07-RDP03-09  Are U02 exactly-once delivery and Clinical Fact interpretation clearly separate?
 IR-U07-RDP03-10  Are existing P01/Consultation assets real, and are missing adapters labeled unimplemented?
+IR-U07-RDP03-11  Does the selected SINGLE_GUARD_DB_STAGED_SAGA_V1 bind every mutating stage to one verified primary DB/transaction manager?
+IR-U07-RDP03-12  Is one F3-authorized P01 Question/Gap/Pending patch truly atomic, with no owner takeover?
+IR-U07-RDP03-13  Does Tx E commit APPLIED and unique outbox PENDING in the same guard DB transaction, with exact crash recovery?
+IR-U07-RDP03-14  Does U15 terminalization fence stage C/D/E **inside** owner commit and include independent statement-time deadline checks?
+IR-U07-RDP03-15  Are both new and inherited controlled amendments explicitly blocking Implementation Readiness?
 ```
 
 ## 15. Formal candidate status / next gate
 
 ```text
-U07-RDP-03 = DESIGN_CANDIDATE / READY_FOR_INDEPENDENT_DESIGN_REVIEW / NOT_FROZEN
+U07-RDP-03 = TARGETED_REMEDIATION_CANDIDATE / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW / NOT_FROZEN
+BF-U07-RDP03-IR-01..03 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
 B-U07-RG-03 = OPEN / NOT_CLOSED
 U07-RDP-01 = CONDITIONALLY_ACCEPTED_DESIGN
 U07-RDP-02 = CONDITIONALLY_ACCEPTED_DESIGN
@@ -438,4 +519,4 @@ U07 Implementation Authorization = NOT_GRANTED
 Production / PROFILE-A / PHI / real-patient = BLOCKED
 ```
 
-Next gate: **U07-RDP-03 Independent Design Review** against an exact design HEAD. The review must explicitly decide whether §9–10 leave any critical unresolved **physical atomicity blocker** that requires targeted RDP-03 remediation before design acceptance. No runtime edits, merge, patient flows, clinical activation, or authorization under this document.
+Next gate: **U07-RDP-03 Targeted Independent Design Re-Review** against this amended exact design HEAD. Check §9–10 for one enforceable physical topology, terminal-fenced stage C/D/E owner commits, and atomic APPLIED+outbox. Require positive independent confirmation before closing BF-01..03. No runtime edits, merge, patient flows, clinical activation, or authorization under this document.
