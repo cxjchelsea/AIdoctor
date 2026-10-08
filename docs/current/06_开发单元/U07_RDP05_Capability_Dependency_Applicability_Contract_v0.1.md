@@ -4,7 +4,8 @@
 > Gap: **B-U07-RG-05**
 > Design-input baseline: RDP-01..04 independently **CONDITIONALLY_ACCEPTED_DESIGN** (last RDP-04 review [PR #282](https://github.com/cxjchelsea/AIdoctor/pull/282), review commit `b536221bcb66cbce43e559093431cb07631d78f3`)
 > Bounded source-inspection baseline: `main@6d4fd787600e3a57f01f3e17893e6d98893ac546`
-> Status: **DESIGN_CANDIDATE / READY_FOR_INDEPENDENT_DESIGN_REVIEW / NOT_FROZEN**
+> Status: **TARGETED_REMEDIATION_CANDIDATE / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW / NOT_FROZEN**
+> Independent Design Review [PR #284](https://github.com/cxjchelsea/AIdoctor/pull/284) @ `38eceebe3ad84dda37a78326e58f8b0576bbfa55` = REVISE_REQUIRED. This author-side revision targets BF-U07-RDP05-IR-01..03; **no blocker independently CLOSED**.
 > Coverage: capability inventory, producer/owner signatures, dependency currentness and applicability, transaction-domain constraints, upstream amendment register, physical impact, readiness gates and design oracles.
 > **Does not authorize** implementation, schema changes, PR merge, live P02 resume, U02 delivery, PROFILE-A, PHI or real-patient production.
 
@@ -55,6 +56,10 @@ This contract **never** changes F8 business verdict, manufactures U06 eligibilit
 ## 4. Exact dependency vocabulary
 
 ```text
+Dependency role (orthogonal to requiredness):
+  CAPABILITY_PREREQUISITE | PRIOR_STAGE_EFFECT_EVIDENCE |
+  CURRENT_STAGE_EXPECTED_OUTPUT | FUTURE_STAGE_DEPENDENCY
+
 Requiredness:
   REQUIRED_NOW | REQUIRED_IF_SELECTED_PATH | REQUIRED_AT_NEXT_STAGE |
   HISTORICAL_PROVENANCE_ONLY | OPTIONAL_IF_APPROVED | NOT_APPLICABLE
@@ -87,17 +92,26 @@ U07DependencyAssessmentV1 {
   current_u15_terminal_generation?, owner_snapshot_epoch?,
   selected_resume_path = NOT_SELECTED | EXACT_RESTORE |
                          CERTIFIED_REHYDRATE | GOVERNED_FAILURE,
-  requested_stage = ADMISSION | F8 | APPLY_CLAIM | P02_RESTORE |
-                    P01_APPLY | CONSULTATION_ACTIVE | APPLIED_OUTBOX |
-                    U02_DISPATCH_GRANT | U02_CONSUMER_ACCEPT,
+  requested_stage = ADMISSION_PRE | ADMISSION_POST |
+                    F8_EVALUATION_PRE | F8_RESULT_POST |
+                    APPLY_CLAIM_PRE | APPLY_CLAIM_POST |
+                    P02_RESTORE_PRE | P02_RESTORE_POST |
+                    STAGE_C_PRE | C_COMMIT_POST | STAGE_D_PRE | D_COMMIT_POST |
+                    STAGE_E_PRE | E_COMMIT_POST |
+                    F_GRANT_PRE | F_GRANT_POST | F_DISPATCH_PRE |
+                    U02_ACCEPT_POST | U02_FACT_OWNER_LATER,
   dependencies[] = {
-    capability_id, owner_namespace, requiredness, applicability,
+    capability_id, owner_namespace, dependency_role, requiredness, applicability,
     expected_contract_version, original_binding_ref?,
     current_binding_ref?, binding_fingerprint?,
     source_kind, source_sha?, executable_adapter_ref?,
     authorization_profile_ref?, capability_proof_ref?,
     transaction_manager_ref?, primary_db_ref?, version_vector?,
-    owner_fence_generation?, evaluation_result, reason_code,
+    owner_fence_generation?, authority_version_or_epoch?,
+    owner_signed_snapshot_ref?, owner_authority_fingerprint?,
+    required_recheck_point?, recheck_mechanism?,
+    bounded_lease_expires_at?, terminal_effect_receipt_ref?,
+    evaluation_result, reason_code,
     negative_effect_evidence_ref?, independent_review_ref?
   },
   aggregate = READY_FOR_STAGE | BLOCKED | DEFERRED_RECONCILIATION,
@@ -107,33 +121,66 @@ U07DependencyAssessmentV1 {
 
 **Trust/immutability:** build from authoritative owner/Registry sources, never client-supplied positive capability flags. Bind assessment and source SHAs to one immutable evaluation snapshot with explicit owner version vector; retry same assessment ID with altered binding/fingerprint is CONFLICTED. Evaluations after a Consultation/U15 generation change must reacquire owner evidence; a cached `READY_FOR_STAGE` cannot outlive its bounded generation.
 
-**Requiredness rule:** for requested stage `S`, aggregate READY only if **every** REQUIRED_NOW and selected-path REQUIRED_IF_SELECTED_PATH item has independently verified contract/version/scope/producer permission, actual executable adapter, owner receipt, selected-profile permission and required shared transaction/effect fencing; any missing/denied = BLOCKED, transient authority gap = DEFERRED_RECONCILIATION with **zero novel effects**. Future-stage capabilities may be NOT_YET_APPLICABLE for that stage but must remain in the overall U07 readiness inventory. This is a precondition check, **not an authorization decision itself**.
+**Pre/post separation (BF-U07-RDP05-IR-01):** dependency `role` is mandatory and orthogonal to `requiredness`:
+- `CAPABILITY_PREREQUISITE`: executable owner adapter, profile/producer grants, version/scope/transaction topology, and versioned authority proof; **no current-stage success receipt required**.
+- `PRIOR_STAGE_EFFECT_EVIDENCE`: an already completed **earlier** stage's authoritative immutable result/owner readback is required.
+- `CURRENT_STAGE_EXPECTED_OUTPUT`: an effect receipt that must **not exist as a prerequisite for first execution**. At `*_PRE`, register its expected immutable identity/schema but do not require its committed result. At `*_POST`, require an exact successful authoritative effect receipt/readback or an explicitly approved typed no-effect disposition.
+- `FUTURE_STAGE_DEPENDENCY`: visible in the overall U07 readiness inventory but not a prerequisite for the current stage; cannot be silently marked `NOT_APPLICABLE` to overall readiness.
 
-## 6. Stage × capability applicability matrix
+**Resolver split:** `assessPre(stage, original_owner_version_vector)` yields `PRECONDITIONS_VERIFIED / BLOCKED / DEFERRED_RECONCILIATION`. It never asserts current-stage success. `verifyPost(stage, exact_effect_id, commit_result_ref)` yields `POST_EFFECT_VERIFIED / POST_NO_EFFECT_AUTHORIZED / RECONCILIATION_REQUIRED / BLOCKED` based on owner receipt and readback. `PRECONDITIONS_VERIFIED` is **not** execution authorization: the mutating Owner must re-check authority at its final operation fence (§6.2). A retry with original effect identity first resolves previous committed effects, not a new implementation attempt. `CURRENT_STAGE_EXPECTED_OUTPUT` can only become authoritative after that same-owner commit, then serves as `PRIOR_STAGE_EFFECT_EVIDENCE` for later phases.
 
-Codes: **R** required for ordinary stage; **C** required when path is selected; **H** historical owner evidence; **G** prerequisite before any novel effect; **—** not applicable; **F** future-stage dependency tracked but not a premature gate.
+**Requiredness rule:** at stage `S` PRE, check every REQUIRED_NOW/selected-path REQUIRED_IF_SELECTED_PATH *capability* and every required *prior-stage result*, but **not the future result of S itself**. After S effect commits, advance only if `verifyPost` proves the original result. Missing/denied = BLOCKED; transient owner gaps = DEFERRED_RECONCILIATION with zero novel effects. Later-stage missing capabilities may be NOT_YET_APPLICABLE in the *stage* response while still blocking **overall U07 Implementation Readiness**. The resolver itself is not a business, Runtime, P01 or U15 authorization decision.
 
-| Capability | Ingress RDP-01 | F8 RDP-02 | P02 restore RDP-04 | Stage C/D RDP-03 | Stage E Outbox | Stage F/U02 |
-|---|---|---|---|---|---|---|
-| Foundation canonical event + inline binding | R | H | H | H | H | H |
-| U06 delivered-wait + original eligibility issuance | R | R | H | H | H | H |
-| F8 committed ACCEPTED/wait winner | — | R | R | R | R | H |
-| Consultation/U15 shared terminal guard + DB clock | H | G | G | G | G | G |
-| P06 original/current Scope/Registry/version resolution | R | R | R | R | H | R |
-| P02 executable checkpoint | — | — | C exact restore | F | F | F |
-| P02 certified rehydrate proof + owner recipe | — | — | C rehydrate | F | F | F |
-| P02 parked landing + restore-only U15 start grant | — | — | R | H | H | H |
-| F3 Question/Gap answer policy + K09/P01 single patch | — | — | F | R | H | H |
-| Consultation ACTIVE owner effect | — | — | F | R | H | H |
-| U07 ApplyJournal + stable effect receipt | — | H | R | R | R | H |
-| APPLIED+Outbox same guard-DB COMMIT | — | — | F | F | R | H |
-| U15 committed U02 dispatch-grant | — | — | F | F | F | G |
-| U02 consumer idempotent admission/receipt lookup | — | — | F | F | F | R |
-| P05 Trace/evidence provenance | R | R | R | R | R | R |
-| U14 governed failure/safety escalation | C failure | C failure | C failure | C failure | C failure | C failure |
-| P03 LLM inference / P04 knowledge lookup | — | — | — | — | — | — |
+## 6. Stage × capability and effect-role applicability matrix
 
-**Important:** P03/P04 are **NOT REQUIRED** to determine lawful Resume or to park a recovered Runtime. They may be required later by U02 or a future separately authorized post-landing clinical execution, but they cannot silently become U07 F8/P02 required prerequisites nor license post-landing model calls. U05/U08 Scheduler reentry is NOT_APPLICABLE before U02 under U07 V1.
+**Frozen evaluation sequence:** ADMISSION_PRE→ADMISSION_POST→F8_EVALUATION_PRE→F8_RESULT_POST→APPLY_CLAIM_PRE/POST→P02_RESTORE_PRE/POST→STAGE_C_PRE/C_COMMIT_POST→STAGE_D_PRE/D_COMMIT_POST→STAGE_E_PRE/E_COMMIT_POST→F_GRANT_PRE/F_GRANT_POST→F_DISPATCH_PRE→U02_ACCEPT_POST→U02_FACT_OWNER_LATER.
+
+The following table is normative. PRE rows describe what **already exists** and what the stage may attempt, not a requirement to produce its own effect early. POST rows require authoritative owner receipts or a typed approved no-effect result. `Ready for stage` ≠ committed result ≠ permission to skip owner gate.
+
+| Evaluation point | CAPABILITY_PREREQUISITE (PRE) | PRIOR_STAGE_EFFECT_EVIDENCE (PRE) | CURRENT_STAGE_EXPECTED_OUTPUT (only POST) |
+|---|---|---|---|
+| ADMISSION_PRE / POST | Foundation canonical ledger + atomic inline answer side-binding + scope/grants | authenticated U06 original wait delivery/eligibility and event input | committed original canonical USER_ANSWER/binding or authenticated existing canonical replay |
+| F8_EVALUATION_PRE / F8_RESULT_POST | F8 evaluator+ledger, Consultation/U15 shared fence, certified statement-time clock, P06 version | canonical event/binding + U06 original issuance/current wait | first durable F8 verdict/winner (ACCEPTED/DUPLICATE/EXPIRED/REJECTED or typed DEFER); **no preexisting ACCEPTED receipt required** |
+| APPLY_CLAIM_PRE / POST | unique root/wait claim store and U15 authority | durable same-event F8 ACCEPTED and canonical root evidence | exact claim journal and winner identity |
+| P02_RESTORE_PRE / POST | P02 original Thread owner, executable checkpoint **or** certified rehydrate proof, U15 inert start grant capability, parked dispatcher guard | original accepted event, root claim, U06 original historical binding | authoritative P02 parked `RESUMED_VERIFIED` receipt/readback; not business execution |
+| STAGE_C_PRE / C_COMMIT_POST | F3 Question/Gap owner decision, K09/P01 combined single-patch permissions and same-DB U15 commit fence | P02 owner parked receipt, F8 winner and original parent wait | ONE P01 CommitResult, owner readback, ONE Clinical version covering Question/Gap/Pending consume |
+| STAGE_D_PRE / D_COMMIT_POST | Consultation WAITING_USER→ACTIVE owner transition and U15 common fence | same-root Stage C owner effect/readback | ACTIVE owner receipt/version; **not required before D starts** |
+| STAGE_E_PRE / E_COMMIT_POST | U07 ApplyJournal, guard-DB transactional unique Outbox adapter | Stage B, C, D owner effects + fresh Consultation/U15 authority | **one COMMIT** of APPLIED_WITH_DURABLE_U02_INTENT + unique Outbox PENDING |
+| F_GRANT_PRE / F_GRANT_POST | U15 approved irrevocable same-effect dispatch policy, Consultation guard/statement time, Outbox grant CAS; verify U02 idempotent **capability** | Stage E APPLIED+Outbox PENDING and root/wait refs | immutable U15 `DISPATCH_AUTHORIZED` grant receipt, or typed BLOCKED_TERMINAL with zero sends |
+| F_DISPATCH_PRE | Outbox worker, approved consumer endpoint, stable handoff ID, query-by-ID and replay guarantee, transport permissions | committed Stage F grant for exact effect; Stage E Outbox | dispatch attempt/receipt generated **after** send, not a precondition; no U02 ACK required before first send |
+| U02_ACCEPT_POST | consumer admission/receipt authority and original binding/scope | same-grant stable transport effect and actual consumer reply/query | U02 accepted or rejected receipt bound to the same handoff ID; UNKNOWN requires same-ID consumer query/retry, never invent a second effect |
+| U02_FACT_OWNER_LATER | U02 clinical fact interpretation and separately authorized P01 clinical mutation | U02 accepted answer and governed clinical processing | **U02-only** fact commit/readback, never implied by Outbox/grant/transport ACK |
+
+### 6.1 Optionality and path-specific requiredness
+
+- **P02 exact checkpoint vs certified rehydrate proof**: exactly the selected path is `REQUIRED_IF_SELECTED_PATH`; if neither path qualifies, both are failure evidence and P02 may only issue governed failure, not resume.
+- **P03/P04**: NOT_APPLICABLE to U07 F8/P02 legality; future U02 reasoning may have its own dependencies and clinical authorization.
+- **U14**: required on failure branch, not an owner effect that must precede every successful F8 decision.
+- **Version/fencing owner prerequisites** cannot be satisfied by a successful synthetic U06 adapter, by P05 Trace, or by a current-stage expected receipt.
+- **First-ever F8** and **first-ever Stage E** must be eligible on verified PRE capability/prior-effect evidence alone; an earlier same-identity POST result is required only on replay to avoid a second physical mutation.
+
+### 6.2 Per-owner authority revalidation at the committing boundary (BF-U07-RDP05-IR-03)
+
+Every mutable authority is bound by: `owner_namespace`, `authority_version_or_epoch`, `owner_signed_snapshot_ref` or authoritative transactional row version, `scope/profile`, `authority_fingerprint`, `required_recheck_point`, `recheck_mechanism`, and (only where owner-approved) a bounded lease expiry. **No single owner_snapshot_epoch or Consultation lock is a substitute for independent F3/P01/P06/U02 permission authority.**
+
+| Recheck point | Mutable owners and required version proof | Allowed physical enforcement |
+|---|---|---|
+| ADMISSION_PRE / canonical event commit | Foundation canonical grants and P06 scope/producer profile, authoritative U06 issuance | same owner DB transaction **only if co-located**, otherwise owner-issued version-fenced authorization |
+| F8 final conditional decision | F8 policy revision, U15 generation/Consultation row, U06 original wait/issuance owner | same guard-DB lock/statement-current time for F8+U15; independently fenced U06 provenance |
+| P02 start-grant commit | P02 Thread/Run/checkpoint/recipe authority, P06 Registry/Harness binding, U15 start-grant policy and current terminal epoch | P02/U15 common transactional CAS, **plus** P06/Registry signed version or commit-time verified lease; no stale precheck |
+| Stage C P01 owner mutation COMMIT | F3 Question/Gap owner release and Question version, K09/P01 producer+field grants and Clinical State base version, P06 scope, U15 terminal generation and deadline | shared P01/Consultation transaction for state+U15; **F3/P06/grant owner version must also be verified at this final mutation** by owner-fenced CAS or approved stable lease |
+| Stage D Consultation ACTIVE COMMIT | Consultation lifecycle owner/version, U15 generation and Stage C result | shared guard owner transaction with exact C owner result and current lifecycle policy |
+| Stage E APPLIED+Outbox COMMIT | U07 journal generation, Consultation/U15 version, current policy for APPLIED and Stage B/C/D owner receipts | same guard-DB transaction; immutable prior-stage receipts individually read back |
+| Stage F dispatch-grant COMMIT | U15 dispatch policy revision, Consultation row/generation/deadline, Outbox PENDING/root, U02 consumer idempotent admission **capability** | U15/Outbox guard transaction **plus** verified consumer contract version at grant; later receipt not required |
+| F_DISPATCH_PRE / U02 acceptance | Outbox committed grant/policy identity and transport permission, U02 consumer admission version/scope/idempotency and endpoint binding | same-grant worker claim CAS + consumer-authoritative admission/readback; cannot assume remote U02 shares Consultation DB |
+| U02_FACT_OWNER_LATER | U02 clinical fact policy, P01 clinical writer permissions, Clinical base version | separate U02-owned transaction and authorization; not U07 stage permit |
+
+**Mandatory invalidation protocol:**
+1. `assessPre` captures each owner-issued signed/ref-addressable immutable version, historical binding and scope; `READY` is **only a snapshot** and cannot authorize effects on its own.
+2. Immediately at each listed owner commit/first outbound dispatch, re-resolve each mutable required authority through one of: **(a)** same-DB transactional version/permission CAS; **(b)** owner API that conditionally commits against the exact owner epoch; **(c)** separately approved signed/leased immutable capability with enforceable revocation semantics and an expiry beyond the specific operation's linearization. A TTL on an uncoordinated cache alone is **not acceptable**. For providers that cannot implement one of these, phase = `BLOCKED_PHYSICAL / NOT_READY`, no novel effects.
+3. Compare every expected `authority_version_or_epoch` and signed fingerprint; no silent current→latest substitution. Owner revocation, release supersession, permission change, consultation terminalization or uncertainty -> `BLOCKED_AUTHORITY / BLOCKED_VERSION / RECONCILIATION_REQUIRED`; request a fresh owner decision after reconciliation, **not** an optimistic replay.
+4. If a stage committed before subsequent revocation, retain actual owner effect and repair downstream under stage guards; do not retroactively claim its receipt invalid or mint a second effect. If revocation wins before the stage linearization, the stage must not commit.
+5. Dialect, adapter, lease and cross-store revocation/commit ordering must be verified with source and concurrent negative tests in RDP-06. An unsupported owner-fence mechanism is a hard RDP-05 readiness blocker, never waived by a conditional design review.
 
 ## 7. Path-dependent applicability and negative proofs
 
@@ -198,17 +245,17 @@ Physical P06 `RuntimeBindingRecord` existing columns are a baseline **subset**; 
 A dependency may change to `PROVEN_READY_FOR_PROFILE` only with:
 
 1. **Source:** exact code/config/migration/Registry head and declared application role; not a class name alone.
-2. **Owner:** owner decision and approved producer/capability/field permissions for chosen profile.
+2. **Owner:** pre-effect approved producer/capability/field permissions **and owner version/revocation fence** for chosen profile; do not require a first-ever current-stage success receipt.
 3. **Schema:** frozen typed command/result, version, immutable ID/frame and migration evidence in MySQL and Oracle where applicable.
 4. **Semantics:** positive tests of accepted flow and negative tests showing zero U02/Tool/P01 side effects when blocked.
 5. **Idempotency:** same-event replay, different-canonical-same-wait conflict, unknown commit reconciliation, unique owner receipt and fixed root.
 6. **Concurrency:** U15 expiry/cancel vs F8/Stage C/D/E and separate P02/F restore/dispatch grants.
 7. **Runtime:** actual serialized executable snapshot **or** complete owner-certified P02 rehydrate proof, restored Thread parked at central dispatcher barrier.
 8. **Scope:** synthetic PROFILE-B only, no PHI, no real production, no capability substitution.
-9. **P05:** durable Trace/audit (evidence links but no authority).
+9. **P05:** durable Trace/audit (evidence links but no authority); **post-effect** Owner Receipts/readback are verified only when the particular stage actually commits or reconciles.
 10. **Independence:** exact-head verification including reproducible runner, independent evidence-only check and explicit gate decision.
 
-Failure of **any** required quality gate leaves owner capability `NOT_VERIFIED` and U07 Implementation Readiness `NOT_READY`; test simulation/mock passes must be tagged `STRUCTURAL_ONLY` and never substituted for physical owner evidence.
+Pre-effect capability verification and post-effect owner receipt verification are **separate** obligations: capability readiness never proves a result; first-time execution must not require its own future receipt. Owner/currentness constraints must be rechecked at the effect-committing boundary under §6.2. Failure of **any** required quality gate leaves owner capability `NOT_VERIFIED` and U07 Implementation Readiness `NOT_READY`; test simulation/mock passes must be tagged `STRUCTURAL_ONLY` and never substituted for physical owner evidence.
 
 ## 11. Controlled-amendment / dependency authorization register
 
@@ -307,8 +354,20 @@ An aggregate compatibility review must not conclude `READY` from four conditiona
 | CAP-T34 | U07 ApplyJournal says APPLIED but owner readback mismatches | quarantine, NOT_READY, no U02 |
 | CAP-T35 | latest capability exists but original Run bound to older version | require certified historical compatibility/migration |
 | CAP-T36 | end-to-end mocks pass while physical receipt absent | STRUCTURAL_ONLY; not PROVEN_READY_FOR_PROFILE |
+| CAP-T37 | first-ever F8 evaluation, no prior F8 verdict receipt | F8_EVALUATION_PRE can pass on capability+prior wait evidence; F8_RESULT_POST requires newly committed verdict |
+| CAP-T38 | first-ever Stage E, no APPLIED or Outbox receipt yet | STAGE_E_PRE uses B/C/D evidence; E_COMMIT_POST verifies first APPLIED+Outbox atomic receipt |
+| CAP-T39 | Stage D begins with prior C owner receipt but no ACTIVE receipt | D_PRE permitted; D_COMMIT_POST demands newly committed ACTIVE receipt |
+| CAP-T40 | Outbox PENDING, no U15 dispatch grant yet | F_GRANT_PRE may evaluate; zero sends until F_GRANT_POST committed grant |
+| CAP-T41 | U15 grant present but U02 ACK missing | F_DISPATCH_PRE allowed only with proven consumer idempotent capability; grant is NOT ACK nor Clinical Fact |
+| CAP-T42 | U02 ACK lost after U15 terminal, grant committed first | query/retry same grant/handoff ID under owner-approved irrevocable policy; zero newly minted facts |
+| CAP-T43 | Stage C READY snapshot, then P01 field grant revoked before commit | owner-version final fence rejects mutation; no Clinical State advance |
+| CAP-T44 | Stage F policy version superseded between assessment and grant commit | grant rejected or fresh U15 owner decision; no network send |
+| CAP-T45 | P06 historical binding valid but current Scope grant revoked before P02 start | blocked at P02 start-grant commit; no inert restore without owner permission |
+| CAP-T46 | U02 consumer permission changed between Stage F and F_DISPATCH_PRE | no send until current owner-issued endpoint/contract authority verified; prior grant alone insufficient |
+| CAP-T47 | old stage result committed, owner version later changed, same canonical retry | read original owner receipt; cannot erase historical effect or mint a new mutation |
+| CAP-T48 | current dependency proof uses uncoordinated TTL cache rather than owner commit-time fence | BLOCKED_PHYSICAL / NOT_READY, no optimistic READY propagation |
 
-These are **36 unexecuted design oracles**. RDP-06 must later provide test names, source/migration SHA bindings, fixtures, negative-effects evidence, DB-dialect concurrency and owner-level receipt proofs.
+These are **48 unexecuted design oracles**. RDP-06 must later provide test names, source/migration SHA bindings, fixtures, negative-effects evidence, DB-dialect concurrency and owner-level receipt proofs.
 
 ## 16. Independent review questions and current decision
 
@@ -325,11 +384,16 @@ IR-U07-RDP05-09  Is U02 consumer idempotency separate from Outbox and clinical f
 IR-U07-RDP05-10  Are P03/P04 not falsely made required for F8/P02 legality but preserved for future U02?
 IR-U07-RDP05-11  Does every positive readiness require exact-head executable proof beyond mocks?
 IR-U07-RDP05-12  Are PROFILE-A/PHI/real patients explicitly blocked?
+IR-U07-RDP05-13  Are pre-effect capability, prior-stage receipt, and current-stage expected output distinct roles for all stages?
+IR-U07-RDP05-14  Does Stage F grant, dispatch, U02 consumer receipt, and later clinical fact form distinct phases with no premature ACK requirement?
+IR-U07-RDP05-15  Does each mutable Owner authority have a bound version and exact final recheck point/mechanism, including non-co-located owners?
+IR-U07-RDP05-16  Are first-ever F8/Stage E paths eligible without fabricated output receipts, and revoked permissions blocked at commit?
 ```
 
 Formal design-only candidate state:
 ```text
-U07-RDP-05 = DESIGN_CANDIDATE / READY_FOR_INDEPENDENT_DESIGN_REVIEW / NOT_FROZEN
+U07-RDP-05 = TARGETED_REMEDIATION_CANDIDATE / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW / NOT_FROZEN
+BF-U07-RDP05-IR-01..03 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
 B-U07-RG-05 = OPEN / NOT_CLOSED
 U07-RDP-01..04 = CONDITIONALLY_ACCEPTED_DESIGN
 GATE-U07-RDP01-FOUNDATION-REFERENCE-AUDIT-01 = REQUIRED / NOT_PASSED
@@ -349,4 +413,4 @@ U07 Implementation Authorization = NOT_GRANTED
 Production / PROFILE-A / PHI / real-patient = BLOCKED
 ```
 
-**Next gate:** `U07-RDP-05 Independent Design Review` at exact HEAD. Assess completeness of ownership, producer permissions, time/lock topology, current vs historical applicability, quality-gate evidence, and whether remaining assumptions should become explicit blocker remediation. No Runtime code, merge or production permissions follow from this file.
+**Next gate:** `U07-RDP-05 Targeted Independent Design Re-Review` at this amended exact HEAD. Assess completeness of ownership, producer permissions, time/lock topology, current vs historical applicability, quality-gate evidence, and whether remaining assumptions should become explicit blocker remediation. No Runtime code, merge or production permissions follow from this file.
