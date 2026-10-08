@@ -4,7 +4,8 @@
 > Gap: B-U07-RG-06
 > Upstream: independently **CONDITIONALLY_ACCEPTED_DESIGN** RDP-01..05, latest RDP-05 independent review [PR #285](https://github.com/cxjchelsea/AIdoctor/pull/285) @ `15e335759b9cf7acaeca8c7424ff971034c4c1f1`
 > Verified source **inspection** baseline: `main@6d4fd787600e3a57f01f3e17893e6d98893ac546`; design artifacts may be on unmerged PR branches
-> Status: **DESIGN_CANDIDATE / READY_FOR_INDEPENDENT_DESIGN_REVIEW / NOT_FROZEN**
+> Status: **TARGETED_REMEDIATION_CANDIDATE / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW / NOT_FROZEN**
+> Independent review: [PR #287](https://github.com/cxjchelsea/AIdoctor/pull/287) @ `c7abe477cf69dde27641b6be0099df3423959f90`, REVISE_REQUIRED (BF-U07-RDP06-IR-01..03). This revision is an author-side candidate, not independent closure.
 > Scope: design the authoritative expectation oracle, fixture/provenance contract, physical verification layers, runner, failure classification, evidence integrity and independent review. **No executable suite is claimed built, run or passed.**
 > Profile: PROFILE-B synthetic structural nonproduction exclusively; PROFILE-A, PHI, clinical patients, live outbound IO and production BLOCKED.
 
@@ -59,7 +60,7 @@ independently reviewed frozen RDP01..06 contracts + owner authorization profile
 
 ## 4. Verification profile and isolation
 
-Only `PROFILE_B_SYNTHETIC_STRUCTURAL_NONPROD` can be a valid test input. Fixtures use generated nonpatient consultations, Questions and answers; no PHI or external medical profiles. Production credentials/endpoints are impossible to mount in the runner. Deny all real outbound sockets, calls/SMS, production queues, patient CDP and unapproved model endpoints; allow only explicitly cataloged ephemeral DB services and an **isolated synthetic U02 receiver**. Verify denial controls with a deliberate network-attempt tripwire and fail the run if it connects.
+Only `PROFILE_B_SYNTHETIC_STRUCTURAL_NONPROD` can be a valid test input. Authority-negative Tier-0 uses synthetic manifest-only evaluation and does not instantiate a business SUT. Fixtures use generated nonpatient consultations, Questions and answers; no PHI or external medical profiles. Production credentials/endpoints are impossible to mount in the runner. Deny all **unapproved or live-production outbound sockets**, calls/SMS, production queues, patient CDP and unapproved model endpoints; allow only cataloged ephemeral DB services and an **isolated synthetic U02 receiver** with intercepted test-only transport. An allowlisted synthetic receiver is not unrestricted real network access; the exact transport and its spy coverage are frozen in §11.1. Verify denial controls with a deliberate network-attempt tripwire and fail the run if it connects.
 
 Runner records synthetic scope attestation, allowlist hash, route intercept coverage, number of outbound attempts by endpoint/class, actual interposed test consumer count, attempted P01 writes, runtime resumes, scheduler/tool/model invokes, Clinical version advances, Outbox and U02 effects. A zero count without a configured/verified tripwire is insufficient evidence.
 
@@ -95,6 +96,62 @@ U07VerificationFixtureV1 {
 
 No text, customer secret or PHI in evidence. Fixture generator records deterministic version/seed and canonical bytes hash; it must not read oracle expected outcomes. Oracles are reviewed from contracts/owners; fixture validity and oracle correctness are **two independent reviews**. If a clinical-policy output requires unreviewed medical thresholds, exclude it as `CONTRACT_EXPECTATION_GAP`, not guessed clinical answer quality.
 
+### 5.1 Deterministic expectation authority and branch closure (BF-U07-RDP06-IR-01)
+
+A catalog row is a **scenario family**, never an executable free-choice Oracle. The independent reviewer must approve a concrete `U07ExpectedObservationV1` for **each disjoint fixture-branch** before physical SUT execution:
+
+~~~text
+U07ExpectedObservationV1 {
+  case_id, branch_id, reviewed_fixture_id, profile_tier,
+  exact_rdp_contract_blob_refs[], owner_policy_ref + owner_policy_digest,
+  authorized_owner_policy_outcome,
+  given_authority_versions + owner_terminal_ordering,
+  selected_db_dialect + certified_time_boundary,
+  expected_verdict = ONE_EXACT_STATUS,
+  expected_stage_phase = ONE_EXACT_PHASE,
+  expected_owner_receipt_rules[] = {owner, required|forbidden, relation, digest_rule},
+  expected_unique_identity_relations[],
+  expected_effect_counts_by_causal_window[] = {
+    effect_kind, unique_count_exact, attempt_count_exact_or_bounded,
+    explicit_minimum?, explicit_maximum?, owner_evidence_source
+  },
+  expected_negative_counts_by_causal_window[],
+  expected_crash_reconcile_status, expected_evidence_tier,
+  independent_expected_authority_ref
+}
+~~~
+
+**Exactly one expected result per fixture+policy+owner ordering+DB dialect.** No `A/B`, wildcard success, implicit default, or choosing the result after SUT observation. For conditional families, the Oracle lists disjoint branch_ids with concrete owner-approved policy digest/initial state and expected status. Missing approval or unresolved policy branch => `CONTRACT_EXPECTATION_GAP`; TIER-0 can prove missing-authorization blocking, while TIER-1 must not run that positive case. Negative effect counts are exact zeros at the defined observation boundary; attempt counts may be bounded only with an independently frozen allowed-retry schedule and must include observed physical attempt identities.
+
+**Mandatory disjoint branches:**
+- `U07-VG-016/CANCEL_FIRST_CONFIRMED` => fixed `REJECTED` with U15 cancellation evidence and zero F8 ACCEPTED/P02/P01/U02. Expiry-first case is `VG-015` => `EXPIRED`; no runtime-selected choice.
+- `U07-VG-020/CLOCK_UNCERTIFIED` => operational `DEFER` plus exact `F8_TIME_AUTHORITY_UNAVAILABLE` and zero committed F8 verdict/new effects; `CLOCK_CERTIFIED_EQUAL` is tested with RDP-02 F8-T38 and fixed `EXPIRED` under `VG-015` fixture branch.
+- `U07-VG-035/PROOF_FULLY_CERTIFIED` => exact proof schema/digest, positive receipts for **all** prior external effects and approved recipe version, one deterministic Run identity, exactly one parked readback, zero tool/model/U02 calls; `PROOF_MISSING_OR_UNKNOWN` => fail-closed `INSUFFICIENT_EVIDENCE`, no rehydrate, covered `VG-036`.
+- `U07-VG-038/RESTORE_GRANT_POLICY_APPROVED` => after owner-approved *inert* grant first and terminal second, same grant may produce one parked state, zero business steps; `POLICY_NOT_AUTHORIZED` => TIER-0 `BLOCKED_AUTHORITY`, no SUT restoration or grant (not positive acceptance).
+- `U07-VG-045/DISPATCH_GRANT_POLICY_APPROVED` => after owner-approved grant first and terminal second, at most original bounded authorized same-ID sends, never new handoff; `POLICY_NOT_AUTHORIZED` => TIER-0 `BLOCKED_AUTHORITY`, zero sends.
+- `U07-VG-050/F_GRANTED_DISPATCH_ACKED_NO_FACT` => exact Stage E one intent, Stage F one grant, one admission, zero Clinical Fact commits until U02 separately commits; `F_GRANTED_ACK_LOST_REPLAY` => attempt count per controlled retry fixture, one consumer unique admission, zero duplicated facts (see §11.1).
+
+Each branch must identify the owner policy **as an authority**, not a synthetic fixture claiming to authorize itself. Source Oracle reviewer and SUT implementer must be independent; no oracle mutation to match observed behavior. `VG-016,020,035,038,045,050` and the applicable original RDP case IDs must be traceably covered by machine-readable branches.
+
+### 5.2 Coverage obligations / mapping without invented source IDs
+
+The separate `U07TraceabilityMatrixV1` must be independently reviewed and machine-validated. Original RDP-01 uses `U07-RDP01-T01..T20` plus suffix variants; RDP-02 uses `F8-T01..T41`; RDP-03 uses `U07-A03-01..45`; RDP-04 uses `P02-T01..44`; RDP-05 uses `CAP-T01..48`. Every mandatory original case must have an exact mapping to one or more U07-VG cases and a concrete branch_id, or an **owner-approved explicit scope exclusion**. Do not infer that numeric range equality is coverage; verify each actual source case key, including RDP-01 suffix variants.
+
+| Acceptance requirement / gap | Mandatory RDP oracle source | U07-VG coverage candidates | Required reconciliation |
+|---|---|---|---|
+| Unit Spec §26 legal event admission, canonical identity, replay | RDP01 T01–T11 plus T05A/B | 001–009, 049, 060 | suffix and same-semantic-new-event variants require explicit branch-level mapping |
+| §26 first business verdict, duplicate/expired/rejected, immutable ACCEPTED | RDP02 F8-T01–T41 | 010–020, 049 | priority/precise timestamp equality, original ingress vs final statement, U15 first/after branches |
+| §26 P02 checkpoint compatibility, missing checkpoint, historical bind | RDP01 T12/T12A/T12B; RDP04 P02-T01–44 | 010, 033–042, 054–055 | metadata-only and fully certified owner proof, unknown effects and parked barrier |
+| §26 Question/Pending/Consultation ACTIVE and APPLIED idempotency | RDP03 U07-A03-01–45 | 021–032, 049, 051–052, 060 | one C commit, distinct D, E+Outbox atomicity, all replay/crash branches |
+| §26 unique logical U02 handoff and clinical fact separation | RDP03 A03-41–45, RDP04 P02-T18–23 / T43–44 | 043–048, 050, 053 | unique handoff ID vs physical retry and U02 clinical owner receipts |
+| §26 failure/repair, provenance and U14 handoff | RDP03 A03 series and RDP04 P02 series | 030–032, 036, 039, 041–042, 060 | exact owner error/no-effect and missing-authority branches |
+| §26 regression against Foundation/U01–U06 | Unit Spec §26 plus initial RG-06 | Layer L8 (full regression manifest) | enumerate actual suite names, exact source heads and required pass/blocked evidence |
+| RG-05 capability applicability, owner revocation, PROFILE-B | RDP05 CAP-T01–48 | 049–060 plus other stage cases | every CAP-T source scenario individually mapped |
+| RG-01..RG-06 aggregate closure | all RDP01..05 source case catalogs | 001–060 + tier/profile + L8 | an aggregate assertion is not coverage unless case/branch and proof refs exist |
+
+**Closure rule:** `U07TraceabilityMatrixV1` is a future independent machine-readable artifact, not yet created by this document. Its validator must load all source-RDP reviewed case lists and Unit Spec §26 invariants, detect missing original keys/suffix cases and reject unauthorized `EXCLUDED`; any uncovered mandatory semantic case => `INCOMPLETE / CONTRACT_EXPECTATION_GAP`, not a claimed 60/60 completeness PASS. A mapping many-to-one is allowed only with independently reviewed equivalence of inputs/owner outputs; otherwise add new `U07-VG` cases before any Oracle freeze.
+
+
 ## 6. Mandatory U07 first-class oracle catalog
 
 Each row is a **design-only requirement**; IDs `U07-VG-001..060` are reserved for future executable cases. Expected assertions must include exact root/owner state and **negative side-effect counters**, not merely response codes.
@@ -123,11 +180,11 @@ Each row is a **design-only requirement**; IDs `U07-VG-001..060` are reserved fo
 | U07-VG-013 | already APPLIED identical new canonical answer | F8 DUPLICATE, no new Runtime/Clinical effect |
 | U07-VG-014 | same wait but different answer after prior APPLIED | REJECTED/conflict, zero new effect |
 | U07-VG-015 | new late answer vs certified statement-current deadline | EXPIRED; no first ACCEPTED |
-| U07-VG-016 | U15 cancel commits before F8 final conditional statement | REJECTED/owner-terminal with zero effects |
+| U07-VG-016 | U15 non-expiry cancellation commits before F8 final conditional statement | REJECTED with explicit U15 owner-terminal reason; zero new effects (branch CANCEL_FIRST_CONFIRMED) |
 | U07-VG-017 | F8 final statement commits before U15 terminal later | historical ACCEPTED retained; all later effects independently fenced |
 | U07-VG-018 | DB transaction begins pre-deadline, final F8 statement after deadline | no false ACCEPTED based on transaction-start time |
 | U07-VG-019 | two distinct fresh answers contest same wait | exactly one winner, loser typed disposition |
-| U07-VG-020 | time source/currentness unavailable or unverified SQL dialect | DEFER/F8_TIME_AUTHORITY_UNAVAILABLE, zero acceptance/effects |
+| U07-VG-020 | primary DB statement-time authority cannot be certified | operational DEFER + F8_TIME_AUTHORITY_UNAVAILABLE, zero committed business verdict/new effects (branch CLOCK_UNCERTIFIED) |
 
 ### RDP-03 — P01/Consultation/APPLIED and effect replay
 
@@ -152,17 +209,17 @@ Each row is a **design-only requirement**; IDs `U07-VG-001..060` are reserved fo
 |---|---|---|
 | U07-VG-033 | U06 metadata-only Checkpoint without executable image | no COMPATIBLE_CHECKPOINT, no invented runnable continuation |
 | U07-VG-034 | valid executable checkpoint + pinned history | one restore-only grant and parked RESUMED_VERIFIED readback |
-| U07-VG-035 | full certified deterministic rehydrate proof | stable derived continuation Run and parked-state digest match |
+| U07-VG-035 | exact full P02 owner-certified original plan/cursor/effect manifest and approved recipe | one stable derived continuation Run, signed parked-state/cursor digest match and zero business effects (branch PROOF_FULLY_CERTIFIED) |
 | U07-VG-036 | historical UNKNOWN/PARTIAL_SUCCESS Tool attempt | no rehydrate, no history/tool replay |
 | U07-VG-037 | U15 terminal wins before P02 restore-only start grant | no first physical restoration |
-| U07-VG-038 | restore-only grant committed then U15 terminates before worker start | same inert grant may park if explicitly approved; no business node/C |
+| U07-VG-038 | authorized inert restore-grant-first policy digest and U15 terminal second, before worker start | same immutable grant produces one parked state and no business node/C (branch RESTORE_GRANT_POLICY_APPROVED; missing owner authorization => Tier-0 blocked) |
 | U07-VG-039 | grant COMMIT UNKNOWN | no first physical restore until authoritative grant readback |
 | U07-VG-040 | cursor points at Tool/U02, scheduler callback or retry | global parked landing barrier blocks node/tool/model/U02/Clinical effects |
 | U07-VG-041 | P02 owner restore completed but reply/receipt lost | query same Thread/Run owner result; no second restore |
 | U07-VG-042 | restore succeeded, C/P01 later fails or U15 changes | F8 historical ACCEPTED intact; no automatic scheduler or U02 |
 | U07-VG-043 | E APPLIED+PENDING but no U15 Stage-F grant | zero outbound U02 sends |
 | U07-VG-044 | U15 terminal first before F grant | durable BLOCKED_TERMINAL, zero U02 sends |
-| U07-VG-045 | F grant first then U15 terminal before transport | only same granted effect may finish under authorized U15 policy |
+| U07-VG-045 | approved U15 post-grant same-effect dispatch policy digest and F grant first, terminal before transport | only original immutable handoff ID may be sent per bounded fixture retry schedule (branch DISPATCH_GRANT_POLICY_APPROVED; unapproved policy => Tier-0 blocked) |
 | U07-VG-046 | U02 consumer ACK lost / retry | same immutable handoff ID and consumer query; no producer exactly-once fact assumption |
 | U07-VG-047 | U02 consumer lacks idempotent admission/receipt query | NOT_READY, no outbound dispatch |
 | U07-VG-048 | delivery ACK reported but no U02 Clinical Fact receipt | U07 cannot claim Clinical Fact formed or modify U02 truth |
@@ -172,7 +229,7 @@ Each row is a **design-only requirement**; IDs `U07-VG-001..060` are reserved fo
 | ID | Scenario | Required observation |
 |---|---|---|
 | U07-VG-049 | first-ever F8 lacks prior F8 result; Stage E lacks APPLIED result | precondition checks pass if capabilities/earlier effects valid; own receipts verified only POST |
-| U07-VG-050 | F grant, actual transport, U02 accept and U02 Fact phases | distinct persisted statuses; grant/ACK/Fact not interchangeable |
+| U07-VG-050 | Stage E one intent; grant, transport and U02 receipt without later Fact commit | one logical handoff and grant, one unique consumer admission, zero Fact commits until U02 owner commits; separate receipt refs (branch F_GRANTED_DISPATCH_ACKED_NO_FACT) |
 | U07-VG-051 | P01 field grant revoked between READY and Stage C commit | owner-fenced commit blocks; zero Clinical version advance |
 | U07-VG-052 | F3 policy release revoked or P06 scope altered before relevant commit | fail-closed owner recheck; no cached-ready bypass |
 | U07-VG-053 | U02 consumer endpoint/permission changes after grant, before send | no outbound until current consumer authority verified |
@@ -184,7 +241,7 @@ Each row is a **design-only requirement**; IDs `U07-VG-001..060` are reserved fo
 | U07-VG-059 | MySQL vs Oracle time precision/current-statement semantics | both dialected tests prove same owner winner/deadline policy or invalid evidence |
 | U07-VG-060 | F8 P02 P01/Consultation journal Outbox P05 identities | exact single-root lineage; each owner receipt independent of Trace |
 
-All 60 rows are **unexecuted design oracles**, not existing runnable test methods. After design acceptance and separate implementation authorization, a **machine-readable case expectation file** must explicitly enumerate every ID, fixture ID, actual source-of-authority, owner outcome, side-effect counts, required dialect and negative assertions. An omitted case blocks authoritative closure.
+All 60 rows are **unexecuted design scenario families**, not reviewed machine-readable Oracle results or existing runnable test methods. Conditional families require the independently frozen disjoint branches in §5.1. After design acceptance and separate implementation authorization, a **machine-readable case expectation file** must explicitly enumerate every ID, fixture ID, actual source-of-authority, owner outcome, side-effect counts, required dialect and negative assertions. An omitted case blocks authoritative closure.
 
 ## 7. Cross-cutting concurrency and crash schedule
 
@@ -238,6 +295,17 @@ DB source logs and connection metadata must avoid PHI; data export contains sani
 - **HG-09 authority gate escape:** force a pending CA to appear authorized in a fixture without owner approval => invalid.
 - **HG-10 dialect skip:** suppress Oracle DB job while keeping expected both-dialect cases => INCOMPLETE.
 
+### 9.1 Two-tier verification authorization profile (BF-U07-RDP06-IR-02)
+
+`TIER-0 AUTHORITY_NEGATIVE_PRECHECK`: **manifest-only** test of source heads, authorization/gate status and missing/forged/revoked authorities through the trusted authorization evaluator. It must not instantiate/invoke the U07 SUT, Runtime, DB mutation, U02 sender, tool/model, clinical owner or physical side-effect adapter. Tier-0 may produce *valid negative-gate evidence* while Foundation audit or owner CA remains `NOT_PASSED / NOT_AUTHORIZED`. `VG-058` and harness self-test `HG-09` are Tier-0 cases: expected `BLOCKED_AUTHORITY / NOT_READY` and zero SUT physical effects. Tier-0 case evidence must be labeled `AUTHORITY_NEGATIVE_ONLY` and cannot be counted as physical success.
+
+`TIER-1 GOVERNED_PROFILE_B_PHYSICAL`: requires **before any SUT operation** independently proven authorization for every participating owner CA, Foundation audit, scoped PROFILE-B producer permissions, exact Manifest/Oracle/Fixture/Runner heads and sandbox isolation. Then and only then invoke synthetic real-SUT MySQL/Oracle, P02, P01/Consultation, synthetic U02 and cross-owner faults. Tier-1 may include its **own** negative-effect SUT cases using *owner-authorized fault injection*; do not turn off runtime authorization to execute them.
+
+`U07TierVerdictV1`: `TIER0_NEGATIVE_PASS | TIER0_NEGATIVE_FAIL | TIER0_INVALID_EVIDENCE | TIER1_NOT_AUTHORIZED | TIER1_INCOMPLETE | TIER1_FAIL | TIER1_PASS_PENDING_REVIEW`. TIER-0 PASS **never** elevates overall to `PASS_PENDING_INDEPENDENT_EVIDENCE_REVIEW`. Composite full PASS requires both TIER-0 authority-negative and all Tier-1 physical, dialect and regression gates. When any owner CA is unapproved, TIER-1 is `NOT_AUTHORIZED`; Tier-0 passing is still evidence of correct refusal, not permission to create a synthetic `AUTHORIZED` fixture. Missing or forged authority-core refs => `INVALID_EVIDENCE`, not valid negative-gate pass.
+
+A single evidence bundle keeps separated `tier0_authority_negative_cases` and `tier1_physical_cases`, with mutually exclusive case execution identities; every U07-VG branch declares its tier. Tier-0 blocked status cannot be silently relabeled as an `INCOMPLETE` physical observation.
+
+
 ## 10. Runner proposal and observation isolation
 
 **Proposed files; not created or executed under RDP-06 design:**
@@ -257,8 +325,8 @@ diagnosis-service/src/test/resources/u07/u07-auth-profile-review-gate.json
 Pattern may borrow U06's conceptual runner/manifest/guard approach **without** reusing frozen U06 oracle, verification identity, authorization profile or claiming U06 tests prove U07 physical capability.
 
 Runner sequence:
-1. resolve exact reviewed authorization profile and authority-core digest; fail if any mandatory owner authorization is missing;
-2. independently validate contract manifest, reviewed oracle, fixture and scope gates; verify source/migration/runner exact HEAD and hashes;
+1. independently validate the trusted authority core, then run **Tier-0 manifest-only negative-gate assessments** (including legitimately pending CAs); if any owner authorization is missing, mark Tier-1 NOT_AUTHORIZED and do not instantiate the physical SUT;
+2. only when all required owner authorizations are valid, verify Tier-1 contract manifest, independently reviewed oracle, fixture, synthetic profile and source/migration/runner exact HEAD/hashes before physical work;
 3. start isolated ephemeral MySQL/Oracle and synthetic U02, verify live-socket denial tripwires and synthetic scope;
 4. invoke actual SUT through specified public or owner adapter boundaries; observer records statuses/rows/owner receipts/attempted side effects **without importing expected oracle**;
 5. execute deterministic concurrent workers and fault schedules with exact effect identity and owner readback;
@@ -266,7 +334,7 @@ Runner sequence:
 7. run focused U07 tests, full diagnosis-service regression, static/build/profile barriers; capture real exit codes;
 8. produce canonical durable result bundle and integrity digests; then send **separately** to independent evidence-only reviewer.
 
-A test that directly executes production clinical endpoints, lacks physical transaction environment or uses hidden external access MUST fail the authorization/isolation gate and must not be rerun “best effort.”
+A test that directly executes production clinical endpoints, lacks physical transaction environment or uses hidden external access MUST fail the authorization/isolation gate and must not be rerun “best effort.” A Tier-0 PASS does not permit skipping Step 2 or issuing a Tier-1 PASS.
 
 ## 11. Structured execution/effect evidence
 
@@ -288,12 +356,54 @@ U07CaseObservationV1 {
                    consultation_active_commits, outbox_intents, u02_send_attempts,
                    u02_consumer_admissions, U02_fact_commits,
                    tool_calls, model_calls, external_network_attempts},
-  negative_effect_probe_result, observed_failure_class, trace_ref,
+  u02_effect_counters_v1 + unique_handoff_and_grant_id_relations?,
+  intercept_coverage_digest?, synthetic_consumer_receipt_log_ref?,
+  tier_id + tier_evidence_class, negative_effect_probe_result, observed_failure_class, trace_ref,
   test_exit_code, observed_authority_provenance_refs[]
 }
 ~~~
 
 Typed count assertions must report both expected and observed counts at a **defined causal boundary**; zero attempted U02 sends is not equivalent to zero accepted consumer facts if earlier effects existed. Post-commit receipt evidence must be observed from the corresponding owner store, never inferred from scheduler log, response text or Trace. For partial Saga failures, count irreversible prior stages accurately and assert **no additional unauthorized effect**.
+
+### 11.1 Logical U02 effect and physical transport evidence (BF-U07-RDP06-IR-03)
+
+`exactly-one U02 handoff` in Unit Spec §26 means **one committed logical handoff identity and one independently de-duplicated consumer admission per original effect**, **not** one physical transport attempt. This distinction is a normative test invariant:
+
+~~~text
+U07U02EffectCountersV1 {
+  handoff_effect_id, original_root_resume_effect_id,
+  logical_u02_handoff_intents_unique,
+  dispatch_grants_unique,
+  physical_send_attempts,
+  synthetic_consumer_receive_attempts,
+  consumer_admissions_unique,
+  consumer_idempotent_replays,
+  u02_clinical_fact_commits,
+  unauthorized_external_connection_attempts,
+  actual_unauthorized_external_connections,
+  sender_attempt_ids[], consumer_receipt_ids[], owner_readback_refs[],
+  causal_window_start_receipt + causal_window_end_receipt
+}
+~~~
+
+All counts are **deltas in a defined same-root causal window** with owner-backed readback; preexisting historical facts must not be counted as a new effect. Physical send attempts are counted **before** network issuance and include failed/lost-ACK attempts. Consumer receive attempts may differ from sender attempts (lost requests). Unique consumer admissions are keyed on immutable handoff ID and independently verified at the isolated consumer. U02 Clinical Fact commits are a **separate U02 owner fact** and cannot be inferred from send attempts, Outbox or ACK.
+
+| Frozen branch / effect window | Unique intents | Unique grants | Physical send attempts | Unique consumer admissions | New U02 Fact commits |
+|---|---:|---:|---|---:|---:|
+| Stage E committed, Outbox PENDING, before F | 1 | 0 | 0 | 0 | 0 |
+| U15 wins before F grant | 1 historical | 0 | 0 | 0 | 0 |
+| F grant committed, send not yet started | 1 | 1 | 0 | 0 | 0 |
+| single successfully ACKed synthetic send, no U02 Fact phase | 1 | 1 | 1 | 1 | 0 |
+| lost ACK after consumer admitted; precisely one scheduled retry of same ID | 1 | 1 | 2 | 1 | 0 until U02 separately acts |
+| consumer rejects initial same-ID request and stores rejection receipt | 1 | 1 | 1 | 0 | 0 |
+| authorized grant-first, U15 terminal before transport, one permitted test send | 1 | 1 | 1 | 1 only if recipient accepted | 0 unless independently U02-authorized |
+| producer restarts after E or F, before new send, original owner receipt exists | 1 | 0 or 1 as exact restart fixture declares | 0 **additional sends** until recovered grant and consumer query | 0 **additional** | 0 **additional** |
+
+For any asynchronous or retry-scheduled branch, expected send attempts are **exact** from an independently reviewed deterministic injector schedule; if transport may fail pre-receive, per-branch `synthetic_consumer_receive_attempts` must be fixed separately (e.g., first delivered-but-ACK-lost + duplicate retry => 2 receive attempts, 1 unique admission, 1 replay). Variable trial count without frozen bounds/attempt IDs is `CONTRACT_EXPECTATION_GAP`, not an Oracle success range.
+
+**Isolation:** select an explicit **in-process synthetic U02 receiver adapter** for V1 that never opens a real network socket; a loopback endpoint requires a separate explicit allowlisted test-network authorization and independent interceptor proof. Intercept at sender interface **before** send, record stable handoff ID/attempt ID/target idempotency key/endpoint profile. Consumer independently records every receive, unique admission, replay and ACK/rejection. Capture raw unauthorized outbound attempts from a separate global socket/HTTP/queue interception layer; approved in-process synthetic calls count in `physical_send_attempts` but `actual_unauthorized_external_connections = 0`. No intercept coverage, endpoint identity proof or side-effect tripwire => `INVALID_EVIDENCE`, never interpreted as zero outbound.
+
+**Grant-first after later terminalization** requires source-approved immutable U15 policy; without it a positive physical send case is Tier-1 NOT_AUTHORIZED. ACK loss does not authorize a different handoff ID. Full U02 Fact idempotency remains **U02-only** and a separate receipt gate; a U07 verification PASS cannot assert clinical result formation.
 
 ## 12. Durable result bundle and fail-closed final verdicts
 
@@ -314,6 +424,10 @@ U07VerificationEvidenceBundleV1 {
   full_regression_results, test_log_refs + test_log_digests,
   external_side_effect_attestation + interception_results,
   artifact_file_manifest_with_sha256,
+  tier0_authority_negative_cases + tier0_verdict,
+  tier1_physical_cases + tier1_verdict,
+  u02_logical_vs_physical_effect_counter_summary,
+  traceability_matrix_digest + branch_oracle_coverage_summary,
   structural_observation_status, physical_authority_status,
   preliminary_verdict, independent_review_ref?,
   created_at, retention_policy_ref
@@ -327,7 +441,7 @@ U07VerificationEvidenceBundleV1 {
 - `PASS_PENDING_INDEPENDENT_EVIDENCE_REVIEW`: all mandatory cases and gates valid and green at exact head, but independent review not done; **not a merge/authorization**.
 - `PASS_REVIEWED`: after independent evidence-only review validates exact unchanged manifest, results, receipts and side effect counts; still does not itself authorize merge, PROFILE-A or production.
 
-A valid SUT failure is **FAIL**, not INCOMPLETE. Incomplete coverage is not a passing result. An independent reviewer can reject the preliminary runner finding, and that must invalidate any earlier claim of accepted evidence.
+A full positive PASS is **impossible** while Tier-1 owner permissions, Foundation audit, dialects or mandatory positive cases are missing; a Tier-0 negative gate PASS is retained only as scoped denial evidence. A valid SUT failure is **FAIL**, not INCOMPLETE. Incomplete coverage is not a passing result. An independent reviewer can reject the preliminary runner finding, and that must invalidate any earlier claim of accepted evidence.
 
 ## 13. Source/contract change invalidation, retention and review order
 
@@ -389,12 +503,17 @@ IR-U07-RDP06-13  Does harness reject tampered oracle, fixtures, source/migration
 IR-U07-RDP06-14  Are any skipped dialect/owner integration tests INCOMPLETE rather than PASS?
 IR-U07-RDP06-15  Does the complete bundle support independent recomputation of integrity and verdict?
 IR-U07-RDP06-16  Are verification design acceptance and implementation/evidence/merge authorization strictly separate?
+IR-U07-RDP06-17  Are every conditional scenario's expected result and owner-policy fixture branch fixed independently of SUT outputs?
+IR-U07-RDP06-18  Does an authoritative source-case/Unit Spec §26 trace matrix detect missing suffixed RDP01 and F8/RDP03/RDP04/RDP05 scenarios?
+IR-U07-RDP06-19  Is Tier-0 pending-CA denial test independent from Tier-1 authorized physical SUT testing, with no PASS promotion?
+IR-U07-RDP06-20  Are logical handoff IDs, grants, transport attempts, consumer admission/replays and Clinical Fact effects counted separately under intercepted synthetic U02?
 ~~~
 
 ## 16. Current design status and next gate
 
 ~~~text
-U07-RDP-06 = DESIGN_CANDIDATE / READY_FOR_INDEPENDENT_DESIGN_REVIEW / NOT_FROZEN
+U07-RDP-06 = TARGETED_REMEDIATION_CANDIDATE / READY_FOR_TARGETED_INDEPENDENT_RE_REVIEW / NOT_FROZEN
+BF-U07-RDP06-IR-01..03 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
 B-U07-RG-06 = OPEN / DESIGN_REVIEW_REQUIRED
 
 U07-RDP-01..05 = CONDITIONALLY_ACCEPTED_DESIGN
@@ -406,4 +525,4 @@ All inherited Foundation and controlled-amendment gates = BLOCKING
 PROFILE-A / PHI / real-patient / production = BLOCKED
 ~~~
 
-**Next permitted step:** `U07-RDP-06 Independent Design Review` of the exact commit head. Inspect the deterministic completeness of expected oracles, dual-dialect matrix, owner proof validity, negative side-effect tripwires, evidence bundle integrity and physical gate separation. No Merge, code, migrations or test-execution authorization accompanies this contract.
+**Next permitted step:** `U07-RDP-06 Targeted Independent Design Re-Review` of the amended exact commit head. Inspect the deterministic completeness of expected oracles, dual-dialect matrix, owner proof validity, negative side-effect tripwires, evidence bundle integrity and physical gate separation. No Merge, code, migrations or test-execution authorization accompanies this contract.
