@@ -35,11 +35,78 @@ METHODS = {"U01ConsultationService": "start", "CanonicalBusinessEventLedger": "r
            "CDPManager": "createCDP", "CDPVersionService": "createInitialVersion", "RuntimeBindingService": "bind", "ClinicalRunCoordinator": "openRun"}
 
 
+def _java_code_only(text: str) -> str:
+    """Conservatively blank Java comments, strings, chars and text blocks.
+
+    Preserve newlines/offsets to keep source line evidence accurate. Unclosed
+    lexical constructs fail closed instead of treating their contents as code.
+    """
+    out = list(text)
+    state = "CODE"
+    i = 0
+    while i < len(text):
+        c = text[i]
+        nxt = text[i + 1] if i + 1 < len(text) else ""
+        triple = text.startswith('"""', i)
+        if state == "CODE":
+            if c == "/" and nxt == "/":
+                state = "LINE"
+                n = 2
+            elif c == "/" and nxt == "*":
+                state = "BLOCK"
+                n = 2
+            elif triple:
+                state = "TEXT_BLOCK"
+                n = 3
+            elif c == '"':
+                state = "STRING"
+                n = 1
+            elif c == "'":
+                state = "CHAR"
+                n = 1
+            else:
+                i += 1
+                continue
+            for k in range(i, i + n):
+                out[k] = " "
+            i += n
+            continue
+        if state == "LINE" and c == "\n":
+            state = "CODE"
+            i += 1
+            continue
+        if state == "BLOCK" and c == "*" and nxt == "/":
+            out[i] = " "
+            out[i + 1] = " "
+            i += 2
+            state = "CODE"
+            continue
+        if state == "TEXT_BLOCK" and triple:
+            for k in range(i, i + 3):
+                out[k] = " "
+            i += 3
+            state = "CODE"
+            continue
+        if state in ("STRING", "CHAR") and c == "\\" and i + 1 < len(text):
+            out[i] = " "
+            if text[i + 1] != "\n":
+                out[i + 1] = " "
+            i += 2
+            continue
+        if (state == "STRING" and c == '"') or (state == "CHAR" and c == "'"):
+            state = "CODE"
+        if c != "\n":
+            out[i] = " "
+        i += 1
+    if state not in ("CODE", "LINE"):
+        raise EvidenceError("UNCLOSED_JAVA_COMMENT_OR_LITERAL")
+    return "".join(out)
+
+
 def _member_tx(text: str, method: str) -> bool:
-    # Declared annotation only; never actual Spring interception evidence.
+    # Called with code-only text; annotations in comments/literals cannot count.
     rx = r"@Transactional(?:\([^)]*\))?\s+public\s+[\w<>?,\[\]. ]+\s+" + re.escape(method) + r"\s*\("
     return re.search(rx, text, re.MULTILINE) is not None
-
 
 def project(archive: bytes, snapshots: dict[str, bytes]) -> dict:
     if not isinstance(archive, bytes):
@@ -71,7 +138,7 @@ def project(archive: bytes, snapshots: dict[str, bytes]) -> dict:
         if actual_blob is not None and actual_blob != proof["git_blob"]:
             raise EvidenceError("source Git blob mismatch")
         sources.append(proof)
-        source_map[node] = raw.decode("utf-8", errors="strict")
+        source_map[node] = _java_code_only(raw.decode("utf-8", errors="strict"))
     nodes = []
     for node in sorted(FILES):
         nodes.append({"name": node, "status": "SOURCE_ONLY", "declared_transactional": _member_tx(source_map[node], METHODS[node]),
