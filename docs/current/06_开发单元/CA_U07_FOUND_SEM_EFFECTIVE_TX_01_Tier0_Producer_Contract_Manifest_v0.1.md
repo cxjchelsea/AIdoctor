@@ -2,11 +2,14 @@
 
 > Exact authorized decision: [PR #304](https://github.com/cxjchelsea/AIdoctor/pull/304), `fd820541a6a94993c7e698661d7d01c3fd5f74de`.
 > Baseline scanned source: `main@6d4fd787600e3a57f01f3e17893e6d98893ac546`, tree `1bfe776f76c986d4e6199a9b820f2cc20773a181`.
-> Producer: **CANDIDATE IMPLEMENTED / INDEPENDENT REVIEW PENDING**; no implementation verification closure or merge granted.
+> Producer: **TARGETED_REMEDIATION_COMPLETE / READY_FOR_TARGETED_INDEPENDENT_IMPLEMENTATION_AND_EVIDENCE_RE_REVIEW**; this is not independent closure or merge authorization.
+> Findings source: [PR #306](https://github.com/cxjchelsea/AIdoctor/pull/306), BF-U07-FOUND-T0-IMPL-01/02, RF-U07-FOUND-T0-IMPL-01/02.
 
 ## 1. Exact source and evidence provenance
 
 Consumes the pre-existing exact-head read-only full tracked-source scan from PR #297 / #298: GitHub Actions `37736999966`, artifact `11531528615`, `u07-foundation-exact-head-source-inventory`. The three files in that ZIP are `foundation-exact-head-inventory.json`, `foundation-matches.tsv`, `foundation-summary.md`. Producer checks the input archive SHA-256 and JSON SHA-256 for output traceability, validates inventory `source_head`, `tree_sha`, 2,112 tracked paths, 2,063 text and 49 binary classifications, zero skipped, 256 matches, unique paths and all match-to-source SHA256 / Git blob structure.
+
+**Independent trust anchor (checked before parsing):** archive SHA-256 `0ab0682aa9d14f08573a53d47c4ad54c0cdba2955747b749431901b82e694089` and archive-contained JSON SHA-256 `b28d72868833a8c109938025a6077dd6799924e89e31a34572c4d186f5bcf077` are frozen from PR #298 and validated before accepting caller-controlled metadata. Repacked archives or modified unrelated entries fail closed even when self-reported HEAD/tree/counts remain correct.
 
 The original CI artifact is the immutable source of file inventory **only**. It does not contain complete Java source bytes. Therefore the producer additionally **requires caller-supplied snapshots of six exact-main Java sources**, at the same relative paths shown below, and independently validates content SHA-256 from the inventory and Git blob SHA when indexed. It does not fetch or synthesize source text or silently substitute `latest` branch.
 
@@ -36,10 +39,10 @@ Offline invocation **after manually providing the authorized local inputs**:
 python tools/u07_foundation_tx_topology/static_projection.py \
   --archive /isolated-evidence/u07-foundation-exact-head-inventory.zip \
   --snapshots-dir /isolated-source-snapshots \
-  --output /isolated-evidence-out/tier0-source-projection.json
+  --artifact-dir /isolated-evidence-out
 ```
 
-The caller-provided snapshot directory mirrors the six `diagnosis-service/src/main/java/...` paths. The program does not clone, run Git, open sockets or connect to a database. `--output` must be new and outside the provided snapshot directory and producer directory; existing outputs are not overwritten. Producer prints only the `SOURCE_ONLY` projection's SHA-256.
+The caller-provided snapshot directory mirrors the six `diagnosis-service/src/main/java/...` paths. The program does not clone, run Git, open sockets or connect to a database. `--output` is a **pre-existing isolated artifact directory**, separate from snapshots, the producer directory and the input archive's directory. The fixed output is `tier0-source-projection.json` inside this directory; existing output is not overwritten and symlinked boundaries are rejected. Producer prints only the `SOURCE_ONLY` projection's SHA-256.
 
 Output: canonical sorted UTF-8 JSON with `schema`, `status=SOURCE_ONLY`, `source_head`, `source_tree`, `input_archive_sha256`, `input_inventory_sha256`, verified `sources` list (`source_path`, SHA-256, Git blob), declared `nodes`, declared `edges` with paths/line numbers, explicit `effective_manager=UNKNOWN`, `entity_manager_factory=UNKNOWN`, `datasource=UNKNOWN`, `spring_context_executed=false`, `database_access=false`, and `limitations`. Proposed U07 admission/binding nodes = `NOT_IMPLEMENTED`. No positive configured-manager, proxy identity, transaction owner, JDBC enlistment, actual COMMIT or U07 atomicity statements.
 
@@ -61,10 +64,14 @@ A **separately reviewed exact-source snapshot package** is needed for accepting 
 
 ## 5. Validation, status and governance
 
-Implementation validation performed offline on synthetic fixtures: `python -m unittest -v test_static_projection` (stdlib), plus the real PR #297 JSON inventory's static schema validation. These results **do not** verify an actual six-snapshot output until those independent raw sources are supplied and checked. Any missing source snapshot must remain a hard failure. No CI workflow is created in this implementation scope.
+**Targeted remediation validation (local mirrored code, not yet independently SHA-reconciled exact GitHub HEAD):** `python -m unittest -v test_static_projection` = **11 passed**. The two new forged-input tests use the unfalsified frozen digest; the missing/duplicate-edge cases repack a self-consistent synthetic inventory with updated source SHA-256/Git blob and assert the *semantic* edge error rather than a generic hash failure. The real PR #297 archive SHA-256, extracted JSON SHA-256 and 2,112-entry inventory schema also validate locally. Python syntax validation succeeded. These local results are **not** asserted as an exact-GitHub-HEAD CI test run, and do not independently close RF-U07-FOUND-T0-IMPL-01. These results **do not** verify an actual six-snapshot output until those independent raw sources are supplied and checked. Any missing source snapshot must remain a hard failure. No CI workflow is created in this implementation scope.
 
 ```text
-Tier0 candidate = IMPLEMENTED_FOR_INDEPENDENT_REVIEW
+Tier0 candidate = TARGETED_REMEDIATED_FOR_INDEPENDENT_RE_REVIEW
+BF-U07-FOUND-T0-IMPL-01 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
+BF-U07-FOUND-T0-IMPL-02 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
+RF-U07-FOUND-T0-IMPL-01 = OPEN / EXACT_GITHUB_HEAD_TEST_EVIDENCE_PENDING
+RF-U07-FOUND-T0-IMPL-02 = OPEN / REAL_SIX_SOURCE_PROJECTION_PENDING
 Tier0 evidence schema = SOURCE_ONLY
 Tier0 exact-main full six-snapshot projection = NOT_EXECUTED / INPUT_SNAPSHOTS_NOT_PACKAGED
 Tier0 independent implementation review = PENDING
