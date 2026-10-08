@@ -6,7 +6,8 @@
 > Upstream RDP-01: PR #266 @ `4f98e950f6d7dfedd7c046dedfc9db7e52135b04` (design conditionally accepted in PR #270 @ `d43ac7fa1b6d65e8db27a5a316ee650f8137e4e2`)
 > Runtime integration reference: `main@6d4fd787600e3a57f01f3e17893e6d98893ac546`
 > Scope: **F8 OWNER / BUSINESS VERDICT / PRECEDENCE / DECISION DURABILITY PHYSICAL DESIGN CANDIDATE**
-> Status: **SECOND_TARGETED_REMEDIATION_CANDIDATE / PENDING_EXACT_HEAD_INDEPENDENT_RE_REVIEW / NOT_FROZEN**
+> Status: **THIRD_TARGETED_REMEDIATION_CANDIDATE / PENDING_EXACT_HEAD_INDEPENDENT_RE_REVIEW / NOT_FROZEN**
+> Second targeted independent re-review PR #274 @ `e1fedc43b861c372e15e1f62fadb75a7e73941a5`: REVISE_REQUIRED, BF-U07-RDP02-IR-01 remains OPEN solely for contradictory F8-T31/T38 oracle premises; BF-U07-RDP02-IR-02 remains conditionally resolved with unimplemented U15 shared-fence dependency. This third author-side remediation does not close either gate.
 > Targeted re-review PR #273 at `0346ffe7701bc441fef1c7ad48e1fcd231c5be31` found BF-U07-RDP02-IR-01 OPEN (clock/commit linearization) and BF-02 conditional resolution with mandatory U15 shared fence. This revision is an author-side candidate, not a review closure.
 > Independent review PR #272 @ `8ce3c2ca140674c2e723b4c40e8a37ed25371216`: REVISE_REQUIRED / BF-U07-RDP02-IR-01 and IR-02. This amendment is an author-side proposal, not independent closure.
 >
@@ -440,19 +441,19 @@ Design-only, to be integrated into RDP-06:
 | F8-T24 | already APPLIED identical answer after Question superseded/expired | DUPLICATE by P1, no new ordinary effect |
 | F8-T25 | prior ACCEPTED but not APPLIED, now wait cancelled | preserve historical ACCEPTED; block pending new effects by RDP-03 terminal fencing |
 | F8-T26 | user-supplied occurred_at before deadline, server first ingress after expiration | EXPIRED; no backdating |
-| F8-T28 | ingress T1 before expiry T2, first F8 commit T3 after expiry | EXPIRED; not ACCEPTED or generic REJECTED |
-| F8-T29 | ingress T1, U15 cancel T2, F8 commit T3 | REJECTED/CANCELLED |
+| F8-T28 | original ingress T1 precedes authoritative U15 expiry T2; **first F8 final conditional statement** linearizes at T3 after T2, in certified shared time/fence domain | EXPIRED by P2; physical COMMIT instant is irrelevant to first-verdict classification |
+| F8-T29 | original ingress T1, non-expiry U15 cancel T2 durably committed under common Consultation fence; **first F8 final conditional statement** linearizes at T3 after T2, with no proven expiry | REJECTED/CANCELLED by P3; no ACCEPTED or new effects |
 | F8-T30 | first F8 ACCEPTED committed, then U15 expiry before P01 apply | historical ACCEPTED retained, later apply blocked |
-| F8-T31 | same instant deadline and first F8 commit without order proof | DEFER, no verdict |
+| F8-T31 | wall-clock reports apparent equality between a deadline and an F8 operation, but **no certified same-domain `t_f8_linearize` / owner terminal commit order / timestamp precision evidence is available**; physical COMMIT time is not the decision instant | DEFER / `F8_TIME_AUTHORITY_UNAVAILABLE`, no verdict; **NOT** the verified-equality case F8-T38 |
 | F8-T32 | original APPLIED identical event, U15 terminal, new canonical event after expiry | DUPLICATE with no effect |
 | F8-T33 | same prior Consultation version F8 vs U15 competing locks | one serial winner, loser rechecks |
 | F8-T34 | known U15 terminal, F8 owner lock not integrated | BLOCKED_DEPENDENCY / no ACCEPTED |
 | F8-T35 | DB conditional final statement at 10:00:59.999, deadline 10:01:00.000, COMMIT at 10:01:00.050 | ACCEPTED historically if commit succeeds; later effects independently fence; no false commit-time EXPIRED |
 | F8-T36 | separate DB time SELECT before deadline, unconditional INSERT after deadline | forbidden implementation; cannot claim ACCEPTED |
 | F8-T37 | U15 never writes, but deadline crosses before final conditional SQL statement | EXPIRED; Consultation lock cannot freeze clock |
-| F8-T38 | final statement sees t_f8_linearize exactly equal to deadline | EXPIRED, half-open window |
+| F8-T38 | final atomic conditional DB statement establishes **certified same-clock/same-precision** `t_f8_linearize == authoritative deadline`, with coherent owner fence | EXPIRED by P2, since legal interval is half-open; never DEFER merely because clocks are equal |
 | F8-T39 | transaction-start DB clock frozen despite elapsed time | DB clock unfit => DEFER/NOT_READY; no ACCEPTED |
-| F8-T40 | DB clock unknown precision or mismatched F3/U15 time domain | DEFER; no verdict/effects |
+| F8-T40 | DB clock precision, statement-current behavior or F3/U15 deadline time domain is unverified/inconsistent, so no authoritative equality/ordering can be established | DEFER / `F8_TIME_AUTHORITY_UNAVAILABLE`, no verdict/effects; same uncertainty family as F8-T31 |
 | F8-T41 | decision conditional insert succeeds but transaction commit outcome unknown | re-query unique F8 decision and claimant under new transaction; no optimistic ACCEPTED |
 | F8-T27 | typed owner evidence unavailable | operational defer; no fifth business verdict |
 
@@ -466,7 +467,7 @@ No actual tests are executed in this document. §5.1/§8.1.1 and F8-T28..41 cove
 | RDP-03 | persisted ACCEPTED decision, same-wait winner and fencing refs, original answer ref | RDP-03 owns K09/P01 effects and APPLIED, exact claim reconciliation; may not fabricate ACCEPTED |
 | RDP-04 | ACCEPTED decision ref and historically bound wait/thread/checkpoint provenance | P02 owns compatibility/rehydration, never rewrites ACCEPTED |
 | RDP-05 | F8 decision persistence, same-store lock, U06 issuance authority, versioned policy, P05 audit | must verify availability and contracts rather than assume implementation |
-| RDP-06 | precedence matrix, 27 scenario oracles, crash windows, negative effect assertions | independent executable evidence design, post-authorization execution |
+| RDP-06 | precedence matrix, 41 design-only scenario oracles (`F8-T01..T41`, 27 is listed out of order), crash windows and negative-effect assertions | independent executable evidence design, post-authorization execution; current list contains 41 distinct cases |
 | U14 / U15 | governed failure and terminal evidence | cannot create second F8 verdict, U07 cannot undo terminal state |
 
 **Dependency register**:
@@ -544,10 +545,10 @@ IR-U07-RDP02-11
 
 ```text
 B-U07-RG-02 = RDP-02 DESIGN_CANDIDATE / NOT_CLOSED
-U07-RDP-02 = SECOND_TARGETED_REMEDIATION_CANDIDATE / READY_FOR_SECOND_INDEPENDENT_RE_REVIEW / NOT_FROZEN
-BF-U07-RDP02-IR-01 = REMEDIATED_FOR_SECOND_RE_REVIEW / NOT_CLOSED
+U07-RDP-02 = THIRD_TARGETED_REMEDIATION_CANDIDATE / READY_FOR_THIRD_INDEPENDENT_RE_REVIEW / NOT_FROZEN
+BF-U07-RDP02-IR-01 = THIRD_TARGETED_ORACLE_ALIGNMENT / PENDING_EXACT_HEAD_INDEPENDENT_RE_REVIEW
 BF-U07-RDP02-IR-02 = CONDITIONAL_DESIGN_RESOLUTION / U15_UPSTREAM_PENDING
-BF-U07-RDP02-IR-01..02 = REMEDIATED_FOR_RE_REVIEW / NOT_CLOSED
+BF-U07-RDP02-IR-02 = CONDITIONAL_DESIGN_RESOLUTION / CA-U07-RDP02-U15-SHARED-FENCE-01_NOT_AUTHORIZED
 CA-U07-RDP02-U15-SHARED-FENCE-01 = REQUIRED / NOT_AUTHORIZED
 U07-RDP-01 = CONDITIONALLY_ACCEPTED_DESIGN / PENDING_AGGREGATE_COMPATIBILITY
 
@@ -556,4 +557,4 @@ U07 Implementation Authorization = NOT_GRANTED
 Production / PROFILE-A / PHI / real patient = BLOCKED
 ```
 
-Next permitted gate: **U07-RDP-02 Independent Design Review** against this exact-head candidate. This document is neither that review nor implementation evidence. No merge, squash, rebase, source-code implementation or clinical rollout is authorized.
+Next permitted gate: **U07-RDP-02 Third Targeted Independent Design Re-Review** against the new exact-head candidate. This document is neither that review nor implementation evidence. No merge, squash, rebase, source-code implementation or clinical rollout is authorized.
