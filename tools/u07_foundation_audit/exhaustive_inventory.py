@@ -99,13 +99,14 @@ def main():
                 continue
             text = raw.decode("utf-8", errors="replace")
             hits_this = []
+            git_blob = run(root, "hash-object", "--", name).decode().strip()
             for num, line in enumerate(text.splitlines(), start=1):
                 labels = [label for label, rx in COMPILED.items() if rx.search(line)]
                 if not labels:
                     continue
                 role = classify(name, labels)
                 for label in labels:
-                    entry = {"path": name, "line": num, "term": label, "consumer_role_candidate": role, "file_sha256": digest, "file_git_blob": run(root, "hash-object", "--", name).decode().strip()}
+                    entry = {"path": name, "line": num, "term": label, "consumer_role_candidate": role, "file_sha256": digest, "file_git_blob": git_blob}
                     matches.append(entry)
                     totals[label] += 1
                 hits_this.extend(labels)
