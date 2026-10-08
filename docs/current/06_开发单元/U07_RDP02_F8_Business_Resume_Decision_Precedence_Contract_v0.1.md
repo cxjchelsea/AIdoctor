@@ -441,6 +441,7 @@ Design-only, to be integrated into RDP-06:
 | F8-T24 | already APPLIED identical answer after Question superseded/expired | DUPLICATE by P1, no new ordinary effect |
 | F8-T25 | prior ACCEPTED but not APPLIED, now wait cancelled | preserve historical ACCEPTED; block pending new effects by RDP-03 terminal fencing |
 | F8-T26 | user-supplied occurred_at before deadline, server first ingress after expiration | EXPIRED; no backdating |
+| F8-T27 | typed owner evidence unavailable | operational defer; no fifth business verdict |
 | F8-T28 | original ingress T1 precedes authoritative U15 expiry T2; **first F8 final conditional statement** linearizes at T3 after T2, in certified shared time/fence domain | EXPIRED by P2; physical COMMIT instant is irrelevant to first-verdict classification |
 | F8-T29 | original ingress T1, non-expiry U15 cancel T2 durably committed under common Consultation fence; **first F8 final conditional statement** linearizes at T3 after T2, with no proven expiry | REJECTED/CANCELLED by P3; no ACCEPTED or new effects |
 | F8-T30 | first F8 ACCEPTED committed, then U15 expiry before P01 apply | historical ACCEPTED retained, later apply blocked |
@@ -455,7 +456,6 @@ Design-only, to be integrated into RDP-06:
 | F8-T39 | transaction-start DB clock frozen despite elapsed time | DB clock unfit => DEFER/NOT_READY; no ACCEPTED |
 | F8-T40 | DB clock precision, statement-current behavior or F3/U15 deadline time domain is unverified/inconsistent, so no authoritative equality/ordering can be established | DEFER / `F8_TIME_AUTHORITY_UNAVAILABLE`, no verdict/effects; same uncertainty family as F8-T31 |
 | F8-T41 | decision conditional insert succeeds but transaction commit outcome unknown | re-query unique F8 decision and claimant under new transaction; no optimistic ACCEPTED |
-| F8-T27 | typed owner evidence unavailable | operational defer; no fifth business verdict |
 
 No actual tests are executed in this document. §5.1/§8.1.1 and F8-T28..41 cover temporal linearization, expiry/cancel, concurrent claim, and crash oracles. MySQL/Oracle statement-clock semantics and the ability to express the atomic conditional write must be proven before implementation authorization. For all cases assert **zero forbidden Clinical State mutations / P02 resume / U02 handoff** unless independently authorized and the necessary later gates pass.
 
@@ -467,7 +467,7 @@ No actual tests are executed in this document. §5.1/§8.1.1 and F8-T28..41 cove
 | RDP-03 | persisted ACCEPTED decision, same-wait winner and fencing refs, original answer ref | RDP-03 owns K09/P01 effects and APPLIED, exact claim reconciliation; may not fabricate ACCEPTED |
 | RDP-04 | ACCEPTED decision ref and historically bound wait/thread/checkpoint provenance | P02 owns compatibility/rehydration, never rewrites ACCEPTED |
 | RDP-05 | F8 decision persistence, same-store lock, U06 issuance authority, versioned policy, P05 audit | must verify availability and contracts rather than assume implementation |
-| RDP-06 | precedence matrix, 41 design-only scenario oracles (`F8-T01..T41`, 27 is listed out of order), crash windows and negative-effect assertions | independent executable evidence design, post-authorization execution; current list contains 41 distinct cases |
+| RDP-06 | precedence matrix, 41 design-only scenario oracles (`F8-T01..F8-T41`), crash windows and negative-effect assertions | independent executable evidence design, post-authorization execution; current list contains 41 distinct cases |
 | U14 / U15 | governed failure and terminal evidence | cannot create second F8 verdict, U07 cannot undo terminal state |
 
 **Dependency register**:
