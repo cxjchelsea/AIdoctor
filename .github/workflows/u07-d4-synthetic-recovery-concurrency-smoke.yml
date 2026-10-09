@@ -5,6 +5,7 @@ on:
       - "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/**"
       - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4RecoveryConcurrencyJdbcSmoke.java"
       - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4AdversarialOwnedJdbcSmoke.java"
+      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4ForcedProcessExitWorker.java"
       - ".github/workflows/u07-d4-synthetic-recovery-concurrency-smoke.yml"
 
 permissions:
@@ -27,7 +28,8 @@ jobs:
             diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07D4SyntheticRecoveryInspector.java \
             diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07D4SyntheticOwnedTransactionRunner.java \
             diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4RecoveryConcurrencyJdbcSmoke.java \
-            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4AdversarialOwnedJdbcSmoke.java
+            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4AdversarialOwnedJdbcSmoke.java \
+            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4ForcedProcessExitWorker.java
       - name: Disposable MySQL with original V2 V3 V6 V7 schema
         shell: bash
         run: |
@@ -72,6 +74,35 @@ jobs:
           SQL
           mvn -B -ntp dependency:get -Dartifact=com.mysql:mysql-connector-j:8.0.33
           jar="$HOME/.m2/repository/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar"
+          # Actual child JVM forced termination: no graceful JDBC close.
+          for mode in pre post; do
+            set +e
+            java -cp "/tmp/u07_d4_classes:$jar" \
+              com.aidoctor.diagnosis.runtime.u07.U07D4ForcedProcessExitWorker \
+              "jdbc:mysql://127.0.0.1:33321/u07_d4_synthetic?useSSL=false&allowPublicKeyRetrieval=true" \
+              root "$password" "$mode"
+            rc=$?
+            set -e
+            if [[ "$mode" == pre ]]; then [[ "$rc" == 77 ]]; else [[ "$rc" == 78 ]]; fi
+          done
+          query() {
+            docker exec -e MYSQL_PWD="$password" "$name" mysql -uroot u07_d4_synthetic -N -B -s \
+              -e "$1"
+          }
+          # MySQL may need a moment to observe TCP closure from halted JVM.
+          pre_count=999
+          for retry in {1..20}; do
+            pre_count="$(query "SELECT COUNT(*) FROM canonical_business_event WHERE event_id='synthetic-d3-forced-pre'")"
+            [[ "$pre_count" == 0 ]] && break
+            sleep 1
+          done
+          [[ "$pre_count" == 0 ]] || { echo "FAIL forced pre-commit process exit left canonical row"; exit 1; }
+          app_pre="$(query "SELECT COUNT(*) FROM u07_event_application WHERE event_id='synthetic-d3-forced-pre'")"
+          [[ "$app_pre" == 0 ]] || { echo "FAIL forced pre-commit left application row"; exit 1; }
+          post_count="$(query "SELECT COUNT(*) FROM canonical_business_event WHERE event_id='synthetic-d3-forced-post'")"
+          app_post="$(query "SELECT COUNT(*) FROM u07_event_application WHERE event_id='synthetic-d3-forced-post' AND phase='ACCEPTED' AND row_version=1")"
+          [[ "$post_count" == 1 && "$app_post" == 1 ]] || { echo "FAIL forced post-commit evidence absent"; exit 1; }
+          echo "U07_D4_FORCED_JVM_TERMINATION=PASS pre_rollback=1 post_commit_durable=1"
           java -cp "/tmp/u07_d4_classes:$jar" \
             com.aidoctor.diagnosis.runtime.u07.U07D4RecoveryConcurrencyJdbcSmoke \
             "jdbc:mysql://127.0.0.1:33321/u07_d4_synthetic?useSSL=false&allowPublicKeyRetrieval=true" root "$password"
