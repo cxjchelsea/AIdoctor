@@ -1,0 +1,37 @@
+name: U07 Flyway 7 baseline compatibility matrix
+on:
+  pull_request:
+    paths:
+      - "diagnosis-service/scripts/u07_d1_mysql_isolated_smoke.sh"
+      - "diagnosis-service/scripts/stage_u07_d1_mysql_legacy_compat.py"
+      - "diagnosis-service/src/main/resources/db/migration/**"
+      - ".github/workflows/u07-flyway7-compatibility-matrix.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-mysql-matrix:
+    name: Flyway ${{ matrix.flyway }} / ${{ matrix.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        flyway: ["7.15.0", "9.22.3"]
+        mode: ["v7_only", "legacy_compat_full"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Preload disposable images
+        env:
+          FLYWAY_VERSION: ${{ matrix.flyway }}
+        run: |
+          docker pull mysql:8.0
+          docker pull "flyway/flyway:$FLYWAY_VERSION"
+      - name: Isolated migration validation (synthetic test-only)
+        env:
+          U07_D1_MODE: ${{ matrix.mode }}
+          U07_D1_FLYWAY_VERSION: ${{ matrix.flyway }}
+        run: bash diagnosis-service/scripts/u07_d1_mysql_isolated_smoke.sh

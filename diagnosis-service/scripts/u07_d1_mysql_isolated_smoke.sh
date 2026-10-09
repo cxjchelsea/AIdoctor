@@ -13,7 +13,14 @@ endpoint="$(docker context inspect default --format '{{ .Endpoints.docker.Host }
 [[ "$endpoint" == unix://* ]] || die "remote Docker endpoint forbidden"
 docker info >/dev/null 2>&1 || die "Docker daemon unavailable"
 MYSQL_IMAGE=mysql:8.0
-FLYWAY_IMAGE=flyway/flyway:9.22.3
+flyway_version="$(printenv U07_D1_FLYWAY_VERSION || true)"
+[[ -n "$flyway_version" ]] || flyway_version=9.22.3
+case "$flyway_version" in
+  7.15.0|9.22.3) ;;
+  *) die "unapproved Flyway version" ;;
+esac
+FLYWAY_IMAGE="flyway/flyway:$flyway_version"
+echo "U07_D1_FLYWAY_VERSION=$flyway_version"
 for img in "$MYSQL_IMAGE" "$FLYWAY_IMAGE"; do
   docker image inspect "$img" >/dev/null 2>&1 || die "pre-pull $img into trusted local Docker"
 done
@@ -37,6 +44,12 @@ elif [[ "$mode" == legacy_compat_full ]]; then
   python3 "$here/stage_u07_d1_mysql_legacy_compat.py" --source "$migrations" --destination "$stage" || die "compat staging refused"
   migrations="$stage"
   expected_history=7
+fi
+# Flyway 7 Docker runs as an unprivileged user; mktemp directories default
+# to 0700, so make only staged public SQL readable (never credentials).
+if [[ -n "$stage" ]]; then
+  chmod 755 "$stage"
+  chmod 644 "$stage"/V[0-9]*__*.sql
 fi
 random="$(python3 -c 'import secrets; print(secrets.token_hex(6))')"
 pw="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
