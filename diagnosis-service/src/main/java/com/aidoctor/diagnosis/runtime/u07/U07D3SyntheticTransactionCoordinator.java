@@ -83,27 +83,9 @@ public final class U07D3SyntheticTransactionCoordinator {
                     currentWait = r.getString(3);
                 }
             }
-            // An invalid currentness must never create a canonical event identity.
-            if (currentVersion != in.expectedConsultationVersion
-                    || !"WAITING_USER".equals(lifecycle)
-                    || !Objects.equals(currentWait, in.waitEffectId)) {
-                connection.rollback();
-                return Outcome.REJECTED_CURRENTNESS;
-            }
-            try (PreparedStatement p = connection.prepareStatement(
-                    "SELECT consultation_id,question_id,committed_row_version,effect_status "
-                            + "FROM clinical_consultation_wait_effect WHERE wait_effect_id=? FOR UPDATE")) {
-                p.setString(1, in.waitEffectId);
-                try (ResultSet r = p.executeQuery()) {
-                    if (!r.next() || !in.consultationId.equals(r.getString(1))
-                            || !in.questionId.equals(r.getString(2))
-                            || r.getLong(3) != in.expectedConsultationVersion
-                            || !"COMMITTED".equals(r.getString(4))) {
-                        connection.rollback();
-                        return Outcome.REJECTED_CURRENTNESS;
-                    }
-                }
-            }
+            // Reconcile an existing canonical event before applying currentness
+            // to a FIRST admission. Committed historical replay remains stable
+            // when the consultation later advances beyond WAITING_USER.
             String canonicalEventId = null;
             String canonicalConsultation = null;
             String canonicalDigest = null;
@@ -145,6 +127,27 @@ public final class U07D3SyntheticTransactionCoordinator {
                 }
                 connection.commit();
                 return Outcome.SAME_EVENT_REPLAY;
+            }
+            // An invalid currentness must never create a canonical event identity.
+            if (currentVersion != in.expectedConsultationVersion
+                    || !"WAITING_USER".equals(lifecycle)
+                    || !Objects.equals(currentWait, in.waitEffectId)) {
+                connection.rollback();
+                return Outcome.REJECTED_CURRENTNESS;
+            }
+            try (PreparedStatement p = connection.prepareStatement(
+                    "SELECT consultation_id,question_id,committed_row_version,effect_status "
+                            + "FROM clinical_consultation_wait_effect WHERE wait_effect_id=? FOR UPDATE")) {
+                p.setString(1, in.waitEffectId);
+                try (ResultSet r = p.executeQuery()) {
+                    if (!r.next() || !in.consultationId.equals(r.getString(1))
+                            || !in.questionId.equals(r.getString(2))
+                            || r.getLong(3) != in.expectedConsultationVersion
+                            || !"COMMITTED".equals(r.getString(4))) {
+                        connection.rollback();
+                        return Outcome.REJECTED_CURRENTNESS;
+                    }
+                }
             }
             // No unsafe catch-and-read in a rollback-only transaction: SQL unique
             // races throw, rollback, and require a fresh transaction for readback.
