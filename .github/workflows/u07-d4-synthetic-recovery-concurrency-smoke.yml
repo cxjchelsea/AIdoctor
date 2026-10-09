@@ -1,0 +1,74 @@
+name: U07 D4 synthetic crash and concurrency smoke
+on:
+  pull_request:
+    paths:
+      - "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/**"
+      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4RecoveryConcurrencyJdbcSmoke.java"
+      - ".github/workflows/u07-d4-synthetic-recovery-concurrency-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-d4-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Java 8 bytecode compilation
+        run: |
+          mkdir -p /tmp/u07_d4_classes
+          javac --release 8 -d /tmp/u07_d4_classes \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07EventApplicationRepository.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07D3SyntheticTransactionCoordinator.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07D4SyntheticRecoveryInspector.java \
+            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4RecoveryConcurrencyJdbcSmoke.java
+      - name: Disposable MySQL with original V2 V3 V6 V7 schema
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          name="u07-d4-${{ github.run_id }}-${{ github.run_attempt }}"
+          password="$(python3 -c 'import secrets;print(secrets.token_hex(24))')"
+          cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          docker run -d --name "$name" --pull always -p 127.0.0.1:33321:3306 \
+            -e MYSQL_ROOT_PASSWORD="$password" -e MYSQL_DATABASE=u07_d4_synthetic \
+            mysql:8.0 --default-authentication-plugin=mysql_native_password >/dev/null
+          ready=0
+          for i in {1..90}; do
+            if docker exec -e MYSQL_PWD="$password" "$name" mysql -uroot -N -B -e 'SELECT 1' >/dev/null 2>&1; then ready=1; break; fi
+            sleep 2
+          done
+          [[ "$ready" == 1 ]] || { echo "MySQL not ready"; exit 2; }
+          root=diagnosis-service/src/main/resources/db/migration
+          for v in 2 3 6 7; do
+            file="$(find "$root" -maxdepth 1 -name "V${v}__*.sql" -print -quit)"
+            [[ -n "$file" ]] || { echo "missing migration V$v"; exit 2; }
+            docker exec -i -e MYSQL_PWD="$password" "$name" \
+              mysql -uroot u07_d3_synthetic < "$file"
+          done
+          docker exec -i -e MYSQL_PWD="$password" "$name" mysql -uroot u07_d3_synthetic <<'SQL'
+          INSERT INTO clinical_consultation
+          (consultation_id,row_version,cdp_id,user_id,lifecycle_status,subject_status,
+          problem_status,scope_decision,early_safety_signal,start_event_id,created_at,
+          current_wait_effect_id)
+          VALUES ('synthetic-consult-d3',1,'synthetic-cdp-d3','synthetic-user',
+          'WAITING_USER','SYNTHETIC','SYNTHETIC','SYNTHETIC',FALSE,
+          'synthetic-start-d3','2026-01-01 00:00:00','synthetic-wait-d3');
+          INSERT INTO clinical_consultation_wait_effect
+          (wait_effect_id,parent_delivered_wait_effect_id,consultation_id,
+          question_id,delivery_id,payload_fingerprint,idempotency_key,
+          expected_prior_lifecycle,expected_prior_row_version,committed_lifecycle,
+          committed_row_version,effect_status,created_at,committed_at)
+          VALUES ('synthetic-wait-d3','synthetic-parent-d3','synthetic-consult-d3',
+          'synthetic-question-d3','synthetic-delivery-d3','synthetic-fingerprint',
+          'synthetic-wait-idem','ACTIVE',0,'WAITING_USER',1,'COMMITTED',
+          '2026-01-01 00:00:00','2026-01-01 00:00:00');
+          SQL
+          mvn -B -ntp dependency:get -Dartifact=com.mysql:mysql-connector-j:8.0.33
+          jar="$HOME/.m2/repository/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar"
+          java -cp "/tmp/u07_d4_classes:$jar" \
+            com.aidoctor.diagnosis.runtime.u07.U07D4RecoveryConcurrencyJdbcSmoke \
+            "jdbc:mysql://127.0.0.1:33321/u07_d3_synthetic?useSSL=false&allowPublicKeyRetrieval=true" root "$password"
