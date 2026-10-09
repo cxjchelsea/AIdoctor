@@ -159,3 +159,142 @@ STAGE_A1_IMPLEMENTATION_R3_SETUP_R4_CANARY = NOT_AUTHORIZED
 CLINICAL_PHI_PRODUCTION = NOT_AUTHORIZED
 MERGE = NOT_AUTHORIZED
 ```
+
+
+---
+
+## 5. PR #348 Targeted Remediation: RF-U07-S6-IR-01..03 (2026-10-09)
+
+This appendix is the targeted author-side correction to [PR #348](https://github.com/cxjchelsea/AIdoctor/pull/348), independent analytical review HEAD `4d5c13bd945d93517176ae032fd2013962ea53b7`, which reviewed previous PR #347 HEAD `28b6d6cf1094eafb302ff0101c6bceec0751372c`, Blob `f67bf39bc1da1855671cf3240a759028a731c4c9`. In case of ambiguity this §5 **tightens/supersedes**, but does not execute, §§1–4. Source facts and limitations remain unchanged; this author edit **does not create** a governance binding or make S6 effective.
+
+### 5.1 RF-U07-S6-IR-01 — A genuine manual consumer, distinct from data and issuer
+
+**Three distinct entities** are required even for lightweight personal governance:
+
+| Role | Concrete locus / identity | Operation | Explicit limitation |
+|---|---|---|---|
+| **Authority record** (data) | A future single immutable `U07PersonalTierPAuthorityBindingV1` record, pinned Git commit/blob, never this design file | Claims source identity, proposed scope, parent and validity; is subject to validation | Cannot read itself, authenticate itself, issue a new grant or satisfy independent review |
+| **Decision issuer** (human owner) | Authenticated repository owner `cxjchelsea`, with separate explicit scoped activation decision bound to a reviewed binding record | Chooses governance policy within genuine own-project competence, issues revocation | Is not a separate human independent Security approver; cannot waive a higher actual authority |
+| **Manual validation consumer** (documented procedure, not new runtime software) | An independent *analytical check step* using GitHub pinned readback and a recorded evidence/decision checklist; performed by owner with an AI analytical cross-check, explicitly classified `SOLO_OWNER_REVIEW + AI_ANALYTICAL_REVIEW` | Reads issuer event + immutable record + frozen parent applicability evidence, and independently checks source SHA, conflict matrix, UTC validity, revocation and operation scope. Emits `GOVERNANCE_PROFILE_REVIEW_ELIGIBLE_NO_EXECUTION` or `BLOCKED`. | Not an independent human, not a trusted automatic enforcement point; without verifiable inputs, emits `BLOCKED` |
+
+**Manual consumer inputs and execution order (future only):**
+
+1. Fetch actual `main` exact HEAD, PR #341 exact HEAD/Blob and the proposed binding record by **immutable ref**, not a title, branch name or copied field; verify each content digest.
+2. Read independent Owner S5 acceptance event `PR341#issuecomment-6075193477`; read a **separate** explicit S6-activation event if later given. Reject absent, self-referential, unsigned/unattributed or scope-mismatched events.
+3. Resolve policy parent through §5.2 using **independently obtained** applicable accepted policy references and negative-search scope statements; fail on an unknown possibly applicable superior control.
+4. Fetch the exact reviewed consumer mode, current owner identity, frozen conflict/compatibility findings and immutable reviewer provenance. Do not upgrade AI review to `INDEPENDENT_HUMAN`.
+5. Obtain trusted current UTC and fresh revocation-state readback per §5.3. Require one atomic *decision snapshot* matching immutable pins; reject stale/mismatched inputs.
+6. Write a separate review-result artifact/comment with `checked_at_utc`, checked main/profile/binding refs, parent-resolution branch, expiration/revocation readback IDs, decision reason code and `execution_allowed=false`.
+7. If a later separate **S7** grant is requested, its own human authorizer/reviewer MUST explicitly **re-perform** steps 1–6 against latest applicable state. A stale S6 review result cannot serve as a reusable command authorization.
+
+**Path A's actual meaning:** `S6_PERSONAL_GOVERNANCE_ONLY` means an accountable Owner policy was reviewed and may be applied to **governance preparation decisions** under its scope. It is not machine-enforced. Rename positive output `GOVERNANCE_PROFILE_REVIEW_ELIGIBLE_NO_EXECUTION`, never `R2_ALLOWED`, `COLLECTOR_ATTESTED`, `DENIED_BY_POLICY`, or `EFFECTIVE_FOR_EXECUTION`. If no one performed and recorded a complete validation readback, there is no positive consumer result: `S6=NOT_EFFECTIVE`.
+
+### 5.2 RF-U07-S6-IR-02 — Finite parent-resolution algorithm (no infinite approval chain)
+
+Personal project governance **may** have an authorized Owner root for a *local synthetic nonclinical project policy*, but not a power to rewrite a truly superior external or previously accepted frozen security/clinical control.
+
+| Precedence level | Acceptable grounded source | Decision outcome | Stop/fallback |
+|---|---|---|---|
+| P0: actually applicable higher legal, third-party asset, clinical, organizational security or contract rule | A verified binding source *and* proof its scope covers the requested operation/assets | `EXTERNAL_REQUIRED` — obey required approval, stop personal override | Missing mandatory external approval => `BLOCKED` |
+| P1: effective previously accepted repository policy applying to this exact personal R2 preparation | Immutable merged/frozen record, acceptance reference, and explicit operation scope | `REPOSITORY_RULE_MATCH`; apply its existing restrictions, allow exception only under its stated amendment procedure | If conflict or no accepted exception => `BLOCKED` |
+| P2: Owner-defined policy root for a personally controlled, synthetic, nonclinical project | Authenticated `cxjchelsea` Owner assertion **plus** a separately explicit scope-specific S6 activation decision referencing exact reviewed binding/PR341; P0/P1 search evidence records scope and no identified conflict | `PERSONAL_OWNER_ROOT`; policy root is the explicit Owner project-governance decision, **not the candidate Draft binding record or AI recommendation** | If property/owner/clinical/PHI scope or precedence remains uncertain => `UNKNOWN_BLOCKED` |
+| Unknown | Missing applicable rule inventory, inconclusive frozen-source scope, unresolved actually applicable prohibition, unverifiable owner/source | `UNKNOWN_BLOCKED` | Terminate immediately; do not loop indefinitely or invent a second signature |
+
+**Deterministic readback algorithm:**
+
+```text
+resolve_parent(request, owner, inspected_sources):
+  assert request == PERSONAL / NONPRODUCTION / SYNTHETIC / STAGE_A1 / R2_PREPARATION
+  if verified applicable P0 control exists: return EXTERNAL_REQUIRED
+  if P0 applicability is materially unresolved: return UNKNOWN_BLOCKED
+  if verified effective P1 rule applies: return REPOSITORY_RULE_MATCH
+  if P1 applicability materially unresolved: return UNKNOWN_BLOCKED
+  if repo owner verified and owner controls named personal asset,
+     no identified applicable superior conflict within declared reviewed coverage,
+     and separately explicit exact-binding S6 owner policy-root decision is verified:
+       return PERSONAL_OWNER_ROOT
+  return UNKNOWN_BLOCKED
+```
+
+**Bounded source evidence:** pin `main` HEAD, relevant frozen historical source refs/Blobs (if applicable), PR #326/#328 as `DRAFT_NON_EFFECTIVE`, exact source inventory coverage and the precise limitation `INSPECTED_SOURCES_ONLY`. Negative code-search results do not establish global nonexistence, and neither an unverified owner statement nor a self-signed Draft may override a **known applicable** superior prohibition. However, lack of a fictional enterprise Security department is not itself evidence of a superior source: if adequate scoped source/asset inquiry finds none applicable, a **separate explicit Owner-root S6 governance decision** may be a legitimate P2 root for this restricted personal project. If such an inquiry cannot be recorded, **STOP / S6_NOT_EFFECTIVE**. No recursive chain of unbounded extra approval documents is permitted.
+
+The prior S5 event confirms *choice of candidate direction only*. It cannot simultaneously be the S6 effective-policy decision, and an AI analytical review cannot be an independent human credential.
+
+### 5.3 RF-U07-S6-IR-03 — Deterministic decision-time validity and revocation
+
+Add the following **required future** acceptance contract (all NOT_SET/NOT_ISSUED today):
+
+```yaml
+authority_binding_v1_required_fields:
+  immutable_record_sha256: REQUIRED_FROM_ACTUAL_BYTES
+  record_git_blob_sha: REQUIRED_FROM_GITHUB_READBACK
+  record_created_at_utc: REQUIRED
+  issuer_identity_ref: REQUIRED_AUTHENTICATED_OWNER
+  parent_resolution_outcome: [EXTERNAL_REQUIRED, REPOSITORY_RULE_MATCH, PERSONAL_OWNER_ROOT, UNKNOWN_BLOCKED]
+  accepted_parent_or_owner_root_decision_ref: REQUIRED_SEPARATE_NONSELF_SOURCE
+  applicable_frozen_scope_inventory_ref: REQUIRED
+  consumer_mode: GOVERNANCE_ONLY
+  consumer_manual_validation_procedure_version: REQUIRED
+  valid_from_utc: REQUIRED_EXPLICIT
+  expires_at_utc: REQUIRED_EXPLICIT
+  latest_revocation_check_at_utc: REQUIRED_FRESH
+  latest_revocation_check_ref: REQUIRED_IMMUTABLE
+  revocation_status: [NOT_REVOKED, REVOKED, UNKNOWN]
+  revoked_at_utc: OPTIONAL_IF_REVOKED
+  source_reviewed_pr341_head_and_blob: REQUIRED
+  owner_s5_decision_ref: REQUIRED
+  owner_s6_activation_ref: REQUIRED_SEPARATE
+  decision_checked_at_utc: REQUIRED_TRUSTED_CLOCK
+  review_result: [GOVERNANCE_PROFILE_REVIEW_ELIGIBLE_NO_EXECUTION, BLOCKED]
+  execution_allowed: false
+```
+
+**Acceptance predicate at each manual decision readback**, with all checks evaluated on one pinned source snapshot:
+
+```text
+GOOD =
+  binding_digest_and_git_blob_match_actual_bytes
+  AND issuer_identity_is_authenticated
+  AND parent_resolution_outcome in {REPOSITORY_RULE_MATCH, PERSONAL_OWNER_ROOT}
+  AND no_applicable_higher_priority_conflict
+  AND independently_checked_source_head_blob_and_consumer_version_match
+  AND separately_issued_s6_owner_activation_ref_is_valid
+  AND valid_from_utc <= trusted_now_utc < expires_at_utc
+  AND created_at_utc <= trusted_now_utc
+  AND revocation_status == NOT_REVOKED
+  AND revocation_readback_age <= approved_max_freshness
+  AND no_policy_asset_owner_or_source_drift
+  AND requested_operation == STAGE_A1_R2_READ_ONLY_PREPARATION
+  AND no_R2_execution_requested
+ELSE BLOCKED / S6_NOT_EFFECTIVE
+```
+
+**Clock and freshness:** `trusted_now_utc` must be an explicitly identified and independently read back reliable UTC source for the decision; no authored or guessed clock is evidence. `approved_max_freshness` must be specified and accepted in a later policy before any use; **until a numeric bounded interval and an accessible canonical revocation source are approved, freshness check fails**. UTC validity is half-open `[valid_from_utc, expires_at_utc)`. `valid_from_utc >= expires_at_utc` => `BLOCKED_INVALID_INTERVAL`.
+
+**Revocation dominance:** `REVOKED`, `UNKNOWN`, missing revocation endpoint/evidence, stale readback, time source unavailable, expired profile, SHA/version drift or source disagreement immediately fails closed. No cached `NOT_REVOKED` state may survive a source/owner/runner-policy change or expiry. An explicit revoke event must cite the immutable binding record and authenticated issuer; record historic amendments append-only (do not rewrite prior review evidence).
+
+**Evidence / status hierarchy:** `BLOCKED` from P0/P1 conflict, revoked/expired or source mismatch has precedence over any manual positive approval. A GitHub SHA shows source integrity, **not** that a legally competent Security professional signed. S6 records may authorize **manual governance applicability only**, even if accepted. They NEVER set an R2 execution flag or satisfy `INDEPENDENT_HUMAN` credentials.
+
+### 5.4 Finding disposition and scope freeze
+
+| PR #348 finding | Remediation now delivered | Still prohibited |
+|---|---|---|
+| `RF-U07-S6-IR-01` | **DESIGN_REMEDIATED**: distinct data/issuer/manual validator, pinned six-step readback, separate evidence output; governance-only positive never executable | No approved S6 binding or runtime consumer |
+| `RF-U07-S6-IR-02` | **DESIGN_REMEDIATED**: finite P0/P1/P2/UNKNOWN source precedence resolution and owner-root qualification, no recursive self-parent | No actual P2 scope inquiry/parent readback/activation grant |
+| `RF-U07-S6-IR-03` | **DESIGN_REMEDIATED**: half-open UTC validity, canonical revocation freshness, atomic decision snapshot, deny-on-unknown precedence | No issued effective record, approved freshness interval or revocation endpoint |
+
+**Next permitted task:** exact-HEAD `S6-B01/B02 Targeted Independent Design Re-Review` of PR #347 *after this amendment*, against RF-U07-S6-IR-01..03; even `PASS_DESIGN_ONLY` is not an S6 effective grant. Any future binding-record creation requires **another explicit scoped owner authoring authorization**, followed by independent review and separate activation decision.
+
+```text
+S6_B01_B02_TARGETED_DESIGN_REMEDIATION = DELIVERED_RE_REVIEW_PENDING
+RF_U07_S6_IR_01 = DESIGN_REMEDIATED
+RF_U07_S6_IR_02 = DESIGN_REMEDIATED
+RF_U07_S6_IR_03 = DESIGN_REMEDIATED
+S5_OWNER_ADOPTION = ACCEPTED_CONDITIONALLY
+S6_EFFECTIVE_PROFILE = FALSE
+S6_ACTIVATION_DECISION = NOT_GRANTED
+S7_R2_COLLECTION = NOT_GRANTED
+STAGE_A1_IMPLEMENTATION_R3_SETUP_R4_CANARY = NOT_AUTHORIZED
+CLINICAL_PHI_PRODUCTION = NOT_AUTHORIZED
+MERGE = NOT_AUTHORIZED
+```
