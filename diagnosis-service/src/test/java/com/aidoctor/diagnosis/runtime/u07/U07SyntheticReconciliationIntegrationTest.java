@@ -118,4 +118,30 @@ class U07SyntheticReconciliationIntegrationTest {
         assertEquals(U07SyntheticReconciliationIntegration.Resolution.INVALID_EVIDENCE,
                 integration.inspect(replay(), null, key).resolution);
     }
+    @Test void adapterEvidenceForDifferentEventCannotInspectAnotherEvent() {
+        U07SyntheticCanonicalEventLedger otherLedger = new U07SyntheticCanonicalEventLedger();
+        U07SyntheticLedgerToF8Adapter otherAdapter = new U07SyntheticLedgerToF8Adapter(otherLedger);
+        U07CanonicalEventSource.Snapshot other = new U07CanonicalEventSource.Snapshot(
+                "synthetic-version-1", U07CanonicalEventSource.Provenance.SYNTHETIC_TEST_ONLY,
+                new U07SyntheticCanonicalEventLedger.Event("other-event", "synthetic-consult",
+                        "synthetic-question", "synthetic-wait", "other-digest",
+                        U07SyntheticCanonicalEventLedger.EventType.USER_ANSWER));
+        U07InboundAdmission.Input otherInbound = new U07InboundAdmission.Input(
+                U07InboundAdmission.EventType.USER_ANSWER, "other-event", "synthetic-consult",
+                "synthetic-thread", "synthetic-run", null, "synthetic-wait", "synthetic-wait",
+                3, 3, true, true, true, true, true);
+        U07SyntheticF8Decision.Input otherBusiness = new U07SyntheticF8Decision.Input(
+                "other-event", "synthetic-consult", "synthetic-question", "synthetic-question",
+                "synthetic-wait", "synthetic-wait", U07SyntheticF8Decision.EventType.USER_ANSWER,
+                U07SyntheticF8Decision.Lifecycle.WAITING_USER,
+                U07SyntheticF8Decision.Question.CURRENT_DELIVERED,
+                U07SyntheticF8Decision.Ledger.NEW_EVENT,
+                U07SyntheticF8Decision.EvidenceScope.SYNTHETIC_VERIFIED, true, true);
+        otherAdapter.evaluate(other, otherInbound, otherBusiness);
+        U07SyntheticLedgerToF8Adapter.Result otherReplay =
+                otherAdapter.evaluate(other, otherInbound, otherBusiness);
+        assertEquals(U07SyntheticReconciliationIntegration.Resolution.INVALID_EVIDENCE,
+                integration.inspect(otherReplay, source(), key).resolution);
+    }
+
 }
