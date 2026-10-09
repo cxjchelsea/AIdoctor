@@ -21,6 +21,18 @@ here="$(cd "$(dirname "$0")" && pwd -P)"
 migrations="$(cd "$here/../src/main/resources/db/migration" && pwd -P)"
 python3 "$here/verify_u07_d1_schema.py" || die "static migration parity failed"
 pass "static schema test"
+# Optional D1-only isolation: use exact unchanged V7 SQL in a disposable staged
+# Flyway directory. This does NOT prove the legacy V1..V6 upgrade path.
+mode="$(printenv U07_D1_MODE || true)"
+[[ -z "$mode" || "$mode" == v7_only ]] || die "unsupported test mode"
+stage=""
+expected_history=7
+if [[ "$mode" == v7_only ]]; then
+  stage="$(mktemp -d)"
+  cp "$migrations/V7__create_u07_event_application_and_outbox.sql" "$stage/"
+  migrations="$stage"
+  expected_history=1
+fi
 random="$(python3 -c 'import secrets; print(secrets.token_hex(6))')"
 pw="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
 net="u07_d1_net_$random"
@@ -33,6 +45,7 @@ cleanup() {
   set +e
   if [[ "$container_created" == 1 ]]; then docker rm -f "$dbcontainer" >/dev/null 2>&1; fi
   if [[ "$network_created" == 1 ]]; then docker network rm "$net" >/dev/null 2>&1; fi
+  if [[ -n "$stage" ]]; then rm -rf -- "$stage"; fi
 }
 trap cleanup EXIT
 docker network create --internal --label org.aidoctor.test=u07-d1 "$net" >/dev/null
@@ -59,12 +72,12 @@ flyway() {
     -e "FLYWAY_USER=$username" -e "FLYWAY_PASSWORD=$pw" \
     "$FLYWAY_IMAGE" -locations=filesystem:/flyway/sql "$@"
 }
-flyway migrate; pass "V1-V7 on isolated MySQL"
+flyway migrate; pass "Flyway migration in isolated MySQL (mode: $mode)"
 flyway validate; pass "Flyway validate"
 flyway migrate; pass "repeat migrate"
 history="$(sql "SELECT COUNT(*) FROM flyway_schema_history WHERE success=1")"
-[[ "$history" == 7 ]] || die "expected seven successful migrations, got $history"
-pass "seven recorded migrations"
+[[ "$history" == "$expected_history" ]] || die "expected $expected_history successful migrations, got $history"
+pass "$expected_history recorded migrations (mode: $mode)"
 for table in u07_event_application u07_effect_outbox; do
   actual="$(sql "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='$table'")"
   [[ "$actual" == 1 ]] || die "missing table $table"
@@ -105,4 +118,4 @@ sql "START TRANSACTION;
 count="$(sql "SELECT COUNT(*) FROM u07_effect_outbox WHERE effect_id='outbox-rollback'")"
 [[ "$count" == 0 ]] || die "DML rollback failed"
 pass "synthetic DML rollback (not DDL rollback)"
-echo "U07_D1_MYSQL_ENGINE_SMOKE=PASS"
+echo "U07_D1_MYSQL_ENGINE_SMOKE=PASS (mode=$mode; v7_only does not verify V1..V6)"
