@@ -86,8 +86,9 @@ class U07SyntheticLedgerToF8AdapterTest {
                 source("event-1", "digest-a", U07SyntheticCanonicalEventLedger.EventType.USER_ANSWER),
                 inbound("event-1", true, "synthetic-wait"),
                 business("event-1", U07SyntheticF8Decision.Ledger.UNKNOWN));
-        assertEquals(U07SyntheticLedgerToF8Adapter.Stage.F8_EVALUATED, r.stage);
-        assertEquals(U07SyntheticF8Decision.Outcome.INSUFFICIENT_EVIDENCE, r.f8Outcome);
+        assertEquals(U07SyntheticLedgerToF8Adapter.Stage.RECONCILIATION_REQUIRED, r.stage);
+        assertEquals(U07SyntheticCanonicalEventLedger.Status.FIRST_SEEN, r.registrationStatus);
+        assertEquals(null, r.f8Outcome);
     }
 
     @Test void staleAdmissionBlocksF8AfterRegistration() {
