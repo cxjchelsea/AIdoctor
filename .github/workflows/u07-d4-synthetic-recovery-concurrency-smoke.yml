@@ -47,9 +47,9 @@ jobs:
             file="$(find "$root" -maxdepth 1 -name "V${v}__*.sql" -print -quit)"
             [[ -n "$file" ]] || { echo "missing migration V$v"; exit 2; }
             docker exec -i -e MYSQL_PWD="$password" "$name" \
-              mysql -uroot u07_d3_synthetic < "$file"
+              mysql -uroot u07_d4_synthetic < "$file"
           done
-          docker exec -i -e MYSQL_PWD="$password" "$name" mysql -uroot u07_d3_synthetic <<'SQL'
+          docker exec -i -e MYSQL_PWD="$password" "$name" mysql -uroot u07_d4_synthetic <<'SQL'
           INSERT INTO clinical_consultation
           (consultation_id,row_version,cdp_id,user_id,lifecycle_status,subject_status,
           problem_status,scope_decision,early_safety_signal,start_event_id,created_at,
@@ -71,4 +71,4 @@ jobs:
           jar="$HOME/.m2/repository/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar"
           java -cp "/tmp/u07_d4_classes:$jar" \
             com.aidoctor.diagnosis.runtime.u07.U07D4RecoveryConcurrencyJdbcSmoke \
-            "jdbc:mysql://127.0.0.1:33321/u07_d3_synthetic?useSSL=false&allowPublicKeyRetrieval=true" root "$password"
+            "jdbc:mysql://127.0.0.1:33321/u07_d4_synthetic?useSSL=false&allowPublicKeyRetrieval=true" root "$password"
