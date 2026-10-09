@@ -4,6 +4,7 @@ on:
     paths:
       - "diagnosis-service/scripts/u07_d1_mysql_isolated_smoke.sh"
       - "diagnosis-service/scripts/verify_u07_d1_schema.py"
+      - "diagnosis-service/scripts/stage_u07_d1_mysql_legacy_compat.py"
       - "diagnosis-service/src/main/resources/db/migration/**"
       - ".github/workflows/u07-d1-isolated-mysql-smoke.yml"
 
@@ -28,4 +29,8 @@ jobs:
       - name: Run exact V7-only disposable MySQL smoke (legacy V1 baseline blocked)
         env:
           U07_D1_MODE: v7_only
+        run: bash diagnosis-service/scripts/u07_d1_mysql_isolated_smoke.sh
+      - name: Run test-only legacy V1 overlay then full V1-V7 MySQL migration
+        env:
+          U07_D1_MODE: legacy_compat_full
         run: bash diagnosis-service/scripts/u07_d1_mysql_isolated_smoke.sh
