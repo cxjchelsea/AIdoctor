@@ -71,6 +71,12 @@ public final class U07SyntheticLedgerToF8Adapter {
             return result(Stage.LEDGER_BLOCKED, registration.status, null, null,
                     "LEDGER_REGISTRATION_NOT_NEW");
         }
+        // An event first seen in this volatile ledger has no authoritative APPLIED
+        // history here. Never trust a caller-supplied F8 replay status to invent it.
+        if (business.ledgerStatus != U07SyntheticF8Decision.Ledger.NEW_EVENT) {
+            return result(Stage.RECONCILIATION_REQUIRED, registration.status, null, null,
+                    "INCONSISTENT_OR_UNKNOWN_APPLICATION_EVIDENCE");
+        }
         U07SyntheticResumePipeline.Result flow = pipeline.evaluate(inbound, business);
         if (flow.stage == U07SyntheticResumePipeline.Stage.INVALID_COMPOSITION) {
             return result(Stage.INVALID_CROSS_INPUT, registration.status, flow.admissionStatus,
