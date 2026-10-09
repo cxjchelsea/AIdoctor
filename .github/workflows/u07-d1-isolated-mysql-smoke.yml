@@ -1,0 +1,29 @@
+name: U07 D1 isolated MySQL migration smoke
+on:
+  pull_request:
+    paths:
+      - "diagnosis-service/scripts/u07_d1_mysql_isolated_smoke.sh"
+      - "diagnosis-service/scripts/verify_u07_d1_schema.py"
+      - "diagnosis-service/src/main/resources/db/migration/**"
+      - ".github/workflows/u07-d1-isolated-mysql-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-flyway-v1-v7:
+    name: Disposable MySQL / Flyway V1-V7
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify schema parity without a database
+        run: python3 diagnosis-service/scripts/verify_u07_d1_schema.py
+      - name: Pre-pull pinned local-only smoke images
+        run: |
+          docker pull mysql:8.0
+          docker pull flyway/flyway:9.22.3
+      - name: Run disposable MySQL Flyway and uniqueness smoke
+        run: bash diagnosis-service/scripts/u07_d1_mysql_isolated_smoke.sh
