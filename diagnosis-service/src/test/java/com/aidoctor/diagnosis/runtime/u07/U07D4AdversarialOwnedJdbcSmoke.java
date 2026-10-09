@@ -73,7 +73,14 @@ public final class U07D4AdversarialOwnedJdbcSmoke {
                         replay.incrementAndGet();
                     } else throw new AssertionError("unexpected currentness");
                 } catch (SQLException sql) {
-                    explicitlyRejected.incrementAndGet();
+                    // Only known uniqueness / serialization conflicts are
+                    // admissible fail-closed outcomes. Infrastructure failures
+                    // must FAIL the test, not masquerade as concurrency proof.
+                    if ("23000".equals(sql.getSQLState()) || "40001".equals(sql.getSQLState())) {
+                        explicitlyRejected.incrementAndGet();
+                    } else {
+                        unexpected.compareAndSet(null, sql);
+                    }
                 } catch (IllegalStateException conflict) {
                     if (conflict.getMessage() != null &&
                             conflict.getMessage().startsWith("U07_D3_CANONICAL_")) {
@@ -152,6 +159,36 @@ public final class U07D4AdversarialOwnedJdbcSmoke {
         check(runner.execute(after, NOW, U07D4SyntheticOwnedTransactionRunner.Fault.NONE).outcome ==
                 U07D3SyntheticTransactionCoordinator.Outcome.SAME_EVENT_REPLAY,
                 "retry after ack loss is stable replay");
+
+        // An unrelated caller transaction MUST NOT be committed by the
+        // dedicated owner's independently created JDBC connection.
+        String foreignId = "synthetic-d3-owner-foreign-uncommitted";
+        try (Connection unrelated = DriverManager.getConnection(args[0], args[1], args[2])) {
+            unrelated.setAutoCommit(false);
+            try (PreparedStatement p = unrelated.prepareStatement(
+                    "INSERT INTO canonical_business_event "
+                    + "(event_id,consultation_id,event_type,idempotency_key,payload_digest,received_at) "
+                    + "VALUES (?,?,'SYNTHETIC_TEST_ONLY',?,?,?)")) {
+                p.setString(1, foreignId);
+                p.setString(2, "synthetic-consult-d3");
+                p.setString(3, foreignId + "-key");
+                p.setString(4, "foreign-digest");
+                p.setTimestamp(5, NOW);
+                p.executeUpdate();
+            }
+            U07D3SyntheticTransactionCoordinator.Input owned = cmd(
+                    "synthetic-d3-owner-independent",
+                    "synthetic-d3-owner-independent-key", "owned-digest");
+            check(runner.execute(owned, NOW, U07D4SyntheticOwnedTransactionRunner.Fault.NONE).outcome
+                    == U07D3SyntheticTransactionCoordinator.Outcome.ACCEPTED,
+                    "dedicated owner commits its own transaction");
+            check(count(args, "canonical_business_event", owned.eventId) == 1,
+                    "owner's committed event exists on another connection");
+            // No unrelated commit; close/rollback drops its uncommitted event.
+            unrelated.rollback();
+        }
+        check(count(args, "canonical_business_event", foreignId) == 0,
+                "owner never committed a different connection's pending writes");
 
         for (int i = 0; i < 5; i++) {
             String id = "synthetic-d3-owner-same-" + i;
