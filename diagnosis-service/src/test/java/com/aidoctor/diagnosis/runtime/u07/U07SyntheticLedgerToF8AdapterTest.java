@@ -42,6 +42,16 @@ class U07SyntheticLedgerToF8AdapterTest {
         assertEquals(1, ledger.syntheticEntryCount());
     }
 
+    @Test void firstSeenCannotInventAppliedHistoryFromCallerSuppliedLedgerFlag() {
+        U07SyntheticLedgerToF8Adapter.Result r = adapter.evaluate(
+                source("event-1", "digest-a", U07SyntheticCanonicalEventLedger.EventType.USER_ANSWER),
+                inbound("event-1", true, "synthetic-wait"),
+                business("event-1", U07SyntheticF8Decision.Ledger.ALREADY_APPLIED_SAME_EVENT));
+        assertEquals(U07SyntheticLedgerToF8Adapter.Stage.RECONCILIATION_REQUIRED, r.stage);
+        assertEquals(U07SyntheticCanonicalEventLedger.Status.FIRST_SEEN, r.registrationStatus);
+        assertEquals(null, r.f8Outcome);
+    }
+
     @Test void replayIsReconciliationNotBusinessDuplicateEvenIfClaimedApplied() {
         U07CanonicalEventSource.Snapshot s = source("event-1", "digest-a",
                 U07SyntheticCanonicalEventLedger.EventType.USER_ANSWER);
