@@ -145,3 +145,127 @@ R4_NEGATIVE_CANARIES = NOT_AUTHORIZED
 STAGE_B_SPRING_AND_CLINICAL_PRODUCTION = NOT_AUTHORIZED
 MERGE = NOT_AUTHORIZED
 ```
+
+
+---
+
+## 7. Scoped controlled amendment — personal project governance candidate (WRITE-ONLY, 2026-10-09)
+
+**Precedence:** this §7 clarifies the proposed future individual-project role model and any ambiguity in §§1–6. It does **not** change their original `NOT_GRANTED` and `false` values. The entire document remains `DRAFT_ONLY_NOT_EFFECTIVE`.
+
+**Authorized write source:** The sole repository owner expressly supplied `AUTHORIZE AMENDMENT WRITE ONLY`, limited to editing this single existing PR #341 Markdown Draft based on [PR #343](https://github.com/cxjchelsea/AIdoctor/pull/343) @ `e6994add9c612e2f7d010f6e9b66bb6f50bde45d`, blob `56fcd137d1ac8761c68dfc0fb38cf161f85597d9`, and [PR #345](https://github.com/cxjchelsea/AIdoctor/pull/345) @ `7708b2feaa2599712da5c8103b4b039a4dfa2889` (conditional design acceptance). Original PR #341 parent HEAD `ece0c12b4ab90c2629d315c7c9b81153196f18f5`, blob `c1098d2ac6a120cebd8e503725919486e8fd31e9`; main `86e8843197091c8c8172b7e4213537a31bdf0654`. Approval is **document-edit only**, not rule adoption, activation, real host inspection, code, tests or merge.
+
+### 7.1 Personal project profile and exact scope
+
+```yaml
+# Proposal fields ONLY — never an executable grant
+proposal_status: DRAFT_ONLY_NOT_EFFECTIVE
+governance_model: SOLO_OWNER_WITH_FUNCTIONAL_SEPARATION
+project_classification: SINGLE_MAINTAINER_PERSONAL_PROJECT_USER_DECLARED
+profile_selector: PERSONAL_SYNTHETIC_NONCLINICAL
+project_owner_identity: cxjchelsea
+project_owner_identity_basis: GITHUB_REPOSITORY_ADMIN_NOT_HOST_ATTESTATION
+project_owner_roles_proposed:
+  - LOCAL_ASSET_CUSTODIAN
+  - PROJECT_GOVERNANCE_SCOPE_AUTHORIZER
+  - PROJECT_R2_SAFETY_RISK_ACCEPTOR
+original_independent_security_approval_ref: NOT_GRANTED
+original_foundation_u01_approval_ref: NOT_GRANTED
+independent_human_security_signature: NOT_OBTAINED
+governing_parent_effective_ref: UNRESOLVED_REQUIRED
+personal_tier_p_exception_ref: NOT_GRANTED
+profile_dispatch_effect: NO_EFFECT_UNTIL_APPROVED_PARENT_AND_CONSUMER_COMPATIBILITY
+project_owner_authorization_ref_for_profile_adoption: NOT_GRANTED
+project_owner_r2_risk_acceptance_ref: NOT_GRANTED
+project_owner_stage_a1_governance_ref: NOT_GRANTED
+local_asset_custody_ref: NOT_ATTESTED
+r2_safety_profile_ref: UNREVIEWED_NOT_GRANTED
+r2_exact_runner_command_grant_ref: NOT_GRANTED
+reviewer_independence: AI_ANALYTICAL_REVIEW
+evidence_reproducibility: SOURCE_ONLY
+evidence_claim_class: NOT_APPLICABLE_TO_DRAFT_POLICY
+actual_host_inspection_executed: false
+```
+
+This additional profile applies **only when later adopted** for a user's personally controlled, nonproduction Docker/WSL2 runner handling synthetic, nonclinical Stage A1 **R2 read-only** inventory. It excludes independent claims of protected sandbox enforcement, R3 trusted setup, R4 A1-N01..10 negative canaries, Stage A1 implementation, Spring/JVM, PHI, patients, clinical/production, CI, public/corporate networking and merge. All exclusions from §1 continue to apply.
+
+### 7.2 Original signers: explicit profile dispatch, no forged waiver
+
+**Selection must be positive-only.** The personal branch is eligible only if authenticated competent project-owner governance explicitly accepts this exact amended profile, effective parent/frozen-source precedence is compatible, the profile's immutable version and expiry are valid, the personal runner's custody is established, operation is `STAGE_A1_R2_READ_ONLY`, the data is synthetic and there is no higher-priority prohibitory rule. If ANY condition is unknown, conflicted, expired, or absent, return `BLOCKED` / `PROFILE_NO_EFFECT`.
+
+| Original draft contract field | Enterprise/default branch | Proposed personal Tier P branch, only after *valid accepted exception* | Current state |
+|---|---|---|---|
+| PR #328 `infrastructure_owner_identity_ref` | Independent Infrastructure role | `project_owner_identity_ref` and separate `local_asset_custody_ref`; no inferred host/kernel proof | Original UNASSIGNED; personal custody NOT_ATTESTED |
+| PR #328 `security_approver_identity_ref` | Actual independent Security signoff | Original value remains absent, NEVER replaced by a forged Security identity. An adopted narrow `personal_tier_p_exception_ref` MAY classify the enterprise signer requirement `NOT_APPLICABLE_BY_APPROVED_TIER_P_EXCEPTION` **for R2 nonclinical governance only**, backed by exact parent and `project_owner_r2_risk_acceptance_ref` | NOT_GRANTED; exception NOT_GRANTED |
+| PR #328 `foundation_u01_approver_identity_ref` | Independent Foundation/U01 approval | Same conditional nonapplicability only with accepted `project_owner_stage_a1_governance_ref`; cannot waive U01 clinical/runtime restrictions | NOT_GRANTED; exception NOT_GRANTED |
+| PR #328 `r2_collection_grant_ref` and per-argv allowlist | Explicit runner-bound and time-limited grant | Remains **separately** required as `r2_exact_runner_command_grant_ref`, exact collector binary/argv/output/retention/expiry; no inheritance | NOT_GRANTED |
+| PR #341 `independent_security_approval_ref` and `foundation_u01_approval_ref` | Preserve original absent signatory fields | **Keep both `NOT_GRANTED`** in historical schema; add personal exception/dispatch alongside them, not in their place | NOT_GRANTED |
+| PR #326 original R2 signer and R3/R4 gates | Original approval and negative Oracle | Any new R2-only owner-role interpretation requires separate controlled change if consumed; **no modification to R3/R4, six-file implementation or Oracle** | ORIGINAL GATES UNCHANGED |
+
+No document may turn a literal `NOT_GRANTED` from an original signatory slot into `GRANTED` merely because this project has one maintainer. A later personal exception must have an authentic, separate, conflict-free authority record. A draft profile is **not its own parent authority**. Updating this Markdown alone does not modify the consumer fields of PR #328 / #326 or any runtime parser. If they remain incompatible, disposition is `PROFILE_NO_EFFECT / CONSUMER_INCOMPATIBLE`, not silent use of the new rule.
+
+### 7.3 Orthogonal technical review and evidence classes
+
+```yaml
+reviewer_independence_enum:
+  - INDEPENDENT_HUMAN
+  - AI_ANALYTICAL_REVIEW
+  - SOLO_OWNER_REVIEW
+  - NONE
+evidence_reproducibility_enum:
+  - REPRODUCIBLE_BY_SEPARATE_VERIFIER
+  - SOURCE_ONLY
+  - UNVERIFIED
+evidence_claim_class_enum:
+  - COLLECTOR_LOCAL_FACT
+  - ASSET_OWNER_ASSERTION
+  - VERIFIED_POLICY_EVENT
+  - CLINICAL_PRODUCTION_ASSURANCE
+```
+
+A design/source review by an assistant is `AI_ANALYTICAL_REVIEW`, **never `INDEPENDENT_HUMAN`**. Reproducible evidence is not the same thing as a separately credentialed Security signature; a claimed frozen human-independent gate remains unmet if no genuine human reviewer exists and no valid applicable exception has been approved. For future R2 collection, `/proc/self`, `id` and `uname` at most establish `COLLECTOR_LOCAL_FACT` under valid provenance; an owner manifest is `ASSET_OWNER_ASSERTION`, not independent host attestation. Neither fact proves `VERIFIED_POLICY_EVENT`, a target process's sandbox isolation, `DENIED_BY_POLICY` or clinical/production assurance. Negative Oracle, trusted synthetic fixture, actual policy event attribution, control-case observations and teardown remain distinct later-stage obligations.
+
+Unknown provenance, reviewer classification or raw-output disclosure => `INCOMPLETE_EVIDENCE`. Never generate an expected Oracle from actual measured outputs.
+
+### 7.4 Noncircular transition / grant matrix
+
+| State transition | Required real source | Authority effect |
+|---|---|---|
+| S0 proposed → S1 design reviewed | PR #343 remediation and PR #345 exact design review | Design recommendation only |
+| S1 → S2 **amendment write authorized** | User's explicit `AUTHORIZE AMENDMENT WRITE ONLY`; compare exact old PR #341 HEAD/blob and file path | Grants THIS ONE Draft Markdown edit only |
+| S2 → S3 draft updated | Compare-and-swap original content blob, readback exact new PR HEAD/blob; no other changes | Modified proposal remains inactive |
+| S3 → S4 new-head review | Separate exact-head analytical design review of revised PR #341 | No policy activation |
+| S4 → S5 profile adoption decision | New, separately explicit and version-bound Owner instruction with accepted effective parent, priority compatibility, expiry/revocation | Decision record only, not R2 |
+| S5 → S6 effective Tier P dispatch | Verify authenticated adopter, parent/consumer compatibility, actual accepted narrow signer exception and validity | Governance classification only; no commands |
+| S6 → S7 R2 grant | Separate owner asset declaration, approved fixed command/hash/output restrictions/retention and limited time | Read-only R2 on one exact runner only |
+| S7 → S8 R2 collection | Real authorized per-command single-run evidence envelope | Candidate facts, not automatically accepted |
+| S8 → S9 R2 evidence review | Provenance check and truthfully labeled independent/solo reviewer | Accept only the permissible factual claim class |
+
+At every authorizing transition recheck exact `main` HEAD, affected branch/file HEAD/blob, scope, authenticated issuer, parent authority, revocation, expiry, reader integrity and higher-priority conflicts. Mismatch fails closed. No part of S0–S9 confers R3, R4, Stage A1 implementation, clinical/PHI, deployment, CI or merge permission.
+
+**This authorized action stops at S3 (Draft updated).** Even S4 has not yet been performed for the amended file. States S5–S9 are `NOT_STARTED / NOT_AUTHORIZED`.
+
+### 7.5 Post-amendment status (must not be interpreted as activation)
+
+```text
+CA-U07-FOUND-SEM-EFFECTIVE-TX-01
+PERSONAL_PROJECT_GOVERNANCE_ONE_FILE_CONTROLLED_AMENDMENT
+= DRAFT_WRITE_ONLY
+
+PROFILE_MODEL = SOLO_OWNER_WITH_FUNCTIONAL_SEPARATION
+PROFILE_DESIGN_REVIEW = CONDITIONAL_ACCEPTANCE_PR345
+PERSONAL_PROFILE_ACTIVATION = NOT_GRANTED
+ORIGINAL_SECURITY_FOUNDATION_SIGNERS = NOT_GRANTED
+INDEPENDENT_HUMAN_SECURITY_APPROVAL = NOT_OBTAINED
+GOVERNING_PARENT_COMPATIBILITY = UNRESOLVED
+DOWNSTREAM_R2_CONSUMER_COMPATIBILITY = UNPROVEN
+R2_RUNNER_IDENTITY = NOT_ATTESTED
+R2_COLLECTION_GRANT = NOT_GRANTED
+R2_COLLECTION_EXECUTION = NOT_AUTHORIZED
+STAGE_A1_CODE = NOT_AUTHORIZED
+R3_SETUP = NOT_AUTHORIZED
+R4_CANARY = NOT_AUTHORIZED
+CLINICAL_PHI_PRODUCTION = NOT_AUTHORIZED
+MERGE = NOT_AUTHORIZED
+NEXT = EXACT_HEAD_POST_AMENDMENT_INDEPENDENT_DRAFT_REVIEW
+```
