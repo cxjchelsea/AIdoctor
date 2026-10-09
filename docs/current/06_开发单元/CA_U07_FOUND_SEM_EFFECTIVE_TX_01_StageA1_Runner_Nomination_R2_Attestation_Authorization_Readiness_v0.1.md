@@ -3,6 +3,7 @@
 > Date: 2026-10-09. Repository `cxjchelsea/AIdoctor`.
 > Source main exact HEAD: `86e8843197091c8c8172b7e4213537a31bdf0654`; GitHub latest commit rechecked.
 > Inputs: [PR #326](https://github.com/cxjchelsea/AIdoctor/pull/326) exact HEAD `6884c26e93855b97a5f1293fe81c3fa5f524a739` and [PR #327](https://github.com/cxjchelsea/AIdoctor/pull/327) exact HEAD `fe300a512a91cb56dd322b405f2b1642a3bdd03c`, review blob `0c7dce6cd1c7d7d22045dc63bc9f48fc190aa35b`; [PR #323](https://github.com/cxjchelsea/AIdoctor/pull/323) author runner design exact HEAD `c9d495620b74706c57d79e9cdd8528f46e8a5e04`.
+> Targeted remediation against [PR #329](https://github.com/cxjchelsea/AIdoctor/pull/329) independent review exact HEAD `c7a2772fb5d2668a78354147d79158744558bf16`, report blob `00689a2e5eb5b1e2bc63fa9b0470006b0da7cab0`, findings `RF-U07-A1-R2-IR-01..04`. This author-side revision proposes design closure pending **new independent exact-head targeted re-review**; it grants no authority.  
 > **Decision: RUNNER_NOMINATION_NOT_COMPLETE / R2_AUTHORIZATION_READINESS_NOT_READY / R2_COLLECTION_NOT_AUTHORIZED.** This is source-only authorization readiness and evidence-plan design; no machine selected or inspected.
 
 ## 1. Narrow scope and non-assumptions
@@ -38,11 +39,62 @@ The above values must come from the responsible platform/owners or an authorized
 | `R2-03` | `id -u; id -g` | Collector UID/GID (not user identity) | Do not collect group membership or account names |
 | `R2-04` | `grep -E '^(Cap(Eff|Bnd)|NoNewPrivs|Seccomp):' /proc/self/status` | Effective/bounding privilege and seccomp mode | Never enumerate process IDs beyond self |
 | `R2-05` | `readlink /proc/self/ns/user; readlink /proc/self/ns/mnt; readlink /proc/self/ns/net; readlink /proc/self/ns/pid` | Current namespace inode identity | No host-wide namespace traversal |
-| `R2-06` | `findmnt --noheadings --output TARGET,FSTYPE,OPTIONS` with a reviewed mount-target allowlist | Mount isolation and read-only roots | **May reveal sensitive paths**: must be filtered in-process before export; if safe filtering cannot be guaranteed, skip / `INCOMPLETE_EVIDENCE` |
-| `R2-07` | Approved API/readback of existing runner image digest, virtualization runtime ID, and assigned runner ID | Bind provenance to platform owner | No privileged daemon, container socket or cloud API access by unapproved collector |
+| `R2-06` | **DEFAULT: OWNER_OFFLINE_SIGNED_MOUNT_SUMMARY, NO HOST COMMAND.** A Security-approved offline owner-issued manifest with fixed Boolean outcomes `root_read_only`, `scratch_isolated`, `host_mount_absent`, `secrets_mount_absent` and source attestation digest. | Verify least-disclosing mount posture at claim level; no `findmnt` enumeration | Raw targets, file paths, device identifiers and mount options prohibited. When no signed minimal source exists: `R2_INCOMPLETE_EVIDENCE` and no local command fallback. Any later exact target-scoped source-side query requires a separate reviewed command-profile amendment. |
+| `R2-07` | **OWNER_OFFLINE_SIGNED_RUNNER_ASSET_MANIFEST, NO NETWORK/API CALL.** Immutable, preexisting asset inventory handed over through a separately approved offline transfer path. | Bind `runner_id`, image/runtime digest and owner to external asset inventory | Absolutely no control-plane API call, token, cloud metadata, Docker socket, HTTP(S), DNS, remote fetch or credentials in R2. If manifest is missing/unsigned/stale: `R2_INCOMPLETE_EVIDENCE`; any future API is a new independently authorized scope, never silent R2 expansion. |
 | `R2-08` | Owner-provided **sanitized** policy description/hash + existing enforcement mechanism status | Presence of network/LSM/firewall rules without modifying or testing them | No `iptables`/`nft` raw rule dump unless separately scoped and Security reviewed; no packet probe |
 | `R2-09` | Owner-provided existing audit/telemetry coverage manifest for syscall/socket/child/FD attempts | Observability feasibility, not evidence of successful denial | No eBPF load, tracing attachment, auditd configuration, elevated capability |
 | `R2-10` | Existing signed runner inventory attestation and independent owner readback | Immutable runner identity and validity | No tokens/secrets/system paths exported |
+
+### 3.1 Fixed execution-profile proposal and disclosure-safe outputs (RF-U07-A1-R2-IR-01..03)
+
+**Design-only allowlist; no command is authorized or executed.** For R2-01..05, the only future local actions eligible for review are **fixed argv calls without a shell**, with `shell=false`, sanitized environment, deterministic locale, nonprivileged named collector UID, no startup scripts, no `sudo`, `sh -c`, pipes or redirections; no user-provided args, glob or command substitution. Each individual argv and binary identity/hash must be explicitly accepted *after* a real runner is selected. The prior table's punctuation (`;`, `grep` examples) is descriptive, **not** permission to execute a combined shell string.
+
+| Probe | Proposed exact individual argv or offline source | Allowed *exported* fields | Invalid / unsafe handling |
+|---|---|---|---|
+| R2-01 | `["uname","-s"]`, `["uname","-r"]`, `["uname","-m"]` | `os_family`, `kernel_release`, `architecture` as max-128-character ASCII allowlisted tokens | Any unexpected bytes or field => `R2_DISCLOSURE_BOUNDARY_UNPROVEN` |
+| R2-02 | **Prefer signed offline owner OS inventory**; if locally approved later: `["cat","/etc/os-release"]` through a controlled parser that never exports raw bytes | Only `ID`, `VERSION_ID` (each max 128 safe characters), no free text | If raw command stdout/stderr cannot be safely confined and parsed, **skip**. Do not claim `cat` itself prevents raw host logging |
+| R2-03 | `["id","-u"]`, `["id","-g"]` | `collector_uid`, `collector_gid` as decimal integers; no usernames | Host user/account lookup, group names, supplementary groups forbidden |
+| R2-04 | **Prefer approved restricted reader** of `/proc/self/status`; earlier anchored `grep` allowed only after binary/argv review | `CapEff`, `CapBnd` hex with bounded lengths; `NoNewPrivs`, `Seccomp` integers | Export no extra keys, process metadata or raw proc bytes; collector-local facts only |
+| R2-05 | `["readlink","/proc/self/ns/user"]`, `["readlink","/proc/self/ns/mnt"]`, `["readlink","/proc/self/ns/net"]`, `["readlink","/proc/self/ns/pid"]` | Four namespaced inode identifiers, fixed numeric pattern/length; no host filenames | Collector-local namespace facts only; cannot assert equal JVM process isolation |
+| R2-06 | **No local command**: offline signed minimal mount summary from owner | Fixed four tri-state claims (TRUE/FALSE/UNKNOWN), attestation digest | If owner summary would expose names/paths, reject; `UNKNOWN` never defaults FALSE |
+| R2-07 | **No API command**: offline signed runner asset inventory | Runner opaque asset ID, immutable image/runtime digests, signature provenance, expiration | No live API, network connection or token; stale/missing => incomplete |
+| R2-08/09/10 | **No local command**: preexisting signed owner-issued policy/coverage/asset attestations | Typed digests, owner references, narrow status flags and issuer/expiry | No raw rules, endpoint URLs, credentials, paths, tokens or unrestricted logs |
+
+**Collection isolation contract:** the future approved collector must not forward unsanitized child stdout/stderr, exception messages, debug logs or argument dumps to GitHub CI/logging, chat, network or artifacts. Its raw data read path must remain local and nonpersistent until strict schema/pattern/length validation; when safe capture cannot be guaranteed, **do not execute** that probe. Only normalized, bounded fields and per-probe status codes may be retained under explicit ACL and retention. Failure `stderr` content is not exported (record only bounded error category). Logging controls require an independent test of the concrete collector implementation **before** approval; these descriptions alone are not evidence.
+
+**Cross-identity rule:** `/proc/self`, UID and namespace readbacks identify the **collector process**, not necessarily the future test/JVM/security policy principal. Evidence must carry `collector_instance_id`, `collector_uid`, `runner_asset_id`, and separate `target_execution_identity` = UNKNOWN until independently bound. Do not promote self-observed `Seccomp`, `CapEff`, mount or namespace facts to a guarantee about a Spring process.
+
+### 3.2 Offline manifest provenance, signatures and independent evidence chain (RF-U07-A1-R2-IR-04)
+
+Freeze a normalized typed `RunnerOfflineAttestationV1` envelope **before any R2 collection grant**:
+
+```yaml
+schema: RunnerOfflineAttestationV1
+runner_asset_id: UNKNOWN
+environment_nonproduction_status: UNKNOWN
+artifact_type: MOUNT_SUMMARY_OR_ASSET_INVENTORY_OR_POLICY_COVERAGE
+issuer_owner_identity_ref: UNASSIGNED
+issuer_authority_record_ref: UNAVAILABLE
+issued_at: UNKNOWN
+expires_at: UNKNOWN
+source_asset_inventory_version: UNKNOWN
+artifact_content_sha256: UNKNOWN
+signature_algorithm_and_key_id: UNKNOWN
+signature_validation_result: NOT_VERIFIED
+revocation_or_supersession_check_ref: UNAVAILABLE
+independent_readback_reviewer_ref: UNASSIGNED
+transfer_channel_and_integrity_ref: UNAPPROVED
+accepted_output_schema_digest: UNKNOWN
+allowed_fields_only: NOT_VERIFIED
+retention_policy_acl_ref: UNSET
+status: EVIDENCE_NOT_COLLECTED
+```
+
+An owner must produce the evidence independently of the R2 collector and preserve original signed provenance outside the application repository; reviewer verifies the issuer's authorized role, signature validity, source asset ID, freshness/expiry, revocation state, immutable SHA-256, offline transfer approval, field-level disclosure controls, and **independent** asset registry readback. A cryptographic digest without trusted ownership and valid issuer is not evidence. Self-generated “signed” text or GitHub PR authorship is not substitute human/organizational Security approval. Changed runner image/policy/owner/command profile invalidates prior attestation.
+
+### 3.3 Required separate grant profile additions
+
+The R2 grant must bind exact `collector_binary_digest`, `per_probe_argv_hashes`, `collector_uid`, `collector_instance_id`, `target_execution_identity_or_unknown`, `offline_manifest_authority_key_ids`, `per_probe_output_schema_hash`, `max_output_bytes`, `stderr_handling=DROP_RAW_KEEP_ERROR_CODE_ONLY`, `no_raw_logs_attestation`, `retention_acl_ref`, `independent_reviewer_ref` and expiration. Values remain UNKNOWN / NOT_GRANTED. No command wildcard approval and no conditional auto-escalation from R2 into R3.
 
 **Important limits:** Even apparently read-only commands can disclose sensitive host paths, process details or internal configuration. Explicit allowlist approval must include each command's **arguments, allowed output keys, output truncation/redaction, execution UID, runner identifier, expiry, artifact storage and independent readback**. No `sudo`, network access, package installation, privileged `nft/iptables`, `unshare`, `nsenter`, `docker` socket, recursive `/proc`, `lsblk`, `env`, `mount`, `curl`, `ping`, `dig`, policy writes or real metadata probes. A subcommand missing from the exact signed allowlist must fail closed.
 
@@ -61,6 +113,15 @@ security_approver_identity_ref: UNASSIGNED
 foundation_u01_approver_identity_ref: UNASSIGNED
 collection_principal_and_uid_ref: UNASSIGNED
 approved_command_allowlist_sha256: UNKNOWN
+collector_binary_digest: UNKNOWN
+per_probe_exact_argv_hashes: UNKNOWN
+collector_instance_id: UNKNOWN
+target_execution_identity_or_unknown: UNKNOWN
+per_probe_output_schema_digest: UNKNOWN
+max_export_bytes_and_stderr_drop_policy: NOT_APPROVED
+no_raw_stdout_stderr_persistent_logs_proof: NOT_PROVEN
+offline_signed_manifest_validation_refs: UNAVAILABLE
+issuer_key_revocation_and_asset_registry_readback: NOT_VERIFIED
 allowed_output_fields_and_redaction_sha256: UNKNOWN
 no_network_no_privilege_change_attestation: NOT_PROVEN
 collection_start_end_or_expiration: UNSET
@@ -79,7 +140,7 @@ A valid authorization binds exact runner ID, collection identity, command and ar
 | `R2-G01` | Author PR #326 / independent PR #327 / main source exact heads frozen | SOURCE_VERIFIED |
 | `R2-G02` | Concrete nonproduction runner/owner nominated and independently verified | BLOCKED |
 | `R2-G03` | OS/kernel/VM and collection principal can be read without privilege changes | NOT_PROVEN |
-| `R2-G04` | Approved explicit command set bound to runner and output redaction | DESIGN_CANDIDATE, NOT_APPROVED |
+| `R2-G04` | Approved argv hashes, binary digests, non-shell collector, offline R2-06/07 evidence, bounded outputs and no raw logs | TARGETED_DESIGN_REMEDIATED / NOT_APPROVED |
 | `R2-G05` | Signed Infrastructure + Security + Foundation/U01 R2-only approvals | NOT_GRANTED |
 | `R2-G06` | Valid retention/ACL/provenance and independent reviewer/readback | NOT_PROVEN |
 | `R2-G07` | No SETUP, CANARY, Spring or DB, no CI trigger, no production scope | PASS / CONTRACT_ONLY |
@@ -110,6 +171,10 @@ One can evaluate a platform's likely suitability from existing independent inven
 |---|---|---|
 | `BF-U07-A1-R2-01` | No actual nominated, approved nonproduction runner/owner record | OPEN / EXTERNAL_DEPENDENCY |
 | `BF-U07-A1-R2-02` | No signed R2 read-only command/redaction/time/ACL/security grant | OPEN |
+| `RF-U07-A1-R2-IR-01` | Raw `findmnt` replaced with offline signed least-disclosing mount claims | REMEDIATION_PROPOSED / EXACT_HEAD_RE_REVIEW_PENDING |
+| `RF-U07-A1-R2-IR-02` | R2-07 replaced with signed offline asset manifest; no hidden network API | REMEDIATION_PROPOSED / EXACT_HEAD_RE_REVIEW_PENDING |
+| `RF-U07-A1-R2-IR-03` | Fixed per-command argv/binary/output/logging and collector-vs-target separation | REMEDIATION_PROPOSED / EXACT_HEAD_RE_REVIEW_PENDING |
+| `RF-U07-A1-R2-IR-04` | Issuer identity, artifact SHA/signature, expiry, revocation, approved transfer/retention and independent readback | REMEDIATION_PROPOSED / EXACT_HEAD_RE_REVIEW_PENDING |
 | `RF-U07-A1-CA-IR-01` | Six future code paths exact tree/blob review | REQUIRED / FUTURE |
 | `RF-U07-A1-CA-IR-02` | Concrete runner identity + safe command set/owner authority | REQUIRED / ADDRESSED_AS_PLAN, NOT CLOSED |
 | `RF-U07-A1-CA-IR-03` | Executable independent Oracle/fixture/attempt coverage | REQUIRED / FUTURE |
@@ -117,7 +182,7 @@ One can evaluate a platform's likely suitability from existing independent inven
 | `SA-BF-01/02` | Physical isolation and canary evidence | OPEN |
 | `SA-BF-03/04` | Stage A2 dependencies/Oracle and amendments | OPEN / NOT IN SCOPE |
 
-**Next review:** `CA-U07-FOUND-SEM-EFFECTIVE-TX-01 — Stage A1 Runner Nomination + R2 Read-Only Attestation Authorization Readiness Independent Review`, exact author HEAD/blob. Independent reviewer must examine whether the command set is genuinely read-only and disclosure-safe, whether runner nomination is missing, whether any API command implies ambient privileges, and whether grant ownership is complete. If real runner is not nominated, the correct decision remains `R2_NOT_READY` rather than authorizing collection.
+**Next review:** `CA-U07-FOUND-SEM-EFFECTIVE-TX-01 — Stage A1 R2 Command Profile Targeted Independent Re-Review`, on the NEW author exact HEAD/blob. Independent reviewer must examine whether the command set is genuinely read-only and disclosure-safe, whether runner nomination is missing, whether any API command implies ambient privileges, and whether grant ownership is complete. If real runner is not nominated, the correct decision remains `R2_NOT_READY` rather than authorizing collection.
 
 ## 8. Formal decision
 
@@ -125,6 +190,8 @@ One can evaluate a platform's likely suitability from existing independent inven
 CA-U07-FOUND-SEM-EFFECTIVE-TX-01
 STAGE_A1_RUNNER_NOMINATION_R2_READ_ONLY_ATTESTATION_AUTHORIZATION_READINESS
 = NOT_READY / R2_NOT_AUTHORIZED
+R2_COMMAND_PROFILE = TARGETED_DESIGN_REMEDIATED / INDEPENDENT_RE_REVIEW_PENDING
+RF-U07-A1-R2-IR-01..04 = REMEDIATION_PROPOSED / OPEN_UNTIL_RE_REVIEW
 
 BASE_MAIN = 86e8843197091c8c8172b7e4213537a31bdf0654
 AUTHOR_PR326_HEAD = 6884c26e93855b97a5f1293fe81c3fa5f524a739
