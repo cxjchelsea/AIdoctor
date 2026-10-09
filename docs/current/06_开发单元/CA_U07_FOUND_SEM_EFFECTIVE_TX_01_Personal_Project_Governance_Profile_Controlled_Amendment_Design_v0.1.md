@@ -139,3 +139,85 @@ CLINICAL_PHI_PRODUCTION = NOT_AUTHORIZED
 MERGE = NOT_AUTHORIZED
 NEXT = TARGETED_INDEPENDENT_CONTROLLED_AMENDMENT_DESIGN_REVIEW
 ```
+
+
+---
+
+## 8. Targeted remediation to independent PR #344 — 2026-10-09
+
+This section supersedes ambiguous role/authorization language in earlier §§2–6, without activating any amendment. Review source: PR #344 @ 5b6d6f8fea4a39b83b8fee52ee32842368493ab4, which reviewed PR #343 HEAD 95a4e999623807a6c965b3fbdabefc7ee6f99867 and blob 0290f674f97a57a4cc9c0cc57fa258f680fb8c1c. **PR #341 / PR #328 / PR #326 are NOT updated here.**
+
+### 8.1 RF-U07-PPG-IR-01: exact field/authority dispatch
+
+**Positive-only profile selection:**
+- Personal Tier P is selected ONLY after a separately authorized, effective, immutable, precedence-compatible governance amendment is verified, AND operation is STAGE_A1_R2_READ_ONLY, environment personally owned/nonproduction, data SYNTHETIC_NO_PHI, local asset owner verified, effective profile ref/version matches, and no higher-priority frozen prohibition conflicts.
+- Any UNKNOWN, clinical/PHI/production, R3/R4 operation, missing approved exception, source mismatch, or superior policy conflict => BLOCKED / NOT_READY. Never silently default to personal mode.
+- If enterprise profile is applicable but its signers are unavailable => BLOCKED_APPROVER_UNAVAILABLE, not an invented substitute.
+
+| Existing field/source | Enterprise branch | Proposed personal Tier P branch **only after policy adoption** | Constraint |
+|---|---|---|---|
+| PR #328 infrastructure_owner_identity_ref | Named infrastructure approver | project_owner_identity_ref + local_asset_custody_ref + separately scoped personal R2 consent | Owner declaration cannot attest hardware or policy enforcement |
+| PR #328 security_approver_identity_ref | Recognized independent Security approval | original remains NOT_GRANTED; effective profile dispatch treats it as NOT_APPLICABLE_BY_APPROVED_TIER_P_EXCEPTION **only if** approved_exception_ref and owner_r2_risk_acceptance_ref are authentic | NOT an independent Security signature; original requirement persists outside Tier P |
+| PR #328 foundation_u01_approver_identity_ref | Named Foundation/U01 signoff | original remains NOT_GRANTED; NOT_APPLICABLE_BY_APPROVED_TIER_P_EXCEPTION is allowed only with accepted governing ref and project_owner_stage_a1_governance_ref | No clinical Foundation/U01 or production scope waiver |
+| PR #328 r2_collection_grant_ref and exact argv/digest/expiry | Separate scoped read-only authorization | Separate personal_r2_exact_grant_ref after effective profile, bound owner, image, runner, binaries, argv, schema, retention, expiry/revocation | Profile adoption never grants R2 |
+| PR #341 independent_security_approval_ref / foundation_u01_approval_ref | Preserve named field and NOT_GRANTED value until actual original approval | **Retain original fields**. Add distinct conditional profile_dispatch_effect, personal_tier_p_exception_ref, project_owner_r2_risk_acceptance_ref and project_owner_stage_a1_governance_ref, not forged Security/Foundation signatures | Missing parent/exception => NO_EFFECT |
+| PR #326 R2 ownership language | Three enterprise approval roles as written | Proposed owner function/risk acceptance, only through scoped controlled amendment | PR #326 **unchanged** and any consumer still interpreting old roles blocks |
+| PR #326 R3/R4/implementation/independent Oracle | Existing original gates | UNCHANGED and separately authorized | No inherited R2 permission |
+
+**Downstream binding:** changing PR #341's Markdown alone cannot override PR #328's typed authorization schema or PR #326's R2 approval consumers. If adoption actually requires changes to those documents or to implementation, first obtain separate exact-diff authorization and review; otherwise set PROFILE_NO_EFFECT / CONSUMER_INCOMPATIBLE. No existing frozen rule is overridden by a Draft file.
+
+### 8.2 RF-U07-PPG-IR-02: independence and reproducibility are separate dimensions
+
+A valid evidence report MUST carry independent dimensions:
+
+| Dimension | Enumerated values | Meaning |
+|---|---|---|
+| reviewer_independence | INDEPENDENT_HUMAN / AI_ANALYTICAL_REVIEW / SOLO_OWNER_REVIEW / NONE | Whether a different human reviewed it; AI is not an independent human |
+| evidence_reproducibility | REPRODUCIBLE_BY_SEPARATE_VERIFIER / SOURCE_ONLY / UNVERIFIED | Whether source and observed results can be rerun and independently verified |
+| evidence_claim_class | COLLECTOR_LOCAL_FACT / ASSET_OWNER_ASSERTION / VERIFIED_POLICY_EVENT / CLINICAL_PRODUCTION_ASSURANCE | Which claim the evidence may support |
+
+| Claim | Maximum admission without independent human | Mandatory limits |
+|---|---|---|
+| Personal-project profile design | PASS_DESIGN_ONLY from separately performed AI analytical review, exact diff pinned | Never a human Security signature |
+| R2 COLLECTOR_LOCAL_FACT | Only factual read-only collector-bound report, after a distinct owner grant and bounded immutable readback; label reviewer honestly | Collector process facts are NOT target process / VM assurance |
+| ASSET_OWNER_ASSERTION | Owner-sourced assertion with accurate trust classification and available signed provenance; may remain SOURCE_ONLY | Cannot pretend to be independent physical attestation |
+| Stage A1 VERIFIED_POLICY_EVENT (R4) | NOT admitted by R2; future permission must bind frozen independent expected Oracle, policy-rule causal denial evidence, trusted fixture, negative controls and cleanup | Seccomp mode, unreachable service and user transcript alone do NOT show DENIED_BY_POLICY |
+| CLINICAL_PRODUCTION_ASSURANCE | NOT_ADMITTED under personal Tier P | Separate high-risk independent clinical/security approval requirements untouched |
+
+If the applicable accepted frozen contract explicitly requires INDEPENDENT_HUMAN, AI_ANALYTICAL_REVIEW, SOLO_OWNER_REVIEW and reproducibility **cannot** satisfy that role unless a properly approved scoped governing exception expressly changes that gate. An AI design reviewer is not a human approver; record missing independent review as NOT_OBTAINED. Do not derive the expected Oracle from actual execution results. UNKNOWN and disclosure policy gaps => INCOMPLETE_EVIDENCE.
+
+### 8.3 RF-U07-PPG-IR-03: exact-head noncircular adoption lifecycle
+
+Every transition emits a separately traceable decision containing issuer identity, bounded purpose, input/head/blob, review and timestamp. Mere presence of a Draft PR does not grant a transition.
+
+| Transition | Gate and required decision | Effect | Failure |
+|---|---|---|---|
+| S0_PROPOSED → S1_DESIGN_REVIEWED | New exact-HEAD review of remediated PR #343, findings closed | Design recommendation only | Stay S0 |
+| S1 → S2_AMENDMENT_WRITE_AUTHORIZED | **Explicit project Owner** authorization to update only PR #341's Markdown against pinned existing HEAD/blob; no higher-priority conflict | Authoring permission only | BLOCKED_NOT_AUTHORIZED |
+| S2 → S3_DRAFT_UPDATED | Compare-and-swap PR #341 blob; only authorized field/role patch; effective=false and no additional files | Candidate revision only | HEAD_DRIFT / RE_REVIEW |
+| S3 → S4_NEW_HEAD_REVIEWED | Separate independent analytical exact-head design re-review, checks semantics/compatibility | Evidence of review, not policy approval | REVISE_REQUIRED |
+| S4 → S5_OWNER_ADOPTION_DECISION | **New explicit** Owner instruction specific to activating the reviewed personal Tier P governance rule; exact main/PR version, actual parent authority and conflict check, expiry and revocation | Owner decision record only | NO_EFFECT |
+| S5 → S6_EFFECTIVE_PROFILE | Authenticated owner and effective parent validated, all precedence/consumer requirements accepted, original governing constraints unchanged unless an authorized narrow amendment covers them | Personal R2 **role dispatch** effective, not a runnable grant | BLOCKED_PARENT_OR_CONSUMER_INCOMPATIBILITY |
+| S6 → S7_R2_EXACT_GRANT | Separate owner asset declaration, reviewed fixed binaries and argv, output restrictions, time-scoped grant/retention | Read-only R2 grant ONLY | NOT_GRANTED |
+| S7 → S8_R2_EVIDENCE | Actual bounded one-run collection under grant, runner/collector/target binding | Candidate evidence only | INCOMPLETE_EVIDENCE |
+| S8 → S9_R2_REVIEW | Correct reviewer classification and independent technical fact/provenance assessment | Admit bounded R2 facts only | NOT_ACCEPTED |
+
+**Mandatory precondition at every authorizing transition:** main exact HEAD and target PR exact HEAD/blob must equal reviewed versions or trigger explicit new precedence/diff review; signer is genuinely authenticated/project-authorized; scoped profile explicitly remains PERSONAL_NONPRODUCTION_SYNTHETIC_STAGE_A1_R2_ONLY; requested operation is in its own grant type; no expiry, revocation, policy/runner drift, superior frozen-source conflict or disclosure failure. Otherwise STOP / NOT_READY.
+
+The proposed PR #341 supplement is **never** its own governing parent. Even as sole project Owner, one cannot bypass any actually applicable higher-priority externally controlled safety/clinical rule just by writing a self-approving document. If parent competence cannot be verified, S5/S6 remain NOT_EFFECTIVE. Independent Security/Foundation roles cannot be fabricated.
+
+**Noninheritance:** S6/S7/S8/S9 NEVER authorize six-file Stage A1 implementation, R3 trusted SETUP, R4 negative canaries, Spring, clinical/PHI/production or merge. Each requires its own separate decision. Expired/changed runner, image, owner, exact commands, kernel/policy, profile or reviewer evidence invalidates downstream grants; preserve historical records with revoked status rather than falsifying original facts.
+
+### 8.4 Targeted design disposition and next gate
+
+| Finding | Remediation | Authorization status |
+|---|---|---|
+| RF-U07-PPG-IR-01 | DESIGN_REMEDIATED: positive profile dispatch, exact original-field mapping and original consumer conflict fail-closed | No effective exception nor PR #341/PR #328 amendment |
+| RF-U07-PPG-IR-02 | DESIGN_REMEDIATED: independence, reproducibility and claim type independently classified, with R2 claim ceiling | No human independent audit or policy event implied |
+| RF-U07-PPG-IR-03 | DESIGN_REMEDIATED: S0–S9 explicit version-bound, noncircular gates | No authoring, activation, R2 or merge grant |
+
+**Next:** targeted independent design re-review of this new PR #343 HEAD/blob only. If its verdict permits, user may separately authorize the minimum **one-file PR #341** controlled amendment. The present amendment design is not that authorization.
+
+PERSONAL_PROJECT_GOVERNANCE_TARGETED_REMEDIATION = DELIVERED / REVIEW_PENDING
+
+PR341_AMENDMENT = NOT_AUTHORIZED; R2_COLLECTION = NOT_GRANTED; STAGE_A1_IMPLEMENTATION/R3/R4 = NOT_AUTHORIZED; MERGE = NOT_AUTHORIZED.
