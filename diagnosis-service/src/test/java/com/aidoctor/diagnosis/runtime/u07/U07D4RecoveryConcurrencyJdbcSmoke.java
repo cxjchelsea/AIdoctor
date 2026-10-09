@@ -111,7 +111,9 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
             check(read(fresh, accepted) ==
                     U07D4SyntheticRecoveryInspector.State.HISTORICAL_ACCEPTED,
                     "historical evidence stable after wait advances");
-            fresh.rollback();
+            check(COORDINATOR.admitAndDecideSynthetic(fresh, accepted, NOW)
+                    == U07D3SyntheticTransactionCoordinator.Outcome.SAME_EVENT_REPLAY,
+                    "historical replay survives current wait state advancement");
         }
 
         U07D3SyntheticTransactionCoordinator.Input partial = command("synthetic-d3-partial");
