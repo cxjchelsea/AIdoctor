@@ -24,7 +24,7 @@ pass "static schema test"
 # Optional D1-only isolation: use exact unchanged V7 SQL in a disposable staged
 # Flyway directory. This does NOT prove the legacy V1..V6 upgrade path.
 mode="$(printenv U07_D1_MODE || true)"
-[[ -z "$mode" || "$mode" == v7_only ]] || die "unsupported test mode"
+[[ -z "$mode" || "$mode" == v7_only || "$mode" == legacy_compat_full ]] || die "unsupported test mode"
 stage=""
 expected_history=7
 if [[ "$mode" == v7_only ]]; then
@@ -32,6 +32,11 @@ if [[ "$mode" == v7_only ]]; then
   cp "$migrations/V7__create_u07_event_application_and_outbox.sql" "$stage/"
   migrations="$stage"
   expected_history=1
+elif [[ "$mode" == legacy_compat_full ]]; then
+  stage="$(mktemp -d)"
+  python3 "$here/stage_u07_d1_mysql_legacy_compat.py" --source "$migrations" --destination "$stage" || die "compat staging refused"
+  migrations="$stage"
+  expected_history=7
 fi
 random="$(python3 -c 'import secrets; print(secrets.token_hex(6))')"
 pw="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
@@ -118,4 +123,4 @@ sql "START TRANSACTION;
 count="$(sql "SELECT COUNT(*) FROM u07_effect_outbox WHERE effect_id='outbox-rollback'")"
 [[ "$count" == 0 ]] || die "DML rollback failed"
 pass "synthetic DML rollback (not DDL rollback)"
-echo "U07_D1_MYSQL_ENGINE_SMOKE=PASS (mode=$mode; v7_only does not verify V1..V6)"
+echo "U07_D1_MYSQL_ENGINE_SMOKE=PASS (mode=$mode; legacy_compat_full is test-only and changes V1 checksum)"
