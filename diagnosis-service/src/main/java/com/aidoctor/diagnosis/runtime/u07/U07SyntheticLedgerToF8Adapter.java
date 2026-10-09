@@ -22,14 +22,19 @@ public final class U07SyntheticLedgerToF8Adapter {
         public final U07InboundAdmission.Status admissionStatus;
         public final U07SyntheticF8Decision.Outcome f8Outcome;
         public final String reason;
+        public final String protectedEventId;
+        public final String protectedPayloadDigest;
         private Result(Stage stage, U07SyntheticCanonicalEventLedger.Status registrationStatus,
                        U07InboundAdmission.Status admissionStatus,
-                       U07SyntheticF8Decision.Outcome f8Outcome, String reason) {
+                       U07SyntheticF8Decision.Outcome f8Outcome, String reason,
+                       U07CanonicalEventSource.Snapshot source) {
             this.stage = stage;
             this.registrationStatus = registrationStatus;
             this.admissionStatus = admissionStatus;
             this.f8Outcome = f8Outcome;
             this.reason = reason;
+            this.protectedEventId = source == null || source.event == null ? null : source.event.eventId;
+            this.protectedPayloadDigest = source == null || source.event == null ? null : source.event.payloadDigest;
         }
     }
 
@@ -58,36 +63,36 @@ public final class U07SyntheticLedgerToF8Adapter {
                 || source.event.eventType == null || inbound.eventType == null || business.eventType == null
                 || !source.event.eventType.name().equals(inbound.eventType.name())
                 || !source.event.eventType.name().equals(business.eventType.name())) {
-            return result(Stage.INVALID_CROSS_INPUT, null, null, null, "CANONICAL_EVENT_INPUT_MISMATCH");
+            return result(Stage.INVALID_CROSS_INPUT, null, null, null, "CANONICAL_EVENT_INPUT_MISMATCH", null);
         }
         // Register only a synthetic event identity, not clinical/business application.
         U07SyntheticCanonicalEventLedger.Result registration = ledger.register(source);
         if (registration.status == U07SyntheticCanonicalEventLedger.Status.SAME_EVENT_REPLAY) {
             // No APPLIED evidence exists in this in-memory ledger. Never invent DUPLICATE.
             return result(Stage.RECONCILIATION_REQUIRED, registration.status, null, null,
-                    "REGISTERED_BEFORE_APPLICATION_STATUS_UNKNOWN");
+                    "REGISTERED_BEFORE_APPLICATION_STATUS_UNKNOWN", source);
         }
         if (registration.status != U07SyntheticCanonicalEventLedger.Status.FIRST_SEEN) {
             return result(Stage.LEDGER_BLOCKED, registration.status, null, null,
-                    "LEDGER_REGISTRATION_NOT_NEW");
+                    "LEDGER_REGISTRATION_NOT_NEW", source);
         }
         // An event first seen in this volatile ledger has no authoritative APPLIED
         // history here. Never trust a caller-supplied F8 replay status to invent it.
         if (business.ledgerStatus != U07SyntheticF8Decision.Ledger.NEW_EVENT) {
             return result(Stage.RECONCILIATION_REQUIRED, registration.status, null, null,
-                    "INCONSISTENT_OR_UNKNOWN_APPLICATION_EVIDENCE");
+                    "INCONSISTENT_OR_UNKNOWN_APPLICATION_EVIDENCE", source);
         }
         U07SyntheticResumePipeline.Result flow = pipeline.evaluate(inbound, business);
         if (flow.stage == U07SyntheticResumePipeline.Stage.INVALID_COMPOSITION) {
             return result(Stage.INVALID_CROSS_INPUT, registration.status, flow.admissionStatus,
-                    null, "PIPELINE_COMPOSITION_CONFLICT");
+                    null, "PIPELINE_COMPOSITION_CONFLICT", source);
         }
         if (flow.stage == U07SyntheticResumePipeline.Stage.BLOCKED_BY_ADMISSION) {
             return result(Stage.ADMISSION_BLOCKED, registration.status, flow.admissionStatus,
-                    null, "INBOUND_ADMISSION_NOT_ELIGIBLE");
+                    null, "INBOUND_ADMISSION_NOT_ELIGIBLE", source);
         }
         return result(Stage.F8_EVALUATED, registration.status, flow.admissionStatus,
-                flow.f8Outcome, "SYNTHETIC_F8_ONLY_NO_APPLY");
+                flow.f8Outcome, "SYNTHETIC_F8_ONLY_NO_APPLY", source);
     }
 
     private static boolean same(String a, String b) {
@@ -96,7 +101,8 @@ public final class U07SyntheticLedgerToF8Adapter {
 
     private static Result result(Stage stage, U07SyntheticCanonicalEventLedger.Status registration,
                                  U07InboundAdmission.Status admission,
-                                 U07SyntheticF8Decision.Outcome outcome, String reason) {
-        return new Result(stage, registration, admission, outcome, reason);
+                                 U07SyntheticF8Decision.Outcome outcome, String reason,
+                                 U07CanonicalEventSource.Snapshot source) {
+        return new Result(stage, registration, admission, outcome, reason, source);
     }
 }
