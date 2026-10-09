@@ -45,6 +45,12 @@ elif [[ "$mode" == legacy_compat_full ]]; then
   migrations="$stage"
   expected_history=7
 fi
+# Flyway 7 Docker runs as an unprivileged user; mktemp directories default
+# to 0700, so make only staged public SQL readable (never credentials).
+if [[ -n "$stage" ]]; then
+  chmod 755 "$stage"
+  chmod 644 "$stage"/V[0-9]*__*.sql
+fi
 random="$(python3 -c 'import secrets; print(secrets.token_hex(6))')"
 pw="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
 net="u07_d1_net_$random"
