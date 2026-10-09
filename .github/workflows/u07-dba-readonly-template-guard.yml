@@ -1,0 +1,23 @@
+name: U07 DBA Read-Only SQL Template Guard
+on:
+  pull_request:
+    paths:
+      - "diagnosis-service/scripts/u07_legacy_dba_readonly_*.sql"
+      - "diagnosis-service/scripts/test_u07_legacy_dba_readonly_queries.py"
+      - ".github/workflows/u07-dba-readonly-template-guard.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  static-readonly-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile guard
+        run: python3 -m py_compile diagnosis-service/scripts/test_u07_legacy_dba_readonly_queries.py
+      - name: Validate SQL-only select and data-source allowlist
+        run: python3 diagnosis-service/scripts/test_u07_legacy_dba_readonly_queries.py
