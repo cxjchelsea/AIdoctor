@@ -25,5 +25,7 @@ jobs:
         run: |
           docker pull mysql:8.0
           docker pull flyway/flyway:9.22.3
-      - name: Run disposable MySQL Flyway and uniqueness smoke
+      - name: Run exact V7-only disposable MySQL smoke (legacy V1 baseline blocked)
+        env:
+          U07_D1_MODE: v7_only
         run: bash diagnosis-service/scripts/u07_d1_mysql_isolated_smoke.sh
