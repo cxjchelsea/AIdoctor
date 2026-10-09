@@ -13,7 +13,14 @@ endpoint="$(docker context inspect default --format '{{ .Endpoints.docker.Host }
 [[ "$endpoint" == unix://* ]] || die "remote Docker endpoint forbidden"
 docker info >/dev/null 2>&1 || die "Docker daemon unavailable"
 MYSQL_IMAGE=mysql:8.0
-FLYWAY_IMAGE=flyway/flyway:9.22.3
+flyway_version="$(printenv U07_D1_FLYWAY_VERSION || true)"
+[[ -n "$flyway_version" ]] || flyway_version=9.22.3
+case "$flyway_version" in
+  7.15.0|9.22.3) ;;
+  *) die "unapproved Flyway version" ;;
+esac
+FLYWAY_IMAGE="flyway/flyway:$flyway_version"
+echo "U07_D1_FLYWAY_VERSION=$flyway_version"
 for img in "$MYSQL_IMAGE" "$FLYWAY_IMAGE"; do
   docker image inspect "$img" >/dev/null 2>&1 || die "pre-pull $img into trusted local Docker"
 done
