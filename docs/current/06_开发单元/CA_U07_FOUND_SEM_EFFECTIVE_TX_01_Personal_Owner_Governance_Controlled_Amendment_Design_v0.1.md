@@ -208,3 +208,130 @@ SA-BF-01/02 = OPEN
 FOUNDATION_AUDIT = NOT_PASSED
 U07_IMPLEMENTATION = NOT_AUTHORIZED
 ```
+
+
+---
+
+## 10. Targeted remediation to PR #336 independent findings (2026-10-09)
+
+> Amendment to **this same author design** only; the separate frozen governing authority is **not** updated. This section supersedes earlier ambiguities in §7–§9 while preserving all restrictions. Inputs: independent [PR #336](https://github.com/cxjchelsea/AIdoctor/pull/336) @ `7c6b62d7ea56bdb815f3e5fb7d5f958632fcb40e`, review blob `2a4f23dc16504090d670485116aaa8f4061c4cdb`.
+
+### 10.1 RF-U07-A1-PGA-IR-01 — Exact authority source discovery, truth before substitution
+
+Direct GitHub REST tree inspection on `main@86e8843197091c8c8172b7e4213537a31bdf0654`: `GET /repos/cxjchelsea/AIdoctor/git/trees/86e8843197091c8c8172b7e4213537a31bdf0654?recursive=1` returned a tree of 2639 entries. In `docs/current/06_开发单元`, an authoritative **Stage A1 R2 signer-override contract was not identified**. The sole matching `CA_U07_FOUND_SEM_EFFECTIVE_TX_01_*` file on `main` is:
+`docs/current/06_开发单元/CA_U07_FOUND_SEM_EFFECTIVE_TX_01_Tier0_Producer_Contract_Manifest_v0.1.md`, Git tree blob `98189638619aa78e997a1a588239b36b89617378`. Its name denotes a *Tier-0 producer* contract, **not** by itself a Stage A1 owner-signature authority. No transitive superiority is inferred from a filename.
+
+The two concrete **draft-source** targets now checked via GitHub exact-head file fetch and PR changed-file inspection are:
+
+| Artifact status | Verified exact file path | Blob SHA | Scope |
+|---|---|---|---|
+| PR #328 (Draft, unmerged) @ `3f6725f387105798d2fa4ba6cefb1b43a69a0360` | `docs/current/06_开发单元/CA_U07_FOUND_SEM_EFFECTIVE_TX_01_StageA1_Runner_Nomination_R2_Attestation_Authorization_Readiness_v0.1.md` | `2518bdb4e0a239abf70c84f32b24ccba80c713bd` | **Proposed** `U07StageA1R2CollectionGrantV1` with `infrastructure_owner_identity_ref`, `security_approver_identity_ref`, `foundation_u01_approver_identity_ref`, exact argv and offline evidence constraints |
+| PR #326 (Draft, unmerged) @ `6884c26e93855b97a5f1293fe81c3fa5f524a739` | `docs/current/06_开发单元/CA_U07_FOUND_SEM_EFFECTIVE_TX_01_StageA1_Controlled_ExactDiff_Amendment_Runner_Authority_Evidence_Plan_v0.1.md` | `72b71011331c6c8e36f5bad1c786ab` | Proposed R0–R4 and A1 six-file runner controls; owner/reviewer/permission assumptions; **not** effective permission |
+
+**Binding decision:** no enforceable default-branch Stage A1 R2 approval-clause location and authoritative blob can be asserted based on this inspection. The two verified PR design candidates are **the design sources**, not existing effective frozen overrides. This absence is a positive, falsifiable repository state finding, **not** permission to bypass the frozen governance process or other branches. A required pre-implementation decision must identify the controlling repository branch/revision (including any pinned enterprise branch), original signed authority, and precedence; then either (A) locate and narrowly amend the actual effective frozen clause, or (B) explicitly approve a new supplemental Stage A1 personal profile in the **correct authoritative location**, with declared precedence, version, owner, revocation and no inherited clinical rights. **Unknown source, other branch or conflicting approval => STOP / NOT_READY.**
+
+Exact **proposed** field diff in the candidate new-supplement case, after authority is resolved:
+
+```diff
++ profile_id: PERSONAL_OWNER_LOCAL_NONPRODUCTION
++ parent_approval_profile_ref: <verified governing profile exact ref, required>
++ valid_scope: STAGE_A1_PREBOOTSTRAP / SYNTHETIC / NONCLINICAL / R2_ONLY
++ asset_owner_local_consent_ref: <approved signed bounded grant, required>
++ independent_r2_command_profile_review_ref: <approved exact head, required>
++ independent_evidence_acceptor_ref: <approved principal, required>
++ command_allowlist_sha256: <verified approved version, required>
++ expiry_and_revocation_record: <required>
++ unknown_or_conflicting_authority_decision: NOT_READY
+  enterprise_profile: UNCHANGED
+  clinical_security_and_foundation_production_requirements: UNCHANGED
+```
+
+No effective file edit, contract freeze, or approval is inferred from this diff.
+
+### 10.2 RF-U07-A1-PGA-IR-02 — Per-signature and fallback decision matrix
+
+Based on the **draft** `U07StageA1R2CollectionGrantV1` fields read from PR #328 (not a legal/organizational signer substitution):
+
+| Original draft authority/gate | Candidate personal-profile substitute | Independent authority requirement | Disposition until governing clause accepted |
+|---|---|---|---|
+| `infrastructure_owner_identity_ref` for owned runner asset | `LOCAL_ENVIRONMENT_OWNER` asset self-declaration, local alias, dated consent | Independent readback must assess identity and asset binding; owner is not automatically an attestor | **PROPOSED_SUBSTITUTE_ONLY** |
+| Infrastructure sign-off for **bounded R2-only collection** | Same personal owner as `LOCAL_COLLECTION_CONSENT_SIGNER` **after amendment** | Exact command allowlist, output schema, retention/ACL and expiry independently accepted | **NO_VALID_GRANT_YET** |
+| `security_approver_identity_ref` and prevention assurance | **NO AUTOMATIC SUBSTITUTE** | Named credentialed independent Security authority where governing policy requires it; cannot be an AI-generated signature or self-declared role | **NOT_READY** when unavailable |
+| `foundation_u01_approver_identity_ref` and Core/frozen-contract authority | **NO AUTOMATIC SUBSTITUTE** | Existing Foundation/U01 owner or formally delegated authority approved at exact frozen clause | **NOT_READY** when unavailable |
+| R2 command-profile reviewer | Independent source/code/evidence reviewer (not command producer function) | Exact argv/binaries, output/telemetry absence, collector isolation and artifact identity | **DESIGN_REVIEW_ONLY** |
+| Evidence producer versus A1 negative-denial Oracle acceptor | Local collector may produce but **cannot accept** evidence | Independent accepted provenance, fixture and denial-effect review | **NOT_READY** before separate review |
+| Setup/Canary execution, Stage B/clinical/production | **NONE** | Existing specific approval model | **NOT_AUTHORIZED** |
+
+**No independent approver available** is an explicit terminal gate state `NOT_READY / APPROVER_UNAVAILABLE`, never a route to substitute the owner/assistant's design report as a real signature. No automatic transitive authority from Docker owner => Security => Foundation. A personal profile may simplify owner **logistics**, not redefine the independent reviewer evidence threshold. Resolve exact governing signature precedence before marking this finding closed.
+
+### 10.3 RF-U07-A1-PGA-IR-03 — Concrete minimal R2 collector/evidence envelope (no execution)
+
+The following is an example **bounded metadata contract**, not a granted or implemented collector. Per-probe binaries and fixed argv must still be sourced from PR #328, reviewed against local Windows CMD/WSL/Docker applicability, separately accepted and pinned before any live collection:
+
+```yaml
+schema: U07StageA1LocalR2EvidenceEnvelopeV1
+classification: DESIGN_ONLY_NOT_ATTESTED
+owner:
+  profile_ref: PERSONAL_OWNER_LOCAL_NONPRODUCTION
+  machine_alias: OWNER_TO_DECLARE_NO_HOSTNAME
+  owner_consent_signature_ref: REQUIRED_NOT_GRANTED
+  grant_ref: REQUIRED_NOT_GRANTED
+  valid_from_utc: REQUIRED
+  expires_at_utc: REQUIRED
+target:
+  docker_context: desktop-linux
+  docker_engine_version: "28.1.1"   # observed in earlier user transcript
+  docker_desktop_version: "4.41.2"
+  kernel_release: 6.18.33.2-microsoft-standard-WSL2
+  runtime: runc
+  image_id: sha256:25c5b8011a3425a140bf5fa73be0feabd3c0d5b323eecb19dc02437a368ae075
+  immutable_container_attempt_ref: REQUIRED_NEW_RUN
+  process_identity_ref: REQUIRED_TARGET_PROCESS_BOUND
+collector:
+  approved_binary_digest: REQUIRED_NOT_SET
+  fixed_argv_sha256_by_probe: REQUIRED_NOT_SET
+  collector_identity_and_isolation_ref: REQUIRED
+  attempt_started_at_utc: REQUIRED_NEW_RUN
+  no_raw_stdout_stderr_storage: REQUIRED_PRE_EXECUTION_PROOF
+  no_shell_expansion_or_network_api: REQUIRED
+output:
+  schema_digest: REQUIRED
+  allowed_fields:
+    - collector_uid
+    - collector_gid
+    - seccomp_mode
+    - cap_effective_hex
+    - cap_bounding_hex
+    - no_new_privs
+    - namespace_inode_tokens
+    - bool_root_readonly
+    - bool_host_mount_absent_or_unknown
+  forbidden: [hostname, usernames, raw_mount_paths, credentials, environment, unfiltered_proc, raw_daemon_logs, other_workload_metadata]
+  retention_acl_ref: REQUIRED
+  reviewer_signature_and_readback_ref: REQUIRED_AFTER_COLLECTION
+validity:
+  drift_invalidates: [owner, engine, kernel, runtime, image, policy, command, schema, collection_principal]
+  unknown_or_missing: INCOMPLETE_EVIDENCE
+```
+
+Pre-run disclosure invariant: if collection cannot prevent raw stdout/stderr, terminal scrollback, engine logging or artifacts from exposing excluded data, **SKIP** the probe and report `R2_DISCLOSURE_BOUNDARY_UNPROVEN`. Local Docker commands executed earlier are exploratory **user observations**, and may be cited as background but must not be backdated as one approved R2 attempt. Container `--rm` evidence cannot be independently reconstructed once removed without additional trusted capture. Avoid Docker daemon socket bind, host networking, privileged flags, auto-pull, dynamic API queries and inspection of other applications or databases.
+
+### 10.4 Remediation disposition and next decision
+
+| Finding | Targeted design disposition | What remains blocking |
+|---|---|---|
+| `RF-U07-A1-PGA-IR-01` | **TARGETED_PARTIAL_REMEDIATION**: verified exact two draft source HEADs/blobs; main tree negative Stage A1 profile lookup; established required authoritative-source decision instead of guessing | Governing frozen contract/branch/signature authority not yet established; must remain **BLOCKED** |
+| `RF-U07-A1-PGA-IR-02` | **TARGETED_DESIGN_REMEDIATION_COMPLETE**: exact draft field-oriented signer matrix and no-approver fail-closed branch | Effective authority acceptance by actual governing owner not obtained |
+| `RF-U07-A1-PGA-IR-03` | **TARGETED_DESIGN_REMEDIATION_COMPLETE**: minimal R2 one-attempt collector provenance/schema/retention/drift contract defined | Independently approved exact argv/binaries and actual execution grant not obtained |
+
+**Next:** targeted independent design re-review against the new exact PR #335 HEAD/blob. If `IR-01` is still blocked, accept only partial remediation and proceed with a **frozen-authority source identification / precedence decision**, not a fictional approval. No Stage A1 Runner R2 authorization, implementation, negative canary or merge while authority is ambiguous.
+
+```text
+PERSONAL_OWNER_GOVERNANCE_TARGETED_DESIGN_REMEDIATION = DELIVERED
+RF-U07-A1-PGA-IR-01 = PARTIAL / AUTHORITATIVE_FROZEN_SOURCE_BLOCKER_OPEN
+RF-U07-A1-PGA-IR-02 = DESIGN_REMEDIATED / AUTHORITY_NOT_GRANTED
+RF-U07-A1-PGA-IR-03 = DESIGN_REMEDIATED / R2_NOT_EXECUTED
+MAIN_EFFECTIVE_STAGE_A1_OWNER_PROFILE = NOT_IDENTIFIED
+R2_COLLECTION_AUTHORIZATION = NOT_GRANTED
+STAGE_A1_CANARY_EXECUTION = NOT_AUTHORIZED
+```
