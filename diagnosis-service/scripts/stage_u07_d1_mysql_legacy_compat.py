@@ -16,7 +16,7 @@ from pathlib import Path
 EXPECTED_V1_GIT_BLOB = "dfd87844be26015131fffa57430d3d982b5a4ef6"
 V1_NAME = "V1__create_agent_state_and_audit_trail.sql"
 REQUIRED_VERSIONS = tuple(range(1, 8))
-PATTERN = re.compile(r"(?m)^(\\s*\\w+\\s+)CLOB(?=\\s*[,\\n])")
+PATTERN = re.compile(r"(?m)^(\s*\w+\s+)CLOB(?=\s*[,\n])")
 EXPECTED_NAMES = {
     "thresholds", "budget", "failure_backoff", "tried_tools",
     "evidence_fusion_state", "stop_conditions", "tool_call",
@@ -25,7 +25,7 @@ EXPECTED_NAMES = {
 
 
 def blob_sha(data: bytes) -> str:
-    return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+    return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
 
 
 def stage(source: Path, destination: Path) -> list[str]:
