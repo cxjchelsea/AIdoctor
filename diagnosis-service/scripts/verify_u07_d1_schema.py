@@ -117,7 +117,7 @@ class U07D1SchemaTests(unittest.TestCase):
             outbox = table_body(sql, "u07_effect_outbox")
             self.assertRegex(application.upper(), r"PRIMARY\s+KEY\s*\(EVENT_ID\)")
             self.assertRegex(outbox.upper(), r"PRIMARY\s+KEY\s*\(EFFECT_ID\)")
-            self.assertRegex(application.upper(), r"UNIQUE\s*\(EFFECT_ID\)")
+            self.assertRegex(application.upper(), r"(?:UNIQUE\s+KEY\s+\w+|UNIQUE)\s*\(EFFECT_ID\)")
             self.assertEqual(
                 {i.lower() for i in re.findall(
                     r"\b(?:KEY\s+|CREATE\s+INDEX\s+)(idx_u07_\w+)", sql, re.I
