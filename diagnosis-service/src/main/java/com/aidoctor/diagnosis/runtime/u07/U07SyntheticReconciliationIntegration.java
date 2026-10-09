@@ -53,6 +53,8 @@ public final class U07SyntheticReconciliationIntegration {
                 || blank(protectedKey.eventId) || blank(protectedKey.payloadDigest)
                 || !protectedKey.eventId.equals(eventSource.event.eventId)
                 || !protectedKey.payloadDigest.equals(eventSource.event.payloadDigest)
+                || !protectedKey.eventId.equals(adapterResult.protectedEventId)
+                || !protectedKey.payloadDigest.equals(adapterResult.protectedPayloadDigest)
                 || adapterResult.registrationStatus == null
                 || (adapterResult.registrationStatus
                     != U07SyntheticCanonicalEventLedger.Status.SAME_EVENT_REPLAY
