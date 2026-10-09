@@ -1,0 +1,55 @@
+name: U07 D2 isolated JDBC repository smoke
+on:
+  pull_request:
+    paths:
+      - "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07*Repository.java"
+      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D2JdbcRepositorySmoke.java"
+      - "diagnosis-service/src/main/resources/db/migration/V7__create_u07_event_application_and_outbox.sql"
+      - ".github/workflows/u07-d2-isolated-jdbc-repository-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  d2-disposable-mysql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile D2 Java 8-compatible sources
+        run: |
+          mkdir -p /tmp/u07_d2_classes
+          javac --release 8 -d /tmp/u07_d2_classes \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07EventApplicationRepository.java \
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07EffectOutboxRepository.java \
+            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D2JdbcRepositorySmoke.java
+      - name: Run isolated MySQL JDBC transaction test
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          password="$(python3 -c 'import secrets; print(secrets.token_hex(22))')"
+          name="u07-d2-${{ github.run_id }}-${{ github.run_attempt }}"
+          cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          docker run -d --pull always --name "$name" -p 127.0.0.1:33319:3306 \
+            -e MYSQL_ROOT_PASSWORD="$password" \
+            -e MYSQL_DATABASE=u07_d2_synthetic \
+            mysql:8.0 --default-authentication-plugin=mysql_native_password >/dev/null
+          ready=0
+          for i in {1..90}; do
+            if docker exec -e MYSQL_PWD="$password" "$name" \
+              mysql -uroot -N -B -e 'SELECT 1' >/dev/null 2>&1; then ready=1; break; fi
+            sleep 2
+          done
+          [[ "$ready" == 1 ]] || { echo "MySQL not ready"; exit 2; }
+          docker exec -i -e MYSQL_PWD="$password" "$name" mysql -uroot u07_d2_synthetic \
+            < diagnosis-service/src/main/resources/db/migration/V7__create_u07_event_application_and_outbox.sql
+          # Download JDBC dependency from Maven Central (public artifact) in isolated runner.
+          mvn -B -ntp dependency:get -Dartifact=com.mysql:mysql-connector-j:8.0.33
+          jar="$HOME/.m2/repository/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar"
+          [[ -r "$jar" ]] || { echo "MySQL JDBC artifact missing"; exit 2; }
+          java -cp "/tmp/u07_d2_classes:$jar" \
+            com.aidoctor.diagnosis.runtime.u07.U07D2JdbcRepositorySmoke \
+            "jdbc:mysql://127.0.0.1:33319/u07_d2_synthetic?useSSL=false&allowPublicKeyRetrieval=true" root "$password"
