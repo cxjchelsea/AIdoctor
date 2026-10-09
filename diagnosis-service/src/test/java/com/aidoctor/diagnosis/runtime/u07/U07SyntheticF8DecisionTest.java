@@ -144,4 +144,60 @@ class U07SyntheticF8DecisionTest {
         assertEquals(U07SyntheticF8Decision.Outcome.ACCEPTED, f8.decide(current).outcome);
         assertEquals(U07SyntheticF8Decision.Outcome.ACCEPTED, f8.decide(current).outcome);
     }
+
+    @Test void resumeRequestHasTheSameSyntheticBusinessEvidenceRequirements() {
+        U07SyntheticF8Decision.Input request = new U07SyntheticF8Decision.Input(
+                "synthetic-resume-event", "synthetic-consult", "question-1", "question-1",
+                "wait-1", "wait-1", U07SyntheticF8Decision.EventType.RESUME_REQUEST,
+                U07SyntheticF8Decision.Lifecycle.WAITING_USER,
+                U07SyntheticF8Decision.Question.CURRENT_DELIVERED,
+                U07SyntheticF8Decision.Ledger.NEW_EVENT,
+                U07SyntheticF8Decision.EvidenceScope.SYNTHETIC_VERIFIED, true, true);
+        U07SyntheticF8Decision.Result result = f8.decide(request);
+        assertEquals(U07SyntheticF8Decision.Outcome.ACCEPTED, result.outcome);
+        assertTrue(result.eligibleForRuntimeCompatibilityCheck);
+        U07SyntheticF8Decision.Input unboundRequest = new U07SyntheticF8Decision.Input(
+                request.eventId, request.consultationId, request.questionId, request.expectedQuestionId,
+                request.waitEffectId, request.expectedWaitEffectId, request.eventType,
+                request.consultationLifecycle, request.questionState, request.ledgerStatus,
+                request.evidenceScope, true, false);
+        assertEquals(U07SyntheticF8Decision.Outcome.REJECTED, f8.decide(unboundRequest).outcome);
+    }
+
+    @Test void blankProtectedIdentitiesNeverCreateAResumeDecision() {
+        String[] bad = {null, "", "  "};
+        for (String value : bad) {
+            U07SyntheticF8Decision.Input[] cases = {
+                new U07SyntheticF8Decision.Input(value, "synthetic-consult", "question-1", "question-1",
+                        "wait-1", "wait-1", U07SyntheticF8Decision.EventType.USER_ANSWER,
+                        U07SyntheticF8Decision.Lifecycle.WAITING_USER,
+                        U07SyntheticF8Decision.Question.CURRENT_DELIVERED,
+                        U07SyntheticF8Decision.Ledger.NEW_EVENT,
+                        U07SyntheticF8Decision.EvidenceScope.SYNTHETIC_VERIFIED, true, true),
+                new U07SyntheticF8Decision.Input("synthetic-event", value, "question-1", "question-1",
+                        "wait-1", "wait-1", U07SyntheticF8Decision.EventType.USER_ANSWER,
+                        U07SyntheticF8Decision.Lifecycle.WAITING_USER,
+                        U07SyntheticF8Decision.Question.CURRENT_DELIVERED,
+                        U07SyntheticF8Decision.Ledger.NEW_EVENT,
+                        U07SyntheticF8Decision.EvidenceScope.SYNTHETIC_VERIFIED, true, true),
+                new U07SyntheticF8Decision.Input("synthetic-event", "synthetic-consult", value, "question-1",
+                        "wait-1", "wait-1", U07SyntheticF8Decision.EventType.USER_ANSWER,
+                        U07SyntheticF8Decision.Lifecycle.WAITING_USER,
+                        U07SyntheticF8Decision.Question.CURRENT_DELIVERED,
+                        U07SyntheticF8Decision.Ledger.NEW_EVENT,
+                        U07SyntheticF8Decision.EvidenceScope.SYNTHETIC_VERIFIED, true, true),
+                new U07SyntheticF8Decision.Input("synthetic-event", "synthetic-consult", "question-1", "question-1",
+                        value, "wait-1", U07SyntheticF8Decision.EventType.USER_ANSWER,
+                        U07SyntheticF8Decision.Lifecycle.WAITING_USER,
+                        U07SyntheticF8Decision.Question.CURRENT_DELIVERED,
+                        U07SyntheticF8Decision.Ledger.NEW_EVENT,
+                        U07SyntheticF8Decision.EvidenceScope.SYNTHETIC_VERIFIED, true, true)
+            };
+            for (U07SyntheticF8Decision.Input candidate : cases) {
+                U07SyntheticF8Decision.Result result = f8.decide(candidate);
+                assertEquals(U07SyntheticF8Decision.Outcome.INSUFFICIENT_EVIDENCE, result.outcome);
+                assertFalse(result.eligibleForRuntimeCompatibilityCheck);
+            }
+        }
+    }
 }
