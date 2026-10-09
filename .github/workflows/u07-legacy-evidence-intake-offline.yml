@@ -1,0 +1,23 @@
+name: U07 Legacy Evidence Intake Offline Validation
+on:
+  pull_request:
+    paths:
+      - "diagnosis-service/scripts/validate_u07_migration_history_evidence.py"
+      - "diagnosis-service/scripts/test_validate_u07_migration_history_evidence.py"
+      - ".github/workflows/u07-legacy-evidence-intake-offline.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-allowlist-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile offline evidence tool
+        run: python3 -m py_compile diagnosis-service/scripts/validate_u07_migration_history_evidence.py diagnosis-service/scripts/test_validate_u07_migration_history_evidence.py
+      - name: Run synthetic no-network unit tests
+        run: python3 diagnosis-service/scripts/test_validate_u07_migration_history_evidence.py
