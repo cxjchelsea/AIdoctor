@@ -5,7 +5,9 @@ die() { echo "NOT_RUN: $*" >&2; exit 2; }
 pass() { echo "PASS $*"; }
 command -v docker >/dev/null 2>&1 || die "docker absent"
 command -v python3 >/dev/null 2>&1 || die "python3 absent"
-[[ -z "$DOCKER_HOST" && -z "$DOCKER_CONTEXT" ]] || die "Docker overrides forbidden"
+if [[ -n "$(printenv DOCKER_HOST || true)" || -n "$(printenv DOCKER_CONTEXT || true)" ]]; then
+  die "Docker overrides forbidden"
+fi
 [[ "$(docker context show)" == default ]] || die "non-default Docker context forbidden"
 endpoint="$(docker context inspect default --format '{{ .Endpoints.docker.Host }}' 2>/dev/null)" || die "cannot inspect local Docker endpoint"
 [[ "$endpoint" == unix://* ]] || die "remote Docker endpoint forbidden"
