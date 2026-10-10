@@ -26,6 +26,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: 702e280f14adacb50d6b72a6cd42cc7d32ff020a
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
