@@ -118,7 +118,7 @@ final class SourceBindingAdapter {
         List<Map<String,Object>> rows=jdbc.queryForList("SELECT * FROM u07_test_authority_record WHERE record_id=?",r.sourceRef);
         if(rows.size()!=1)throw new Block(Status.DENIED);
         Map<String,Object> row=rows.get(0);
-        if(!"SOURCE".equals(row.get("record_type"))||!TestAuthority.ISSUER.equals(row.get("issuer_id"))
+        if(!"SOURCE".equals(row.get("record_type"))||!"SYNTHETIC_ADMISSION".equals(row.get("action_id"))||!TestAuthority.ISSUER.equals(row.get("issuer_id"))
             || !TestAuthority.POLICY.equals(row.get("policy_id"))||!TestAuthority.MANIFEST.equals(row.get("manifest_digest")))throw new Block(Status.DENIED);
         try {
             byte[] frame=(byte[])row.get("binding_bytes");String[] f=BindingCodec.decode(frame);
@@ -185,7 +185,7 @@ final class SourceBindingAdapter {
             List<Map<String,Object>> original=jdbc.queryForList("SELECT * FROM u07_test_authority_record WHERE record_id=?",row.get("source_record_ref"));
             if(original.size()!=1)throw new Block(Status.INCONSISTENT);
             Map<String,Object> proof=original.get(0);
-            if(!"SOURCE".equals(proof.get("record_type"))||!TestAuthority.ISSUER.equals(proof.get("issuer_id"))
+            if(!"SOURCE".equals(proof.get("record_type"))||!"SYNTHETIC_ADMISSION".equals(proof.get("action_id"))||!TestAuthority.ISSUER.equals(proof.get("issuer_id"))
                 ||!TestAuthority.POLICY.equals(proof.get("policy_id"))||!TestAuthority.MANIFEST.equals(proof.get("manifest_digest"))
                 ||!f[4].equals(proof.get("tenant_id"))||!Arrays.equals(b,(byte[])proof.get("binding_bytes"))
                 ||!BindingCodec.hash(b).equals(proof.get("binding_fingerprint"))||!source.key.equals(proof.get("storage_key"))

@@ -5,7 +5,7 @@ CREATE TABLE u07_test_permission_epoch (
 ) ENGINE=InnoDB;
 CREATE TABLE u07_test_authority_record (
  record_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
- record_type VARCHAR(32) NOT NULL, issuer_id VARCHAR(128) NOT NULL,
+ record_type VARCHAR(32) NOT NULL, action_id VARCHAR(64) NOT NULL, issuer_id VARCHAR(128) NOT NULL,
  policy_id VARCHAR(128) NOT NULL, manifest_digest CHAR(64) NOT NULL,
  tenant_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
  permission_epoch BIGINT NOT NULL, source_token VARCHAR(128) NOT NULL,

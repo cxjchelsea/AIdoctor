@@ -133,7 +133,7 @@ class SourceBindingTest {
     }
     @Test void forgedRefWrongIssuerPolicyTypeAndManifestCannotBecomeVerified(){
         Fixture f=new Fixture();assertEquals(Status.DENIED,adapter().admit(new Request(f.event,f.token,id(),WHEN),f.scope()).status);
-        for(String column:new String[]{"issuer_id","policy_id","record_type","manifest_digest"}){
+        for(String column:new String[]{"issuer_id","policy_id","record_type","action_id","manifest_digest"}){
             Object old=admin.queryForObject("SELECT "+column+" FROM u07_test_authority_record WHERE record_id=?",String.class,f.ref);
             admin.update("UPDATE u07_test_authority_record SET "+column+"='forged' WHERE record_id=?",f.ref);
             assertEquals(Status.DENIED,adapter().admit(f.req(),f.scope()).status);
@@ -215,7 +215,7 @@ class SourceBindingTest {
         assertEquals(Status.DENIED,adapter().admit(f.alias(),f.scope()).status);assertEquals(f.event,adapter().read(f.req(),f.scope()).canonicalId);
         Fixture g=new Fixture();issuer.epoch(g.tenant,false);assertEquals(Status.DENIED,adapter().admit(g.req(),g.scope()).status);absent(g.event);
     }
-    @Test void effectFirstHoldsSharedEpochUntilCommitThenRevocationWins() throws Exception {
+    @Test void admissionFirstHoldsSharedEpochUntilCommitThenRevocationWins() throws Exception {
         Fixture f=new Fixture();CountDownLatch ready=new CountDownLatch(1),release=new CountDownLatch(1),contender=new CountDownLatch(1);
         SourceBindingAdapter a=adapter(p->{if(p.equals("before_commit")){ready.countDown();try{if(!release.await(8,TimeUnit.SECONDS))throw new IllegalStateException("timeout");}catch(InterruptedException e){throw new IllegalStateException(e);}}});
         ExecutorService pool=Executors.newFixedThreadPool(2);

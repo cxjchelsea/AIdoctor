@@ -45,7 +45,7 @@ final class TestAuthority {
             List<Map<String,Object>> epochs=issuer.queryForList("SELECT epoch,allowed FROM u07_test_permission_epoch WHERE tenant_id=? FOR UPDATE",fields[4]);
             if(epochs.size()!=1 || ((Number)epochs.get(0).get("allowed")).intValue()!=1) throw new IllegalStateException("issuer denied");
             long epoch=((Number)epochs.get(0).get("epoch")).longValue();
-            issuer.update("INSERT INTO u07_test_authority_record (record_id,record_type,issuer_id,policy_id,manifest_digest,tenant_id,permission_epoch,source_token,storage_key,binding_bytes,binding_fingerprint,answer_cipher,key_ref,occurred_at) VALUES (?,'SOURCE',?,?,?,?,?,?,?,?,?,?,?,?)",
+            issuer.update("INSERT INTO u07_test_authority_record (record_id,record_type,action_id,issuer_id,policy_id,manifest_digest,tenant_id,permission_epoch,source_token,storage_key,binding_bytes,binding_fingerprint,answer_cipher,key_ref,occurred_at) VALUES (?,'SOURCE','SYNTHETIC_ADMISSION',?,?,?,?,?,?,?,?,?,?,?,?)",
                 ref,ISSUER,POLICY,MANIFEST,fields[4],epoch,token,key,frame,BindingCodec.hash(frame),encrypted,encrypted==null?null:KEY_REF,occurred.toString());
             return null;
         });
