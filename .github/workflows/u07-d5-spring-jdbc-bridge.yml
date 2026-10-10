@@ -1,0 +1,77 @@
+name: U07 D5 isolated Spring JPA JDBC bridge
+on:
+  pull_request:
+    paths:
+      - 'tools/u07_d5_tx_bridge/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/wait/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/**'
+      - '.github/workflows/u07-d5-spring-jdbc-bridge.yml'
+permissions:
+  contents: read
+jobs:
+  isolated-bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: synthetic-ci-only
+          MYSQL_DATABASE: u07_d5_bridge
+        ports:
+          - 33322:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -psynthetic-ci-only"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Exact checkout
+        run: git rev-parse HEAD
+      - name: Original disposable schema
+        env:
+          MYSQL_PWD: synthetic-ci-only
+        run: |
+          set -euo pipefail
+          for v in 2 3 6 7; do
+            file=$(find diagnosis-service/src/main/resources/db/migration -name "V${v}__*.sql" -print -quit)
+            test -n "$file"
+            mysql -h 127.0.0.1 -P 33322 -uroot u07_d5_bridge < "$file"
+          done
+      - name: Full module build evidence (does not substitute for bridge tests)
+        id: full
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          mvn -B -f contracts/v1/bindings/java/pom.xml install -DskipTests > /tmp/u07-full-build.log 2>&1
+          mvn -B -f diagnosis-service/pom.xml test >> /tmp/u07-full-build.log 2>&1 || { tail -100 /tmp/u07-full-build.log; exit 1; }
+          tail -20 /tmp/u07-full-build.log
+      - name: Isolated real Spring MySQL suite
+        env:
+          U07_BRIDGE_URL: jdbc:mysql://127.0.0.1:33322/u07_d5_bridge?useSSL=false&allowPublicKeyRetrieval=true
+          U07_BRIDGE_USER: root
+          U07_BRIDGE_PASSWORD: synthetic-ci-only
+        run: |
+          mvn -B -f tools/u07_d5_tx_bridge/pom.xml test
+          echo 'U07_D5_SPRING_JPA_JDBC_BRIDGE=PASS scope=ISOLATED_MYSQL_TEST_WIRING tests=8'
+      - name: Evidence scope
+        env:
+          FULL_OUTCOME: ${{ steps.full.outcome }}
+        run: |
+          echo "U07_D5_FULL_MODULE_OUTCOME=$FULL_OUTCOME"
+          test -f tools/u07_d5_tx_bridge/target/surefire-reports/com.aidoctor.verification.BridgeTest.txt
+          cat tools/u07_d5_tx_bridge/target/surefire-reports/com.aidoctor.verification.BridgeTest.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: u07-d5-bridge-evidence
+          path: |
+            /tmp/u07-full-build.log
+            tools/u07_d5_tx_bridge/target/surefire-reports/

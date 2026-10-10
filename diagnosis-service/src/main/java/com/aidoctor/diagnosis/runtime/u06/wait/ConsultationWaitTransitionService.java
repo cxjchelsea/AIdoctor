@@ -1,6 +1,6 @@
 package com.aidoctor.diagnosis.runtime.u06.wait;
 import com.aidoctor.diagnosis.runtime.u01.ConsultationRecord;import com.aidoctor.diagnosis.runtime.u01.ConsultationRepository;import org.springframework.transaction.annotation.*;import java.time.LocalDateTime;import java.util.Optional;
-public final class ConsultationWaitTransitionService{
+public class ConsultationWaitTransitionService{
  private final ConsultationRepository consultations;private final ConsultationWaitEffectRepository effects;
  public ConsultationWaitTransitionService(ConsultationRepository c,ConsultationWaitEffectRepository e){if(c==null||e==null)throw new IllegalArgumentException("repositories required");consultations=c;effects=e;}
  @Transactional(isolation=Isolation.SERIALIZABLE) public Result establish(Command c){
