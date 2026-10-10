@@ -6,6 +6,8 @@ on:
       - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4RecoveryConcurrencyJdbcSmoke.java"
       - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4AdversarialOwnedJdbcSmoke.java"
       - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4ForcedProcessExitWorker.java"
+      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4MysqlConflictClassifier.java"
+      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4ReplayStateJdbcSmoke.java"
       - ".github/workflows/u07-d4-synthetic-recovery-concurrency-smoke.yml"
 
 permissions:
@@ -29,7 +31,9 @@ jobs:
             diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07D4SyntheticOwnedTransactionRunner.java \
             diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4RecoveryConcurrencyJdbcSmoke.java \
             diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4AdversarialOwnedJdbcSmoke.java \
-            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4ForcedProcessExitWorker.java
+            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4ForcedProcessExitWorker.java \
+            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4MysqlConflictClassifier.java \
+            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4ReplayStateJdbcSmoke.java
       - name: Disposable MySQL with original V2 V3 V6 V7 schema
         shell: bash
         run: |
@@ -108,4 +112,7 @@ jobs:
             "jdbc:mysql://127.0.0.1:33321/u07_d4_synthetic?useSSL=false&allowPublicKeyRetrieval=true" root "$password"
           java -cp "/tmp/u07_d4_classes:$jar" \
             com.aidoctor.diagnosis.runtime.u07.U07D4AdversarialOwnedJdbcSmoke \
+            "jdbc:mysql://127.0.0.1:33321/u07_d4_synthetic?useSSL=false&allowPublicKeyRetrieval=true" root "$password"
+          java -cp "/tmp/u07_d4_classes:$jar" \
+            com.aidoctor.diagnosis.runtime.u07.U07D4ReplayStateJdbcSmoke \
             "jdbc:mysql://127.0.0.1:33321/u07_d4_synthetic?useSSL=false&allowPublicKeyRetrieval=true" root "$password"

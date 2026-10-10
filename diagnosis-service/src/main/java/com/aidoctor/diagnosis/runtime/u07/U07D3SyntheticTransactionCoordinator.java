@@ -125,6 +125,13 @@ public final class U07D3SyntheticTransactionCoordinator {
                         || !in.digest.equals(existing.digest)) {
                     throw new IllegalStateException("U07_D3_RECONCILIATION_REQUIRED");
                 }
+                // Replay is a historical ACCEPTED result only, never an
+                // incomplete admission or an effect-bound downstream state.
+                if (!"ACCEPTED".equals(existing.phase)
+                        || !"ACCEPTED".equals(existing.decision)
+                        || existing.revision != 1 || existing.effectId != null) {
+                    throw new IllegalStateException("U07_D3_REPLAY_STATE_REQUIRES_REVIEW");
+                }
                 connection.commit();
                 return Outcome.SAME_EVENT_REPLAY;
             }
