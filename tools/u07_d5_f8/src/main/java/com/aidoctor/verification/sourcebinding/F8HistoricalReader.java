@@ -41,6 +41,11 @@ final class F8HistoricalReader {
    if(!id.scope(r)||!id.decisionId.equals(r.get("id"))||!id.source.canonicalId.equals(r.get("canonical_id"))||!id.source.fingerprint.equals(r.get("fingerprint"))||!Objects.equals(id.source.field(16),r.get("digest"))||!F8Identity.CONTRACT.equals(r.get("contract"))||!Objects.equals(r.get("sampled_at"),r.get("predicate_at")))throw corrupt();
    Verdict v=Verdict.valueOf((String)r.get("verdict"));boolean own=c!=null&&id.decisionId.equals(c.get("decision_id"));
    if(v==Verdict.ACCEPTED&&!own||v!=Verdict.ACCEPTED&&own)throw corrupt();
+   Object referenced=r.get("winner_id");
+   if(v==Verdict.ACCEPTED&&referenced!=null)throw corrupt();
+   // Negative history may have no observed winner even if another winner exists now.
+   if((v==Verdict.EXPIRED||v==Verdict.REJECTED)&&referenced!=null
+    &&(c==null||!Objects.equals(referenced,c.get("decision_id"))))throw corrupt();
    if(v==Verdict.DUPLICATE){Map<String,Object> a=applied(id,c);if(a==null||!Objects.equals(r.get("winner_id"),c.get("decision_id"))||!Objects.equals(a.get("digest"),id.source.field(16)))throw corrupt();}
    return new Read(State.FOUND_MATCH,new Receipt(id.decisionId,id.source.canonicalId,id.source.fingerprint,id.waitKey,v,(String)r.get("winner_id")));
   }catch(F8OwnerReader.Halt|SourceBindingAdapter.Block|IllegalArgumentException e){return new Read(State.INCONSISTENT,null);}

@@ -11,7 +11,9 @@ final class F8Result {
   final String decisionId,canonicalId,fingerprint,waitKey,winnerId; final Verdict verdict;
   Receipt(String decisionId,String canonicalId,String fingerprint,String waitKey,Verdict verdict,String winnerId){
    if(decisionId==null||canonicalId==null||fingerprint==null||waitKey==null||verdict==null
-    ||(verdict==Verdict.DUPLICATE&&winnerId==null))throw new IllegalArgumentException("INVALID_RECEIPT");
+    ||(verdict==Verdict.DUPLICATE&&winnerId==null)
+    ||(verdict==Verdict.ACCEPTED&&winnerId!=null)
+    ||(winnerId!=null&&(winnerId.isEmpty()||winnerId.equals(decisionId))))throw new IllegalArgumentException("INVALID_RECEIPT");
    this.decisionId=decisionId;this.canonicalId=canonicalId;this.fingerprint=fingerprint;this.waitKey=waitKey;this.verdict=verdict;this.winnerId=winnerId;
   }
  }
