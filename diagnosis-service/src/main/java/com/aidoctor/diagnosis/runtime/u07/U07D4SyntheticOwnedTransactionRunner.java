@@ -4,87 +4,139 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+import static com.aidoctor.diagnosis.runtime.u07.U07SyntheticResults.*;
 
-/**
- * Synthetic-only test boundary: creates a fresh dedicated JDBC connection
- * per call. Never consumes or commits a caller-owned transaction.
- *
- * Do NOT register as a production Spring component or pass real DB credentials.
- */
+/** Synthetic ONLY. No Spring wiring, caller connection, datasource or callback. */
 public final class U07D4SyntheticOwnedTransactionRunner {
-    public enum Fault {
-        NONE,
-        BEFORE_ADMISSION,
-        AFTER_COMMIT_ACK_LOSS
+    public enum Fault { NONE, BEFORE_ADMISSION, AFTER_COMMIT_ACK_LOSS }
+    private final U07SyntheticTestTarget target;
+    private final String user, password;
+    public U07D4SyntheticOwnedTransactionRunner(U07SyntheticTestTarget target, String user, String password) {
+        this.target = target; this.user = user; this.password = password;
     }
-
-    public static final class Result {
-        public final boolean acknowledgementKnown;
-        public final U07D3SyntheticTransactionCoordinator.Outcome outcome;
-        private Result(boolean known, U07D3SyntheticTransactionCoordinator.Outcome value) {
-            acknowledgementKnown = known;
-            outcome = value;
+    private void validate(U07SyntheticInput input) {
+        U07SyntheticInputValidator.validate(input);
+        if (target == null || user == null || password == null) {
+            throw new IllegalArgumentException("INVALID_SYNTHETIC_TARGET_OR_CREDENTIALS");
         }
     }
-
-    private final String url;
-    private final String user;
-    private final String password;
-    private final U07D3SyntheticTransactionCoordinator coordinator =
-            new U07D3SyntheticTransactionCoordinator();
-
-    public U07D4SyntheticOwnedTransactionRunner(String url, String user, String password) {
-        if (url == null || !url.matches(
-                "^jdbc:mysql://127[.]0[.]0[.]1:[0-9]{1,5}/u07_d4_synthetic"
-                        + "(?:[?].*)?$")) {
-            throw new IllegalArgumentException("U07_D4_LOCAL_SYNTHETIC_DATABASE_ONLY");
+    private static final class Session {
+        Connection connection;
+        boolean started, commitEntered, committed, rollbackAttempted;
+        Transaction tx = Transaction.NOT_STARTED;
+        Cleanup cleanup = Cleanup.NOT_REQUIRED;
+        Throwable primary;
+        final List<Throwable> errors = new ArrayList<>();
+        void cleanupError(Throwable error) {
+            errors.add(error);
+            cleanup = Cleanup.FAILED;
+            if (primary == null) primary = error;
+            else if (primary != error) primary.addSuppressed(error);
         }
-        if (user == null || password == null) throw new IllegalArgumentException("credentials required");
-        this.url = url;
-        this.user = user;
-        this.password = password;
-    }
-
-    public Result execute(U07D3SyntheticTransactionCoordinator.Input input,
-                          Timestamp now, Fault fault) throws SQLException {
-        if (fault == null) throw new IllegalArgumentException("fault required");
-        try (Connection tx = DriverManager.getConnection(url, user, password)) {
-            if (!tx.getAutoCommit()) {
-                // Require a fresh connection in the driver's ordinary initial state.
-                throw new IllegalStateException("U07_D4_NEW_CONNECTION_REQUIRED");
-            }
-            tx.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
-            tx.setAutoCommit(false);
-            if (fault == Fault.BEFORE_ADMISSION) {
-                tx.rollback();
-                return new Result(false, null);
-            }
-            U07D3SyntheticTransactionCoordinator.Outcome outcome =
-                    coordinator.admitAndDecideSynthetic(tx, input, now);
-            // D3 owns commit; injected ack loss occurs AFTER DB commit.
-            if (fault == Fault.AFTER_COMMIT_ACK_LOSS) {
-                return new Result(false, null);
-            }
-            return new Result(true, outcome);
-        }
-    }
-
-    /**
-     * Fresh-connection readback is separate from a possibly poisoned write TX.
-     * Never invent an acceptance if durable evidence is partial or missing.
-     */
-    public U07D4SyntheticRecoveryInspector.State inspectFresh(
-            U07D3SyntheticTransactionCoordinator.Input input) throws SQLException {
-        try (Connection tx = DriverManager.getConnection(url, user, password)) {
-            tx.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
-            tx.setAutoCommit(false);
+        void rollback() {
+            rollbackAttempted = true;
             try {
-                return new U07D4SyntheticRecoveryInspector().inspect(
-                        tx, input.eventId, input.consultationId, input.questionId,
-                        input.waitEffectId, input.idempotencyKey, input.digest);
-            } finally {
-                tx.rollback();
+                connection.rollback();
+                if (!commitEntered) tx = Transaction.ROLLED_BACK;
+            } catch (SQLException | RuntimeException error) {
+                if (!commitEntered) tx = Transaction.ABORT_UNCONFIRMED;
+                cleanupError(error);
             }
         }
+        void finish() {
+            if (connection == null) return;
+            if (cleanup != Cleanup.FAILED) cleanup = Cleanup.COMPLETE;
+            if (started && !committed && !rollbackAttempted) rollback();
+            try { connection.close(); }
+            catch (SQLException | RuntimeException error) { cleanupError(error); }
+        }
+    }
+    public WriteResult execute(U07SyntheticInput input, Timestamp now, Fault fault) {
+        Session s = new Session();
+        Operation op = Operation.FAILED;
+        Response response = Response.AVAILABLE;
+        Business business = null;
+        Error fatal = null;
+        try {
+            validate(input);
+            if (now == null || fault == null) throw new IllegalArgumentException("INVALID_SYNTHETIC_INPUT");
+            // Defensive copy: timestamp is caller-mutable, unlike the input.
+            Timestamp frozenNow = new Timestamp(now.getTime());
+            frozenNow.setNanos(now.getNanos());
+            s.connection = DriverManager.getConnection(target.jdbcUrl(), user, password);
+            s.connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            s.connection.setAutoCommit(false);
+            s.started = true;
+            s.tx = Transaction.ABORT_UNCONFIRMED;
+            if (fault == Fault.BEFORE_ADMISSION) throw new IllegalStateException("U07_SYNTHETIC_BEFORE_ADMISSION");
+            U07D3SyntheticTransactionCoordinator.Outcome outcome =
+                    new U07D3SyntheticTransactionCoordinator().admitAndDecideSynthetic(s.connection, input, frozenNow);
+            if (outcome == U07D3SyntheticTransactionCoordinator.Outcome.REJECTED_CURRENTNESS) {
+                s.rollback();
+                if (s.tx == Transaction.ROLLED_BACK) {
+                    op = Operation.REJECTED;
+                    business = Business.REJECTED_CURRENTNESS;
+                }
+            } else {
+                s.commitEntered = true;
+                s.tx = Transaction.COMMIT_OUTCOME_UNKNOWN;
+                s.connection.commit();
+                s.committed = true;
+                s.tx = Transaction.COMMITTED;
+                op = Operation.SUCCEEDED;
+                if (fault == Fault.AFTER_COMMIT_ACK_LOSS) {
+                    response = Response.SUPPRESSED_AFTER_COMMIT;
+                } else {
+                    business = outcome == U07D3SyntheticTransactionCoordinator.Outcome.ACCEPTED
+                            ? Business.ACCEPTED : Business.SAME_EVENT_REPLAY;
+                }
+            }
+        } catch (SQLException | RuntimeException failure) {
+            s.primary = failure;
+        } catch (Error failure) {
+            fatal = failure;
+            s.primary = failure;
+            throw failure;
+        } finally {
+            // Preserve a JVM Error even if cleanup itself throws another Error.
+            try { s.finish(); }
+            catch (Error cleanupFailure) {
+                if (fatal != null) fatal.addSuppressed(cleanupFailure);
+                else throw cleanupFailure;
+            }
+        }
+        if (s.cleanup == Cleanup.FAILED) op = Operation.FAILED;
+        return new WriteResult(op, s.tx, response, s.cleanup, business, s.primary, s.errors);
+    }
+    public RecoveryResult inspectFresh(U07SyntheticInput input) {
+        Session s = new Session();
+        Read read = Read.NOT_ATTEMPTED;
+        Observation observation = null;
+        Error fatal = null;
+        try {
+            validate(input);
+            read = Read.UNAVAILABLE;
+            s.connection = DriverManager.getConnection(target.jdbcUrl(), user, password);
+            s.connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            s.connection.setAutoCommit(false);
+            s.started = true;
+            observation = new Observation(new U07D4SyntheticRecoveryInspector().inspect(s.connection, input));
+            read = Read.COMPLETE;
+        } catch (SQLException | RuntimeException failure) {
+            s.primary = failure;
+        } catch (Error failure) {
+            fatal = failure; s.primary = failure; throw failure;
+        } finally {
+            try { s.finish(); }
+            catch (Error cleanupFailure) {
+                if (fatal != null) fatal.addSuppressed(cleanupFailure);
+                else throw cleanupFailure;
+            }
+        }
+        Operation op = read == Read.COMPLETE && s.cleanup == Cleanup.COMPLETE
+                ? Operation.SUCCEEDED : Operation.FAILED;
+        return new RecoveryResult(op, read, observation, s.cleanup, s.primary, s.errors);
     }
 }

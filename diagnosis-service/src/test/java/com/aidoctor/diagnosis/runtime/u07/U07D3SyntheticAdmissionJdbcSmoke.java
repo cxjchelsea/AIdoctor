@@ -10,8 +10,6 @@ import java.sql.Timestamp;
 public final class U07D3SyntheticAdmissionJdbcSmoke {
     private static int assertions;
     private static final Timestamp NOW = Timestamp.valueOf("2026-01-01 00:00:00");
-    private static final U07D3SyntheticTransactionCoordinator COORDINATOR =
-            new U07D3SyntheticTransactionCoordinator();
 
     private static void check(boolean condition, String label) {
         assertions++;
@@ -30,9 +28,9 @@ public final class U07D3SyntheticAdmissionJdbcSmoke {
         }
     }
 
-    private static U07D3SyntheticTransactionCoordinator.Input command(
+    private static U07SyntheticInput command(
             String event, String key, String digest, String question, long revision) {
-        return new U07D3SyntheticTransactionCoordinator.Input(
+        return new U07SyntheticInput(
                 event, "synthetic-consult-d3", question, "synthetic-wait-d3",
                 key, digest, revision);
     }
@@ -44,11 +42,11 @@ public final class U07D3SyntheticAdmissionJdbcSmoke {
         Class.forName("com.mysql.cj.jdbc.Driver");
         try (Connection c = DriverManager.getConnection(args[0], args[1], args[2])) {
             c.setAutoCommit(false);
-            U07D3SyntheticTransactionCoordinator.Input original =
+            U07SyntheticInput original =
                     command("synthetic-d3-event-1", "synthetic-d3-idem-1", "digest-1",
                             "synthetic-question-d3", 1);
-            check(COORDINATOR.admitAndDecideSynthetic(c, original, NOW)
-                    == U07D3SyntheticTransactionCoordinator.Outcome.ACCEPTED, "first accepted");
+            check(U07SyntheticSmokeSupport.run(args, original, NOW)
+                    == U07SyntheticResults.Business.ACCEPTED, "first accepted");
             check(count(c, "canonical_business_event", "event_id", original.eventId) == 1,
                     "canonical identity persisted");
             check(count(c, "u07_event_application", "event_id", original.eventId) == 1,
@@ -60,15 +58,15 @@ public final class U07D3SyntheticAdmissionJdbcSmoke {
             check(accepted.effectId == null, "no effect or APPLIED inferred");
             c.rollback();
 
-            check(COORDINATOR.admitAndDecideSynthetic(c, original, NOW)
-                    == U07D3SyntheticTransactionCoordinator.Outcome.SAME_EVENT_REPLAY,
+            check(U07SyntheticSmokeSupport.run(args, original, NOW)
+                    == U07SyntheticResults.Business.SAME_EVENT_REPLAY,
                     "canonical replay returns historical application");
             check(count(c, "canonical_business_event", "event_id", original.eventId) == 1,
                     "no duplicate canonical row on replay");
 
             boolean mismatch = false;
             try {
-                COORDINATOR.admitAndDecideSynthetic(c,
+                U07SyntheticSmokeSupport.run(args,
                         command(original.eventId, original.idempotencyKey, "other-digest",
                                 "synthetic-question-d3", 1), NOW);
             } catch (IllegalStateException expected) {
@@ -80,7 +78,7 @@ public final class U07D3SyntheticAdmissionJdbcSmoke {
 
             boolean aliasConflict = false;
             try {
-                COORDINATOR.admitAndDecideSynthetic(c,
+                U07SyntheticSmokeSupport.run(args,
                         command("synthetic-d3-alias", original.idempotencyKey, "digest-1",
                                 "synthetic-question-d3", 1), NOW);
             } catch (IllegalStateException expected) {
@@ -90,29 +88,29 @@ public final class U07D3SyntheticAdmissionJdbcSmoke {
             check(count(c, "canonical_business_event", "event_id", "synthetic-d3-alias") == 0,
                     "alias not inserted");
 
-            check(COORDINATOR.admitAndDecideSynthetic(c,
+            check(U07SyntheticSmokeSupport.run(args,
                     command("synthetic-d3-stale", "synthetic-d3-idem-stale", "digest-stale",
                             "synthetic-question-d3", 0), NOW)
-                    == U07D3SyntheticTransactionCoordinator.Outcome.REJECTED_CURRENTNESS,
+                    == U07SyntheticResults.Business.REJECTED_CURRENTNESS,
                     "stale wait version rejected");
             check(count(c, "canonical_business_event", "event_id", "synthetic-d3-stale") == 0,
                     "stale event not admitted");
 
-            check(COORDINATOR.admitAndDecideSynthetic(c,
+            check(U07SyntheticSmokeSupport.run(args,
                     command("synthetic-d3-wrong-question", "synthetic-d3-idem-q", "digest-q",
-                            "different-question", 1), NOW)
-                    == U07D3SyntheticTransactionCoordinator.Outcome.REJECTED_CURRENTNESS,
+                            "synthetic-different-question", 1), NOW)
+                    == U07SyntheticResults.Business.REJECTED_CURRENTNESS,
                     "wrong question rejected");
             check(count(c, "canonical_business_event", "event_id", "synthetic-d3-wrong-question") == 0,
                     "invalid question no identity");
 
             boolean forbidden = false;
             try {
-                COORDINATOR.admitAndDecideSynthetic(c,
+                U07SyntheticSmokeSupport.run(args,
                         command("real-event", "synthetic-d3-idem-real", "digest",
                                 "synthetic-question-d3", 1), NOW);
             } catch (IllegalArgumentException expected) {
-                forbidden = expected.getMessage().contains("SYNTHETIC_SCOPE_ONLY");
+                forbidden = expected.getMessage().contains("INVALID_SYNTHETIC_INPUT");
             }
             check(forbidden, "non-synthetic event rejected");
             check(count(c, "canonical_business_event", "event_id", "real-event") == 0,

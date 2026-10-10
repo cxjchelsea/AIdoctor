@@ -16,10 +16,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * Does not exercise kill -9 or actual post-commit loss of network acknowledgement.
  */
 public final class U07D4RecoveryConcurrencyJdbcSmoke {
-    private static final U07D4SyntheticRecoveryInspector INSPECTOR =
-            new U07D4SyntheticRecoveryInspector();
-    private static final U07D3SyntheticTransactionCoordinator COORDINATOR =
-            new U07D3SyntheticTransactionCoordinator();
     private static final Timestamp NOW = Timestamp.valueOf("2026-01-01 00:00:00");
     private static int assertions;
 
@@ -34,15 +30,14 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
         return c;
     }
 
-    private static U07D3SyntheticTransactionCoordinator.Input command(String id) {
-        return new U07D3SyntheticTransactionCoordinator.Input(id, "synthetic-consult-d3",
+    private static U07SyntheticInput command(String id) {
+        return new U07SyntheticInput(id, "synthetic-consult-d3",
                 "synthetic-question-d3", "synthetic-wait-d3", id + "-key", "digest-" + id, 1);
     }
 
-    private static U07D4SyntheticRecoveryInspector.State read(
-            Connection c, U07D3SyntheticTransactionCoordinator.Input in) throws SQLException {
-        return INSPECTOR.inspect(c, in.eventId, in.consultationId,
-                in.questionId, in.waitEffectId, in.idempotencyKey, in.digest);
+    private static U07SyntheticResults.Evidence read(
+            String[] args, U07SyntheticInput in) throws SQLException {
+        return U07SyntheticSmokeSupport.inspect(args, in);
     }
 
     private static int count(Connection c, String table, String event) throws SQLException {
@@ -63,10 +58,10 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
             throw new IllegalArgumentException("local synthetic-only database");
         }
         Class.forName("com.mysql.cj.jdbc.Driver");
-        U07D3SyntheticTransactionCoordinator.Input crashed =
+        U07SyntheticInput crashed =
                 command("synthetic-d3-uncommitted");
         try (Connection c = connect(args)) {
-            check(read(c, crashed) == U07D4SyntheticRecoveryInspector.State.NO_DURABLE_EVENT,
+            check(read(args, crashed) == U07SyntheticResults.Evidence.NO_DURABLE_EVENT,
                     "no accepted evidence before insert");
             try (PreparedStatement p = c.prepareStatement(
                     "INSERT INTO canonical_business_event "
@@ -82,20 +77,20 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
             // Simulate connection disappearing before COMMIT.
         }
         try (Connection fresh = connect(args)) {
-            check(read(fresh, crashed) == U07D4SyntheticRecoveryInspector.State.NO_DURABLE_EVENT,
+            check(read(args, crashed) == U07SyntheticResults.Evidence.NO_DURABLE_EVENT,
                     "uncommitted canonical rolled back on connection loss");
             fresh.rollback();
         }
 
-        U07D3SyntheticTransactionCoordinator.Input accepted = command("synthetic-d3-recover");
+        U07SyntheticInput accepted = command("synthetic-d3-recover");
         try (Connection c = connect(args)) {
-            check(COORDINATOR.admitAndDecideSynthetic(c, accepted, NOW)
-                    == U07D3SyntheticTransactionCoordinator.Outcome.ACCEPTED,
+            check(U07SyntheticSmokeSupport.run(args, accepted, NOW)
+                    == U07SyntheticResults.Business.ACCEPTED,
                     "positive durable admission");
         }
         try (Connection fresh = connect(args)) {
-            check(read(fresh, accepted) ==
-                    U07D4SyntheticRecoveryInspector.State.HISTORICAL_ACCEPTED,
+            check(read(args, accepted) ==
+                    U07SyntheticResults.Evidence.HISTORICAL_ACCEPTED,
                     "fresh connection accepted readback after commit");
             fresh.rollback();
         }
@@ -109,15 +104,15 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
             mutation.commit();
         }
         try (Connection fresh = connect(args)) {
-            check(read(fresh, accepted) ==
-                    U07D4SyntheticRecoveryInspector.State.HISTORICAL_ACCEPTED,
+            check(read(args, accepted) ==
+                    U07SyntheticResults.Evidence.HISTORICAL_ACCEPTED,
                     "historical evidence stable after wait advances");
-            check(COORDINATOR.admitAndDecideSynthetic(fresh, accepted, NOW)
-                    == U07D3SyntheticTransactionCoordinator.Outcome.SAME_EVENT_REPLAY,
+            check(U07SyntheticSmokeSupport.run(args, accepted, NOW)
+                    == U07SyntheticResults.Business.SAME_EVENT_REPLAY,
                     "historical replay survives current wait state advancement");
         }
 
-        U07D3SyntheticTransactionCoordinator.Input partial = command("synthetic-d3-partial");
+        U07SyntheticInput partial = command("synthetic-d3-partial");
         try (Connection c = connect(args)) {
             try (PreparedStatement p = c.prepareStatement(
                     "INSERT INTO canonical_business_event "
@@ -133,13 +128,13 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
             c.commit();
         }
         try (Connection c = connect(args)) {
-            check(read(c, partial) ==
-                    U07D4SyntheticRecoveryInspector.State.PARTIAL_OR_INCONSISTENT,
+            check(read(args, partial) ==
+                    U07SyntheticResults.Evidence.PARTIAL_OR_INCONSISTENT,
                     "canonical-only partial evidence is fail-closed");
-            check(INSPECTOR.inspect(c, partial.eventId, partial.consultationId,
-                    partial.questionId, partial.waitEffectId, partial.idempotencyKey,
-                    "conflicting-digest") ==
-                    U07D4SyntheticRecoveryInspector.State.IDENTITY_CONFLICT,
+            check(U07SyntheticSmokeSupport.inspect(args, new U07SyntheticInput(
+                    partial.eventId, partial.consultationId, partial.questionId, partial.waitEffectId,
+                    partial.idempotencyKey, "conflicting-digest", 1)) ==
+                    U07SyntheticResults.Evidence.IDENTITY_CONFLICT,
                     "mismatching canonical digest rejected");
             c.rollback();
         }
@@ -155,7 +150,7 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
             }
             c.commit();
         }
-        final U07D3SyntheticTransactionCoordinator.Input race =
+        final U07SyntheticInput race =
                 command("synthetic-d3-race");
         CountDownLatch start = new CountDownLatch(1);
         AtomicInteger acceptedCount = new AtomicInteger();
@@ -167,11 +162,11 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
             workers[i] = new Thread(() -> {
                 try (Connection c = connect(args)) {
                     if (!start.await(12, TimeUnit.SECONDS)) throw new AssertionError("start timeout");
-                    U07D3SyntheticTransactionCoordinator.Outcome o =
-                            COORDINATOR.admitAndDecideSynthetic(c, race, NOW);
-                    if (o == U07D3SyntheticTransactionCoordinator.Outcome.ACCEPTED) {
+                    U07SyntheticResults.Business o =
+                            U07SyntheticSmokeSupport.run(args, race, NOW);
+                    if (o == U07SyntheticResults.Business.ACCEPTED) {
                         acceptedCount.incrementAndGet();
-                    } else if (o == U07D3SyntheticTransactionCoordinator.Outcome.SAME_EVENT_REPLAY) {
+                    } else if (o == U07SyntheticResults.Business.SAME_EVENT_REPLAY) {
                         replayCount.incrementAndGet();
                     } else {
                         throw new AssertionError("unexpected currentness rejection");
@@ -204,7 +199,7 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
                     "exactly one durable canonical identity");
             check(count(fresh, "u07_event_application", race.eventId) == 1,
                     "exactly one application");
-            check(read(fresh, race) == U07D4SyntheticRecoveryInspector.State.HISTORICAL_ACCEPTED,
+            check(read(args, race) == U07SyntheticResults.Evidence.HISTORICAL_ACCEPTED,
                     "race winner reconcile from fresh connection");
             fresh.rollback();
         }

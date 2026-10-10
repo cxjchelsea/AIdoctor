@@ -45,12 +45,12 @@ public final class U07D4ForcedProcessExitWorker {
             // Process dies with both JDBC INSERTs uncommitted.
             Runtime.getRuntime().halt(77);
         } else {
-            new U07D3SyntheticTransactionCoordinator().admitAndDecideSynthetic(
-                    connection,
-                    new U07D3SyntheticTransactionCoordinator.Input(
-                            event, "synthetic-consult-d3", "synthetic-question-d3",
-                            "synthetic-wait-d3", key, "synthetic-forced-digest", 1),
-                    NOW);
+            connection.close();
+            U07SyntheticResults.WriteResult result = U07SyntheticSmokeSupport.runner(args).execute(
+                    new U07SyntheticInput(event, "synthetic-consult-d3", "synthetic-question-d3",
+                            "synthetic-wait-d3", key, "synthetic-forced-digest", 1), NOW,
+                    U07D4SyntheticOwnedTransactionRunner.Fault.NONE);
+            if (!result.isNormalSuccess()) throw new AssertionError("owner did not commit", result.primaryFailure);
             // D3 committed, but calling process disappears before responding.
             Runtime.getRuntime().halt(78);
         }

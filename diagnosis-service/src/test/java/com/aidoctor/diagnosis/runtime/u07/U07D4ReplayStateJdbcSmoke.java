@@ -20,9 +20,9 @@ public final class U07D4ReplayStateJdbcSmoke {
         c.setAutoCommit(false);
         return c;
     }
-    private static U07D3SyntheticTransactionCoordinator.Input cmd(String suffix) {
+    private static U07SyntheticInput cmd(String suffix) {
         String id = "synthetic-d3-replay-state-" + suffix;
-        return new U07D3SyntheticTransactionCoordinator.Input(id, "synthetic-consult-d3",
+        return new U07SyntheticInput(id, "synthetic-consult-d3",
                 "synthetic-question-d3", "synthetic-wait-d3", id + "-key", "digest-" + suffix, 1);
     }
     private static void corrupt(String[] args, String event, String phase,
@@ -42,11 +42,11 @@ public final class U07D4ReplayStateJdbcSmoke {
     private static void invalidReplay(String[] args, String suffix, String phase,
                                       String decision, long revision, String effect,
                                       boolean delete) throws Exception {
-        U07D3SyntheticTransactionCoordinator.Input in = cmd(suffix);
+        U07SyntheticInput in = cmd(suffix);
         U07D4SyntheticOwnedTransactionRunner runner =
-                new U07D4SyntheticOwnedTransactionRunner(args[0], args[1], args[2]);
-        check(runner.execute(in, NOW, U07D4SyntheticOwnedTransactionRunner.Fault.NONE).outcome
-                == U07D3SyntheticTransactionCoordinator.Outcome.ACCEPTED, "seed accepted");
+                U07SyntheticSmokeSupport.runner(args);
+        check(U07SyntheticSmokeSupport.run(args, in, NOW)
+                == U07SyntheticResults.Business.ACCEPTED, "seed accepted");
         if (delete) {
             try (Connection c = connect(args);
                  PreparedStatement p = c.prepareStatement("DELETE FROM u07_event_application WHERE event_id=?")) {
@@ -57,20 +57,17 @@ public final class U07D4ReplayStateJdbcSmoke {
         } else {
             corrupt(args, in.eventId, phase, decision, revision, effect);
         }
-        U07D4SyntheticRecoveryInspector.State state = runner.inspectFresh(in);
-        check(state != U07D4SyntheticRecoveryInspector.State.HISTORICAL_ACCEPTED,
+        U07SyntheticResults.Evidence state = U07SyntheticSmokeSupport.inspect(args, in);
+        check(state != U07SyntheticResults.Evidence.HISTORICAL_ACCEPTED,
                 "inspector never upgrades incomplete or inconsistent state");
-        boolean rejected = false;
-        try {
-            runner.execute(in, NOW, U07D4SyntheticOwnedTransactionRunner.Fault.NONE);
-        } catch (IllegalStateException expected) {
-            String reason = delete ? "U07_D3_RECONCILIATION_REQUIRED"
-                    : "U07_D3_REPLAY_STATE_REQUIRES_REVIEW";
-            check(reason.equals(expected.getMessage()), "explicit reconciliation reason");
-            rejected = true;
-        }
-        check(rejected, "invalid historical record is not a successful replay");
-        check(runner.inspectFresh(in) == state, "rejected replay does not repair or mutate evidence");
+        U07SyntheticResults.WriteResult bad = runner.execute(in, NOW, U07D4SyntheticOwnedTransactionRunner.Fault.NONE);
+        String reason = delete ? "U07_D3_RECONCILIATION_REQUIRED" : "U07_D3_REPLAY_STATE_REQUIRES_REVIEW";
+        check(bad.primaryFailure != null && reason.equals(bad.primaryFailure.getMessage()), "explicit reconciliation reason");
+        check(bad.operationStatus == U07SyntheticResults.Operation.FAILED
+                && bad.transactionStatus == U07SyntheticResults.Transaction.ROLLED_BACK
+                && bad.businessOutcome == null && bad.cleanupStatus == U07SyntheticResults.Cleanup.COMPLETE,
+                "invalid historical record is not a successful replay");
+        check(U07SyntheticSmokeSupport.inspect(args, in) == state, "rejected replay does not repair or mutate evidence");
         try (Connection c = connect(args);
              PreparedStatement p = c.prepareStatement("SELECT phase,decision,row_version,effect_id "
                      + "FROM u07_event_application WHERE event_id=?")) {
@@ -92,7 +89,7 @@ public final class U07D4ReplayStateJdbcSmoke {
     public static void main(String[] args) throws Exception {
         if (args.length != 3) throw new IllegalArgumentException("args");
         U07D4SyntheticOwnedTransactionRunner runner =
-                new U07D4SyntheticOwnedTransactionRunner(args[0], args[1], args[2]);
+                U07SyntheticSmokeSupport.runner(args);
         Class.forName("com.mysql.cj.jdbc.Driver");
         // The same shared classifier drives BOTH concurrency harnesses.
         check(U07D4MysqlConflictClassifier.isExpected(new SQLException("duplicate", "23000", 1062)),
@@ -130,9 +127,9 @@ public final class U07D4ReplayStateJdbcSmoke {
         invalidReplay(args, "phase", "APPLIED", "ACCEPTED", 1, null, false);
         invalidReplay(args, "effect", "ACCEPTED", "ACCEPTED", 1, "synthetic-effect-invalid", false);
         invalidReplay(args, "missing", null, null, 0, null, true);
-        U07D3SyntheticTransactionCoordinator.Input valid = cmd("valid");
-        check(runner.execute(valid, NOW, U07D4SyntheticOwnedTransactionRunner.Fault.NONE).outcome
-                == U07D3SyntheticTransactionCoordinator.Outcome.ACCEPTED, "valid first acceptance");
+        U07SyntheticInput valid = cmd("valid");
+        check(U07SyntheticSmokeSupport.run(args, valid, NOW)
+                == U07SyntheticResults.Business.ACCEPTED, "valid first acceptance");
         try (Connection c = connect(args);
              PreparedStatement p = c.prepareStatement("UPDATE clinical_consultation "
                      + "SET lifecycle_status='ACTIVE',row_version=2,current_wait_effect_id=NULL "
@@ -140,9 +137,9 @@ public final class U07D4ReplayStateJdbcSmoke {
             check(p.executeUpdate() == 1, "advance synthetic wait after commit");
             c.commit();
         }
-        check(runner.execute(valid, NOW, U07D4SyntheticOwnedTransactionRunner.Fault.NONE).outcome
-                == U07D3SyntheticTransactionCoordinator.Outcome.SAME_EVENT_REPLAY, "valid historical replay after advance");
-        check(runner.inspectFresh(valid) == U07D4SyntheticRecoveryInspector.State.HISTORICAL_ACCEPTED,
+        check(U07SyntheticSmokeSupport.run(args, valid, NOW)
+                == U07SyntheticResults.Business.SAME_EVENT_REPLAY, "valid historical replay after advance");
+        check(U07SyntheticSmokeSupport.inspect(args, valid) == U07SyntheticResults.Evidence.HISTORICAL_ACCEPTED,
                 "inspector and coordinator agree on valid historical acceptance");
         System.out.println("U07_D4_REPLAY_STATE_SMOKE=PASS assertions=" + assertions
                 + " invalid_states=7 scope=SYNTHETIC_HISTORICAL_ACCEPTED_ONLY");
