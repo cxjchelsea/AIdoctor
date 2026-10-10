@@ -126,7 +126,7 @@ class F8AdapterTest {
   final boolean failCommit,failRollback;
   AmbiguousManager(boolean commit,boolean rollback){super(context.getBean(EntityManagerFactory.class));setDataSource(ds);failCommit=commit;failRollback=rollback;}
   @Override protected void doCommit(DefaultTransactionStatus status){super.doCommit(status);if(failCommit)throw new IllegalStateException("injected lost commit acknowledgement");}
-  @Override protected void doRollback(DefaultTransactionStatus status){if(failRollback)throw new IllegalStateException("injected unknown rollback");super.doRollback(status);}
+  @Override protected void doRollback(DefaultTransactionStatus status){super.doRollback(status);if(failRollback)throw new IllegalStateException("injected lost rollback acknowledgement");}
  }
  @Test void injectedCommitUnknownRecoversViaFreshRead(){Fixture f=new Fixture();F8Adapter uncertain=new F8Adapter(ds,new AmbiguousManager(true,false),em,box,BindingCodec.PROFILE,T,p->{});F8Result r=uncertain.finalizeAnswer(f.req(),f.scope());assertEquals(Durability.UNKNOWN,r.durability);assertNull(r.confirmed);assertEquals(F8HistoricalReader.State.FOUND_MATCH,adapter().read(f.req(),f.scope()).state);}
  @Test void injectedRollbackUnknownDoesNotClaimNotCommitted(){Fixture f=new Fixture();F8Adapter uncertain=new F8Adapter(ds,new AmbiguousManager(false,true),em,box,BindingCodec.PROFILE,T,p->{if(p.equals("after_sentinel"))throw new IllegalStateException("trigger");});F8Result r=uncertain.finalizeAnswer(f.req(),f.scope());assertEquals(Durability.UNKNOWN,r.durability);assertNull(r.confirmed);assertNotNull(r.queryKey);}
@@ -145,6 +145,7 @@ class F8AdapterTest {
    if(valid)assertNotNull(new F8Result(o,a,d,reason,"d",success?r:null));else assertThrows(IllegalArgumentException.class,()->new F8Result(o,a,d,reason,"d",success?r:null));
   }
  }
+ @Test void adapterDoesNotMutateCanonicalOrRuntimeState(){Fixture f=new Fixture();Map<String,Integer> before=new HashMap<>();for(String table:new String[]{"canonical_business_event","u07_canonical_event_binding","clinical_runtime_binding","clinical_runtime_run","f8_applied"})before.put(table,admin.queryForObject("SELECT COUNT(*) FROM "+table,Integer.class));byte[] frame=admin.queryForObject("SELECT canonical_binding_bytes FROM u07_canonical_event_binding WHERE canonical_event_id=?",byte[].class,f.event);assertEquals(Verdict.ACCEPTED,adapter().finalizeAnswer(f.req(),f.scope()).confirmed.verdict);for(Map.Entry<String,Integer> e:before.entrySet())assertEquals(e.getValue(),admin.queryForObject("SELECT COUNT(*) FROM "+e.getKey(),Integer.class));assertArrayEquals(frame,admin.queryForObject("SELECT canonical_binding_bytes FROM u07_canonical_event_binding WHERE canonical_event_id=?",byte[].class,f.event));assertThrows(org.springframework.dao.DataAccessException.class,()->db.update("DELETE FROM clinical_runtime_binding"));}
  @Test void resultMatrixRejectsInvalidCombinations(){
   Receipt receipt=new Receipt("d","c","f","w",Verdict.ACCEPTED,null);assertThrows(IllegalArgumentException.class,()->new F8Result(Operational.FINALIZED,Attempt.NOT_ATTEMPTED,Durability.COMMITTED,Reason.NONE,"d",receipt));
   assertThrows(IllegalArgumentException.class,()->new F8Result(Operational.RECONCILIATION_REQUIRED,Attempt.ATTEMPTED,Durability.UNKNOWN,Reason.COMMIT_UNKNOWN,"d",receipt));
