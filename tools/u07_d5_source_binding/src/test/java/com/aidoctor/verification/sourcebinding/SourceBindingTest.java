@@ -251,4 +251,49 @@ class SourceBindingTest {
         assertThrows(IllegalArgumentException.class,()->Result.committed(Status.REATTACHED,"synthetic-x","key","synthetic-target",Attempt.NOT_ATTEMPTED));
         assertNull(Result.blocked(Status.DENIED,Attempt.NOT_ATTEMPTED).canonicalId);
     }
+    /** Review reproducer: not an acceptance oracle; proves missing Foundation/binding type equivalence. */
+    @Test void reviewCorruptResumeBindingCanMasqueradeAsCanonicalUserAnswer(){
+        Fixture f=new Fixture();assertEquals(Status.STORED,adapter().admit(f.req(),f.scope()).status);
+        String target=f.event;
+        f.fields[1]="RESUME_REQUEST";f.fields[15]=null;f.fields[16]=null;f.fields[17]=target;
+        f.token=id();f.event=id();f.nextProof();
+        // Valid issuer-issued RESUME proof; no forged issuer or altered source namespace.
+        String corruptKey=f.key();byte[] bytes=BindingCodec.encode(f.fields);
+        admin.update("UPDATE canonical_business_event SET idempotency_key=?,payload_digest=? WHERE event_id=?",corruptKey,f.fields[20],target);
+        admin.update("UPDATE u07_canonical_event_binding SET storage_idempotency_key=?,event_type='RESUME_REQUEST',binding_fingerprint=?,payload_digest=?,canonical_binding_bytes=?,synthetic_answer_bytes=NULL,answer_payload_digest=NULL,key_ref=NULL,source_record_ref=?,target_answer_event_id=? WHERE canonical_event_id=?",
+            corruptKey,BindingCodec.hash(bytes),f.fields[20],bytes,f.ref,target,target);
+        assertEquals("USER_ANSWER",admin.queryForObject("SELECT event_type FROM canonical_business_event WHERE event_id=?",String.class,target));
+        assertEquals("RESUME_REQUEST",admin.queryForObject("SELECT event_type FROM u07_canonical_event_binding WHERE canonical_event_id=?",String.class,target));
+        assertNull(admin.queryForObject("SELECT synthetic_answer_bytes FROM u07_canonical_event_binding WHERE canonical_event_id=?",byte[].class,target));
+        // A new, otherwise valid request must quarantine this target. Current code incorrectly accepts it.
+        f.token=id();f.event=id();f.nextProof();Result observed=adapter().admit(f.req(),f.scope());
+        assertEquals(Status.TARGET_REATTACHED,observed.status,"known bug reproduction, not expected contract behavior");
+        assertEquals(target,observed.targetId);pair(f.event);
+        System.out.println("REVIEW387_TARGET_TYPE_MISMATCH_ACCEPTED=true answer_bytes_absent=true");
+    }
+    /** Review reproducer: force winner commit after initial absent lookup, before real ledger lookup. */
+    @Test void reviewLateMatchingAliasWinnerIsMisclassified() throws Exception {
+        Fixture f=new Fixture();String alias=id();ExecutorService pool=Executors.newSingleThreadExecutor();
+        java.util.concurrent.atomic.AtomicBoolean inject=new java.util.concurrent.atomic.AtomicBoolean(true);
+        CanonicalBusinessEventRepository wrapped=(CanonicalBusinessEventRepository)java.lang.reflect.Proxy.newProxyInstance(
+            CanonicalBusinessEventRepository.class.getClassLoader(),new Class<?>[]{CanonicalBusinessEventRepository.class},(proxy,method,args)->{
+                Object answer;
+                try{answer=method.invoke(events,args);}catch(java.lang.reflect.InvocationTargetException e){throw e.getCause();}
+                if(method.getName().equals("findByIdempotencyKey") && inject.compareAndSet(true,false)){
+                    assertFalse(((Optional<?>)answer).isPresent());
+                    Result winner=pool.submit(()->adapter().admit(f.req(),f.scope())).get(12,TimeUnit.SECONDS);
+                    assertEquals(Status.STORED,winner.status);
+                }
+                return answer;
+            });
+        try{
+            SourceBindingAdapter late=new SourceBindingAdapter(ds,manager,ledger,wrapped,em,box,BindingCodec.PROFILE);
+            Request request=new Request(alias,f.token,f.ref,WHEN);Result observed=late.admit(request,f.scope());
+            assertEquals(Status.INCONSISTENT,observed.status,"known bug reproduction, not expected contract behavior");
+            Result confirmed=adapter().read(request,f.scope());assertEquals(Status.REATTACHED,confirmed.status);
+            assertEquals(f.event,confirmed.canonicalId);pair(f.event);absent(alias);
+            System.out.println("REVIEW387_LATE_ALIAS_FALSE_INCONSISTENT=true matching_winner_read=true");
+        }finally{pool.shutdownNow();assertTrue(pool.awaitTermination(5,TimeUnit.SECONDS));}
+    }
+
 }
