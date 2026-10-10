@@ -117,6 +117,42 @@ class SqlClockTest {
         assertEquals(1,count("decision"));assertEquals(1,count("wait_claim"));
         // Wrapper contract: DEFER/NOT_ATTEMPTED/NOT_ATTEMPTED. Raw forced finalizer P5 is tested separately.
     }
+    @ParameterizedTest @CsvSource({"CLEARED,REJECTED,1","MOVED,REJECTED,1","MATCH,NONE,0"})
+    void pendingWinnerWaitCombinations(String state,String expected,int rows) {
+        winner(false,"same");
+        if(state.equals("CLEARED"))admin.update("UPDATE owner_fact SET current_wait=NULL");
+        if(state.equals("MOVED"))admin.update("UPDATE owner_fact SET current_wait='moved'");
+        tx.execute(s->{lock();assertEquals(rows,insert(fixed(T),1));
+            if(rows==1)assertEquals(expected,db.queryForObject("SELECT verdict FROM decision WHERE id='new'",String.class));
+            else s.setRollbackOnly();return null;});
+        assertEquals(1,count("wait_claim"));assertEquals("original",admin.queryForObject("SELECT decision_id FROM wait_claim",String.class));
+    }
+    @Test void appliedEquivalentClearedWaitStillDuplicates() {
+        winner(true,"same");admin.update("UPDATE owner_fact SET current_wait=NULL");
+        assertEquals("FINALIZED/ATTEMPTED/COMMITTED",finalizeAtomic(fixed(T),false,false,false));assertEquals("DUPLICATE",verdict());
+        assertEquals(1,count("wait_claim"));
+    }
+    @ParameterizedTest @CsvSource({"LEGAL","EXPIRED","CANCELLED"})
+    void wrongScopeClaimCannotDisappear(String state) {
+        admin.update("INSERT INTO wait_claim VALUES ('wait','other',NULL,NULL,2)");
+        if(state.equals("EXPIRED"))admin.update("UPDATE owner_fact SET deadline=?",Timestamp.valueOf(T));
+        if(state.equals("CANCELLED"))admin.update("UPDATE owner_fact SET terminal='CANCELLED',current_wait=NULL");
+        assertEquals("RETRYABLE_FAILURE/ATTEMPTED/NOT_COMMITTED",finalizeAtomic(fixed(T),false,false,false));
+        assertEquals(0,count("decision"));assertEquals(1,count("wait_claim"));
+        assertEquals("other",admin.queryForObject("SELECT scope_id FROM wait_claim",String.class));
+        assertEquals(2L,admin.queryForObject("SELECT generation FROM wait_claim",Long.class));
+    }
+    @Test void halfFilledRelatedClaimBlocksNegativeFinalization() {
+        admin.update("INSERT INTO wait_claim VALUES ('wait','scope','broken',NULL,0)");
+        admin.update("UPDATE owner_fact SET terminal='CANCELLED'");
+        assertEquals("RETRYABLE_FAILURE/ATTEMPTED/NOT_COMMITTED",finalizeAtomic(fixed(T),false,false,false));assertEquals(0,count("decision"));
+        assertEquals("broken",admin.queryForObject("SELECT answer_id FROM wait_claim",String.class));
+    }
+    @Test void unrelatedClaimIsPreservedAndDoesNotBlockAccepted() {
+        admin.update("INSERT INTO wait_claim VALUES ('other-wait','other',NULL,NULL,0)");
+        assertEquals("FINALIZED/ATTEMPTED/COMMITTED",finalizeAtomic(fixed(T),true,false,false));assertEquals("ACCEPTED",verdict());
+        assertEquals(2,count("wait_claim"));assertEquals(0L,admin.queryForObject("SELECT generation FROM wait_claim WHERE wait_id='other-wait'",Long.class));
+    }
     static class RollbackProbe extends RuntimeException { private static final long serialVersionUID=1L; }
     String finalizeAtomic(String clock,boolean sentinel,boolean faultAfterDecision,boolean faultAfterClaim) {
         AtomicBoolean attempted=new AtomicBoolean(false);
