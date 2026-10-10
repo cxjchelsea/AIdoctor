@@ -9,6 +9,7 @@ import java.sql.Timestamp;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Disposable MySQL-only synthetic crash/rollback and multi-connection smoke.
@@ -143,7 +144,7 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
             c.rollback();
         }
 
-        // Distinct synthetic consultation restores WAITING_USER for a real
+        // Restore the SAME synthetic consultation to WAITING_USER for a
         // two-connection race after our historical-readback checks.
         try (Connection c = connect(args)) {
             try (PreparedStatement p = c.prepareStatement(
@@ -160,6 +161,7 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
         AtomicInteger acceptedCount = new AtomicInteger();
         AtomicInteger replayCount = new AtomicInteger();
         AtomicInteger dbConflictCount = new AtomicInteger();
+        AtomicReference<Throwable> unexpected = new AtomicReference<>();
         Thread[] workers = new Thread[2];
         for (int i = 0; i < workers.length; i++) {
             workers[i] = new Thread(() -> {
@@ -177,9 +179,14 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
                 } catch (SQLException sqlFailure) {
                     // A retryable deadlock/serialization failure is an explicit
                     // failure surface, never silently promoted to acceptance.
-                    dbConflictCount.incrementAndGet();
-                } catch (Exception fail) {
-                    throw new RuntimeException(fail);
+                    try {
+                        U07D4MysqlConflictClassifier.requireExpected(sqlFailure);
+                        dbConflictCount.incrementAndGet();
+                    } catch (SQLException nonConflict) {
+                        unexpected.compareAndSet(null, nonConflict);
+                    }
+                } catch (Throwable fail) {
+                    unexpected.compareAndSet(null, fail);
                 }
             }, "u07-d4-synthetic-" + i);
             workers[i].start();
@@ -188,6 +195,9 @@ public final class U07D4RecoveryConcurrencyJdbcSmoke {
         for (Thread t : workers) {
             t.join(20000);
             check(!t.isAlive(), "bounded concurrent completion");
+        }
+        if (unexpected.get() != null) {
+            throw new AssertionError("unexpected worker failure", unexpected.get());
         }
         try (Connection fresh = connect(args)) {
             check(count(fresh, "canonical_business_event", race.eventId) == 1,

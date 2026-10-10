@@ -76,10 +76,12 @@ public final class U07D4AdversarialOwnedJdbcSmoke {
                     // Only known uniqueness / serialization conflicts are
                     // admissible fail-closed outcomes. Infrastructure failures
                     // must FAIL the test, not masquerade as concurrency proof.
-                    if ("23000".equals(sql.getSQLState()) || "40001".equals(sql.getSQLState())) {
+                    // Only MySQL duplicate-key 1062 / deadlock 1213 qualify.
+                    try {
+                        U07D4MysqlConflictClassifier.requireExpected(sql);
                         explicitlyRejected.incrementAndGet();
-                    } else {
-                        unexpected.compareAndSet(null, sql);
+                    } catch (SQLException nonConflict) {
+                        unexpected.compareAndSet(null, nonConflict);
                     }
                 } catch (IllegalStateException conflict) {
                     if (conflict.getMessage() != null &&
@@ -206,6 +208,6 @@ public final class U07D4AdversarialOwnedJdbcSmoke {
             runRace(runner, a, b, args, false);
         }
         System.out.println("U07_D4_ADVERSARIAL_OWNER_SMOKE=PASS assertions=" + assertions
-                + " races=10 (5 duplicate identity + 5 same-key conflict)");
+                + " races=10 scope=SAME_CONSULTATION_SERIALIZED_RACES");
     }
 }
