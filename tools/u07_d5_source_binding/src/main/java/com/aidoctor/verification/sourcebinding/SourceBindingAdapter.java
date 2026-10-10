@@ -23,7 +23,14 @@ final class SourceBindingAdapter {
         final String canonicalId, queryKey, targetId;
         private Result(Status status, Attempt attempt, Durability durability, String canonicalId, String queryKey, String targetId) {
             boolean success=status==Status.STORED||status==Status.REATTACHED||status==Status.TARGET_REATTACHED;
-            if(success != (durability==Durability.COMMITTED) || success != (canonicalId!=null)
+            if(status==null||attempt==null||durability==null
+                || success != (durability==Durability.COMMITTED) || success != (canonicalId!=null)
+                || (success && queryKey==null)
+                || ((status==Status.TARGET_REATTACHED) != (targetId!=null))
+                || ((status==Status.UNKNOWN) != (durability==Durability.UNKNOWN))
+                || (durability==Durability.NOT_COMMITTED && attempt!=Attempt.ATTEMPTED)
+                || (status==Status.STORED && attempt!=Attempt.ATTEMPTED)
+                || (!success && status!=Status.UNKNOWN && queryKey!=null)
                 || (durability==Durability.NOT_ATTEMPTED && attempt!=Attempt.NOT_ATTEMPTED)
                 || (durability==Durability.UNKNOWN && (status!=Status.UNKNOWN || queryKey==null))
                 || (!success && targetId!=null)) throw new IllegalArgumentException("INVALID_RESULT");

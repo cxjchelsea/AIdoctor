@@ -125,7 +125,9 @@ class SourceBindingTest {
         assertEquals(Status.INVALID_INPUT,adapter().admit(new Request(f.event,f.token,f.ref,null),f.scope()).status);absent(f.event);
         assertThrows(IllegalArgumentException.class,()->new TestAuthority(issuerJdbc,new TransactionTemplate(manager),box,"PRODUCTION"));
         assertThrows(IllegalArgumentException.class,()->new SourceBindingAdapter(ds,manager,ledger,events,em,box,"PROFILE-A"));
-        new TransactionTemplate(manager).execute(s->{assertThrows(IllegalStateException.class,()->adapter().admit(f.req(),f.scope()));return null;});absent(f.event);
+        new TransactionTemplate(manager).execute(s->{assertThrows(IllegalStateException.class,()->adapter().admit(f.req(),f.scope()));return null;});
+        SourceBindingAdapter wrong=new SourceBindingAdapter(new DriverManagerDataSource(),manager,ledger,events,em,box,BindingCodec.PROFILE);
+        assertEquals(Status.UNAVAILABLE,wrong.admit(f.req(),f.scope()).status);absent(f.event);
     }
     @Test void forgedRefWrongIssuerPolicyTypeAndManifestCannotBecomeVerified(){
         Fixture f=new Fixture();assertEquals(Status.DENIED,adapter().admit(new Request(f.event,f.token,id(),WHEN),f.scope()).status);
@@ -241,6 +243,10 @@ class SourceBindingTest {
         assertThrows(IllegalArgumentException.class,()->Result.committed(Status.STORED,null,"key",null,Attempt.ATTEMPTED));
         assertThrows(IllegalArgumentException.class,()->Result.blocked(Status.STORED,Attempt.NOT_ATTEMPTED));
         assertThrows(IllegalArgumentException.class,()->Result.unknown(null));
+        assertThrows(IllegalArgumentException.class,()->Result.blocked(Status.UNKNOWN,Attempt.ATTEMPTED));
+        assertThrows(IllegalArgumentException.class,()->Result.committed(Status.STORED,"synthetic-x","key",null,Attempt.NOT_ATTEMPTED));
+        assertThrows(IllegalArgumentException.class,()->Result.committed(Status.TARGET_REATTACHED,"synthetic-x","key",null,Attempt.ATTEMPTED));
+        assertThrows(IllegalArgumentException.class,()->Result.committed(Status.REATTACHED,"synthetic-x","key","synthetic-target",Attempt.NOT_ATTEMPTED));
         assertNull(Result.blocked(Status.DENIED,Attempt.NOT_ATTEMPTED).canonicalId);
     }
 }
