@@ -1,7 +1,8 @@
-# U07 D5-F8 隔离权威读回与决策提交适配详细设计及实现就绪评估 v0.1
+# U07 D5-F8 隔离权威读回与决策提交适配详细设计及实现就绪评估 v0.2
 
 日期：2026-10-10。base/main：835441492d130de320bf3d49fe2b4be598a2b327。
-状态：DESIGN_PROPOSED / READY_FOR_TARGETED_DESIGN_REVIEW；IMPLEMENTATION_NOT_YET_AUTHORIZED；REAL_D5_NOT_READY。
+修订依据：#395 142e47534508b024b878a03d92788cde203a8497，DF8-B01 / DF8-R01。文件名保留v0.1；本修订不自行关闭finding。
+状态：TARGETED_REMEDIATION_PROPOSED / READY_FOR_TARGETED_RE_REVIEW；IMPLEMENTATION_NOT_YET_AUTHORIZED；REAL_D5_NOT_READY。
 本文件不修改冻结合同、生产源码、Shared Contracts或迁移，不执行合并。
 
 ## 1. 输入基线及目标
@@ -62,17 +63,17 @@ P1用已认证answer content digest+exact consultation/question/parent wait+equi
 
 fixture decision：PK stable framed hash(canonical answer ID,decision contract version)，UNIQUE canonical answer ID；包含scope、完整wait、binding及input fingerprints、policy/manifest、verdict/reason、original duplicate/applied refs、owner版本/ref、terminal generation、claim generation、decision_effective_at/clock/precision、trace。input fingerprint含所观察的政策输入及版本，与RDP01 binding hash分离。采用FINAL-only durable行；VALIDATING为事务内候选状态，不新增durable in-flight lease，不以timeout释放claim。
 
-claim：PK consultation/question/parent wait；sentinel空winner，generation=0。ACCEPTED同时绑定winner canonical/decision及generation CAS 0→1、观察owner fence版本。无winner重派操作。非ACCEPTED无新claim；DUPLICATE关联已应用winner，不冒充自己的winner。FK和CHECK只辅助，reader仍交叉校验decision/verdict/claim/payload/source关系。
+claim：PK consultation/question/parent wait；sentinel空winner，generation=0，仅本次事务内创建；只有ACCEPTED路径可将其与own decision/claim一起提交，其他路径必须回滚新建sentinel。ACCEPTED同时绑定winner canonical/decision及generation CAS 0→1、观察owner fence版本。无winner重派操作。非ACCEPTED无自己的winner claim；可读取既有其他winner，但不提交本次新建sentinel；DUPLICATE关联已应用winner，不冒充自己的winner。FK和CHECK只辅助，reader仍交叉校验decision/verdict/claim/payload/source关系。
 
 ## 5. 最终语句与时间门禁
 
 MySQL8候选clock表达式UTC_TIMESTAMP(6)，作为待实测mapping，不宣称本文件已认证。deadline只用相同primary DB域、精度及fixture owner签发来源；client Instant、transaction-start或单独SELECT时间均不能授权ACCEPTED。Oracle不在本切片实施范围。
 
-在持有共同guard的事务内，以一个INSERT ... SELECT最终decision语句取statement时间，并重新predicate owner generation、Consultation版本/current wait、permission epoch、wait及claim generation，按P1..P8产生最终verdict或零行。时间与判定来自同语句，同精度deadline比较，等于即EXPIRED。禁止在Java提前选定ACCEPTED再无条件INSERT。时钟mapping/precision未经证明时DEFER，零新decision/claim。
+在持有共同guard的事务内，以一个INSERT ... SELECT最终decision语句取statement时间，并重新核对认证owner记录的观察版本、scope及permission epoch，按§9的分支条件执行P1..P8，产生最终verdict或零行。current-wait匹配和winner为空只适用于P7，不能作为全局WHERE。时间与判定来自同语句，同精度deadline比较，等于即EXPIRED。禁止在Java提前选定ACCEPTED再无条件INSERT。时钟mapping/precision未经证明时DEFER，零新decision/claim。
 
 statement可按确定性CASE选择四verdict；DEFER条件必须过滤为零行，不持久化第五business enum。全部优先级条件使用本事务认证的owner行/ref，不接受request布尔结果。执行后读取本事务decision以获取实际verdict/statement time；若ACCEPTED，CAS更新claim到该decision，受同Consultation/claim锁保护。CAS受影响行不为1或claim写失败使外层全部回滚。语句谓词失败不得降级无条件写，须退出/重读同identity。
 
-decision与claim可以是两条SQL，但必须一个物理事务、持锁到commit；final decision语句同时校验winner空/代次。外部COMMITTED仅在outer commit成功后公开，不能以两条SQL之间的暂存decision视作winner。decision-before-claim满足逻辑原子性的前提须由故障测试证明。
+decision与claim可以是两条SQL，但必须一个物理事务、持锁到commit；final decision语句按verdict核验适用winner/代次：P7要求无winner，P1要求完整原applied winner；其余分支不要求winner为空。外部COMMITTED仅在outer commit成功后公开，不能以两条SQL之间的暂存decision视作winner。decision-before-claim满足逻辑原子性的前提须由故障测试证明。
 
 最终statement在deadline前、物理commit在deadline后：若commit成功，历史ACCEPTED保持；下游必须另行currentness验证，本切片不执行下游。先finalization再故意延迟commit不能被误标EXPIRED。
 
@@ -80,12 +81,12 @@ decision与claim可以是两条SQL，但必须一个物理事务、持锁到comm
 
 沿接入合同§10：
 - DEFER/DENIED/INTEGRITY_CONFLICT + NOT_ATTEMPTED/NOT_ATTEMPTED，无confirmed字段。
-- 确定已回滚：RETRYABLE_FAILURE等 + ATTEMPTED/NOT_COMMITTED，无verdict/decision/claim。
+- 确定已回滚：仅§10列出的operational + ATTEMPTED/NOT_COMMITTED，无verdict/decision/claim；零行统一RETRYABLE_FAILURE并附typed defer原因。
 - commit outcome不明：RECONCILIATION_REQUIRED + ATTEMPTED/UNKNOWN，仅stable query及诊断，无confirmed verdict/time。
 - FINALIZED + ATTEMPTED/COMMITTED，必须完整decision；仅ACCEPTED带自己的claim，DUPLICATE带已应用等价证据。
 - HISTORICAL_FOUND + NOT_ATTEMPTED/COMMITTED，返回原decision，不授新effect许可。
 
-非duplicate异常不能普遍解释成NOT_COMMITTED。1062失败必须结束原事务后fresh exact read，不在rollback-only session继续。新的FOUND_MATCH是独立历史证据，不篡改原UNKNOWN观察；ABSENT一次不证明unknown失败，不换identity。claim有winner但decision缺失或反之为INCONSISTENT，禁止补造历史claim/decision。当前权限不足与source不可用分别报告。
+非duplicate异常不能普遍解释成NOT_COMMITTED。1062失败必须结束原事务后fresh exact read，不在rollback-only session继续。新的FOUND_MATCH是独立历史证据，不篡改原UNKNOWN观察；ABSENT一次不证明unknown失败，不换identity。只有ACCEPTED与其own winner claim之间缺失/矛盾才按§11判INCONSISTENT；DUPLICATE及其他verdict分别校验，不要求自己的claim。禁止补造历史claim/decision。当前权限不足与source不可用分别报告。
 
 本切片不采用durable VALIDATING claim；线程在提交前终止应回滚；若真实process kill未执行只报告故障注入，不能称crash验证。已有ACCEPTED永不因P02失败、取消或timeout改写。拒绝没有owner授权的winner release。
 
@@ -128,3 +129,82 @@ applied fixture需验证独立issuer证据完整链，而非简单applied=true�
 下一步针对性设计审查重点：Source reader事务归属、共同锁与owner写权限、P1..P8最终SQL完整性、statement clock、decision/claim两语句原子性、Tier0与新permission分离、UNKNOWN恢复。通过后才能形成独立SQL/clock prototype或隔离实现授权清单；不得凭本设计跳到真实F8/P01或合并。
 
 本轮只交付一份设计文档；没有新增Java/schema/workflow、运行新测试或合并任何PR。
+
+
+## 9. DF8-B01：公共authority条件与分支predicate矩阵
+
+安全公共条件C：已认证当前finalize action与scope；完整canonical USER_ANSWER/source/binding；共同guard/resource/clock mapping有效；statement引用的owner记录、指针和观察版本未被改变；exact decision不存在。版本相等仅表示“观察未变”，不等于其业务状态必须合法。未知/缺失关键高优先级证据不能按false继续低优先级。
+
+U06原issuance与历史wait身份必须有可信记录。当前owner状态与该历史wait不同可以是负向事实，不能强制inner join当前wait相等后使其消失。缺当前row只有owner合同明确认证其“已删除/终结”且有tombstone/version证据才可作负向事实；普通缺行、未签发、不可读、拼错ref均DEFER。跨tenant/actor未经授权仍入口DENIED，不能写REJECTED记录泄露他人scope。
+
+定义Ei为对应已认证事实：E1已应用等价，E2statement-time expiry/owner expiry，E3非expiry terminal，E4可信身份/当前wait mismatch，E5其他pending winner，E6已应用不等价，E7合法当前wait且无winner。按顺序只在前面所需事实可信且均未命中时进入下一项。E2使用本最终语句同一个clock值，不能预先以JVM计算。认证后观察版本/refs输入SQL，不接受caller给的Ei布尔值。
+
+| 分支 | 最终命中条件（除C外） | current wait / winner条件 | 落库及claim |
+| --- | --- | --- | --- |
+| P1 | E1；原ACCEPTED decision+claim+独立applied证据、同内容digest/政策、exact历史wait关联均匹配 | 允许current wait合法移动/清空及已terminal；必须原applied winner存在并完整 | DUPLICATE，原winner/applied refs；无own claim |
+| P2 | 已排除E1；可信E2，包含t>=deadline | 不要求current wait仍匹配或winner为空；记录观察到的owner版本与可选winner | EXPIRED，无own claim |
+| P3 | 已排除E1/E2；可信E3 | 可已清空current wait；不要求winner空 | REJECTED/terminal，无own claim |
+| P4 | 已排除前项；可信E4 | current wait不匹配本身是命中事实；仍须同认证scope及历史wait来源 | REJECTED/mismatch，无own claim |
+| P5 | 前项已排除；可信E5 | 另一ACCEPTED-own-claim完整，但未证明APPLIED | 零decision，typed competing-winner DEFER |
+| P6 | 前项已排除；可信E6 | applied winner完整且内容不同；不要求winner空 | REJECTED/conflict，无own claim |
+| P7 | 前项已排除；E7及delivery/issuance/Question/Pending/Consultation WAITING_USER全部合法，t<deadline、无terminal、许可有效 | 仅此分支要求current wait匹配、claim缺失或合法空sentinel，generation=0 | ACCEPTED，own claim CAS 0→1，同外层commit |
+| P8 | 正向证明不足或任一必要precedence事实不确定 | 不补造缺owner证据 | 零decision，typed blocked-evidence DEFER |
+
+最终语句按此有序CASE+过滤选择四verdict；SQL join必须保留可信负向事实，不以所有owner值“合法”为共同WHERE。非法provenance不进入CASE。duplicate/applied/terminal事实来源的generation分别保存，不把别人的claim generation当自己的own claim。
+
+predicate版本不符或C不成立时零行；不能将零行猜成P2/P4，不能降级无条件INSERT。应按§10结束当前attempt，再重新读同identity。若锁内已出现本canonical committed decision，回到Tier0的完整历史校验，不执行第二INSERT。
+
+## 10. DF8-R01：attempt边界、sentinel及全部退出路径
+
+attempt边界固定为本次首次调用任何F8持久DML（sentinel INSERT、decision final INSERT或claim CAS），在调用前即置ATTEMPTED。只读事务、SELECT FOR UPDATE、已有行锁不会令attempt变ATTEMPTED。入参/权限/证据拒绝或只读pending-winner DEFER均可NOT_ATTEMPTED；执行过DML即使影响0行或失败也不能改回。
+
+策略：先锁Consultation及owner，再读取已存在claim；Consultation共同锁覆盖claim缺行的创建竞争。pending winner只读退出，不先创建sentinel。对可进入finalizer的候选先做只读预判：确实需要P7时才暂存sentinel。最终statement可能因时间推进变为P2；若本事务已新建sentinel，必须回滚整个事务，随后以原identity重新评估负向verdict，且新的负向分支不创建sentinel。禁止提交空sentinel或在失败事务内删sentinel继续。原已有合法空sentinel只读可识别，不能被视为已拥有winner。
+
+最终SQL执行已零行统一回滚，包括sentinel。回滚成功后输出RETRYABLE_FAILURE/ATTEMPTED/NOT_COMMITTED，reason为COMPETING_WINNER_PENDING、BLOCKED_EVIDENCE、PREDICATE_CHANGED或SENTINEL_ROLLBACK_REQUIRED等typed诊断；不是新增business enum。仅当回滚已确认且原attempt结束才可另开评估事务；本次返回原attempt结果，禁止同一次返回将其伪装NOT_ATTEMPTED。下一次请求/受控reconciliation仍用相同canonical/decision ID。
+
+| 路径 | operational / attempt / durability | confirmed字段 |
+| --- | --- | --- |
+| 仅历史read FOUND_MATCH，无DML | HISTORICAL_FOUND / NOT_ATTEMPTED / COMMITTED | 原完整decision/verdict及适用关联 |
+| 入参、scope、许可拒绝，无DML | DENIED或INTEGRITY_CONFLICT / NOT_ATTEMPTED / NOT_ATTEMPTED | 空 |
+| owner/clock不可用、只读pending winner或缺证据 | DEFER / NOT_ATTEMPTED / NOT_ATTEMPTED | 空 |
+| 任意DML后零行/策略退出，确定回滚 | RETRYABLE_FAILURE / ATTEMPTED / NOT_COMMITTED | 空，可stable query+typed reason |
+| 任意DML后确认DENIED/完整性损坏，确定回滚 | DENIED或INTEGRITY_CONFLICT / ATTEMPTED / NOT_COMMITTED | 空 |
+| DML后数据库异常，确定回滚 | RETRYABLE_FAILURE / ATTEMPTED / NOT_COMMITTED | 空 |
+| DML后commit/rollback结果不明 | RECONCILIATION_REQUIRED / ATTEMPTED / UNKNOWN | 空，仅stable query及diagnostics |
+| 最终decision及所需own claim成功，outer commit确认 | FINALIZED / ATTEMPTED / COMMITTED | 完整decision/verdict，关联按§11 |
+| DML竞争失败后fresh read winner | 原attempt结果与独立HistoricalDecisionRead分开 | 不将winner写入失败attempt字段 |
+
+只读历史reader的MISMATCH/INCONSISTENT/UNAVAILABLE/ABSENT/INDETERMINATE属于HistoricalDecisionRead，不伪装写结果成功。若尚未尝试F8 DML的只读事务出异常，返回DEFER/NOT_ATTEMPTED/NOT_ATTEMPTED诊断；不得据此修改任何既有UNKNOWN事实。1062不自动证明新canonical成功；先确定失败事务结束，再fresh reader核对decision/claim。
+
+FINALIZED提交时只允许：非ACCEPTED没有本次new sentinel；ACCEPTED的本次sentinel已转完整winner。roll back失败/unknown须保持UNKNOWN，不以“预计回滚”报告NOT_COMMITTED。上述退出分支必须成为独立result validator用例。
+
+## 11. DF8-R01：按verdict读回与损坏隔离
+
+| 持久情况 | 读回裁决 |
+| --- | --- |
+| ACCEPTED + 同scope/exact wait、own canonical/decision、generation及fence匹配的claim | FOUND_MATCH；无当前effect grant |
+| ACCEPTED缺own claim；own winner缺decision；关系/代次错误 | INCONSISTENT，不repair或重派winner |
+| DUPLICATE + 原已应用winner的ACCEPTED decision/claim/applied issuer证据完整，equivalence匹配 | FOUND_MATCH；没有自己的claim是正常状态 |
+| DUPLICATE缺原winner/证据、错scope/wait/digest，或claim指向该DUPLICATE作为winner | INCONSISTENT/MISMATCH，不确认duplicate |
+| EXPIRED/REJECTED + 自身decision完整，没有own winner claim | FOUND_MATCH；可以观察另一答案的合法claim，不要求其为空 |
+| EXPIRED/REJECTED被claim作为winner引用 | INCONSISTENT |
+| 合法空sentinel：winner canonical/decision均NULL、generation=0，scope/wait有效 | 不是winner，也不是历史decision；query本canonical无decision则ABSENT，可按当前许可重新评估 |
+| sentinel半填、空winner非0 generation、非法scope/wait | INCONSISTENT，不归为ABSENT |
+| 完全缺claim且无decision | ABSENT，不证明原UNKNOWN失败 |
+
+新实现不会正常提交空sentinel；合法旧空sentinel作为受控fixture兼容情况可识别，不因该兼容能力许可F8补造历史owner证据。判定只检查与本canonical或引用winner相关的claim，不将另一事件的claim误认own claim。
+
+## 12. 修订增补oracle与交付边界
+
+| ID | 独立预期 |
+| --- | --- |
+| DF8-R17 | 已APPLIED同内容+既有winner+current wait移动/terminal：P1 DUPLICATE，仅新增decision，零新claim |
+| DF8-R18 | cancel后current wait清空：可信P3 REJECTED；可信current-wait mismatch：P4 REJECTED；缺authority则DEFER |
+| DF8-R19 | finalizer零行、已创建sentinel、clock推进P7→P2：确认回滚，ATTEMPTED/NOT_COMMITTED；后续原identity负向decision无sentinel |
+| DF8-R20 | 只读pending winner：NOT_ATTEMPTED；DML后退出：ATTEMPTED；UNKNOWN不得伪装确定回滚 |
+| DF8-R21 | 历史EXPIRED/REJECTED无claim、DUPLICATE无own claim：正常；ACCEPTED缺claim/错duplicate winner：隔离 |
+| DF8-R22 | 合法空sentinel可读无winner；半填/错误generation隔离；所有非ACCEPTED路径不提交新sentinel |
+
+原16组+增补6组均为未来oracle，本轮未执行。§9–11优先于原文本中简写的最终predicate、attempt及claim检查；这些简写已同步修订。原P1..P8优先级、clock与outer commit边界、Source21字段及真实owner CA不改变。
+
+DF8-B01 / DF8-R01 = REMEDIATION_PROPOSED，待新HEAD定向复审；不是自动关闭或实施授权。下一步只做修订后设计复审，再决定隔离SQL/clock prototype范围。
