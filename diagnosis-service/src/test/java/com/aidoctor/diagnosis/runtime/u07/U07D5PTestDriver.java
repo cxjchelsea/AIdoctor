@@ -14,11 +14,15 @@ import java.util.logging.Logger;
 final class U07D5PTestDriver implements Driver, AutoCloseable {
     enum Fault { NONE, CONNECT, CONFIG, BEGIN, BODY, COMMIT_BEFORE, COMMIT_AFTER,
         BODY_ROLLBACK, BODY_ROLLBACK_CLOSE, REJECT_ROLLBACK, CLOSE, READ,
-        READ_CLOSE, READ_ROLLBACK, READ_ROLLBACK_CLOSE, READ_FAIL_CLOSE, FATAL }
+        READ_CLOSE, READ_ROLLBACK, READ_ROLLBACK_CLOSE, READ_FAIL_CLOSE, FATAL,
+        BODY_ROLLBACK_FATAL, READ_ROLLBACK_FATAL, FATAL_ROLLBACK_CLOSE,
+        FATAL_ROLLBACK_CLOSE_FATAL, FATAL_SELF_ROLLBACK }
     static final class Trace {
         Fault fault = Fault.NONE;
         int connections, queries, statements, commits, rollbacks, closes;
         SQLException primary, rollbackError, closeError;
+        final AssertionError rollbackFatal = new AssertionError("injected rollback Error");
+        final AssertionError closeFatal = new AssertionError("injected close Error");
         final AssertionError fatal = new AssertionError("injected fatal Error");
     }
     final ThreadLocal<Trace> traces = ThreadLocal.withInitial(Trace::new);
@@ -66,6 +70,10 @@ final class U07D5PTestDriver implements Driver, AutoCloseable {
                     }
                     if (name.equals("rollback")) {
                         t.rollbacks++;
+                        if (t.fault == Fault.FATAL_SELF_ROLLBACK) throw t.fatal;
+                        if (t.fault == Fault.BODY_ROLLBACK_FATAL || t.fault == Fault.READ_ROLLBACK_FATAL
+                                || t.fault == Fault.FATAL_ROLLBACK_CLOSE
+                                || t.fault == Fault.FATAL_ROLLBACK_CLOSE_FATAL) throw t.rollbackFatal;
                         if (t.fault == Fault.BODY_ROLLBACK || t.fault == Fault.BODY_ROLLBACK_CLOSE
                                 || t.fault == Fault.REJECT_ROLLBACK || t.fault == Fault.READ_ROLLBACK
                                 || t.fault == Fault.READ_ROLLBACK_CLOSE) throw t.rollbackError;
@@ -73,6 +81,8 @@ final class U07D5PTestDriver implements Driver, AutoCloseable {
                     if (name.equals("close")) {
                         t.closes++;
                         Object value = invoke(m, c, args);
+                        if (t.fault == Fault.FATAL_ROLLBACK_CLOSE_FATAL) throw t.closeFatal;
+                        if (t.fault == Fault.FATAL_ROLLBACK_CLOSE) throw t.closeError;
                         if (t.fault == Fault.CLOSE || t.fault == Fault.BODY_ROLLBACK_CLOSE
                                 || t.fault == Fault.READ_CLOSE || t.fault == Fault.READ_ROLLBACK_CLOSE
                                 || t.fault == Fault.READ_FAIL_CLOSE) throw t.closeError;
@@ -90,9 +100,12 @@ final class U07D5PTestDriver implements Driver, AutoCloseable {
                                                 || t.fault == Fault.READ_FAIL_CLOSE)) throw t.primary;
                                     }
                                     if (sm.getName().equals("executeUpdate") && sql.startsWith("INSERT INTO u07_event_application")) {
-                                        if (t.fault == Fault.FATAL) throw t.fatal;
+                                        if (t.fault == Fault.FATAL || t.fault == Fault.FATAL_ROLLBACK_CLOSE
+                                                || t.fault == Fault.FATAL_ROLLBACK_CLOSE_FATAL
+                                                || t.fault == Fault.FATAL_SELF_ROLLBACK) throw t.fatal;
                                         if (t.fault == Fault.BODY || t.fault == Fault.BODY_ROLLBACK
-                                                || t.fault == Fault.BODY_ROLLBACK_CLOSE) throw t.primary;
+                                                || t.fault == Fault.BODY_ROLLBACK_CLOSE
+                                                || t.fault == Fault.BODY_ROLLBACK_FATAL) throw t.primary;
                                     }
                                     return invoke(sm, p, sa);
                                 });
