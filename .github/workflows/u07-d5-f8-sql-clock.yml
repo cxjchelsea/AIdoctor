@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'tools/u07_d5_f8/**'
+      - 'tools/u07_d5_source_binding/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/**'
       - '.github/workflows/u07-d5-f8-sql-clock.yml'
 permissions:
   contents: read
@@ -37,10 +39,24 @@ jobs:
           set -euo pipefail
           git rev-parse HEAD
           mysql -h 127.0.0.1 -P 33324 -uroot u07_f8 < tools/u07_d5_f8/src/test/resources/schema-mysql.sql
+      - name: Source and adapter isolated schemas
+        env:
+          MYSQL_PWD: synthetic-ci-only
+        run: |
+          set -euo pipefail
+          mysql -h 127.0.0.1 -P 33324 -uroot -e 'CREATE DATABASE u07_f8_adapter CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;'
+          mysql -h 127.0.0.1 -P 33324 -uroot u07_f8_adapter < diagnosis-service/src/main/resources/db/migration/V2__create_clinical_runtime_foundation.sql
+          python tools/u07_d5_f8/src/test/resources/bootstrap-adapter.py > /tmp/adapter-source.sql
+          mysql -h 127.0.0.1 -P 33324 -uroot u07_f8_adapter < /tmp/adapter-source.sql
+          mysql -h 127.0.0.1 -P 33324 -uroot u07_f8_adapter < tools/u07_d5_f8/src/test/resources/schema-adapter-mysql.sql
+          python tools/u07_d5_source_binding/src/test/resources/reference_vectors.py --check
       - name: Real MySQL Spring SQL clock and atomicity tests
+        env:
+          U07_F8_ADAPTER_URL: jdbc:mysql://127.0.0.1:33324/u07_f8_adapter?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
         run: |
           mvn -B -f tools/u07_d5_f8/pom.xml test
           cat tools/u07_d5_f8/target/surefire-reports/com.aidoctor.verification.f8.SqlClockTest.txt
+          cat tools/u07_d5_f8/target/surefire-reports/com.aidoctor.verification.sourcebinding.F8AdapterTest.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
