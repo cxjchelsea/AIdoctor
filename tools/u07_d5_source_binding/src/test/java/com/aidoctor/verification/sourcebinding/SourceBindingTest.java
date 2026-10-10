@@ -251,4 +251,59 @@ class SourceBindingTest {
         assertThrows(IllegalArgumentException.class,()->Result.committed(Status.REATTACHED,"synthetic-x","key","synthetic-target",Attempt.NOT_ATTEMPTED));
         assertNull(Result.blocked(Status.DENIED,Attempt.NOT_ATTEMPTED).canonicalId);
     }
+    /** Regression: corrupt Foundation/binding target type must be quarantined. */
+    @Test void corruptResumeBindingCannotMasqueradeAsCanonicalUserAnswer(){
+        Fixture f=new Fixture();assertEquals(Status.STORED,adapter().admit(f.req(),f.scope()).status);
+        String target=f.event;
+        f.fields[1]="RESUME_REQUEST";f.fields[15]=null;f.fields[16]=null;f.fields[17]=target;
+        f.token=id();f.event=id();f.nextProof();
+        // Valid issuer-issued RESUME proof; no forged issuer or altered source namespace.
+        String corruptKey=f.key();byte[] bytes=BindingCodec.encode(f.fields);
+        admin.update("UPDATE canonical_business_event SET idempotency_key=?,payload_digest=? WHERE event_id=?",corruptKey,f.fields[20],target);
+        admin.update("UPDATE u07_canonical_event_binding SET storage_idempotency_key=?,event_type='RESUME_REQUEST',binding_fingerprint=?,payload_digest=?,canonical_binding_bytes=?,synthetic_answer_bytes=NULL,answer_payload_digest=NULL,key_ref=NULL,source_record_ref=?,target_answer_event_id=? WHERE canonical_event_id=?",
+            corruptKey,BindingCodec.hash(bytes),f.fields[20],bytes,f.ref,target,target);
+        assertEquals("USER_ANSWER",admin.queryForObject("SELECT event_type FROM canonical_business_event WHERE event_id=?",String.class,target));
+        assertEquals("RESUME_REQUEST",admin.queryForObject("SELECT event_type FROM u07_canonical_event_binding WHERE canonical_event_id=?",String.class,target));
+        assertNull(admin.queryForObject("SELECT synthetic_answer_bytes FROM u07_canonical_event_binding WHERE canonical_event_id=?",byte[].class,target));
+        // A new, otherwise valid request must quarantine this target with no new pair.
+        f.token=id();f.event=id();f.nextProof();Result observed=adapter().admit(f.req(),f.scope());
+        assertEquals(Status.INTEGRITY_CONFLICT,observed.status);
+        assertNull(observed.canonicalId);assertNull(observed.targetId);absent(f.event);
+    }
+    static Result withLateWinner(Fixture f,Request request,Runnable commitWinner) throws Exception {
+        ExecutorService pool=Executors.newSingleThreadExecutor();
+        java.util.concurrent.atomic.AtomicBoolean inject=new java.util.concurrent.atomic.AtomicBoolean(true);
+        CanonicalBusinessEventRepository wrapped=(CanonicalBusinessEventRepository)java.lang.reflect.Proxy.newProxyInstance(
+            CanonicalBusinessEventRepository.class.getClassLoader(),new Class<?>[]{CanonicalBusinessEventRepository.class},(proxy,method,args)->{
+                Object answer;
+                try{answer=method.invoke(events,args);}catch(java.lang.reflect.InvocationTargetException e){throw e.getCause();}
+                if(method.getName().equals("findByIdempotencyKey") && inject.compareAndSet(true,false)){
+                    assertFalse(((Optional<?>)answer).isPresent());pool.submit(commitWinner).get(12,TimeUnit.SECONDS);
+                }
+                return answer;
+            });
+        try{return new SourceBindingAdapter(ds,manager,ledger,wrapped,em,box,BindingCodec.PROFILE).admit(request,f.scope());}
+        finally{pool.shutdownNow();assertTrue(pool.awaitTermination(5,TimeUnit.SECONDS));}
+    }
+    /** Regression: winner commits after initial absent lookup, before real ledger lookup. */
+    @Test void lateMatchingAliasWinnerReattaches() throws Exception {
+        Fixture f=new Fixture();String alias=id();Request request=new Request(alias,f.token,f.ref,WHEN.plusSeconds(7));
+        Result observed=withLateWinner(f,request,()->assertEquals(Status.STORED,adapter().admit(f.req(),f.scope()).status));
+        assertEquals(Status.REATTACHED,observed.status);assertEquals(f.event,observed.canonicalId);
+        assertEquals(WHEN.toString(),admin.queryForObject("SELECT occurred_at FROM u07_canonical_event_binding WHERE canonical_event_id=?",String.class,f.event));
+        Result confirmed=adapter().read(request,f.scope());assertEquals(Status.REATTACHED,confirmed.status);
+        assertEquals(f.event,confirmed.canonicalId);pair(f.event);absent(alias);
+    }
+    @Test void lateWinnerWithDifferentQuestionRemainsConflict() throws Exception {
+        Fixture f=new Fixture();Request winner=f.req();f.fields[7]=id();f.nextProof();Request incoming=f.alias();
+        Result observed=withLateWinner(f,incoming,()->assertEquals(Status.STORED,adapter().admit(winner,f.scope()).status));
+        assertEquals(Status.INTEGRITY_CONFLICT,observed.status);assertNull(observed.canonicalId);pair(f.event);absent(incoming.eventId);
+    }
+    @Test void lateSameIdCommittedOrphanIsNeverFilledFromRetry() throws Exception {
+        Fixture f=new Fixture();Result observed=withLateWinner(f,f.req(),()->new TransactionTemplate(manager).execute(s->{
+            ledger.resolveOrCreate(f.event,f.c,"USER_ANSWER",f.key(),f.fields[20]);em.flush();return null;}));
+        assertEquals(Status.INCONSISTENT,observed.status);assertNull(observed.canonicalId);
+        assertEquals(1,count("canonical_business_event",f.event));assertEquals(0,count("u07_canonical_event_binding",f.event));
+    }
+
 }
