@@ -93,7 +93,7 @@ class SqlClockTest {
             db.queryForObject("SELECT SLEEP(0.35)",Integer.class);
             assertEquals(1,insert("UTC_TIMESTAMP(6)",1));
             Map<String,Object> row=db.queryForMap("SELECT sampled_at,predicate_at FROM decision WHERE id='new'");
-            assertEquals(row.get("sampled_at"),row.get("predicate_at"));assertTrue(((Timestamp)row.get("sampled_at")).after(start));
+            assertEquals(row.get("sampled_at"),row.get("predicate_at"));assertTrue(db.queryForObject("SELECT sampled_at FROM decision WHERE id='new'",Timestamp.class).after(start));
             return null;}); assertEquals("EXPIRED",verdict());
         System.out.println("CLOCK_ENV="+admin.queryForMap("SELECT VERSION() version,@@session.time_zone session_zone,@@global.time_zone global_zone,UTC_TIMESTAMP(6) clock"));
     }
