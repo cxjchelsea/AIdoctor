@@ -16,7 +16,7 @@ import static com.aidoctor.verification.sourcebinding.F8Result.*;
 /** Synthetic isolated adapter, not a production bean. Always owns the outer transaction. */
 final class F8Adapter {
  interface Probe {void at(String phase);}
- static final class Context {F8Identity id;boolean attempted,commitStarted;int completion=TransactionSynchronization.STATUS_UNKNOWN;}
+ static final class Context {F8Identity id;boolean attempted,commitStarted,rollbackOnly;int completion=TransactionSynchronization.STATUS_UNKNOWN;}
  private final DataSource ds;private final EntityManager em;private final TransactionTemplate tx;
  private final JdbcTemplate db;private final NamedParameterJdbcTemplate named;
  private final SourceBindingVerifier verifier;private final F8OwnerReader owners;private final F8HistoricalReader history;
@@ -59,7 +59,7 @@ final class F8Adapter {
    if(sentinel&&!"ACCEPTED".equals(verdict))throw new F8OwnerReader.Halt(Operational.RETRYABLE_FAILURE,Reason.SENTINEL_ROLLBACK);
    if("ACCEPTED".equals(verdict)){if(db.update("UPDATE f8_claim SET canonical_id=?,decision_id=?,generation=1 WHERE wait_key=? AND canonical_id IS NULL AND decision_id IS NULL AND generation=0",ctx.id.source.canonicalId,ctx.id.decisionId,ctx.id.waitKey)!=1)throw F8HistoricalReader.corrupt();probe.at("after_claim");}
    F8HistoricalReader.Read finalRead=history.read(ctx.id);if(finalRead.state!=F8HistoricalReader.State.FOUND_MATCH)throw F8HistoricalReader.corrupt();
-   probe.at("before_commit");return F8Result.success(finalRead.receipt,false);
+   probe.at("before_commit");ctx.rollbackOnly=s.isRollbackOnly();return F8Result.success(finalRead.receipt,false);
   });
    if(ctx.completion!=TransactionSynchronization.STATUS_COMMITTED){
     if(!ctx.attempted)return F8Result.blocked(Operational.DEFER,Attempt.NOT_ATTEMPTED,Reason.DB_FAILURE,key(ctx));
@@ -69,7 +69,7 @@ final class F8Adapter {
    probe.at("after_commit");return result;}catch(F8OwnerReader.Halt h){if(ctx.attempted&&(ctx.commitStarted||ctx.completion!=TransactionSynchronization.STATUS_ROLLED_BACK))return F8Result.unknown(key(ctx));return F8Result.blocked(ctx.attempted&&h.operational==Operational.DEFER?Operational.RETRYABLE_FAILURE:h.operational,ctx.attempted?Attempt.ATTEMPTED:Attempt.NOT_ATTEMPTED,h.reason,key(ctx));}
   catch(SourceBindingAdapter.Block b){if(ctx.attempted&&(ctx.commitStarted||ctx.completion!=TransactionSynchronization.STATUS_ROLLED_BACK))return F8Result.unknown(key(ctx));return F8Result.blocked(b.status==SourceBindingAdapter.Status.DENIED?Operational.DENIED:(b.status==SourceBindingAdapter.Status.ABSENT||b.status==SourceBindingAdapter.Status.UNRESOLVED_TARGET||b.status==SourceBindingAdapter.Status.UNAVAILABLE)?(ctx.attempted?Operational.RETRYABLE_FAILURE:Operational.DEFER):Operational.INTEGRITY_CONFLICT,ctx.attempted?Attempt.ATTEMPTED:Attempt.NOT_ATTEMPTED,Reason.EVIDENCE,key(ctx));}
   catch(IllegalArgumentException e){if(ctx.attempted&&(ctx.commitStarted||ctx.completion!=TransactionSynchronization.STATUS_ROLLED_BACK))return F8Result.unknown(key(ctx));return F8Result.blocked(ctx.attempted?Operational.INTEGRITY_CONFLICT:Operational.INVALID_INPUT,ctx.attempted?Attempt.ATTEMPTED:Attempt.NOT_ATTEMPTED,Reason.INPUT,key(ctx));}
-  catch(RuntimeException e){return ctx.attempted?(!ctx.commitStarted&&ctx.completion==TransactionSynchronization.STATUS_ROLLED_BACK?F8Result.blocked(Operational.RETRYABLE_FAILURE,Attempt.ATTEMPTED,Reason.DB_FAILURE,key(ctx)):F8Result.unknown(key(ctx))):F8Result.blocked(Operational.DEFER,Attempt.NOT_ATTEMPTED,Reason.DB_FAILURE,key(ctx));}
+  catch(RuntimeException e){return ctx.attempted?((!ctx.commitStarted||ctx.rollbackOnly)&&ctx.completion==TransactionSynchronization.STATUS_ROLLED_BACK?F8Result.blocked(Operational.RETRYABLE_FAILURE,Attempt.ATTEMPTED,Reason.DB_FAILURE,key(ctx)):F8Result.unknown(key(ctx))):F8Result.blocked(Operational.DEFER,Attempt.NOT_ATTEMPTED,Reason.DB_FAILURE,key(ctx));}
  }
  F8HistoricalReader.Read read(SourceBindingAdapter.Request request,SourceBindingAdapter.Scope scope){
   entry();try{return tx.execute(s->{guard();F8Identity id=new F8Identity(verifier.verify(request,scope));owners.lock(id);owners.permission(id,false);return history.read(id);});}
