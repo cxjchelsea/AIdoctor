@@ -19,6 +19,7 @@ final class F8HistoricalReader {
   List<Map<String,Object>> rows=db.queryForList("SELECT * FROM f8_decision WHERE id=?",c.get("decision_id"));
   if(rows.size()!=1)throw corrupt();Map<String,Object> w=rows.get(0);
   if(!id.scope(w)||!"ACCEPTED".equals(w.get("verdict"))||!Objects.equals(c.get("canonical_id"),w.get("canonical_id"))
+   ||w.get("winner_id")!=null||!Objects.equals(w.get("sampled_at"),w.get("predicate_at"))
    ||!F8Identity.CONTRACT.equals(w.get("contract"))||!F8Identity.digest("f8-decision",(String)w.get("canonical_id"),F8Identity.CONTRACT).equals(w.get("id")))throw corrupt();
   List<Map<String,Object>> b=db.queryForList("SELECT b.source_record_ref,b.occurred_at,p.source_token FROM u07_canonical_event_binding b JOIN u07_test_authority_record p ON p.record_id=b.source_record_ref WHERE b.canonical_event_id=?",w.get("canonical_id"));
   if(b.size()!=1)throw corrupt();Map<String,Object> proof=b.get(0);
