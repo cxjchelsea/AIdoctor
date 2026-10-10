@@ -1,0 +1,57 @@
+name: U07 D5 isolated source canonical binding
+on:
+  pull_request:
+    paths:
+      - 'tools/u07_d5_source_binding/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/**'
+      - '.github/workflows/u07-d5-source-binding.yml'
+permissions:
+  contents: read
+jobs:
+  source-binding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: synthetic-ci-only
+          MYSQL_DATABASE: u07_source_binding
+        ports:
+          - 33323:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -psynthetic-ci-only"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Exact checkout and independent reference fixture
+        run: |
+          git rev-parse HEAD
+          python tools/u07_d5_source_binding/src/test/resources/reference_vectors.py --check
+      - name: Disposable schema with separate issuer and consumer privileges
+        env:
+          MYSQL_PWD: synthetic-ci-only
+        run: |
+          set -euo pipefail
+          mysql -h 127.0.0.1 -P 33323 -uroot u07_source_binding < diagnosis-service/src/main/resources/db/migration/V2__create_clinical_runtime_foundation.sql
+          mysql -h 127.0.0.1 -P 33323 -uroot u07_source_binding < tools/u07_d5_source_binding/src/test/resources/schema-mysql.sql
+      - name: Actual Spring JPA JDBC MySQL authority binding suite
+        env:
+          U07_SOURCE_BINDING_URL: jdbc:mysql://127.0.0.1:33323/u07_source_binding?useSSL=false&allowPublicKeyRetrieval=true
+          U07_SOURCE_BINDING_ADMIN_PASSWORD: synthetic-ci-only
+        run: |
+          mvn -B -f tools/u07_d5_source_binding/pom.xml test
+          cat tools/u07_d5_source_binding/target/surefire-reports/com.aidoctor.verification.sourcebinding.SourceBindingTest.txt
+          echo 'U07_D5_SOURCE_BINDING=PASS scope=ISOLATED_TEST_ISSUER_MYSQL no_real_owner_no_F8_no_APPLY'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: u07-d5-source-binding-evidence
+          path: tools/u07_d5_source_binding/target/surefire-reports/
