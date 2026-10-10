@@ -45,14 +45,35 @@ public final class U07D4SyntheticOwnedTransactionRunner {
                 cleanupError(error);
             }
         }
-        void finish() {
+        void finish(Error originalFatal) {
             if (connection == null) return;
             if (cleanup != Cleanup.FAILED) cleanup = Cleanup.COMPLETE;
-            if (started && !committed && !rollbackAttempted) rollback();
-            try { connection.close(); }
-            catch (SQLException | RuntimeException error) { cleanupError(error); }
+            Error fatal = originalFatal;
+            try {
+                if (started && !committed && !rollbackAttempted) rollback();
+            } catch (Error error) {
+                cleanupError(error);
+                if (fatal == null) fatal = error;
+            } finally {
+                try { connection.close(); }
+                catch (SQLException | RuntimeException error) { cleanupError(error); }
+                catch (Error error) {
+                    cleanupError(error);
+                    if (fatal == null) fatal = error;
+                }
+            }
+            // cleanupError already appends to the original primary. If the first
+            // fatal came from cleanup after an ordinary failure, attach subsequent
+            // cleanup errors to that fatal too, without self-suppression.
+            if (fatal != null && primary != fatal) {
+                for (Throwable error : errors) {
+                    if (error != fatal) fatal.addSuppressed(error);
+                }
+            }
+            if (originalFatal == null && fatal != null) throw fatal;
         }
     }
+
     public WriteResult execute(U07SyntheticInput input, Timestamp now, Fault fault) {
         Session s = new Session();
         Operation op = Operation.FAILED;
@@ -100,12 +121,7 @@ public final class U07D4SyntheticOwnedTransactionRunner {
             s.primary = failure;
             throw failure;
         } finally {
-            // Preserve a JVM Error even if cleanup itself throws another Error.
-            try { s.finish(); }
-            catch (Error cleanupFailure) {
-                if (fatal != null) fatal.addSuppressed(cleanupFailure);
-                else throw cleanupFailure;
-            }
+            s.finish(fatal);
         }
         if (s.cleanup == Cleanup.FAILED) op = Operation.FAILED;
         return new WriteResult(op, s.tx, response, s.cleanup, business, s.primary, s.errors);
@@ -129,11 +145,7 @@ public final class U07D4SyntheticOwnedTransactionRunner {
         } catch (Error failure) {
             fatal = failure; s.primary = failure; throw failure;
         } finally {
-            try { s.finish(); }
-            catch (Error cleanupFailure) {
-                if (fatal != null) fatal.addSuppressed(cleanupFailure);
-                else throw cleanupFailure;
-            }
+            s.finish(fatal);
         }
         Operation op = read == Read.COMPLETE && s.cleanup == Cleanup.COMPLETE
                 ? Operation.SUCCEEDED : Operation.FAILED;

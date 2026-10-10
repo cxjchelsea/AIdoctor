@@ -156,6 +156,38 @@ public final class U07D5PBoundaryJdbcSmoke {
         driver.mode(Fault.NONE);
         check(U07SyntheticSmokeSupport.inspect(args, input("fatal")) == Evidence.NO_DURABLE_EVENT, "fatal partial writes rolled back");
     }
+    private static void fatalCleanup(U07D5PTestDriver driver, String[] args) throws Exception {
+        U07D4SyntheticOwnedTransactionRunner runner = U07SyntheticSmokeSupport.runner(args);
+        for (Fault fault : new Fault[]{Fault.BODY_ROLLBACK_FATAL, Fault.READ_ROLLBACK_FATAL,
+                Fault.FATAL_ROLLBACK_CLOSE, Fault.FATAL_ROLLBACK_CLOSE_FATAL, Fault.FATAL_SELF_ROLLBACK}) {
+            String suffix = "fatal-cleanup-" + serial++;
+            U07SyntheticInput in = input(suffix);
+            U07D5PTestDriver.Trace t = driver.mode(fault);
+            AssertionError caught = null;
+            try {
+                if (fault == Fault.READ_ROLLBACK_FATAL) runner.inspectFresh(in);
+                else runner.execute(in, NOW, U07D4SyntheticOwnedTransactionRunner.Fault.NONE);
+            } catch (AssertionError error) { caught = error; }
+            boolean bodyFatal = fault == Fault.FATAL_ROLLBACK_CLOSE
+                    || fault == Fault.FATAL_ROLLBACK_CLOSE_FATAL || fault == Fault.FATAL_SELF_ROLLBACK;
+            check(caught == (bodyFatal ? t.fatal : t.rollbackFatal), "first fatal identity preserved");
+            check(t.rollbacks == 1 && t.closes == 1 && t.commits == 0, "fatal rollback still attempts close once");
+            if (fault == Fault.FATAL_ROLLBACK_CLOSE || fault == Fault.FATAL_ROLLBACK_CLOSE_FATAL) {
+                Throwable[] errors = caught.getSuppressed();
+                check(errors.length == 2 && errors[0] == t.rollbackFatal
+                        && errors[1] == (fault == Fault.FATAL_ROLLBACK_CLOSE ? t.closeError : t.closeFatal),
+                        "fatal secondary errors retain rollback then close order");
+            } else {
+                check(caught.getSuppressed().length == 0, "no self suppression or fabricated secondary");
+            }
+            if (fault == Fault.READ_ROLLBACK_FATAL) check(t.queries == 1, "fatal read cleanup still single query");
+            driver.mode(Fault.NONE);
+            check(U07SyntheticSmokeSupport.inspect(args, in) == Evidence.NO_DURABLE_EVENT,
+                    "fresh evidence after fatal cleanup; close removes uncommitted writes");
+        }
+        System.out.println("U07_D5P_FATAL_CLEANUP=PASS cases=5 close_attempts=5 first_fatal_preserved=1");
+    }
+
     private static void reads(U07D5PTestDriver driver, String[] args) throws Exception {
         U07D4SyntheticOwnedTransactionRunner runner = U07SyntheticSmokeSupport.runner(args);
         U07SyntheticInput valid = input("read-valid");
@@ -262,7 +294,7 @@ public final class U07D5PBoundaryJdbcSmoke {
                 }
                 throw new AssertionError("fault injection failed to reach worker");
             }
-            architecture(); ready(args); invalids(driver, args); writes(driver, args); reads(driver, args);
+            architecture(); ready(args); invalids(driver, args); writes(driver, args); reads(driver, args); fatalCleanup(driver, args);
             interleaving(driver, args);
             System.out.println("U07_D5P_BOUNDARY_SMOKE=PASS assertions=" + assertions
                     + " scope=SYNTHETIC_MYSQL_DRIVER_FAULTS_AND_SINGLE_QUERY");
