@@ -60,14 +60,16 @@ final class F8Adapter {
    if("ACCEPTED".equals(verdict)){if(db.update("UPDATE f8_claim SET canonical_id=?,decision_id=?,generation=1 WHERE wait_key=? AND canonical_id IS NULL AND decision_id IS NULL AND generation=0",ctx.id.source.canonicalId,ctx.id.decisionId,ctx.id.waitKey)!=1)throw F8HistoricalReader.corrupt();probe.at("after_claim");}
    F8HistoricalReader.Read finalRead=history.read(ctx.id);if(finalRead.state!=F8HistoricalReader.State.FOUND_MATCH)throw F8HistoricalReader.corrupt();
    probe.at("before_commit");return F8Result.success(finalRead.receipt,false);
-  });probe.at("after_commit");return result;}catch(F8OwnerReader.Halt h){return F8Result.blocked(ctx.attempted&&h.operational==Operational.DEFER?Operational.RETRYABLE_FAILURE:h.operational,ctx.attempted?Attempt.ATTEMPTED:Attempt.NOT_ATTEMPTED,h.reason,key(ctx));}
-  catch(SourceBindingAdapter.Block b){return F8Result.blocked(b.status==SourceBindingAdapter.Status.DENIED?Operational.DENIED:b.status==SourceBindingAdapter.Status.ABSENT?Operational.DEFER:Operational.INTEGRITY_CONFLICT,ctx.attempted?Attempt.ATTEMPTED:Attempt.NOT_ATTEMPTED,Reason.EVIDENCE,key(ctx));}
-  catch(IllegalArgumentException e){return F8Result.blocked(ctx.attempted?Operational.INTEGRITY_CONFLICT:Operational.INVALID_INPUT,ctx.attempted?Attempt.ATTEMPTED:Attempt.NOT_ATTEMPTED,Reason.INPUT,key(ctx));}
+  });probe.at("after_commit");return result;}catch(F8OwnerReader.Halt h){if(ctx.attempted&&ctx.completion!=TransactionSynchronization.STATUS_ROLLED_BACK)return F8Result.unknown(key(ctx));return F8Result.blocked(ctx.attempted&&h.operational==Operational.DEFER?Operational.RETRYABLE_FAILURE:h.operational,ctx.attempted?Attempt.ATTEMPTED:Attempt.NOT_ATTEMPTED,h.reason,key(ctx));}
+  catch(SourceBindingAdapter.Block b){if(ctx.attempted&&ctx.completion!=TransactionSynchronization.STATUS_ROLLED_BACK)return F8Result.unknown(key(ctx));return F8Result.blocked(b.status==SourceBindingAdapter.Status.DENIED?Operational.DENIED:b.status==SourceBindingAdapter.Status.ABSENT?Operational.DEFER:Operational.INTEGRITY_CONFLICT,ctx.attempted?Attempt.ATTEMPTED:Attempt.NOT_ATTEMPTED,Reason.EVIDENCE,key(ctx));}
+  catch(IllegalArgumentException e){if(ctx.attempted&&ctx.completion!=TransactionSynchronization.STATUS_ROLLED_BACK)return F8Result.unknown(key(ctx));return F8Result.blocked(ctx.attempted?Operational.INTEGRITY_CONFLICT:Operational.INVALID_INPUT,ctx.attempted?Attempt.ATTEMPTED:Attempt.NOT_ATTEMPTED,Reason.INPUT,key(ctx));}
   catch(RuntimeException e){return ctx.attempted?(ctx.completion==TransactionSynchronization.STATUS_ROLLED_BACK?F8Result.blocked(Operational.RETRYABLE_FAILURE,Attempt.ATTEMPTED,Reason.DB_FAILURE,key(ctx)):F8Result.unknown(key(ctx))):F8Result.blocked(Operational.DEFER,Attempt.NOT_ATTEMPTED,Reason.DB_FAILURE,key(ctx));}
  }
  F8HistoricalReader.Read read(SourceBindingAdapter.Request request,SourceBindingAdapter.Scope scope){
   entry();try{return tx.execute(s->{guard();F8Identity id=new F8Identity(verifier.verify(request,scope));owners.lock(id);owners.permission(id,false);return history.read(id);});}
-  catch(F8OwnerReader.Halt|SourceBindingAdapter.Block|IllegalArgumentException e){return new F8HistoricalReader.Read(F8HistoricalReader.State.INCONSISTENT,null);}
+  catch(F8OwnerReader.Halt h){return new F8HistoricalReader.Read(h.operational==Operational.DENIED?F8HistoricalReader.State.MISMATCH:h.operational==Operational.DEFER?F8HistoricalReader.State.UNAVAILABLE:F8HistoricalReader.State.INCONSISTENT,null);}
+  catch(SourceBindingAdapter.Block b){return new F8HistoricalReader.Read(b.status==SourceBindingAdapter.Status.DENIED?F8HistoricalReader.State.MISMATCH:b.status==SourceBindingAdapter.Status.ABSENT||b.status==SourceBindingAdapter.Status.UNRESOLVED_TARGET?F8HistoricalReader.State.INDETERMINATE:F8HistoricalReader.State.INCONSISTENT,null);}
+  catch(IllegalArgumentException e){return new F8HistoricalReader.Read(F8HistoricalReader.State.MISMATCH,null);}
   catch(RuntimeException e){return new F8HistoricalReader.Read(F8HistoricalReader.State.UNAVAILABLE,null);}
  }
  private String key(Context c){return c.id==null?null:c.id.decisionId;}

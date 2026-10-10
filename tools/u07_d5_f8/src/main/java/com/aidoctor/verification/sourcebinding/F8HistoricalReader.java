@@ -3,7 +3,7 @@ import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import static com.aidoctor.verification.sourcebinding.F8Result.*;
 final class F8HistoricalReader {
- enum State { FOUND_MATCH,ABSENT,INCONSISTENT,UNAVAILABLE,INDETERMINATE }
+ enum State { FOUND_MATCH,ABSENT,MISMATCH,INCONSISTENT,UNAVAILABLE,INDETERMINATE }
  static final class Read {final State state;final Receipt receipt;Read(State s,Receipt r){state=s;receipt=r;}}
  final JdbcTemplate db;final SourceBindingVerifier verifier;
  F8HistoricalReader(JdbcTemplate db,SourceBindingVerifier verifier){this.db=db;this.verifier=verifier;}
