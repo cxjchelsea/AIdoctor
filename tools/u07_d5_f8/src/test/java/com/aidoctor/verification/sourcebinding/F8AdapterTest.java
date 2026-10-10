@@ -180,4 +180,52 @@ class F8AdapterTest {
 
  @Test void duplicateCannotHideCorruptOriginalAcceptedWinnerReference(){Fixture f=new Fixture();adapter().finalizeAnswer(f.req(),f.scope());F8Identity original=f.identity();owner.applied(original);f.next("f8");F8Result duplicate=adapter().finalizeAnswer(f.req(),f.scope());assertEquals(Verdict.DUPLICATE,duplicate.confirmed.verdict);admin.update("UPDATE f8_decision SET winner_id=? WHERE id=?",F8Identity.digest("forged","missing"),original.decisionId);assertEquals(F8HistoricalReader.State.INCONSISTENT,adapter().read(f.req(),f.scope()).state);assertEquals(Operational.INTEGRITY_CONFLICT,adapter().finalizeAnswer(f.req(),f.scope()).operational);}
 
+ // EV-F8-02: execute actual database faults inside the adapter-owned transaction.
+ @Test void actualClaimCasZeroRollsBackDecisionAndSentinel(){
+  Fixture f=new Fixture();F8Identity i=f.identity();AtomicInteger changed=new AtomicInteger(),claimed=new AtomicInteger();
+  F8Result r=adapter(phase->{if(phase.equals("after_decision")){
+   changed.set(db.update("UPDATE f8_claim SET generation=2 WHERE wait_key=? AND generation=0",i.waitKey));
+   assertEquals(0,db.queryForObject("SELECT COUNT(*) FROM f8_claim WHERE wait_key=? AND canonical_id IS NULL AND decision_id IS NULL AND generation=0",Integer.class,i.waitKey));
+  }if(phase.equals("after_claim"))claimed.incrementAndGet();}).finalizeAnswer(f.req(),f.scope());
+  assertEquals(1,changed.get());assertEquals(0,claimed.get());assertEquals(Operational.INTEGRITY_CONFLICT,r.operational);
+  assertEquals(Attempt.ATTEMPTED,r.attempt);assertEquals(Durability.NOT_COMMITTED,r.durability);assertEquals(Reason.INTEGRITY,r.reason);assertNull(r.confirmed);
+  assertEquals(0,decisions(i));assertEquals(0,claims(i));assertEquals(F8HistoricalReader.State.ABSENT,adapter().read(f.req(),f.scope()).state);
+  assertEquals(Verdict.ACCEPTED,adapter().finalizeAnswer(f.req(),f.scope()).confirmed.verdict);
+ }
+ @Test void actualMysql1062OnClaimRollsBackOwnedAttempt(){
+  Fixture f=new Fixture();F8Identity i=f.identity();AtomicInteger vendor=new AtomicInteger();String[] state={null};
+  F8Result r=adapter(phase->{if(phase.equals("after_sentinel")){
+   try{db.update("INSERT INTO f8_claim SELECT * FROM f8_claim WHERE wait_key=?",i.waitKey);fail("duplicate constraint must reject the second claim");}
+   catch(org.springframework.dao.DataAccessException fault){
+    for(Throwable cause=fault;cause!=null;cause=cause.getCause())if(cause instanceof SQLException){vendor.set(((SQLException)cause).getErrorCode());state[0]=((SQLException)cause).getSQLState();}
+    throw fault;
+   }
+  }}).finalizeAnswer(f.req(),f.scope());
+  assertEquals(1062,vendor.get());assertEquals("23000",state[0]);assertEquals(Operational.RETRYABLE_FAILURE,r.operational);
+  assertEquals(Attempt.ATTEMPTED,r.attempt);assertEquals(Durability.NOT_COMMITTED,r.durability);assertEquals(Reason.DB_FAILURE,r.reason);assertNull(r.confirmed);
+  assertEquals(0,decisions(i));assertEquals(0,claims(i));assertEquals(F8HistoricalReader.State.ABSENT,adapter().read(f.req(),f.scope()).state);
+  assertEquals(Verdict.ACCEPTED,adapter().finalizeAnswer(f.req(),f.scope()).confirmed.verdict);
+ }
+ // EV-F8-03: RESUME is admitted while intact; only its independently verified target is then damaged.
+ @ParameterizedTest @CsvSource({"missing-canonical,DEFER,INDETERMINATE","missing-binding,INTEGRITY_CONFLICT,INCONSISTENT","fingerprint,INTEGRITY_CONFLICT,INCONSISTENT","cipher,INTEGRITY_CONFLICT,INCONSISTENT","scope,DENIED,MISMATCH"})
+ void resumeTargetDamageHasTypedNoWriteExit(String damage,Operational expected,F8HistoricalReader.State readState){
+  Fixture f=new Fixture();F8Identity original=f.identity();String target=f.event;
+  f.event=id();f.token=id();f.ref=id();f.f[1]="RESUME_REQUEST";f.f[16]=null;f.f[17]=target;f.persist();
+  if(damage.equals("missing-canonical"))admin.execute((org.springframework.jdbc.core.ConnectionCallback<Void>)connection->{
+   try(Statement statement=connection.createStatement()){
+    statement.execute("SET FOREIGN_KEY_CHECKS=0");
+    try(PreparedStatement delete=connection.prepareStatement("DELETE FROM canonical_business_event WHERE event_id=?")){delete.setString(1,target);assertEquals(1,delete.executeUpdate());}
+    finally{statement.execute("SET FOREIGN_KEY_CHECKS=1");}
+   }return null;
+  });
+  if(damage.equals("missing-binding"))assertEquals(1,admin.update("DELETE FROM u07_canonical_event_binding WHERE canonical_event_id=?",target));
+  if(damage.equals("fingerprint"))assertEquals(1,admin.update("UPDATE u07_canonical_event_binding SET binding_fingerprint='forged' WHERE canonical_event_id=?",target));
+  if(damage.equals("cipher"))assertEquals(1,admin.update("UPDATE u07_canonical_event_binding SET synthetic_answer_bytes=? WHERE canonical_event_id=?",new byte[30],target));
+  if(damage.equals("scope"))assertEquals(1,admin.update("UPDATE canonical_business_event SET consultation_id=? WHERE event_id=?",id(),target));
+  F8Result r=adapter().finalizeAnswer(f.req(),f.scope());assertEquals(expected,r.operational);assertEquals(Reason.EVIDENCE,r.reason);
+  assertEquals(Attempt.NOT_ATTEMPTED,r.attempt);assertEquals(Durability.NOT_ATTEMPTED,r.durability);assertNull(r.confirmed);
+  assertEquals(readState,adapter().read(f.req(),f.scope()).state);assertEquals(0,claims(original));assertEquals(0,decisions(original));
+  assertEquals(0,admin.queryForObject("SELECT COUNT(*) FROM f8_decision WHERE canonical_id=?",Integer.class,f.event));
+ }
+
 }
