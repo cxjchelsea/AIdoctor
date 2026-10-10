@@ -145,11 +145,16 @@ final class SourceBindingAdapter {
         Optional<CanonicalBusinessEventRecord> byId=events.findById(r.eventId);
         Optional<CanonicalBusinessEventRecord> byKey=events.findByIdempotencyKey(source.key);
         if(byId.isPresent()||byKey.isPresent())return existing(r,source,true);
-        if(!r.occurred.toString().equals(source.occurred))throw new Block(Status.INTEGRITY_CONFLICT);
         if("RESUME_REQUEST".equals(source.f[1]))target(source);
         CanonicalBusinessEventRecord event=ledger.resolveOrCreate(r.eventId,source.f[5],source.f[1],source.key,source.f[20]);
+        // JDBC does not auto-flush the pending JPA INSERT. Any visible row here is an
+        // existing winner (including one committed after our initial absent lookup).
+        boolean visibleWinner=jdbc.queryForObject("SELECT COUNT(*) FROM canonical_business_event WHERE event_id=? OR idempotency_key=?",
+            Integer.class,r.eventId,source.key)>0;
+        if(!event.getEventId().equals(r.eventId)||visibleWinner)return existing(r,source,true);
+        // Only an actually new original event is constrained by its issuance timestamp.
+        if(!r.occurred.toString().equals(source.occurred))throw new Block(Status.INTEGRITY_CONFLICT);
         probe.at("pending_insert");em.flush();probe.at("after_foundation_flush");
-        if(!event.getEventId().equals(r.eventId))throw new Block(Status.INCONSISTENT);
         jdbc.update("INSERT INTO u07_canonical_event_binding (canonical_event_id,storage_idempotency_key,event_type,consultation_id,tenant_id,binding_fingerprint,payload_digest,canonical_binding_bytes,synthetic_answer_bytes,answer_payload_digest,key_ref,source_record_ref,occurred_at,target_answer_event_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             event.getEventId(),source.key,source.f[1],source.f[5],source.f[4],BindingCodec.hash(source.frame),source.f[20],source.frame,
             source.cipher,source.f[16],source.cipher==null?null:TestAuthority.KEY_REF,r.sourceRef,source.occurred,source.f[17]);
@@ -173,7 +178,11 @@ final class SourceBindingAdapter {
         if(row.get("canonical_event_id")==null)throw new Block(Status.INCONSISTENT);
         try {
             byte[] b=(byte[])row.get("canonical_binding_bytes");String[] f=BindingCodec.decode(b);
-            if(!Arrays.equals(b,source.frame)||!BindingCodec.hash(b).equals(row.get("binding_fingerprint"))
+            if(!f[1].equals(row.get("owner_type"))||!f[5].equals(row.get("owner_consultation"))
+                ||!source.key.equals(row.get("owner_key"))||!f[20].equals(row.get("owner_digest"))
+                ||!Objects.equals(row.get("event_id"),row.get("canonical_event_id"))
+                ||!BindingCodec.payload(f).equals(f[20])
+                ||!Arrays.equals(b,source.frame)||!BindingCodec.hash(b).equals(row.get("binding_fingerprint"))
                 ||!source.key.equals(row.get("storage_idempotency_key"))||!source.f[20].equals(row.get("payload_digest"))
                 ||!f[1].equals(row.get("event_type"))||!f[5].equals(row.get("consultation_id"))||!f[4].equals(row.get("tenant_id"))
                 ||!Objects.equals(f[17],row.get("target_answer_event_id")))throw new Block(Status.INTEGRITY_CONFLICT);
@@ -190,7 +199,12 @@ final class SourceBindingAdapter {
                 ||!f[4].equals(proof.get("tenant_id"))||!Arrays.equals(b,(byte[])proof.get("binding_bytes"))
                 ||!BindingCodec.hash(b).equals(proof.get("binding_fingerprint"))||!source.key.equals(proof.get("storage_key"))
                 ||!Objects.equals(row.get("occurred_at"),proof.get("occurred_at")))throw new Block(Status.INTEGRITY_CONFLICT);
-            if("USER_ANSWER".equals(f[1])&&!BindingCodec.hash(box.decrypt((byte[])proof.get("answer_cipher"),(String)proof.get("key_ref"))).equals(f[16]))throw new Block(Status.INTEGRITY_CONFLICT);
+            String originalKey=BindingCodec.key(f,(String)proof.get("source_token"));
+            if(!originalKey.equals(source.key))throw new Block(Status.INTEGRITY_CONFLICT);
+            if("USER_ANSWER".equals(f[1])) {
+                if(!("u07db:v1:"+originalKey+":answer").equals(f[15])
+                    ||!BindingCodec.hash(box.decrypt((byte[])proof.get("answer_cipher"),(String)proof.get("key_ref"))).equals(f[16]))throw new Block(Status.INTEGRITY_CONFLICT);
+            }else if(proof.get("answer_cipher")!=null||proof.get("key_ref")!=null)throw new Block(Status.INTEGRITY_CONFLICT);
         }catch(IllegalArgumentException e){throw new Block(Status.INTEGRITY_CONFLICT);}
     }
     private void target(Source source) {
@@ -201,6 +215,8 @@ final class SourceBindingAdapter {
         if(row.get("canonical_binding_bytes")==null)throw new Block(Status.INCONSISTENT);
         try {
             String[] f=BindingCodec.decode((byte[])row.get("canonical_binding_bytes"));
+            if(!"USER_ANSWER".equals(f[1])||f[17]!=null||row.get("synthetic_answer_bytes")==null)
+                throw new Block(Status.INTEGRITY_CONFLICT);
             for(int i:new int[]{2,3,4,5,6,7,8,9,10,11,12,13,14,18,19})if(!Objects.equals(source.f[i],f[i]))throw new Block(Status.INTEGRITY_CONFLICT);
             Source target=new Source(f,(byte[])row.get("canonical_binding_bytes"),(byte[])row.get("synthetic_answer_bytes"),(String)row.get("owner_key"),(String)row.get("occurred_at"),source.epoch);
             if(!BindingCodec.payload(f).equals(row.get("owner_digest")))throw new Block(Status.INTEGRITY_CONFLICT);
