@@ -1,4 +1,4 @@
-CREATE TABLE guard (id VARCHAR(40) PRIMARY KEY, version BIGINT NOT NULL);
+CREATE TABLE guard (id VARCHAR(40) PRIMARY KEY, version BIGINT NOT NULL, lock_token BIGINT NOT NULL DEFAULT 0);
 CREATE TABLE owner_fact (
  id VARCHAR(40) PRIMARY KEY, scope_id VARCHAR(40) NOT NULL, version BIGINT NOT NULL,
  historical_wait VARCHAR(40) NOT NULL, current_wait VARCHAR(40), digest VARCHAR(40) NOT NULL,
@@ -24,3 +24,6 @@ CREATE USER 'f8_consumer'@'%' IDENTIFIED BY 'synthetic-consumer-only';
 GRANT SELECT ON u07_f8.* TO 'f8_consumer'@'%';
 GRANT INSERT ON u07_f8.decision TO 'f8_consumer'@'%';
 GRANT INSERT, UPDATE ON u07_f8.wait_claim TO 'f8_consumer'@'%';
+
+-- MySQL FOR UPDATE needs SELECT plus UPDATE privilege; no owner/version mutation grant.
+GRANT UPDATE (lock_token) ON u07_f8.guard TO 'f8_consumer'@'%';

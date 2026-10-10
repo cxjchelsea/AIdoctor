@@ -34,7 +34,7 @@ class SqlClockTest {
         sql=org.springframework.util.StreamUtils.copyToString(getClass().getResourceAsStream("/finalize.sql"),StandardCharsets.UTF_8);
         admin.update("DELETE FROM applied_evidence"); admin.update("DELETE FROM wait_claim");
         admin.update("DELETE FROM decision"); admin.update("DELETE FROM owner_fact"); admin.update("DELETE FROM guard");
-        admin.update("INSERT INTO guard VALUES ('o',1)");
+        admin.update("INSERT INTO guard (id,version) VALUES ('o',1)");
         admin.update("INSERT INTO owner_fact VALUES ('o','scope',1,'wait','wait','same',?,NULL,1,1)",Timestamp.valueOf(T.plusSeconds(10)));
     }
     void winner(boolean applied, String digest) {
@@ -155,6 +155,7 @@ class SqlClockTest {
         assertEquals("FINALIZED/ATTEMPTED/COMMITTED",finalizeAtomic("UTC_TIMESTAMP(6)",false,false,false));assertEquals("EXPIRED",verdict());assertEquals(0,count("wait_claim"));
     }
     @Test void consumerCannotForgeOwnerOrAppliedEvidence() {
+        assertThrows(org.springframework.dao.DataAccessException.class,()->db.update("UPDATE guard SET version=2"));
         assertThrows(org.springframework.dao.DataAccessException.class,()->db.update("UPDATE owner_fact SET terminal='CANCELLED'"));
         assertThrows(org.springframework.dao.DataAccessException.class,()->db.update("INSERT INTO applied_evidence VALUES ('x','scope','wait','same',1,'synthetic-independent-issuer')"));
         assertThrows(org.springframework.dao.DataAccessException.class,()->db.update("DELETE FROM decision"));
