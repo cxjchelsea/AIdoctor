@@ -15,50 +15,21 @@ import java.util.Objects;
  * event application admission and a synthetic positive decision. No effect
  * dispatch, APPLIED transition, U02/P02 resume, or clinical state mutation.
  */
-public final class U07D3SyntheticTransactionCoordinator {
+final class U07D3SyntheticTransactionCoordinator {
     private final U07EventApplicationRepository applications =
             new U07EventApplicationRepository();
 
-    public enum Outcome { ACCEPTED, SAME_EVENT_REPLAY, REJECTED_CURRENTNESS }
+    enum Outcome { ACCEPTED, SAME_EVENT_REPLAY, REJECTED_CURRENTNESS }
 
-    public static final class Input {
-        public final String eventId;
-        public final String consultationId;
-        public final String questionId;
-        public final String waitEffectId;
-        public final String idempotencyKey;
-        public final String digest;
-        public final long expectedConsultationVersion;
-
-        public Input(String eventId, String consultationId, String questionId,
-                     String waitEffectId, String idempotencyKey, String digest,
-                     long expectedConsultationVersion) {
-            this.eventId = required(eventId);
-            this.consultationId = required(consultationId);
-            this.questionId = required(questionId);
-            this.waitEffectId = required(waitEffectId);
-            this.idempotencyKey = required(idempotencyKey);
-            this.digest = required(digest);
-            if (expectedConsultationVersion < 0) throw new IllegalArgumentException("version");
-            this.expectedConsultationVersion = expectedConsultationVersion;
-        }
-    }
-
-    private static String required(String value) {
-        if (value == null || value.trim().isEmpty() || value.length() > 128) {
-            throw new IllegalArgumentException("INVALID_SYNTHETIC_INPUT");
-        }
-        return value;
-    }
-
-    /** A terminal commit is owned here. Caller must provide an unused transaction. */
-    public Outcome admitAndDecideSynthetic(Connection connection, Input in,
+    /** Internal transaction body; ONLY the runner owns terminalization. */
+    Outcome admitAndDecideSynthetic(Connection connection, U07SyntheticInput in,
                                             Timestamp now) throws SQLException {
         if (connection == null || connection.isClosed() || connection.getAutoCommit()) {
             throw new IllegalStateException("U07_D3_TRANSACTION_REQUIRED");
         }
         if (now == null) throw new IllegalArgumentException("time");
-        try {
+        U07SyntheticInputValidator.validate(in);
+        {
             // A synthetic test-only event namespace is mandatory, not caller authority.
             if (!in.eventId.startsWith("synthetic-d3-")
                     || !in.idempotencyKey.startsWith("synthetic-d3-")) {
@@ -75,7 +46,6 @@ public final class U07D3SyntheticTransactionCoordinator {
                 p.setString(1, in.consultationId);
                 try (ResultSet r = p.executeQuery()) {
                     if (!r.next()) {
-                        connection.rollback();
                         return Outcome.REJECTED_CURRENTNESS;
                     }
                     currentVersion = r.getLong(1);
@@ -132,14 +102,12 @@ public final class U07D3SyntheticTransactionCoordinator {
                         || existing.revision != 1 || existing.effectId != null) {
                     throw new IllegalStateException("U07_D3_REPLAY_STATE_REQUIRES_REVIEW");
                 }
-                connection.commit();
                 return Outcome.SAME_EVENT_REPLAY;
             }
             // An invalid currentness must never create a canonical event identity.
             if (currentVersion != in.expectedConsultationVersion
                     || !"WAITING_USER".equals(lifecycle)
                     || !Objects.equals(currentWait, in.waitEffectId)) {
-                connection.rollback();
                 return Outcome.REJECTED_CURRENTNESS;
             }
             try (PreparedStatement p = connection.prepareStatement(
@@ -151,7 +119,6 @@ public final class U07D3SyntheticTransactionCoordinator {
                             || !in.questionId.equals(r.getString(2))
                             || r.getLong(3) != in.expectedConsultationVersion
                             || !"COMMITTED".equals(r.getString(4))) {
-                        connection.rollback();
                         return Outcome.REJECTED_CURRENTNESS;
                     }
                 }
@@ -179,15 +146,7 @@ public final class U07D3SyntheticTransactionCoordinator {
             if (applications.acceptWithCas(connection, in.eventId, in.digest, 0, now) != 1) {
                 throw new IllegalStateException("U07_D3_SYNTHETIC_CAS_FAILED");
             }
-            connection.commit();
             return Outcome.ACCEPTED;
-        } catch (SQLException | RuntimeException failure) {
-            try {
-                connection.rollback();
-            } catch (SQLException rollbackFailure) {
-                failure.addSuppressed(rollbackFailure);
-            }
-            throw failure;
         }
     }
 }

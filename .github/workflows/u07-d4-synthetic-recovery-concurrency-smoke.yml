@@ -3,11 +3,8 @@ on:
   pull_request:
     paths:
       - "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/**"
-      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4RecoveryConcurrencyJdbcSmoke.java"
-      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4AdversarialOwnedJdbcSmoke.java"
-      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4ForcedProcessExitWorker.java"
-      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4MysqlConflictClassifier.java"
-      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4ReplayStateJdbcSmoke.java"
+      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/**"
+      - "diagnosis-service/scripts/verify_u07_d5p_boundary.py"
       - ".github/workflows/u07-d4-synthetic-recovery-concurrency-smoke.yml"
 
 permissions:
@@ -21,19 +18,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Boundary architecture checks
+        run: python3 diagnosis-service/scripts/verify_u07_d5p_boundary.py
       - name: Java 8 bytecode compilation
         run: |
           mkdir -p /tmp/u07_d4_classes
           javac --release 8 -d /tmp/u07_d4_classes \
-            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07EventApplicationRepository.java \
-            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07D3SyntheticTransactionCoordinator.java \
-            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07D4SyntheticRecoveryInspector.java \
-            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07D4SyntheticOwnedTransactionRunner.java \
-            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4RecoveryConcurrencyJdbcSmoke.java \
-            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4AdversarialOwnedJdbcSmoke.java \
-            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4ForcedProcessExitWorker.java \
-            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4MysqlConflictClassifier.java \
-            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D4ReplayStateJdbcSmoke.java
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/*.java \
+            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/*.java
       - name: Disposable MySQL with original V2 V3 V6 V7 schema
         shell: bash
         run: |
@@ -116,3 +108,16 @@ jobs:
           java -cp "/tmp/u07_d4_classes:$jar" \
             com.aidoctor.diagnosis.runtime.u07.U07D4ReplayStateJdbcSmoke \
             "jdbc:mysql://127.0.0.1:33321/u07_d4_synthetic?useSSL=false&allowPublicKeyRetrieval=true" root "$password"
+          java -cp "/tmp/u07_d4_classes:$jar" \
+            com.aidoctor.diagnosis.runtime.u07.U07D5PBoundaryJdbcSmoke \
+            "jdbc:mysql://127.0.0.1:33321/u07_d4_synthetic?useSSL=false&allowPublicKeyRetrieval=true" root "$password"
+          set +e
+          java -cp "/tmp/u07_d4_classes:$jar" \
+            com.aidoctor.diagnosis.runtime.u07.U07D5PBoundaryJdbcSmoke \
+            "jdbc:mysql://127.0.0.1:33321/u07_d4_synthetic?useSSL=false&allowPublicKeyRetrieval=true" \
+            root "$password" worker-failure > /tmp/u07_d5p_worker_failure.log 2>&1
+          rc=$?
+          set -e
+          [[ "$rc" != 0 ]] || { echo "FAIL unexpected SQL worker fault was masked"; exit 1; }
+          grep -q 'U07_D5P_EXPECTED_NON_CONFLICT_WORKER_FAILURE' /tmp/u07_d5p_worker_failure.log
+          echo "U07_D5P_NON_CONFLICT_WORKER_FAILURE=PASS nonzero_exit=1"

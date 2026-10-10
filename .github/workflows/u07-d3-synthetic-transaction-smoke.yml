@@ -3,7 +3,8 @@ on:
   pull_request:
     paths:
       - "diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/**"
-      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D3SyntheticAdmissionJdbcSmoke.java"
+      - "diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/**"
+      - "diagnosis-service/scripts/verify_u07_d5p_boundary.py"
       - ".github/workflows/u07-d3-synthetic-transaction-smoke.yml"
 
 permissions:
@@ -17,13 +18,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Boundary architecture checks
+        run: python3 diagnosis-service/scripts/verify_u07_d5p_boundary.py
       - name: Java 8 bytecode compilation
         run: |
           mkdir -p /tmp/u07_d3_classes
           javac --release 8 -d /tmp/u07_d3_classes \
-            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07EventApplicationRepository.java \
-            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/U07D3SyntheticTransactionCoordinator.java \
-            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/U07D3SyntheticAdmissionJdbcSmoke.java
+            diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u07/*.java \
+            diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/*.java
       - name: Disposable MySQL with original V2 V3 V6 V7 schema
         shell: bash
         run: |
