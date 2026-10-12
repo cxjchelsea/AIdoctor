@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "O1_TEST_SCOPE_V1",
+  "evidenceKind": "TEST_SCOPE",
+  "profile": "NONPRODUCTION_SYNTHETIC",
+  "fixtureManifestRef": "o1-fixture-v1",
+  "schemaManifestRef": "o1-schema-v1",
+  "testTenantId": "test-tenant",
+  "testActorId": "test-actor",
+  "scopeVersion": "o1-scope-v1",
+  "capabilitySetVersion": "o1-cap-v1",
+  "contractVersion": "1.1.0"
+}
