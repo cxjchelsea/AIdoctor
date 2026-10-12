@@ -26,7 +26,7 @@ public class StageBP1BReplayConflictTest {
    StageBP1BEvidence.Hook positive=StageBP1BEvidence.hook(env);
    U06DeliveryStore.Snapshot created=StageBP1BEvidence.call(env,healthy,positive);
    assertFalse(created.replay);assertEquals(6,positive.writes);
-   StageBP1BEvidence.Snapshot before,after;
+   StageBP1BEvidence.Snapshot before,after,candidateAfter;
    long readerId;
    try(Connection reader=StageBP1BEvidence.reader()){
     readerId=StageBP1BEvidence.connectionId(reader);
@@ -54,19 +54,27 @@ public class StageBP1BReplayConflictTest {
     assertEquals(n==6?0:n==9?4:1,hook.writes);
    }
    try(Connection reader=StageBP1BEvidence.reader()){
+    assertTrue(StageBP1BEvidence.fullSixCoherent(reader,healthy));
     StageBP1BEvidence.complete(reader,healthy);
     after=StageBP1BEvidence.snapshot(reader,healthy.deliveryEffectId);
     assertArrayEquals(before.vector,after.vector);
     assertEquals(before.digest,after.digest,"P1B_PROTECTED_WINNER_MUTATED");
-    if(n>5)assertArrayEquals(new int[6],
-      StageBP1BEvidence.snapshot(reader,candidate.deliveryEffectId).vector);
+    candidateAfter=StageBP1BEvidence.snapshot(reader,candidate.deliveryEffectId);
+    if(n>5)assertArrayEquals(new int[6],candidateAfter.vector);
+    else assertEquals(after.digest,candidateAfter.digest);
    }
+   assertTrue(hook.writerConnectionId>0);
+   assertNotEquals(hook.writerConnectionId,readerId);
    Map<String,Object> fact=StageBP1BEvidence.fact(name,caseId,outcome,"ROLLED_BACK_OBSERVED",
-     before,after,candidate.deliveryEffectId,false,true,true,hook.writes,readerId,0,error);
+     before,after,candidate.deliveryEffectId,false,true,hook,readerId,0,error);
    fact.put("protectedGraphBefore",before.digest);
    fact.put("protectedGraphAfter",after.digest);
-   fact.put("candidateSixAfter",n>5?new int[6]:before.vector);
+   fact.put("candidateSixAfter",candidateAfter.vector);
+   fact.put("candidateGraphAfter",candidateAfter.digest);
+   fact.put("fullSixCoherentObserved",true);
+   fact.put("businessReplaySafetyVerdict","NOT_ASSESSED_CONFLICT_ONLY");
    fact.put("fullSixTableReplaySafety","NOT_ASSESSED_CONFLICT_ONLY");
+   fact.put("fixtureCleanupRequired",false);
    StageBP1BEvidence.emit(fact);
   }
  }
