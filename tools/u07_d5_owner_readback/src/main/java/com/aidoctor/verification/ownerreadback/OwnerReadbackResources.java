@@ -31,6 +31,8 @@ final class OwnerReadbackResources {
     if(col.isMissingNode()||!col.path("type").asText().equals(actual.get("DATA_TYPE"))||!col.path("nullable").asText().equals(actual.get("IS_NULLABLE"))||(!col.path("length").isNull()&&((Number)actual.get("CHARACTER_MAXIMUM_LENGTH")).longValue()!=col.path("length").asLong()))throw new IllegalStateException("RESOURCE_PRECONDITION_FAILED");
    }
    Map<String,List<String>> indices=new TreeMap<>();for(Map<String,Object> row:jdbc.queryForList("SELECT INDEX_NAME,COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND NON_UNIQUE=0 ORDER BY INDEX_NAME,SEQ_IN_INDEX","u07_owner_readback",table))indices.computeIfAbsent((String)row.get("INDEX_NAME"),k->new ArrayList<>()).add((String)row.get("COLUMN_NAME"));
+   List<String> primary=indices.remove("PRIMARY"),wantedPrimary=new ArrayList<>();for(JsonNode column:expected.path("primary_key"))wantedPrimary.add(column.asText());
+   if(primary==null||wantedPrimary.isEmpty()||!primary.equals(wantedPrimary))throw new IllegalStateException("RESOURCE_PRECONDITION_FAILED");
    List<List<String>> observed=new ArrayList<>(indices.values());List<List<String>> wanted=new ArrayList<>();for(JsonNode key:expected.path("unique")){List<String> list=new ArrayList<>();for(JsonNode v:key)list.add(v.asText());wanted.add(list);}
    Comparator<List<String>> order=Comparator.comparing(Object::toString);observed.sort(order);wanted.sort(order);if(!observed.equals(wanted))throw new IllegalStateException("RESOURCE_PRECONDITION_FAILED");
   }

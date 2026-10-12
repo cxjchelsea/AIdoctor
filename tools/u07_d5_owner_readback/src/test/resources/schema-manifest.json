@@ -64,11 +64,11 @@
       },
       "unique": [
         [
-          "consultation_id"
-        ],
-        [
           "thread_id"
         ]
+      ],
+      "primary_key": [
+        "consultation_id"
       ]
     },
     "clinical_runtime_run": {
@@ -109,10 +109,9 @@
           "nullable": "NO"
         }
       },
-      "unique": [
-        [
-          "run_id"
-        ]
+      "unique": [],
+      "primary_key": [
+        "run_id"
       ]
     },
     "clinical_consultation": {
@@ -200,14 +199,14 @@
       },
       "unique": [
         [
-          "consultation_id"
-        ],
-        [
           "cdp_id"
         ],
         [
           "start_event_id"
         ]
+      ],
+      "primary_key": [
+        "consultation_id"
       ]
     },
     "clinical_consultation_wait_effect": {
@@ -285,14 +284,14 @@
       },
       "unique": [
         [
-          "wait_effect_id"
-        ],
-        [
           "parent_delivered_wait_effect_id"
         ],
         [
           "idempotency_key"
         ]
+      ],
+      "primary_key": [
+        "wait_effect_id"
       ]
     },
     "clinical_runtime_thread_state": {
@@ -345,11 +344,11 @@
       },
       "unique": [
         [
-          "thread_id"
-        ],
-        [
           "consultation_id"
         ]
+      ],
+      "primary_key": [
+        "thread_id"
       ]
     },
     "clinical_runtime_wait_checkpoint": {
@@ -447,11 +446,11 @@
       },
       "unique": [
         [
-          "checkpoint_id"
-        ],
-        [
           "question_delivered_wait_effect_id"
         ]
+      ],
+      "primary_key": [
+        "checkpoint_id"
       ]
     }
   }
