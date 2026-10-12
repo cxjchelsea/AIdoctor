@@ -118,7 +118,18 @@ def verify(d):
             or f.get("prHeadSha") != head or f.get("mergeCheckoutSha") != checkout
             or f.get("sourceMainSha") != d["sourceMainSha"]
             or f.get("profile") != d["profile"] or f.get("schema") != d["database"]
-            or f.get("downstreamAuthority") is not False or f.get("cleanupVerified") is not True
+            or f.get("downstreamAuthority") is not False
+            or f.get("sqlSignatureStrict") is not True
+            or f.get("writerDeleteDenied") is not True
+            or f.get("readerDeleteDenied") is not True
+            or f.get("roleIdentityPhysicallyChecked") is not True
+            or not isinstance(f.get("writerRole"), str)
+            or not f["writerRole"].startswith("stagebp1b_writer@")
+            or f.get("readerRole") != "stagebp1b_reader"
+            or f.get("writerIsolation") != 8
+            or not isinstance(f.get("writerConnectionId"), int)
+            or f["writerConnectionId"] <= 0
+            or f["writerConnectionId"] == f.get("readerConnectionId")
             or not is_digest(f.get("caseEffectDigest"))
             or not is_digest(f.get("graphBefore")) or not is_digest(f.get("graphAfter"))
             or f["graphBefore"] != f["graphAfter"]
@@ -128,6 +139,11 @@ def verify(d):
             or f["readerConnectionId"] <= 0):
             fail("FACT_" + method)
         before, after = f.get("sixBefore"), f.get("sixAfter")
+        writes = f.get("originalInsertCount")
+        if not isinstance(writes, int) or writes < 0 or writes > 6:
+            fail("WRITES_"+method)
+        if f.get("sqlTrace") != list(TABLES[:writes]):
+            fail("SQL_TRACE_"+method)
         if not isinstance(before, list) or len(before) != 6 or before != after:
             fail("SIX_VECTOR_" + method)
         if method.startswith("partial"):
@@ -136,9 +152,25 @@ def verify(d):
                         [0,0,0,0,1,0],[1,1,0,1,1,1],[1,1,1,0,1,1]][n-1]
             if (before != expected or f.get("cleanupVerified") is not True
                 or f.get("fixtureCleanupAfter") != ZERO
+                or not is_digest(f.get("fixtureCleanupGraphSha256"))
+                or not is_digest(f.get("emptyGroupBeforeSha256"))
+                or f["fixtureCleanupGraphSha256"] != f["emptyGroupBeforeSha256"]
+                or f.get("cleanupEffectDigest") != f.get("caseEffectDigest")
+                or f.get("seederRole") != "stagebp1b_seeder"
+                or f.get("seederDdlDenied") is not True
+                or not isinstance(f.get("cleanupSeederConnectionId"), int)
+                or not isinstance(f.get("cleanupReaderConnectionId"), int)
+                or f["cleanupSeederConnectionId"] <= 0
+                or f["cleanupReaderConnectionId"] <= 0
+                or f["cleanupSeederConnectionId"] == f["cleanupReaderConnectionId"]
+                or f["writerConnectionId"] in (
+                     f["cleanupSeederConnectionId"], f["cleanupReaderConnectionId"])
+                or f["readerConnectionId"] == f["seederConnectionId"]
                 or not isinstance(f.get("seederConnectionId"), int)
                 or f["seederConnectionId"] <= 0
                 or f.get("fullSixTableReplaySafety") != "FAIL_NOT_ESTABLISHED"
+                or f.get("businessReplaySafetyVerdict") != "FAIL_NOT_ESTABLISHED"
+                or f.get("fullSixCoherentObserved") is not False
                 or f.get("sourceGapDetected") is not (n >= 5)
                 or f.get("testVerdict") != ("SOURCE_GAP_CONFIRMED" if n >= 5 else "SOURCE_CHARACTERIZATION_PASS")
                 or f.get("sourceOutcome") != ("ORIGINAL_REPLAY_TRUE" if n >= 5 else "ORIGINAL_THROW_SQL_CONSTRAINT")
@@ -146,6 +178,12 @@ def verify(d):
                 fail("PARTIAL_" + method)
         else:
             if (before != ONE or f.get("sourceGapDetected") is not False
+                or f.get("fullSixCoherentObserved") is not True
+                or f.get("businessReplaySafetyVerdict") != "NOT_ASSESSED_CONFLICT_ONLY"
+                or f.get("fixtureCleanupRequired") is not False
+                or f.get("seederRole") != "NOT_USED"
+                or f.get("seederDdlDenied") is not False
+                or not is_digest(f.get("candidateGraphAfter"))
                 or f.get("fullSixTableReplaySafety") != "NOT_ASSESSED_CONFLICT_ONLY"
                 or f.get("sourceOutcome") != (
                   "ORIGINAL_THROW_TYPED_CONFLICT" if method in
