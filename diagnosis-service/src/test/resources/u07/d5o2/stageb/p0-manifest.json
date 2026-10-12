@@ -31,6 +31,14 @@
     "p0OwnerIdentityJdbcAndJpaEffectiveIsolation",
     "p0NestedManagerAndResidualResourcesFailClosed",
     "p0PostWriteHookIsRealAndRollsBack",
-    "p0WrongManagerDifferentDatasourceCannotBindExpectedResource"
-  ]
+    "p0WrongManagerDifferentDatasourceCannotBindExpectedResource",
+    "p0UnexpectedDeliverySqlFailsBeforeMutation"
+  ],
+  "expectedCaseIds": {
+    "p0OwnerIdentityJdbcAndJpaEffectiveIsolation": "P0-OWNER-01-04",
+    "p0NestedManagerAndResidualResourcesFailClosed": "P0-OWNER-05",
+    "p0WrongManagerDifferentDatasourceCannotBindExpectedResource": "P0-OWNER-06",
+    "p0PostWriteHookIsRealAndRollsBack": "P0-HOOK-01-02",
+    "p0UnexpectedDeliverySqlFailsBeforeMutation": "P0-HOOK-NEG"
+  }
 }
