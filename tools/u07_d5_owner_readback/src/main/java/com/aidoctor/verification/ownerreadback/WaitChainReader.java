@@ -44,7 +44,7 @@ final class WaitChainReader {
  static boolean same(Map<String,Object> m,String k,String v){return Objects.equals(text(m,k),v);}
  static long number(Map<String,Object> m,String k,String reason){Object v=m.get(k);require(v instanceof Number,reason);return ((Number)v).longValue();}
  static boolean known(String v,String...values){return Arrays.asList(values).contains(v);}
- void run(Map<String,Object> r,OwnerReadbackRequest req,String reason){require(r!=null,reason);require(same(r,"consultation_id",req.consultationId)&&same(r,"thread_id",req.threadId),reason);require(known(text(r,"status"),"OPEN","CLOSED")&&number(r,"based_on_clinical_state_version",reason)>=0,reason);}
+ void run(Map<String,Object> r,OwnerReadbackRequest req,String reason){require(r!=null,reason);require(same(r,"consultation_id",req.consultationId)&&same(r,"thread_id",req.threadId),reason);require(known(text(r,"status"),"OPEN","CLOSED"),"OWNER_LINK_INVALID".equals(reason)?"OWNER_ENUM_INVALID":reason);require(number(r,"based_on_clinical_state_version",reason)>=0,reason);}
  WaitChainObservation observe(OwnerReadbackRequest req,Connection c,long physical){
   Map<String,Object> root=row("clinical_consultation","consultation_id",req.consultationId,c,physical);probe.afterRoot();
   if(root==null)return out(ABSENT,"CONSULTATION_ABSENT",true);
