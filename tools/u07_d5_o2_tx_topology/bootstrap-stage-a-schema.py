@@ -43,7 +43,7 @@ def main():
         if not path.is_relative_to(ROOT):  # Python 3.9+ expected on CI.
             raise SystemExit("STAGE_A_PATH_ESCAPES_REPOSITORY")
         raw = path.read_bytes()
-        actual = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\\0" + raw).hexdigest()
+        actual = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
         if actual != expected_blob:
             raise SystemExit("STAGE_A_SOURCE_DDL_CHANGED")
         chunks.append(raw.decode("utf-8"))
