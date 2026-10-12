@@ -12,7 +12,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class StageBP1ReplayConflictTest {
- @Test public void happy01(){
+ @Test public void happy01() throws Exception{
   StageBP1TestConfig.requireEnvironment();
   try(AnnotationConfigApplicationContext ctx=new AnnotationConfigApplicationContext(StageBP1TestConfig.class)){
    DataSource ds=ctx.getBean("p1DataSource",DataSource.class);
@@ -37,7 +37,7 @@ public class StageBP1ReplayConflictTest {
    StageBP1Evidence.emit(facts);
   }
  }
- @Test public void replay01(){
+ @Test public void replay01() throws Exception{
   StageBP1TestConfig.requireEnvironment();
   try(AnnotationConfigApplicationContext ctx=new AnnotationConfigApplicationContext(StageBP1TestConfig.class)){
    DataSource ds=ctx.getBean("p1DataSource",DataSource.class);
