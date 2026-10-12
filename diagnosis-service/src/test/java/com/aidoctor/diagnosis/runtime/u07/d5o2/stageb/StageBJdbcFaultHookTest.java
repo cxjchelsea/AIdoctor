@@ -77,7 +77,16 @@ public class StageBJdbcFaultHookTest {
     assertNotEquals(intercepted.writerConnectionId(),observerId[0]);
     assertEquals(0,uncommittedReaderCount[0]);
     int after=0;
-    for(String table:TABLES){int count=readCount(reader,table,effect);assertEquals(0,count,table+" must rollback");after+=count;}
+    // A fresh observer session prevents a pre-write REPEATABLE READ snapshot from masking a committed row.
+    try(Connection postRollbackReader=independentReader()){
+     postRollbackReader.setAutoCommit(true);
+     assertEquals("u07_d5o2_stage_b_p0",postRollbackReader.getCatalog());
+     for(String table:TABLES){
+      int count=readCount(postRollbackReader,table,effect);
+      assertEquals(0,count,table+" must rollback on a fresh observer snapshot");
+      after+=count;
+     }
+    }
     assertEquals(0,after);
     assertThrows(SQLException.class,()->{
      try(PreparedStatement p=reader.prepareStatement(
@@ -94,7 +103,7 @@ public class StageBJdbcFaultHookTest {
     facts.put("writerConnectionId",intercepted.writerConnectionId());
     facts.put("readerConnectionId",observerId[0]);
     facts.put("baselineCount",baseline);facts.put("uncommittedReaderCount",uncommittedReaderCount[0]);
-    facts.put("postRollbackSumSixTables",after);facts.put("readOnlyDeleteDenied",true);
+    facts.put("postRollbackSumSixTables",after);facts.put("freshObserverAfterRollback",true);facts.put("readOnlyDeleteDenied",true);
     facts.put("writerTxActiveAtFault",intercepted.transactionActiveAtFault());
     StageBTxOwnerBindingTest.evidence("p0PostWriteHookIsRealAndRollsBack",facts);
    }
