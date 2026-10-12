@@ -10,6 +10,8 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[4]
 MANIFEST=ROOT/"diagnosis-service/src/test/resources/u07/d5o2/stageb/p1/manifest.json"
+import re
+HEX64=re.compile(r"^[0-9a-f]{64}$")
 ZERO=[0]*6
 ONE=[1]*6
 def fail(msg):raise SystemExit("P1A_EVIDENCE_DENIED_"+msg)
@@ -26,15 +28,19 @@ def main():
  if len(required)!=8 or len(set(required.values()))!=8:fail("MANIFEST_CASES")
  reports=glob.glob(str(ROOT/"diagnosis-service/target/surefire-reports/TEST-*StageBP1*.xml"))
  methods=set()
+ method_classes={}
  if len(reports)!=2:fail("SUREFIRE_CLASS_COUNT")
  for report in reports:
   xml=ET.parse(report).getroot()
   if xml.attrib.get("name","").split(".")[-1] not in d["testClasses"]:fail("CLASS")
   if any(int(xml.attrib.get(k,"0")) for k in ("failures","errors","skipped")):fail("TEST_FAILURE")
+  suite_class=xml.attrib.get("name","").split(".")[-1]
   for case in xml.findall(".//testcase"):
    name=case.attrib.get("name")
    if name not in required or name in methods:fail("METHOD_MISMATCH")
    if any(case.find(k) is not None for k in ("failure","error","skipped")):fail("CASE_NOT_PASSED")
+   if case.attrib.get("classname","").split(".")[-1]!=suite_class:fail("CASE_CLASS")
+   method_classes[name]=suite_class
    methods.add(name)
  if methods!=set(required):fail("METHODS_MISSING")
  obs=ROOT/"diagnosis-service/target/stage-b-p1a-observations"
@@ -45,7 +51,15 @@ def main():
   file=obs/(name+".json")
   if not file.is_file():fail("OBS_MISSING_"+name)
   fact=json.loads(file.read_text())
+  def digest(field):return isinstance(fact.get(field),str) and bool(HEX64.fullmatch(fact[field]))
   if (fact.get("testMethod")!=name or fact.get("caseId")!=caseid
+      or fact.get("junitClass")!=method_classes[name]
+      or fact.get("actualPrHeadSha")!=head
+      or fact.get("testedSyntheticMergeCheckoutSha")!=sha
+      or fact.get("workflowRunId")!=os.environ["GITHUB_RUN_ID"]
+      or fact.get("readerDmlDenied") is not True
+      or fact.get("writerIsolation")!=8 or fact.get("sqlSignatureStrict") is not True
+      or not digest("candidateEffectSha256")
       or fact.get("sourceMainSha")!=d["sourceMainSha"]
       or fact.get("productionTopologyVerified") is not False
       or fact.get("downstreamAuthority") is not False
@@ -64,16 +78,26 @@ def main():
        or not isinstance(fact.get("writerConnectionId"),int)
        or not isinstance(fact.get("inFlightReaderConnectionId"),int)
        or fact["writerConnectionId"]<=0 or fact["inFlightReaderConnectionId"]<=0
-       or fact["writerConnectionId"]==fact["inFlightReaderConnectionId"]):
+       or fact["writerConnectionId"]==fact["inFlightReaderConnectionId"]
+       or not digest("healthyGraphBeforeSha256") or not digest("healthyGraphAfterSha256")
+       or not digest("protectedEffectSha256")
+       or fact["healthyGraphBeforeSha256"]!=fact["healthyGraphAfterSha256"]
+       or fact["candidateEffectSha256"]==fact["protectedEffectSha256"]
+       or not isinstance(fact.get("postFreshReaderConnectionId"),int)
+       or fact["postFreshReaderConnectionId"]<=0):
     fail("FAULT_"+name)
   elif name=="happy01":
    if (fact.get("successfulOriginalSqlWrites")!=6 or fact.get("sixAfter")!=ONE
        or fact.get("methodOutcome")!="ORIGINAL_NEW_SUCCESS"
-       or fact.get("physicalTransactionResult")!="COMMITTED_OBSERVED"):fail("HAPPY")
+       or fact.get("physicalTransactionResult")!="COMMITTED_OBSERVED"
+       or not digest("sixTableGraphSha256")):fail("HAPPY")
   elif name=="replay01":
    if (fact.get("successfulOriginalSqlWrites")!=0 or fact.get("sixBefore")!=ONE
        or fact.get("sixAfter")!=ONE or fact.get("methodOutcome")!="ORIGINAL_REPLAY_TRUE"
-       or fact.get("physicalTransactionResult")!="COMMITTED_OBSERVED"):fail("REPLAY")
+       or fact.get("physicalTransactionResult")!="COMMITTED_OBSERVED"
+       or not digest("sixTableGraphBeforeSha256")
+       or not digest("sixTableGraphAfterSha256")
+       or fact["sixTableGraphBeforeSha256"]!=fact["sixTableGraphAfterSha256"]):fail("REPLAY")
   entries[name]=fact
  ddl=[]
  for item in d["ddl"]:
