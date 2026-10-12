@@ -4,6 +4,11 @@ import com.aidoctor.diagnosis.runtime.u06.delivery.U06DeliveryStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.TreeMap;
+import java.util.Locale;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -41,6 +46,48 @@ final class StageBP1Evidence {
  static Connection reader() throws SQLException {
   Connection c=DriverManager.getConnection(StageBP1TestConfig.URL,READER,READ_PWD);
   Assertions.assertEquals("u07_d5o2_stage_b_p1",c.getCatalog());c.setAutoCommit(true);return c;
+ }
+ /** Each test reader is physically SELECT-only. A zero-row DELETE must still be denied. */
+ static boolean assertReaderPermission(Connection c)throws SQLException{
+  try(PreparedStatement who=c.prepareStatement("SELECT CURRENT_USER()");
+      ResultSet rs=who.executeQuery()){
+   Assertions.assertTrue(rs.next());
+   Assertions.assertTrue(rs.getString(1).startsWith(READER+"@"),"P1A_WRONG_READER_ROLE");
+  }
+  try(PreparedStatement write=c.prepareStatement(
+    "DELETE FROM u06_delivery_authority WHERE delivery_effect_id=?")){
+   write.setString(1,"synthetic-denied-permission-probe");
+   SQLException denied=Assertions.assertThrows(SQLException.class,()->write.executeUpdate());
+   Assertions.assertEquals("42000",denied.getSQLState(),"P1A_READER_DML_MUST_FAIL_PRIVILEGE");
+  }
+  return true;
+ }
+ /** Domain-separated, stable, complete six-table row serialization including every column. */
+ static String graphDigest(Connection c,U06DeliveryStore.Command x)throws SQLException{
+  complete(c,x);
+  StringBuilder canonical=new StringBuilder("P1A-SIX-GRAPH-V1");
+  append(canonical,x.deliveryEffectId);
+  for(int n=0;n<TABLES.length;n++){
+   append(canonical,TABLES[n]);
+   Map<String,String> sorted=new TreeMap<String,String>(row(c,n,x.deliveryEffectId));
+   for(Map.Entry<String,String> entry:sorted.entrySet()){
+    append(canonical,entry.getKey());append(canonical,entry.getValue());
+   }
+  }
+  return sha256(canonical.toString());
+ }
+ static String effectDigest(String effect){return sha256("P1A-EFFECT-V1:"+effect);}
+ private static void append(StringBuilder b,String value){
+  if(value==null){b.append("-1:");return;}
+  b.append(value.length()).append(":").append(value);
+ }
+ private static String sha256(String value){
+  try{
+   byte[] bytes=MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
+   StringBuilder hex=new StringBuilder();
+   for(byte each:bytes)hex.append(String.format(Locale.ROOT,"%02x",each&0xff));
+   return hex.toString();
+  }catch(NoSuchAlgorithmException e){throw new IllegalStateException(e);}
  }
  static long connectionId(Connection c)throws SQLException{
   try(PreparedStatement p=c.prepareStatement("SELECT CONNECTION_ID()");
@@ -104,6 +151,10 @@ final class StageBP1Evidence {
   m.put("evidencePlane","TEST_ONLY_REAL_MYSQL8");m.put("productionTopologyVerified",false);
   m.put("downstreamAuthority",false);m.put("realD5Ready",false);
   m.put("sourceMainSha","3b0589347d90af5ec5b86fbdad5eecabcce41a24");
+  m.put("junitClass",method.startsWith("fault")?"StageBP1AtomicityTest":"StageBP1ReplayConflictTest");
+  m.put("actualPrHeadSha",System.getenv("U07_D5O2_PR_HEAD_SHA"));
+  m.put("workflowRunId",System.getenv("GITHUB_RUN_ID"));
+  m.put("testedSyntheticMergeCheckoutSha",System.getenv("GITHUB_SHA"));
   return m;
  }
  static void emit(Map<String,Object> m){
@@ -154,12 +205,20 @@ final class StageBP1Evidence {
   private int[] uncommitted;
   private long observerId;
   Hook(DataSource ds,int failAt){super(ds);if(failAt<0||failAt>6)throw new IllegalArgumentException();this.failAt=failAt;}
+  private static final String[] EXACT_INSERTS={
+   "insert into u06_delivery_authority (selection_effect_id,delivery_effect_id,delivery_id,authority_status,created_at) values (?,?,?,?,?)",
+   "insert into u06_delivery_intent (delivery_effect_id,delivery_id,question_id,content_fingerprint,endpoint_ref,idempotency_key,intent_status,created_at) values (?,?,?,?,?,?,?,?)",
+   "insert into u06_delivery_attempt (attempt_id,delivery_effect_id,delivery_id,attempt_status,created_at) values (?,?,?,?,?)",
+   "insert into u06_delivery_receipt (receipt_id,delivery_effect_id,delivery_id,receipt_status,evidence_type,created_at) values (?,?,?,?,?,?)",
+   "insert into u06_delivery_confirmation (confirmation_evaluation_id,delivery_effect_id,delivery_id,confirmation_status,confirmation_fingerprint,created_at) values (?,?,?,?,?,?)",
+   "insert into u06_delivery_ledger (delivery_effect_id,delivery_id,confirmation_status,canonical_fingerprint,created_at) values (?,?,?,?,?)"
+  };
   @Override public int update(String sql,Object... args){
-   if(sql==null||writes>=6||!sql.trim().toLowerCase(java.util.Locale.ROOT)
-      .startsWith("insert into "+TABLES[writes]+" "))
+   if(sql==null||writes>=6||!sql.trim().replaceAll("\\s+"," ").toLowerCase(Locale.ROOT).equals(EXACT_INSERTS[writes]))
     throw new IllegalStateException("P1A_UNEXPECTED_OR_UNORDERED_SQL");
    if(!TransactionSynchronizationManager.isActualTransactionActive()
-     ||!TransactionSynchronizationManager.hasResource(getDataSource()))
+     ||!TransactionSynchronizationManager.hasResource(getDataSource())
+     ||!DataSourceUtils.isConnectionTransactional(DataSourceUtils.getConnection(getDataSource()),getDataSource()))
     throw new IllegalStateException("P1A_SQL_OUTSIDE_OWNED_TX");
    int count=super.update(sql,args);
    if(count!=1)throw new IllegalStateException("P1A_WRONG_INSERT_COUNT");
