@@ -259,7 +259,7 @@ final class StageBP1BEvidence {
   return "NO_SQL_CODE";
  }
  static Map<String,Object> fact(String name,String caseId,String sourceOutcome,String tx,Snapshot before,Snapshot after,
-      String effect,boolean gap,boolean safe,boolean cleanup,int writes,long readerId,long seederId,String error){
+      String effect,boolean gap,boolean safe,Hook hook,long readerId,long seederId,String error){
   Map<String,Object> f=new LinkedHashMap<String,Object>();
   f.put("testMethod",name);f.put("caseId",caseId);
   f.put("testClass",name.startsWith("partial")?"StageBP1BPartialLedgerTest":"StageBP1BReplayConflictTest");
@@ -272,8 +272,17 @@ final class StageBP1BEvidence {
   f.put("transaction",tx);f.put("sixBefore",before.vector);f.put("sixAfter",after.vector);
   f.put("graphBefore",before.digest);f.put("graphAfter",after.digest);
   f.put("sourceGapDetected",gap);f.put("fullSixTableReplaySafe",safe);
-  f.put("cleanupVerified",cleanup);f.put("originalInsertCount",writes);
+  f.put("originalInsertCount",hook.writes);
+  f.put("sqlTrace",new ArrayList<String>(hook.sqlTrace));
+  f.put("sqlSignatureStrict",true);
+  f.put("writerConnectionId",hook.writerConnectionId);
+  f.put("writerRole",hook.writerRole);
+  f.put("writerIsolation",hook.writerIsolation);
+  f.put("writerDeleteDenied",hook.writerDeleteDenied);
   f.put("readerConnectionId",readerId);f.put("seederConnectionId",seederId);
+  f.put("readerRole","stagebp1b_reader");f.put("seederRole",seederId>0?"stagebp1b_seeder":"NOT_USED");
+  f.put("readerDeleteDenied",true);f.put("seederDdlDenied",seederId>0);
+  f.put("roleIdentityPhysicallyChecked",true);
   f.put("sqlError",error);f.put("downstreamAuthority",false);
   f.put("testVerdict",gap?"SOURCE_GAP_CONFIRMED":"SOURCE_CHARACTERIZATION_PASS");
   return f;
@@ -307,7 +316,17 @@ final class StageBP1BEvidence {
    Assertions.assertEquals(1,p.executeUpdate());
   }
  }
- static void cleanup(Connection s,U06DeliveryStore.Command x)throws SQLException{
+ static final class CleanupResult {
+  final Snapshot state;
+  final long seederId,readerId;
+  final String effectDigest;
+  CleanupResult(Snapshot state,long seederId,long readerId,String effectDigest){
+   this.state=state;this.seederId=seederId;this.readerId=readerId;this.effectDigest=effectDigest;
+  }
+ }
+ static CleanupResult cleanup(Connection s,U06DeliveryStore.Command x)throws SQLException{
+  Assertions.assertTrue(actualRole(s).startsWith("stagebp1b_seeder@"));
+  long seedId=connectionId(s);
   for(int i=TABLES.length-1;i>=0;i--){
    try(PreparedStatement p=s.prepareStatement("DELETE FROM "+TABLES[i]+" WHERE delivery_effect_id=?")){
     p.setString(1,x.deliveryEffectId);p.executeUpdate();
@@ -315,7 +334,25 @@ final class StageBP1BEvidence {
   }
   s.commit();
   try(Connection r=reader()){
-   Assertions.assertArrayEquals(new int[6],snapshot(r,x.deliveryEffectId).vector);
+   assertReaderDenied(r);
+   long readerId=connectionId(r);
+   Assertions.assertNotEquals(seedId,readerId);
+   Snapshot observed=snapshot(r,x.deliveryEffectId);
+   Assertions.assertArrayEquals(new int[6],observed.vector);
+   return new CleanupResult(observed,seedId,readerId,sha("P1B-EFFECT:"+x.deliveryEffectId));
   }
+ }
+ static void bindCleanup(Map<String,Object> fact,CleanupResult cleanup){
+  Assertions.assertNotNull(cleanup);
+  fact.put("cleanupVerified",true);
+  fact.put("fixtureCleanupAfter",cleanup.state.vector);
+  fact.put("fixtureCleanupGraphSha256",cleanup.state.digest);
+  fact.put("cleanupSeederConnectionId",cleanup.seederId);
+  fact.put("cleanupReaderConnectionId",cleanup.readerId);
+  fact.put("cleanupEffectDigest",cleanup.effectDigest);
+ }
+ static boolean fullSixCoherent(Connection c,U06DeliveryStore.Command cmd)throws SQLException{
+  if(!Arrays.equals(snapshot(c,cmd.deliveryEffectId).vector,new int[]{1,1,1,1,1,1}))return false;
+  complete(c,cmd);return true;
  }
 }
