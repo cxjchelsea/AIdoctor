@@ -26,3 +26,15 @@ F8EV-D01要求更新本记录；本版明确替换原“所有CI尚未执行/预
 
 EV-F8-02原生claim INSERT1062等待真实CI及复审；即使通过，也只关闭该单事务故障路径，不关闭不遵守guard的外部writer竞争认证。
 EV-F8-01 outbox写拒绝OPEN/NOT_EXECUTED；FULL_CHECKLIST_VERIFICATION=NOT_FULLY_CLOSED；REAL_D5=NOT_READY。生产owner CA/APPLIED/P01、APPLY、effect、dispatch/outbox、真实网络/crash、Oracle均未认证。不是独立人员批准，没有merge授权。
+
+## 本轮真实执行结果（代码提交5bd29b16）
+
+受测代码HEAD：5bd29b16f54cdaed884229c2ace295e259e66395。实际checkout：f69a48c410c925dba6808a32c6a2e1d55cfdfe5a；parents main702e280f与代码HEAD；tree49a5154fd7fbda2a5114bd6daa5aeb88a3b1fdc6与代码HEAD完全一致。
+- F8 [38191136807](https://github.com/cxjchelsea/AIdoctor/actions/runs/38191136807)，job114623947757：adapter70+SQLClock34=104，failure/error/skip均0，BUILD SUCCESS。
+- U03 [38191136775](https://github.com/cxjchelsea/AIdoctor/actions/runs/38191136775)，job114623947585：编译/定向/全套434，0failure/error、1skip，BUILD SUCCESS。
+- U02 [38191136786](https://github.com/cxjchelsea/AIdoctor/actions/runs/38191136786)，Java job114623948053同样434、0failure/error、1skip；Python job114623947857为11+9+1 passed。
+三个run最终均completed/success；四份job日志核验checkout及汇总。原生INSERT日志有真实SQL、1062/23000；新增断言记录种入1行、原execute1次、未到after_sentinel、确定rollback/fresh ABSENT/重试成功。
+
+NATIVE_CLAIM_INSERT_1062=VERIFIED_IN_SINGLE_TRANSACTION_FIXTURE；等待新增fixture定向复审，不冒充外部竞争writer认证。F8EV-D01已将历史/当前实测证据区分并记录到仓库；是否关闭以复审为准。上文PENDING描述为本次测试发布时状态，本节替代该状态。
+
+本节作为仅文档提交发布：其HEAD不称为F8受测HEAD；F8测试代码blob与5bd29b16完全相同，继承上述代码证据。没有新代码修改，不需要将文档commit冒充104次新执行。Source25仍为main继承证据。REAL_D5/其余排除门禁不变，未合并。
