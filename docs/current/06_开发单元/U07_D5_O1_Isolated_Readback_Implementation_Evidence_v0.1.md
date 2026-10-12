@@ -34,7 +34,7 @@ ISOLATED_IMPLEMENTED_AND_PHYSICALLY_VERIFIED_IN_LISTED_SCOPE。待实现与证�
 - 新增真实 MySQL 主键负向回归：正常 MATCH 后，临时将 clinical_runtime_run PRIMARY(run_id) 替换为同列 UNIQUE，预期 UNAVAILABLE/RESOURCE_PRECONDITION_FAILED、payload null，owner SELECT 计数0；finally 恢复原主键，下一次请求恢复 MATCH。仅限 disposable 故障 fixture，不修改原迁移，不将删约束变为正常 writer 协议。
 - O1-R02：新增报告 autoCommit=true 的 connection proxy 回归，断言拒绝且SQL/owner读计数0；新增根读后报告 CONNECTION_ID 改变的 ResultSet proxy 回归，断言拒绝、payload null、owner读只有根1次，不继续子查询。故障注入支持 Statement/PreparedStatement；这是报告值注入，并非真实 autoCommit 切换或连接漂移的认证。
 
-实际 checkout 4e410949fde306dc6ce430a32924b31bda8f2ff4，parents 精确为 main750770e81af79b764cc4148d7fa856363c89972a 与代码HEAD4683195864c07c978d7d5d657ec33ab3c1c2c05f，tree f2f65e63378adf41fb1706ae70a758ea1f8935ca 与受测候选一致。
+实际 checkout 4e410949fde306dc6ce430a32924b31bda8f2ff4，parents 精确为 main750770e81af79b764cc4148d7fa856363c89972a 与代码HEAD4683195864c07c978d7d5d657ec33ab3c1c2c05f，tree 95af1355bcb36a183ee926a7c2080d1362c511ff 与受测候选一致。
 
 | 本轮执行 | job | 结果 |
 | --- | --- | --- |
