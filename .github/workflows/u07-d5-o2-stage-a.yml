@@ -1,0 +1,83 @@
+name: U07 D5-O2 Stage A isolated Spring JPA topology
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/d5o2/**'
+      - 'diagnosis-service/src/test/resources/u07/d5o2/**'
+      - 'tools/u07_d5_o2_tx_topology/**'
+      - '.github/workflows/u07-d5-o2-stage-a.yml'
+permissions:
+  contents: read
+jobs:
+  stage-a-mysql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: synthetic-stagea-root
+          MYSQL_DATABASE: u07_d5o2_stage_a
+        ports:
+          - 33326:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -psynthetic-stagea-root"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      U07_D5O2_PROFILE: U07_D5O2_STAGE_A_SYNTHETIC
+      U07_D5O2_SCHEMA: u07_d5o2_stage_a
+      U07_D5O2_URL: jdbc:mysql://127.0.0.1:33326/u07_d5o2_stage_a?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Fixed context and checkout provenance
+        run: |
+          set -euo pipefail
+          test "$U07_D5O2_PROFILE" = U07_D5O2_STAGE_A_SYNTHETIC
+          test "$U07_D5O2_SCHEMA" = u07_d5o2_stage_a
+          test "$U07_D5O2_URL" = 'jdbc:mysql://127.0.0.1:33326/u07_d5o2_stage_a?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC'
+          git rev-parse HEAD
+          java -version
+      - name: Original immutable owner DDL and test-only MySQL roles
+        env:
+          MYSQL_PWD: synthetic-stagea-root
+        run: |
+          set -euo pipefail
+          python3 tools/u07_d5_o2_tx_topology/bootstrap-stage-a-schema.py > /tmp/stage-a.sql
+          mysql -h 127.0.0.1 -P 33326 -uroot u07_d5o2_stage_a < /tmp/stage-a.sql
+      - name: Install exact Java shared-contract dependency
+        run: mvn -B -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Java 8 test compile (not a verification PASS)
+        run: mvn -B -f diagnosis-service/pom.xml -DskipTests test-compile
+      - name: Execute source negative controls and real Spring JPA MySQL checks
+        run: |
+          set -euo pipefail
+          mvn -B -f diagnosis-service/pom.xml -Dtest=U07D5O2StageATopologyTest,U07D5O2StageATxPhysicalTest test
+          python3 - <<'PY'
+          import glob
+          import xml.etree.ElementTree as ET
+          files=glob.glob('diagnosis-service/target/surefire-reports/TEST-*U07D5O2StageA*.xml')
+          if len(files) != 2:
+              raise SystemExit('STAGE_A_MISSING_TEST_REPORTS')
+          total=0
+          for path in files:
+              root=ET.parse(path).getroot()
+              tests=int(root.attrib.get('tests','0'))
+              fail=int(root.attrib.get('failures','0'))+int(root.attrib.get('errors','0'))+int(root.attrib.get('skipped','0'))
+              if tests <= 0 or fail:
+                  raise SystemExit('STAGE_A_NOT_VERIFIED '+path)
+              total+=tests
+          print('STAGE_A_SYNTHETIC_MYSQL_TESTS_EXECUTED='+str(total))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: u07-d5-o2-stage-a-surefire
+          path: diagnosis-service/target/surefire-reports/TEST-*U07D5O2StageA*.xml
