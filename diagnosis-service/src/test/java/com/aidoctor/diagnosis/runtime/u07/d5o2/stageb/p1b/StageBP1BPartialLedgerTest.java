@@ -21,12 +21,14 @@ public class StageBP1BPartialLedgerTest {
    StageBP1BEvidence.Hook positive=StageBP1BEvidence.hook(env);
    U06DeliveryStore.Snapshot initial=StageBP1BEvidence.call(env,healthy,positive);
    assertFalse(initial.replay);assertEquals(6,positive.writes);
-   String healthyBefore;
+   String healthyBefore,emptyGroupBefore;
    try(Connection reader=StageBP1BEvidence.reader()){
     StageBP1BEvidence.assertReaderDenied(reader);
     StageBP1BEvidence.complete(reader,healthy);
     healthyBefore=StageBP1BEvidence.snapshot(reader,healthy.deliveryEffectId).digest;
-    assertArrayEquals(new int[6],StageBP1BEvidence.snapshot(reader,target.deliveryEffectId).vector);
+    StageBP1BEvidence.Snapshot empty=StageBP1BEvidence.snapshot(reader,target.deliveryEffectId);
+    assertArrayEquals(new int[6],empty.vector);
+    emptyGroupBefore=empty.digest;
    }
    long seederId;
    try(Connection seeder=StageBP1BEvidence.seeder()){
@@ -100,6 +102,8 @@ public class StageBP1BPartialLedgerTest {
    fact.put("businessReplaySafetyVerdict","FAIL_NOT_ESTABLISHED");
    fact.put("protectedGraphBefore",healthyBefore);fact.put("protectedGraphAfter",healthyAfter);
    StageBP1BEvidence.bindCleanup(fact,cleanup);
+   assertEquals(emptyGroupBefore,cleanup.state.digest,"P1B_CLEANUP_GRAPH_NOT_ORIGINAL_EMPTY");
+   fact.put("emptyGroupBeforeSha256",emptyGroupBefore);
    StageBP1BEvidence.emit(fact);
   }
  }
