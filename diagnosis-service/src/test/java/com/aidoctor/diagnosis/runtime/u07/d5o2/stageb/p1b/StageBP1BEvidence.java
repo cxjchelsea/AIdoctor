@@ -188,16 +188,43 @@ final class StageBP1BEvidence {
   }catch(java.security.NoSuchAlgorithmException e){throw new IllegalStateException(e);}
  }
  static void append(StringBuilder b,String v){if(v==null)b.append("-1:");else b.append(v.length()).append(':').append(v);}
+ static final String[] EXACT_INSERTS={
+  "insert into u06_delivery_authority (selection_effect_id,delivery_effect_id,delivery_id,authority_status,created_at) values (?,?,?,?,?)",
+  "insert into u06_delivery_intent (delivery_effect_id,delivery_id,question_id,content_fingerprint,endpoint_ref,idempotency_key,intent_status,created_at) values (?,?,?,?,?,?,?,?)",
+  "insert into u06_delivery_attempt (attempt_id,delivery_effect_id,delivery_id,attempt_status,created_at) values (?,?,?,?,?)",
+  "insert into u06_delivery_receipt (receipt_id,delivery_effect_id,delivery_id,receipt_status,evidence_type,created_at) values (?,?,?,?,?,?)",
+  "insert into u06_delivery_confirmation (confirmation_evaluation_id,delivery_effect_id,delivery_id,confirmation_status,confirmation_fingerprint,created_at) values (?,?,?,?,?,?)",
+  "insert into u06_delivery_ledger (delivery_effect_id,delivery_id,confirmation_status,canonical_fingerprint,created_at) values (?,?,?,?,?)"
+ };
  static final class Hook extends JdbcTemplate {
   int writes;
+  long writerConnectionId;
+  String writerRole;
+  int writerIsolation;
+  boolean writerDeleteDenied;
+  final List<String> sqlTrace=new ArrayList<String>();
   Hook(DataSource ds){super(ds);}
+  void bindWriter(Connection c)throws SQLException{
+   Assertions.assertTrue(TransactionSynchronizationManager.isActualTransactionActive());
+   Assertions.assertTrue(DataSourceUtils.isConnectionTransactional(c,getDataSource()));
+   writerConnectionId=connectionId(c);
+   writerRole=actualRole(c);
+   Assertions.assertTrue(writerRole.startsWith("stagebp1b_writer@"));
+   writerIsolation=c.getTransactionIsolation();
+   Assertions.assertEquals(Connection.TRANSACTION_SERIALIZABLE,writerIsolation);
+   writerDeleteDenied=assertWriterDenied(c);
+  }
   @Override public int update(String sql,Object... args){
    Assertions.assertTrue(TransactionSynchronizationManager.isActualTransactionActive());
    Assertions.assertTrue(TransactionSynchronizationManager.hasResource(getDataSource()));
    Assertions.assertTrue(DataSourceUtils.isConnectionTransactional(DataSourceUtils.getConnection(getDataSource()),getDataSource()));
-   Assertions.assertTrue(sql.trim().toUpperCase(Locale.ROOT).startsWith("INSERT INTO U06_DELIVERY_"));
+   Assertions.assertTrue(writerConnectionId>0&&writerDeleteDenied);
+   Assertions.assertTrue(writes<EXACT_INSERTS.length,"P1B_TOO_MANY_SQL_WRITES");
+   String normalized=sql.trim().replaceAll("\\s+"," ").toLowerCase(Locale.ROOT);
+   Assertions.assertEquals(EXACT_INSERTS[writes],normalized,"P1B_INSERT_SIGNATURE_OR_ORDER");
    int rows=super.update(sql,args);
-   Assertions.assertEquals(1,rows);writes++;return rows;
+   Assertions.assertEquals(1,rows);
+   sqlTrace.add(TABLES[writes]);writes++;return rows;
   }
  }
  static U06DeliveryStore.Snapshot call(StageBP1BTestConfig env,U06DeliveryStore.Command cmd,Hook hook){
@@ -211,8 +238,8 @@ final class StageBP1BEvidence {
   try{return template.execute(status->{
     Assertions.assertTrue(TransactionSynchronizationManager.isActualTransactionActive());
     Connection c=DataSourceUtils.getConnection(env.source);
-    try{Assertions.assertEquals(Connection.TRANSACTION_SERIALIZABLE,c.getTransactionIsolation());}
-    catch(SQLException ex){throw new IllegalStateException(ex);}
+    try{hook.bindWriter(c);}
+    catch(SQLException ex){throw new IllegalStateException("P1B_WRITER_ROLE_OR_ISOLATION",ex);}
     return new JdbcU06DeliveryStore(hook).reconcileConfirmed(cmd);
   });}finally{
    Assertions.assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
