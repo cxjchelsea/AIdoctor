@@ -31,6 +31,7 @@ public class StageBP1BPartialLedgerTest {
    long seederId;
    try(Connection seeder=StageBP1BEvidence.seeder()){
     seederId=StageBP1BEvidence.connectionId(seeder);
+    assertTrue(StageBP1BEvidence.assertSeederDdlDenied(seeder));
     try{
      if(n==1)StageBP1BEvidence.insertSeed(seeder,5,target);
      if(n==2)StageBP1BEvidence.insertSeed(seeder,0,target);
@@ -45,12 +46,16 @@ public class StageBP1BPartialLedgerTest {
    }
    StageBP1BEvidence.Snapshot seeded=null,after=null;
    long readerId=0;
+   String healthyAfter=null;
+   boolean fullSixCoherent=true;
+   StageBP1BEvidence.CleanupResult cleanup=null;
    StageBP1BEvidence.Hook hook=StageBP1BEvidence.hook(env);
    boolean gap=n>=5;
    String outcome=null,error="NO_SQL_CODE",tx=null;
    try{
     try(Connection reader=StageBP1BEvidence.reader()){
      readerId=StageBP1BEvidence.connectionId(reader);
+     assertTrue(StageBP1BEvidence.assertReaderDenied(reader));
      seeded=StageBP1BEvidence.snapshot(reader,target.deliveryEffectId);
     }
     int[][] expected={{0,0,0,0,0,1},{1,0,0,0,0,0},{0,1,0,0,0,0},
@@ -68,23 +73,33 @@ public class StageBP1BPartialLedgerTest {
     }
     try(Connection reader=StageBP1BEvidence.reader()){
      after=StageBP1BEvidence.snapshot(reader,target.deliveryEffectId);
+     fullSixCoherent=StageBP1BEvidence.fullSixCoherent(reader,target);
+     assertFalse(fullSixCoherent,"P1B_PARTIAL_MUST_NOT_BE_SIX_TABLE_COMPLETE");
      assertArrayEquals(seeded.vector,after.vector);
      assertEquals(seeded.digest,after.digest,"P1B_SEEDED_PARTIAL_MUTATED");
      StageBP1BEvidence.complete(reader,healthy);
-     assertEquals(healthyBefore,StageBP1BEvidence.snapshot(reader,healthy.deliveryEffectId).digest);
+     healthyAfter=StageBP1BEvidence.snapshot(reader,healthy.deliveryEffectId).digest;
+     assertEquals(healthyBefore,healthyAfter);
     }
     int[] writeOrdinals={5,0,1,4,0,0};
     assertEquals(writeOrdinals[n-1],hook.writes);
    }finally{
     try(Connection seeder=StageBP1BEvidence.seeder()){
-     StageBP1BEvidence.cleanup(seeder,target);
+     cleanup=StageBP1BEvidence.cleanup(seeder,target);
     }
    }
+   assertNotNull(cleanup);
+   assertTrue(hook.writerConnectionId>0);
+   assertNotEquals(hook.writerConnectionId,readerId);
+   assertNotEquals(hook.writerConnectionId,seederId);
+   assertNotEquals(readerId,seederId);
    Map<String,Object> fact=StageBP1BEvidence.fact(name,caseId,outcome,tx,seeded,after,
-       target.deliveryEffectId,gap,false,true,hook.writes,readerId,seederId,error);
+       target.deliveryEffectId,gap,false,hook,readerId,seederId,error);
    fact.put("fullSixTableReplaySafety","FAIL_NOT_ESTABLISHED");
-   fact.put("protectedGraphBefore",healthyBefore);fact.put("protectedGraphAfter",healthyBefore);
-   fact.put("fixtureCleanupAfter",new int[6]);
+   fact.put("fullSixCoherentObserved",fullSixCoherent);
+   fact.put("businessReplaySafetyVerdict","FAIL_NOT_ESTABLISHED");
+   fact.put("protectedGraphBefore",healthyBefore);fact.put("protectedGraphAfter",healthyAfter);
+   StageBP1BEvidence.bindCleanup(fact,cleanup);
    StageBP1BEvidence.emit(fact);
   }
  }
