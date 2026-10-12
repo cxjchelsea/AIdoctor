@@ -38,6 +38,15 @@ public class StageBJdbcFaultHookTest {
   try(AnnotationConfigApplicationContext ctx=new AnnotationConfigApplicationContext(StageBTestConfig.class)){
    DataSource ds=ctx.getBean("stageBDataSource",DataSource.class);
    DataSourceTransactionManager tm=ctx.getBean("stageBJdbcTransactionManager",DataSourceTransactionManager.class);
+   JdbcTemplate physical=ctx.getBean("stageBJdbcTemplate",JdbcTemplate.class);
+   assertEquals("u07_d5o2_stage_b_p0",physical.queryForObject("SELECT DATABASE()",String.class));
+   String version=physical.queryForObject("SELECT VERSION()",String.class);
+   assertTrue(version.startsWith("8."),"test requires real MySQL 8");
+   for(String table:TABLES){
+    String engine=physical.queryForObject("SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME=?",
+       new Object[]{"u07_d5o2_stage_b_p0",table},String.class);
+    assertEquals("InnoDB",engine,"only transactional InnoDB tables are authorized");
+   }
    String effect="effect-"+UUID.randomUUID(),selection="selection-"+UUID.randomUUID();
    try(Connection reader=independentReader()){
     assertEquals("u07_d5o2_stage_b_p0",reader.getCatalog());
