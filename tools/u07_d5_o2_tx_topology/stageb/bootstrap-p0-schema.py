@@ -23,7 +23,7 @@ def main():
   path=(ROOT/item["path"]).resolve()
   if not path.is_relative_to(ROOT):raise SystemExit("STAGE_B_P0_PATH_DENIED")
   raw=path.read_bytes()
-  actual=hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\\0"+raw).hexdigest()
+  actual=hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
   if actual!=blob:raise SystemExit("STAGE_B_P0_DDL_CHANGED")
   out.append(raw.decode())
  out+=["CREATE USER 'stageb_writer'@'%' IDENTIFIED BY 'synthetic-stageb-writer';",
