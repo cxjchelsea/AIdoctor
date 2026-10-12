@@ -54,6 +54,8 @@ public class U07D5O2StageAFixtureConfig {
         RuntimeThreadStateRecord.class.getName(), RuntimeWaitCheckpointRecord.class.getName()));
 
     static void requireEnvironment() {
+        if (!"true".equals(System.getenv("GITHUB_ACTIONS")))
+            throw new IllegalStateException("STAGE_A_DISPOSABLE_CI_ONLY");
         if (!"U07_D5O2_STAGE_A_SYNTHETIC".equals(System.getenv("U07_D5O2_PROFILE")))
             throw new IllegalStateException("STAGE_A_PROFILE_DENIED");
         if (!FIXED_URL.equals(System.getenv("U07_D5O2_URL")))
