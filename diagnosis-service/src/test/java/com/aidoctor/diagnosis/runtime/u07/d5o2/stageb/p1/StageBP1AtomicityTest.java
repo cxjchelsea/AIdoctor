@@ -33,8 +33,10 @@ public class StageBP1AtomicityTest {
      ()->new JdbcU06DeliveryStore(committedHook).reconcileConfirmed(healthy));
    assertFalse(h.replay);assertEquals(6,committedHook.writes());
    int[] baseline,healthyBaseline;
+   String healthyGraphBefore;
    try(Connection observer=StageBP1Evidence.reader()){
-    StageBP1Evidence.complete(observer,healthy);
+    StageBP1Evidence.assertReaderPermission(observer);
+    healthyGraphBefore=StageBP1Evidence.graphDigest(observer,healthy);
     healthyBaseline=StageBP1Evidence.counts(observer,healthy.deliveryEffectId);
     baseline=StageBP1Evidence.counts(observer,candidate.deliveryEffectId);
    }
@@ -47,14 +49,16 @@ public class StageBP1AtomicityTest {
    assertTrue(faultHook.writerId()>0);assertTrue(faultHook.observerId()>0);
    assertArrayEquals(new int[6],faultHook.uncommitted());
    int[] after,healthyAfter;long afterObserverId;
+   String healthyGraphAfter;
    try(Connection fresh=StageBP1Evidence.reader()){
     afterObserverId=StageBP1Evidence.connectionId(fresh);
     after=StageBP1Evidence.counts(fresh,candidate.deliveryEffectId);
-    StageBP1Evidence.complete(fresh,healthy);
+    healthyGraphAfter=StageBP1Evidence.graphDigest(fresh,healthy);
     healthyAfter=StageBP1Evidence.counts(fresh,healthy.deliveryEffectId);
    }
    assertArrayEquals(new int[6],after);
    assertArrayEquals(healthyBaseline,healthyAfter);
+   assertEquals(healthyGraphBefore,healthyGraphAfter,"P1A_HEALTHY_GROUP_MUTATED");
    Map<String,Object> facts=StageBP1Evidence.facts(method,caseId);
    facts.put("faultOrdinal",n);facts.put("successfulOriginalSqlWrites",faultHook.writes());
    facts.put("methodOutcome","ORIGINAL_THROW");
@@ -63,6 +67,12 @@ public class StageBP1AtomicityTest {
    facts.put("sixBefore",baseline);facts.put("sixInFlight",faultHook.uncommitted());
    facts.put("sixAfter",after);facts.put("healthyBefore",healthyBaseline);
    facts.put("healthyAfter",healthyAfter);
+   facts.put("healthyGraphBeforeSha256",healthyGraphBefore);
+   facts.put("healthyGraphAfterSha256",healthyGraphAfter);
+   facts.put("candidateEffectSha256",StageBP1Evidence.effectDigest(candidate.deliveryEffectId));
+   facts.put("protectedEffectSha256",StageBP1Evidence.effectDigest(healthy.deliveryEffectId));
+   facts.put("readerDmlDenied",true);facts.put("writerIsolation",java.sql.Connection.TRANSACTION_SERIALIZABLE);
+   facts.put("sqlSignatureStrict",true);
    facts.put("writerConnectionId",faultHook.writerId());
    facts.put("inFlightReaderConnectionId",faultHook.observerId());
    facts.put("postFreshReaderConnectionId",afterObserverId);
