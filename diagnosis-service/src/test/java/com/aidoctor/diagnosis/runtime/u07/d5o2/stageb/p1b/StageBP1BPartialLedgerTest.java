@@ -43,6 +43,7 @@ public class StageBP1BPartialLedgerTest {
    }
    StageBP1BEvidence.Snapshot seeded,after;
    long readerId;
+   try{
    try(Connection reader=StageBP1BEvidence.reader()){
     readerId=StageBP1BEvidence.connectionId(reader);
     seeded=StageBP1BEvidence.snapshot(reader,target.deliveryEffectId);
@@ -52,8 +53,7 @@ public class StageBP1BPartialLedgerTest {
    assertArrayEquals(expected,seeded.vector);
    StageBP1BEvidence.Hook hook=StageBP1BEvidence.hook(env);
    boolean gap=n>=5;String outcome,error="NO_SQL_CODE",tx;
-   try{
-    if(gap){
+   if(gap){
      U06DeliveryStore.Snapshot result=StageBP1BEvidence.call(env,target,hook);
      assertTrue(result.replay,"P1B_PARTIAL_EXPECT_ORIGINAL_FOUR_JOIN_REPLAY");
      outcome="ORIGINAL_REPLAY_TRUE";tx="NO_NEW_TX_WRITES_OBSERVED";
@@ -64,8 +64,6 @@ public class StageBP1BPartialLedgerTest {
      assertNotEquals("NO_SQL_CODE",error);
      tx="ROLLED_BACK_OBSERVED";
     }
-   }finally{
-    // Cleanup is performed below after independently observing the Store result.
    }
    try(Connection reader=StageBP1BEvidence.reader()){
     after=StageBP1BEvidence.snapshot(reader,target.deliveryEffectId);
@@ -73,18 +71,19 @@ public class StageBP1BPartialLedgerTest {
     assertEquals(seeded.digest,after.digest,"P1B_SEEDED_PARTIAL_MUTATED");
     StageBP1BEvidence.complete(reader,healthy);
     assertEquals(healthyBefore,StageBP1BEvidence.snapshot(reader,healthy.deliveryEffectId).digest);
-   }finally{
-    try(Connection seeder=StageBP1BEvidence.seeder()){
-     StageBP1BEvidence.cleanup(seeder,target);
-    }
    }
-   assertEquals(gap?0:n-1,hook.writes);
+   assertEquals(new int[]{5,0,1,4,0,0}[n-1],hook.writes);
    Map<String,Object> fact=StageBP1BEvidence.fact(name,caseId,outcome,tx,seeded,after,
      target.deliveryEffectId,gap,false,true,hook.writes,readerId,seederId,error);
    fact.put("fullSixTableReplaySafety","FAIL_NOT_ESTABLISHED");
    fact.put("protectedGraphBefore",healthyBefore);fact.put("protectedGraphAfter",healthyBefore);
    fact.put("fixtureCleanupAfter",new int[6]);
    StageBP1BEvidence.emit(fact);
+   }finally{
+    try(Connection seeder=StageBP1BEvidence.seeder()){
+     StageBP1BEvidence.cleanup(seeder,target);
+    }
+   }
   }
  }
 }
