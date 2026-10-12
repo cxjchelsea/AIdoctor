@@ -68,7 +68,8 @@ def main():
   elif method=="p0PostWriteHookIsRealAndRollsBack":
    if (fact.get("faultOrdinal")!=1 or fact.get("successfulPhysicalSqlWrites")!=1 or
        fact.get("baselineCount")!=0 or fact.get("uncommittedReaderCount")!=0 or
-       fact.get("postRollbackSumSixTables")!=0 or fact.get("readOnlyDeleteDenied") is not True or
+       fact.get("postRollbackSumSixTables")!=0 or fact.get("freshObserverAfterRollback") is not True or
+       fact.get("readOnlyDeleteDenied") is not True or
        fact.get("writerTxActiveAtFault") is not True or
        not isinstance(fact.get("writerConnectionId"),int) or
        not isinstance(fact.get("readerConnectionId"),int) or
