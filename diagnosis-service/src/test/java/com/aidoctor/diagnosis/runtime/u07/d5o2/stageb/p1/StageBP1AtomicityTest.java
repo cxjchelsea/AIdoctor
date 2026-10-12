@@ -13,13 +13,13 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class StageBP1AtomicityTest {
- @Test public void fault01(){fault(1);}
- @Test public void fault02(){fault(2);}
- @Test public void fault03(){fault(3);}
- @Test public void fault04(){fault(4);}
- @Test public void fault05(){fault(5);}
- @Test public void fault06(){fault(6);}
- private void fault(int n){
+ @Test public void fault01() throws Exception{fault(1);}
+ @Test public void fault02() throws Exception{fault(2);}
+ @Test public void fault03() throws Exception{fault(3);}
+ @Test public void fault04() throws Exception{fault(4);}
+ @Test public void fault05() throws Exception{fault(5);}
+ @Test public void fault06() throws Exception{fault(6);}
+ private void fault(int n) throws Exception{
   StageBP1TestConfig.requireEnvironment();
   String suffix=String.format("%02d",n),method="fault"+suffix,caseId="P1-FAULT-"+suffix;
   try(AnnotationConfigApplicationContext ctx=new AnnotationConfigApplicationContext(StageBP1TestConfig.class)){
