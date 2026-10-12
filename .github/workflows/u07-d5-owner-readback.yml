@@ -1,0 +1,50 @@
+name: U07 D5 O1 isolated owner readback
+on:
+  pull_request:
+    paths:
+      - 'tools/u07_d5_owner_readback/**'
+      - '.github/workflows/u07-d5-owner-readback.yml'
+      - 'diagnosis-service/src/main/resources/db/migration/**'
+permissions:
+  contents: read
+jobs:
+  owner-readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: synthetic-ci-only
+          MYSQL_DATABASE: u07_owner_readback
+        ports:
+          - 33325:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -psynthetic-ci-only"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Original owner schemas with separate reader and writer roles
+        env:
+          MYSQL_PWD: synthetic-ci-only
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          python tools/u07_d5_owner_readback/src/test/resources/bootstrap-owner-schema.py > /tmp/o1-bootstrap.sql
+          mysql -h 127.0.0.1 -P 33325 -uroot u07_owner_readback < /tmp/o1-bootstrap.sql
+      - name: Real Spring JDBC MySQL readback and MVCC
+        env:
+          U07_O1_URL: jdbc:mysql://127.0.0.1:33325/u07_owner_readback?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+        run: mvn -B -f tools/u07_d5_owner_readback/pom.xml test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: u07-o1-readback-evidence
+          path: tools/u07_d5_owner_readback/target/surefire-reports/

@@ -1,0 +1,458 @@
+{
+  "source_head": "750770e81af79b764cc4148d7fa856363c89972a",
+  "schema_manifest_ref": "o1-schema-v1",
+  "ddl": [
+    {
+      "path": "diagnosis-service/src/main/resources/db/migration/V2__create_clinical_runtime_foundation.sql",
+      "sha256": "263f24832fc983bb9d1153047e8e67155fd82fd612e56ddd56f82572d6918623",
+      "git_blob": "73029495c5f46e8576e34f8c9a77644fb8c1c4c4"
+    },
+    {
+      "path": "diagnosis-service/src/main/resources/db/migration/V3__create_clinical_consultation.sql",
+      "sha256": "c93f823f64dbc571105dccf6b79c6b8741e84fb6e9b41e6063d94307959961b2",
+      "git_blob": "ccc1aa30b8e9405bd07249bae1d3531853f7510b"
+    },
+    {
+      "path": "diagnosis-service/src/main/resources/db/migration/V6__add_u06_wait_runtime.sql",
+      "sha256": "9aa8d254e3d777f70aca5ad3e68526c14fae7186363c9c4e30b66aaf6550e0ea",
+      "git_blob": "7ed5a82bfba3b3fed2666bee969a7fe276e67566"
+    }
+  ],
+  "tables": {
+    "clinical_runtime_binding": {
+      "columns": {
+        "consultation_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "cdp_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "runtime_authority": {
+          "type": "varchar",
+          "length": 64,
+          "nullable": "NO"
+        },
+        "thread_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "scope_version": {
+          "type": "varchar",
+          "length": 64,
+          "nullable": "NO"
+        },
+        "capability_set_version": {
+          "type": "varchar",
+          "length": 64,
+          "nullable": "NO"
+        },
+        "contract_version": {
+          "type": "varchar",
+          "length": 64,
+          "nullable": "NO"
+        },
+        "created_at": {
+          "type": "timestamp",
+          "length": null,
+          "nullable": "NO"
+        }
+      },
+      "unique": [
+        [
+          "consultation_id"
+        ],
+        [
+          "thread_id"
+        ]
+      ]
+    },
+    "clinical_runtime_run": {
+      "columns": {
+        "run_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "thread_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "consultation_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "event_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "based_on_clinical_state_version": {
+          "type": "int",
+          "length": null,
+          "nullable": "NO"
+        },
+        "status": {
+          "type": "varchar",
+          "length": 32,
+          "nullable": "NO"
+        },
+        "created_at": {
+          "type": "timestamp",
+          "length": null,
+          "nullable": "NO"
+        }
+      },
+      "unique": [
+        [
+          "run_id"
+        ]
+      ]
+    },
+    "clinical_consultation": {
+      "columns": {
+        "consultation_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "row_version": {
+          "type": "bigint",
+          "length": null,
+          "nullable": "NO"
+        },
+        "cdp_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "user_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "lifecycle_status": {
+          "type": "varchar",
+          "length": 32,
+          "nullable": "NO"
+        },
+        "subject_status": {
+          "type": "varchar",
+          "length": 32,
+          "nullable": "NO"
+        },
+        "subject_type": {
+          "type": "varchar",
+          "length": 32,
+          "nullable": "YES"
+        },
+        "subject_reference_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "YES"
+        },
+        "problem_status": {
+          "type": "varchar",
+          "length": 32,
+          "nullable": "NO"
+        },
+        "problem_text": {
+          "type": "varchar",
+          "length": 2000,
+          "nullable": "YES"
+        },
+        "scope_decision": {
+          "type": "varchar",
+          "length": 32,
+          "nullable": "NO"
+        },
+        "clarification_reason": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "YES"
+        },
+        "early_safety_signal": {
+          "type": "tinyint",
+          "length": null,
+          "nullable": "NO"
+        },
+        "start_event_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "created_at": {
+          "type": "datetime",
+          "length": null,
+          "nullable": "NO"
+        },
+        "current_wait_effect_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "YES"
+        }
+      },
+      "unique": [
+        [
+          "consultation_id"
+        ],
+        [
+          "cdp_id"
+        ],
+        [
+          "start_event_id"
+        ]
+      ]
+    },
+    "clinical_consultation_wait_effect": {
+      "columns": {
+        "wait_effect_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "parent_delivered_wait_effect_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "consultation_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "question_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "delivery_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "payload_fingerprint": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "idempotency_key": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "expected_prior_lifecycle": {
+          "type": "varchar",
+          "length": 32,
+          "nullable": "NO"
+        },
+        "expected_prior_row_version": {
+          "type": "bigint",
+          "length": null,
+          "nullable": "NO"
+        },
+        "committed_lifecycle": {
+          "type": "varchar",
+          "length": 32,
+          "nullable": "NO"
+        },
+        "committed_row_version": {
+          "type": "bigint",
+          "length": null,
+          "nullable": "NO"
+        },
+        "effect_status": {
+          "type": "varchar",
+          "length": 32,
+          "nullable": "NO"
+        },
+        "created_at": {
+          "type": "datetime",
+          "length": null,
+          "nullable": "NO"
+        },
+        "committed_at": {
+          "type": "datetime",
+          "length": null,
+          "nullable": "NO"
+        }
+      },
+      "unique": [
+        [
+          "wait_effect_id"
+        ],
+        [
+          "parent_delivered_wait_effect_id"
+        ],
+        [
+          "idempotency_key"
+        ]
+      ]
+    },
+    "clinical_runtime_thread_state": {
+      "columns": {
+        "thread_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "consultation_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "row_version": {
+          "type": "bigint",
+          "length": null,
+          "nullable": "NO"
+        },
+        "runtime_status": {
+          "type": "varchar",
+          "length": 32,
+          "nullable": "NO"
+        },
+        "current_run_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "YES"
+        },
+        "current_wait_checkpoint_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "YES"
+        },
+        "current_wait_effect_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "YES"
+        },
+        "updated_at": {
+          "type": "datetime",
+          "length": null,
+          "nullable": "NO"
+        },
+        "created_at": {
+          "type": "datetime",
+          "length": null,
+          "nullable": "NO"
+        }
+      },
+      "unique": [
+        [
+          "thread_id"
+        ],
+        [
+          "consultation_id"
+        ]
+      ]
+    },
+    "clinical_runtime_wait_checkpoint": {
+      "columns": {
+        "checkpoint_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "consultation_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "thread_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "run_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "question_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "pending_question_ref": {
+          "type": "varchar",
+          "length": 256,
+          "nullable": "NO"
+        },
+        "question_selection_effect_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "question_delivery_effect_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "question_delivered_wait_effect_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "delivery_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "delivery_confirmation_ref": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "clinical_state_version": {
+          "type": "int",
+          "length": null,
+          "nullable": "NO"
+        },
+        "consultation_wait_effect_id": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "dependency_binding_ref": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "YES"
+        },
+        "question_policy_ref": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "YES"
+        },
+        "payload_fingerprint": {
+          "type": "varchar",
+          "length": 128,
+          "nullable": "NO"
+        },
+        "checkpoint_status": {
+          "type": "varchar",
+          "length": 32,
+          "nullable": "NO"
+        },
+        "created_at": {
+          "type": "datetime",
+          "length": null,
+          "nullable": "NO"
+        }
+      },
+      "unique": [
+        [
+          "checkpoint_id"
+        ],
+        [
+          "question_delivered_wait_effect_id"
+        ]
+      ]
+    }
+  }
+}
