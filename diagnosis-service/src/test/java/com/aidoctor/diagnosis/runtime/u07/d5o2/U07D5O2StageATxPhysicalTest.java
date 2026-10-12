@@ -4,6 +4,12 @@ import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRecord;
 import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRepository;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.sql.SQLException;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -21,27 +27,80 @@ public class U07D5O2StageATxPhysicalTest {
     private static final String SQL =
         "SELECT COUNT(*) FROM clinical_runtime_thread_state WHERE thread_id = ?";
 
-    private int separatelyCommittedCount(DataSource dataSource, String key) throws Exception {
-        // Observer must never inherit the writer's transaction-bound ConnectionHolder.
+    private int separatelyCommittedCount(DataSource ignoredWriter, String key) throws Exception {
         final java.util.concurrent.atomic.AtomicReference<Integer> out =
             new java.util.concurrent.atomic.AtomicReference<Integer>();
         final java.util.concurrent.atomic.AtomicReference<Throwable> failure =
             new java.util.concurrent.atomic.AtomicReference<Throwable>();
         Thread observer = new Thread(() -> {
-            try {
-                out.set(new JdbcTemplate(dataSource).queryForObject(SQL,
-                    new Object[] {key}, Integer.class));
+            try (Connection c = DriverManager.getConnection(
+                    U07D5O2StageAFixtureConfig.FIXED_URL,
+                    "stagea_reader", "synthetic-stagea-reader")) {
+                c.setReadOnly(true);
+                try (PreparedStatement p = c.prepareStatement(SQL)) {
+                    p.setString(1, key);
+                    try (ResultSet rs = p.executeQuery()) {
+                        if (!rs.next()) throw new IllegalStateException("NO_READER_ROW");
+                        out.set(rs.getInt(1));
+                    }
+                }
             } catch (Throwable error) {
                 failure.set(error);
             }
-        }, "d5o2-isolated-readback");
+        }, "d5o2-select-only-readback");
         observer.start();
         observer.join(10000);
-        assertFalse(observer.isAlive(), "Observer timeout: no partial verdict");
-        if (failure.get() != null)
-            throw new AssertionError("Observer failed", failure.get());
+        assertFalse(observer.isAlive(), "Observer timeout: no verdict");
+        if (failure.get() != null) throw new AssertionError("SELECT_ONLY_READER_FAILED", failure.get());
         assertNotNull(out.get());
         return out.get().intValue();
+    }
+
+    static void assertDisposableMySql(DataSource ds) throws SQLException {
+        try (Connection c = ds.getConnection();
+             Statement st = c.createStatement()) {
+            assertEquals("u07_d5o2_stage_a", c.getCatalog(), "schema fence");
+            assertTrue(c.getMetaData().getDatabaseProductName().toLowerCase().contains("mysql"));
+            try (ResultSet rs = st.executeQuery("SELECT VERSION(), CURRENT_USER()")) {
+                assertTrue(rs.next());
+                assertTrue(rs.getString(1).startsWith("8."), "MySQL 8 required");
+                assertTrue(rs.getString(2).startsWith("stagea_writer@"), "writer identity");
+            }
+            try (ResultSet rs = st.executeQuery(
+                    "SELECT ENGINE FROM information_schema.TABLES " +
+                    "WHERE TABLE_SCHEMA='u07_d5o2_stage_a' " +
+                    "AND TABLE_NAME='clinical_runtime_thread_state'")) {
+                assertTrue(rs.next());
+                assertEquals("InnoDB", rs.getString(1));
+            }
+        }
+    }
+
+    private long independentReaderConnectionId() throws SQLException {
+        try (Connection c = DriverManager.getConnection(
+                U07D5O2StageAFixtureConfig.FIXED_URL,
+                "stagea_reader", "synthetic-stagea-reader");
+             Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT CONNECTION_ID()")) {
+            assertTrue(rs.next());
+            return rs.getLong(1);
+        }
+    }
+
+    @Test
+    public void readerIsSelectOnlyAndWriterIdentityIsIsolated() throws Exception {
+        U07D5O2StageAFixtureConfig.requireEnvironment();
+        try (Connection c = DriverManager.getConnection(
+                U07D5O2StageAFixtureConfig.FIXED_URL,
+                "stagea_reader", "synthetic-stagea-reader");
+             Statement st = c.createStatement()) {
+            try (ResultSet rs = st.executeQuery("SELECT CURRENT_USER()")) {
+                assertTrue(rs.next());
+                assertTrue(rs.getString(1).startsWith("stagea_reader@"));
+            }
+            assertThrows(SQLException.class, () -> st.executeUpdate(
+                "DELETE FROM clinical_runtime_thread_state WHERE thread_id='not-an-actual-row'"));
+        }
     }
 
     @Test
@@ -50,6 +109,7 @@ public class U07D5O2StageATxPhysicalTest {
         try (AnnotationConfigApplicationContext ctx =
                  new AnnotationConfigApplicationContext(U07D5O2StageAFixtureConfig.class)) {
             final DataSource ds = ctx.getBean(DataSource.class);
+            assertDisposableMySql(ds);
             final RuntimeThreadStateRepository threads = ctx.getBean(RuntimeThreadStateRepository.class);
             final TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
             final JdbcTemplate jdbc = ctx.getBean(JdbcTemplate.class);
@@ -61,6 +121,8 @@ public class U07D5O2StageATxPhysicalTest {
                     assertTrue(TransactionSynchronizationManager.hasResource(ds));
                     assertTrue(DataSourceUtils.isConnectionTransactional(
                         DataSourceUtils.getConnection(ds), ds));
+                    assertNotEquals(jdbc.queryForObject("SELECT CONNECTION_ID()", Long.class),
+                        independentReaderConnectionId(), "reader and writer must differ");
                     threads.saveAndFlush(new RuntimeThreadStateRecord(
                         rollbackId, rollbackId, LocalDateTime.now()));
                     assertEquals(Integer.valueOf(1), jdbc.queryForObject(SQL,
