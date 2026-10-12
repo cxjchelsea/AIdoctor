@@ -1,0 +1,35 @@
+{
+  "schema": "U07_D5O2_STAGE_A_MANIFEST_V1",
+  "source_main_sha": "435c456e7bf43601f0445f82932c3584fa1b8170",
+  "schema_mode": "OWNER_SCHEMA_SLICE",
+  "profile": "U07_D5O2_STAGE_A_SYNTHETIC",
+  "database": "u07_d5o2_stage_a",
+  "port": 33326,
+  "ddl": [
+    {
+      "path": "diagnosis-service/src/main/resources/db/migration/V2__create_clinical_runtime_foundation.sql",
+      "git_blob": "73029495c5f46e8576e34f8c9a77644fb8c1c4c4"
+    },
+    {
+      "path": "diagnosis-service/src/main/resources/db/migration/V3__create_clinical_consultation.sql",
+      "git_blob": "ccc1aa30b8e9405bd07249bae1d3531853f7510b"
+    },
+    {
+      "path": "diagnosis-service/src/main/resources/db/migration/V6__add_u06_wait_runtime.sql",
+      "git_blob": "7ed5a82bfba3b3fed2666bee969a7fe276e67566"
+    }
+  ],
+  "excluded_migrations": [
+    "V1",
+    "V4",
+    "V5"
+  ],
+  "entities": [
+    "com.aidoctor.diagnosis.runtime.u01.ConsultationRecord",
+    "com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRecord",
+    "com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRecord",
+    "com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRecord"
+  ],
+  "authority": "UNKNOWN",
+  "production_topology_verified": false
+}
