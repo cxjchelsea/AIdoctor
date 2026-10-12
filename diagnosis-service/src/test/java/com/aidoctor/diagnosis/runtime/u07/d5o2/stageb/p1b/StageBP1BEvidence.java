@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -84,11 +85,32 @@ final class StageBP1BEvidence {
   try(PreparedStatement p=c.prepareStatement("SELECT CONNECTION_ID()");
       ResultSet r=p.executeQuery()){Assertions.assertTrue(r.next());return r.getLong(1);}
  }
- static void assertReaderDenied(Connection c)throws SQLException{
+ static boolean assertReaderDenied(Connection c)throws SQLException{
   try(PreparedStatement p=c.prepareStatement("DELETE FROM u06_delivery_ledger WHERE delivery_effect_id=?")){
    p.setString(1,"synthetic-denied");
    SQLException error=Assertions.assertThrows(SQLException.class,()->p.executeUpdate());
    Assertions.assertEquals("42000",error.getSQLState());
+  }
+  return true;
+ }
+ static boolean assertWriterDenied(Connection c)throws SQLException{
+  try(PreparedStatement p=c.prepareStatement("DELETE FROM u06_delivery_ledger WHERE delivery_effect_id=?")){
+   p.setString(1,"synthetic-writer-denied");
+   SQLException denied=Assertions.assertThrows(SQLException.class,()->p.executeUpdate());
+   Assertions.assertEquals("42000",denied.getSQLState());
+  }
+  return true;
+ }
+ static boolean assertSeederDdlDenied(Connection c)throws SQLException{
+  try(PreparedStatement p=c.prepareStatement("CREATE TABLE p1b_disallowed_ddl (id INTEGER)")){
+   SQLException denied=Assertions.assertThrows(SQLException.class,()->p.executeUpdate());
+   Assertions.assertEquals("42000",denied.getSQLState());
+  }
+  return true;
+ }
+ static String actualRole(Connection c)throws SQLException{
+  try(PreparedStatement p=c.prepareStatement("SELECT CURRENT_USER()");ResultSet r=p.executeQuery()){
+   Assertions.assertTrue(r.next());return r.getString(1);
   }
  }
  static void schemaPreflight(JdbcTemplate jdbc){
