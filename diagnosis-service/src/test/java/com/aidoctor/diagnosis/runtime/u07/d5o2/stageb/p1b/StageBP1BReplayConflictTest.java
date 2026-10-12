@@ -33,8 +33,10 @@ public class StageBP1BReplayConflictTest {
     StageBP1BEvidence.assertReaderDenied(reader);
     StageBP1BEvidence.complete(reader,healthy);
     before=StageBP1BEvidence.snapshot(reader,healthy.deliveryEffectId);
-    assertArrayEquals(new int[6],StageBP1BEvidence.snapshot(reader,candidate.deliveryEffectId).vector,
-     "P1B_CONFLICT_CANDIDATE_NOT_ABSENT");
+    if(n>5)assertArrayEquals(new int[6],StageBP1BEvidence.snapshot(reader,candidate.deliveryEffectId).vector,
+     "P1B_DISTINCT_EFFECT_CANDIDATE_NOT_ABSENT");
+    else assertEquals(before.digest,StageBP1BEvidence.snapshot(reader,candidate.deliveryEffectId).digest,
+     "P1B_SAME_EFFECT_MUST_BE_EXISTING_HEALTHY_GROUP");
    }
    StageBP1BEvidence.Hook hook=StageBP1BEvidence.hook(env);
    String outcome,error="NO_SQL_CODE";
