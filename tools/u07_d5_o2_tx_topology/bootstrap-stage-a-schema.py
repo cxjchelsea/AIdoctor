@@ -32,6 +32,16 @@ def main():
             or manifest.get("port") != 33326
             or manifest.get("profile") != "U07_D5O2_STAGE_A_SYNTHETIC"):
         raise SystemExit("STAGE_A_MANIFEST_DENIED")
+    if (manifest.get("authority") != "UNKNOWN"
+            or manifest.get("production_topology_verified") is not False
+            or manifest.get("excluded_migrations") != ["V1", "V4", "V5"]
+            or sorted(manifest.get("entities", [])) != sorted([
+                "com.aidoctor.diagnosis.runtime.u01.ConsultationRecord",
+                "com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRecord",
+                "com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRecord",
+                "com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRecord",
+            ])):
+        raise SystemExit("STAGE_A_AUTHORITY_OR_ENTITY_MANIFEST_DENIED")
     items = manifest["ddl"]
     if len(items) != 3 or tuple(x["path"] for x in items) != EXPECTED_PATHS:
         raise SystemExit("STAGE_A_DDL_PATH_DENIED")
@@ -52,12 +62,8 @@ def main():
     print("CREATE USER 'stagea_writer'@'%' IDENTIFIED BY 'synthetic-stagea-writer';")
     print("CREATE USER 'stagea_reader'@'%' IDENTIFIED BY 'synthetic-stagea-reader';")
     for table in (
-        "clinical_runtime_binding", "canonical_business_event", "clinical_runtime_run",
         "clinical_consultation", "clinical_consultation_wait_effect",
         "clinical_runtime_thread_state", "clinical_runtime_wait_checkpoint",
-        "u06_governed_execution_trace", "u06_delivery_authority", "u06_delivery_intent",
-        "u06_delivery_attempt", "u06_delivery_receipt", "u06_delivery_confirmation",
-        "u06_delivery_ledger",
     ):
         print(f"GRANT SELECT, INSERT, UPDATE, DELETE ON {EXPECTED_SCHEMA}.{table} TO 'stagea_writer'@'%';")
         print(f"GRANT SELECT ON {EXPECTED_SCHEMA}.{table} TO 'stagea_reader'@'%';")
