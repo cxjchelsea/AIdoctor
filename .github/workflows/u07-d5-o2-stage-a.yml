@@ -66,4 +66,6 @@ jobs:
         if: always()
         with:
           name: u07-d5-o2-stage-a-surefire
-          path: |\n            diagnosis-service/target/surefire-reports/TEST-*U07D5O2StageA*.xml\n            diagnosis-service/target/u07-d5o2-stage-a-evidence.json
+          path: |
+            diagnosis-service/target/surefire-reports/TEST-*U07D5O2StageA*.xml
+            diagnosis-service/target/u07-d5o2-stage-a-evidence.json
