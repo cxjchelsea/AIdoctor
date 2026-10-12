@@ -127,4 +127,75 @@ public class U07D5O2StageAMultiOwnerTest {
             tx.execute(s -> { cps.deleteById(cp); threads.deleteById(tid); return null; });
         }
     }
+
+    @Test
+    public void failingSecondConsultationOwnerWriteRollsBackFirstOwner() throws Exception {
+        U07D5O2StageAFixtureConfig.requireEnvironment();
+        try (AnnotationConfigApplicationContext ctx =
+                 new AnnotationConfigApplicationContext(U07D5O2StageAFixtureConfig.class)) {
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            JdbcTemplate jdbc = ctx.getBean(JdbcTemplate.class);
+            ConsultationRepository consultations = ctx.getBean(ConsultationRepository.class);
+            ConsultationWaitEffectRepository realEffects = ctx.getBean(ConsultationWaitEffectRepository.class);
+            String cid = id(), eid = id();
+            tx.execute(s -> { consultations.saveAndFlush(consultation(cid)); return null; });
+            ConsultationWaitEffectRepository faultEffects = org.mockito.Mockito.mock(
+                ConsultationWaitEffectRepository.class,
+                org.mockito.AdditionalAnswers.delegatesTo(realEffects));
+            org.mockito.Mockito.doThrow(new IllegalStateException("STAGE_A_SECOND_OWNER_FAILED"))
+                .when(faultEffects).saveAndFlush(
+                    org.mockito.ArgumentMatchers.any(ConsultationWaitEffectRecord.class));
+            ConsultationWaitTransitionService original =
+                new ConsultationWaitTransitionService(consultations, faultEffects);
+            RuntimeException failure = assertThrows(RuntimeException.class, () -> tx.execute(s -> {
+                original.establish(new ConsultationWaitTransitionService.Command(
+                    eid,id(),cid,id(),id(),id(),id(),0,LocalDateTime.now()));
+                return null;
+            }));
+            assertEquals("STAGE_A_SECOND_OWNER_FAILED", failure.getMessage());
+            assertEquals(0, readerCount("clinical_consultation_wait_effect", "wait_effect_id", eid));
+            assertEquals("ACTIVE", jdbc.queryForObject(
+                "SELECT lifecycle_status FROM clinical_consultation WHERE consultation_id=?",
+                new Object[]{cid}, String.class));
+            tx.execute(s -> { consultations.deleteById(cid); return null; });
+        }
+    }
+
+    @Test
+    public void failingSecondCheckpointOwnerWriteRollsBackInsertedCheckpoint() throws Exception {
+        U07D5O2StageAFixtureConfig.requireEnvironment();
+        try (AnnotationConfigApplicationContext ctx =
+                 new AnnotationConfigApplicationContext(U07D5O2StageAFixtureConfig.class)) {
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            JdbcTemplate jdbc = ctx.getBean(JdbcTemplate.class);
+            RuntimeThreadStateRepository realThreads = ctx.getBean(RuntimeThreadStateRepository.class);
+            RuntimeWaitCheckpointRepository checkpoints = ctx.getBean(RuntimeWaitCheckpointRepository.class);
+            String tid=id(), cid=id(), cp=id();
+            tx.execute(s -> {
+                realThreads.saveAndFlush(new RuntimeThreadStateRecord(tid,cid,LocalDateTime.now()));
+                return null;
+            });
+            RuntimeThreadStateRepository faultThreads = org.mockito.Mockito.mock(
+                RuntimeThreadStateRepository.class,
+                org.mockito.AdditionalAnswers.delegatesTo(realThreads));
+            org.mockito.Mockito.doThrow(new IllegalStateException("STAGE_A_THREAD_UPDATE_FAILED"))
+                .when(faultThreads).saveAndFlush(
+                    org.mockito.ArgumentMatchers.any(RuntimeThreadStateRecord.class));
+            RuntimeWaitCheckpointService original =
+                new RuntimeWaitCheckpointService(faultThreads,checkpoints);
+            RuntimeWaitCheckpointService.Command cmd = new RuntimeWaitCheckpointService.Command(
+                cp,cid,tid,id(),id(),"synthetic-pending",id(),id(),id(),id(),id(),1,
+                id(),null,null,id(),NOW);
+            RuntimeException failure = assertThrows(RuntimeException.class, () -> tx.execute(s -> {
+                original.reserve(cmd);
+                return null;
+            }));
+            assertEquals("STAGE_A_THREAD_UPDATE_FAILED", failure.getMessage());
+            assertEquals(0, readerCount("clinical_runtime_wait_checkpoint", "checkpoint_id", cp));
+            assertEquals("ACTIVE", jdbc.queryForObject(
+                "SELECT runtime_status FROM clinical_runtime_thread_state WHERE thread_id=?",
+                new Object[]{tid}, String.class));
+            tx.execute(s -> { realThreads.deleteById(tid); return null; });
+        }
+    }
 }
