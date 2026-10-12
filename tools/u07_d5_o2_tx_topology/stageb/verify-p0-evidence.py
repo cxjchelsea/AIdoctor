@@ -14,7 +14,15 @@ def main():
  if os.environ.get("GITHUB_ACTIONS")!="true" or not os.environ.get("GITHUB_RUN_ID","").isdigit():
   raise SystemExit("P0_UNTRUSTED_RUNNER")
  sha=subprocess.check_output(["git","rev-parse","HEAD"],cwd=ROOT,text=True).strip()
+ pr_head=os.environ.get("U07_D5O2_PR_HEAD_SHA","")
+ pr_number=os.environ.get("U07_D5O2_PR_NUMBER","")
+ if len(pr_head)!=40 or not all(c in "0123456789abcdef" for c in pr_head) or not pr_number.isdigit():
+  raise SystemExit("P0_MISSING_AUTHENTICATED_PR_HEAD")
+ actual_parent=subprocess.check_output(["git","rev-parse","HEAD^2"],cwd=ROOT,text=True).strip()
+ if pr_head!=actual_parent:raise SystemExit("P0_PR_HEAD_MERGE_PARENT_MISMATCH")
+ if sha==pr_head:raise SystemExit("P0_EXPECTED_PR_MERGE_CHECKOUT")
  subprocess.run(["git","merge-base","--is-ancestor",d["sourceMainSha"],sha],cwd=ROOT,check=True)
+ subprocess.run(["git","merge-base","--is-ancestor",d["sourceMainSha"],pr_head],cwd=ROOT,check=True)
  required=set(d["expectedTestMethods"])
  if len(required)!=len(d["expectedTestMethods"]) or set(d["expectedCaseIds"])!=required:
   raise SystemExit("P0_DUPLICATE_OR_MISSING_MANIFEST_CASES")
@@ -79,7 +87,9 @@ def main():
   if digest!=entry["gitBlob"]:raise SystemExit("P0_DDL_MISMATCH")
   ddl.append({"path":entry["path"],"blob":digest,"sha256":hashlib.sha256(raw).hexdigest()})
  result={"schema":"STAGE_B_P0_ISOLATED_EVIDENCE_V1","sourceMainSha":d["sourceMainSha"],
-  "testedCheckoutSha":sha,"workflowRunId":os.environ["GITHUB_RUN_ID"],
+  "testedCheckoutSha":sha,"actualPrHeadSha":pr_head,
+  "pullRequestNumber":int(pr_number),"prHeadVerifiedAsCheckoutSecondParent":True,
+  "workflowRunId":os.environ["GITHUB_RUN_ID"],
   "testCases":sorted(seen),"tests":count,"observations":observations,"ddl":ddl,"authority":"UNKNOWN",
   "evidencePlane":"TEST_ONLY_REAL_MYSQL8","productionTopologyVerified":False,
   "realDeliveryAuthorized":False,"f8ResumeAuthorized":False,
