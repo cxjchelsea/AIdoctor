@@ -76,7 +76,7 @@ public class U07D5O2StageATxPhysicalTest {
         }
     }
 
-    private long independentReaderConnectionId() throws SQLException {
+    private long independentReaderConnectionId() {
         try (Connection c = DriverManager.getConnection(
                 U07D5O2StageAFixtureConfig.FIXED_URL,
                 "stagea_reader", "synthetic-stagea-reader");
@@ -84,6 +84,8 @@ public class U07D5O2StageATxPhysicalTest {
              ResultSet rs = st.executeQuery("SELECT CONNECTION_ID()")) {
             assertTrue(rs.next());
             return rs.getLong(1);
+        } catch (SQLException e) {
+            throw new IllegalStateException("STAGE_A_READER_CONNECTION_FAILED", e);
         }
     }
 
