@@ -1,4 +1,4 @@
-# U07 D5 真实Owner接入差距评估与首个接入切片设计 v0.2
+# U07 D5 真实Owner接入差距评估与首个接入切片设计 v0.3
 
 日期2026-10-12；固定main750770e81af79b764cc4148d7fa856363c89972a。本交付仅设计，不改实现/DDL/生产配置、不运行真实业务数据库、不合并。SOURCE_INSPECTION_COMPLETE；FIRST_SLICE_DESIGN=TARGETED_REMEDIATION_COMPLETE_RE_REVIEW_PENDING；REAL_D5=NOT_READY。
 
@@ -53,7 +53,9 @@ reader在任何SQL/连接创建前做input和scope检查；ALLOW缺证据、未�
 
 固定MySQL8.0、Java8、SpringBoot2.7.8/spring-jdbc、mysql-connector-j8.0.32；不引入JPA/生产package扫描。工具资源工厂固定reader凭证及JDBC DataSourceTransactionManager；reader拥有TransactionTemplate(readOnly=true,isolation=REPEATABLE_READ)并拒绝外层事务，返回UNAVAILABLE/OUTER_TRANSACTION_PRESENT。
 
-schema bootstrap在新disposable schema设置default_storage_engine=InnoDB并按V2→V3→V6加载未改原DDL；manifest记录固定source SHA750770e8全文、三DDL的实际Git blob/digest、六表字段/PK/unique shape。Reader startup preflight使用reader账号验证数据库版本、六表存在、ENGINE=InnoDB、shape与manifest一致；schema/engine/版本不匹配→UNAVAILABLE/RESOURCE_PRECONDITION_FAILED，不返回任何MATCH。metadata查询仅固定schema，不列举其他库。
+schema bootstrap在新disposable schema设置default_storage_engine=InnoDB并按V2→V3→V6加载未改原DDL；manifest记录固定source SHA750770e8全文、三DDL的实际Git blob/digest、六表字段/PK/unique shape。资源构造器只做纯内存profile/URL/manifest校验并创建lazy DataSource/manager，不调用getConnection、不执行startup preflight、health check或后台预热。没有自动启动SQL。
+
+每次read调用在input、scope及outer事务检查全部通过后，才由TransactionTemplate获取reader连接、建立read-only RR事务。在此请求的同一bound connection内执行非缓存metadata preflight：检查MySQL8.0、固定catalog、六表存在/ENGINE=InnoDB/字段PKunique shape与冻结manifest一致。schema/engine/版本不匹配→UNAVAILABLE/RESOURCE_PRECONDITION_FAILED；metadata异常→UNAVAILABLE/DB_UNAVAILABLE，payload为空。metadata仅查固定schema，不列举其他库，不建立owner snapshot证明。不跨请求缓存positive preflight，每个获授权请求重新观察前提。
 
 每次业务读在同一transaction-bound physical connection上检查autoCommit=false、connection.getTransactionIsolation()==TRANSACTION_REPEATABLE_READ和固定catalog；JdbcTemplate必须复用此connection。连接漂移、错误manager/DS、连接或SQL异常→UNAVAILABLE/RESOURCE_PRECONDITION_FAILED或DB_UNAVAILABLE，payload为空。runtime readOnly标志不作为DML权限证明。
 
@@ -65,37 +67,35 @@ Reader没有业务DML；GRANT只六张目标表SELECT，不授全schema SELECT/�
 
 StructureStatus={MATCH,ABSENT,STALE,INCONSISTENT,INVALID_INPUT,DENIED,UNAVAILABLE}。authorityStatus恒UNKNOWN；MATCH仅表示该冻结六表结构。Payload仅MATCH包含六表最小结构IDs、consultation/thread rowVersion及checkpoint capturedClinicalVersion；其他status无row payload。Envelope仅status/reason、authority UNKNOWN及固定非敏感schema/source manifest引用，scopeEvidenceKind仅成功授权后TEST_SCOPE，否则NONE；不输出problem_text/user_id、subject refs、答案或CDP JSON。无COMMITTED/APPLIED/F8 verdict/canFinalize字段。
 
-按下表序号执行，第一条匹配即返回；scope未通过前零SQL。允许ID均在TEST_SCOPE批准四元组内。表中的“缺失”指普通snapshot查询的0行；未知枚举永不自动当新业务状态。
+分类只有下面的phase流程一个真源，按P0→P10执行，每阶段内部按列明顺序。v0.2的0..18首命中表废止。硬错误只对该阶段已经读取、存在或被当前硬指针要求存在的对象判定；不将正常尚未建立的未来checkpoint视为损坏。所有阶段普通SELECT属于同一owner snapshot。
 
-| 序号 | 条件 | status / reason |
-| --- | --- | --- |
-| 0 | profile/URL不批准 | 工厂配置异常CONFIG_REJECTED，零连接/SQL |
-| 1 | Request/ID无效 | INVALID_INPUT / INPUT_INVALID |
-| 2 | scope DENY/证据错绑定或port不可用 | 按3.2返回DENIED或UNAVAILABLE |
-| 3 | 外层事务、物理/隔离/schema前提或DB不可用 | UNAVAILABLE / 对应资源原因 |
-| 4 | consultation不存在 | ABSENT / CONSULTATION_ABSENT；不读取其他对象 |
-| 5 | consultation rowVersion null/负数或lifecycle不在ACTIVE/WAITING_USER | INCONSISTENT / CONSULTATION_SHAPE_INVALID |
-| 6 | consultation ACTIVE且current_wait_effect_id为空 | STALE / NO_CURRENT_WAIT；正常非等待状态，不要求未来checkpoint存在 |
-| 7 | ACTIVE却current wait非空，或WAITING_USER但current wait为空 | INCONSISTENT / CONSULTATION_WAIT_SHAPE_INVALID |
-| 8 | binding/thread/request run不存在或错关联、重复结果；未知runtime_authority/run/thread枚举 | INCONSISTENT / OWNER_LINK_INVALID或OWNER_ENUM_INVALID |
-| 9 | current wait effect不存在或错consultation、effect状态/版本非法 | INCONSISTENT / WAIT_EFFECT_INVALID |
-| 10 | thread ACTIVE且全部current_run/checkpoint/wait指针为空 | STALE / THREAD_WAIT_NOT_ESTABLISHED；允许consultation已等待而runtime尚未预留的部分阶段，不读取未来checkpoint |
-| 11 | thread ACTIVE残留任一current指针；WAIT_CHECKPOINTED/AWAITING_USER缺任一指针或指向对象不存在 | INCONSISTENT / THREAD_WAIT_SHAPE_INVALID或CURRENT_CHECKPOINT_MISSING |
-| 12 | 请求run/checkpoint不是thread当前指针 | STALE / REQUEST_NOT_CURRENT；只在当前checkpoint确实存在且scope关联一致后返回，不隐藏dangling current指针 |
-| 13 | 当前/request同一checkpoint关联/状态/version非法；错parent/question/delivery等硬冲突 | INCONSISTENT / CHECKPOINT_LINK_INVALID |
-| 14 | consultation.rowVersion小于effect.committedRowVersion | INCONSISTENT / VERSION_REGRESSION |
-| 15 | consultation.rowVersion大于effect.committedRowVersion | STALE / CONSULTATION_ADVANCED |
-| 16 | thread WAIT_CHECKPOINTED且其余硬关系一致 | STALE / THREAD_WAIT_CHECKPOINTED |
-| 17 | 所有MATCH必要条件满足 | MATCH / WAIT_CHAIN_MATCH |
-| 18 | 未覆盖/未知情况 | INCONSISTENT / UNSUPPORTED_SHAPE；不得fallback MATCH |
+| Phase | 查询/验证及唯一出口 |
+| --- | --- |
+| P0 纯内存配置 | profile/URL/manifest非法→CONFIG_REJECTED配置异常；构造lazy资源对象，不开连接/SQL |
+| P1 请求与scope | invalid Request/ID→INVALID_INPUT/INPUT_INVALID；随后按3.2检查TEST_SCOPE；DENIED或scope UNAVAILABLE零connection/SQL |
+| P2 外层/资源 | 先拒绝外层事务→UNAVAILABLE/OUTER_TRANSACTION_PRESENT；通过后才创建事务/连接，检查物理connection、autoCommit=false、有效RR、catalog及每请求metadata preflight；失败无payload |
+| P3 首个owner读 | SELECT consultation建立snapshot；根不存在→ABSENT/CONSULTATION_ABSENT，不再查子对象 |
+| P4 根shape | rowVersion null/负数或未知lifecycle→INCONSISTENT/CONSULTATION_SHAPE_INVALID；ACTIVE且current wait非空或WAITING_USER且为空→INCONSISTENT/CONSULTATION_WAIT_SHAPE_INVALID；只有ACTIVE且无wait才能STALE/NO_CURRENT_WAIT，明确不宣称子链完整 |
+| P5 基础绑定 | 独立读取binding/thread/request run；按对象顺序分别检查存在唯一性→ID/scope关联→非负version及已知enum；失败INCONSISTENT/OWNER_LINK_INVALID或OWNER_ENUM_INVALID。尚未返回任何“旧请求”STALE |
+| P6 当前effect及版本硬检查 | 用consultation当前wait指针读effect；存在/consultation关联、COMMITTED、prior ACTIVE/committed WAITING_USER、prior>=0且committed=prior+1防overflow、question/delivery/parent必填逐项检查；失败INCONSISTENT/WAIT_EFFECT_INVALID。随后consultation.rowVersion<effect.committedRowVersion→INCONSISTENT/VERSION_REGRESSION。这些检查先于所有后续STALE |
+| P7 thread指针shape | ACTIVE且残留任一current run/checkpoint/wait→INCONSISTENT/THREAD_WAIT_SHAPE_INVALID；ACTIVE且三者皆空→STALE/THREAD_WAIT_NOT_ESTABLISHED（P6已排除effect/版本硬错误，不读取未来checkpoint）。WAIT_CHECKPOINTED/AWAITING_USER缺任一指针→INCONSISTENT/THREAD_WAIT_SHAPE_INVALID |
+| P8 当前链硬完整性 | 用thread当前指针读取current run/current checkpoint（若等于请求ID复用已读对象）；先存在/唯一性，再scope/已知enum，再parent/question/delivery/version/ref关系。任何失败INCONSISTENT/CURRENT_OWNER_MISSING或CHECKPOINT_LINK_INVALID。不因请求旧或consultation较新跳过该阶段 |
+| P9 请求/当前及STALE分类 | P8全部通过后处理请求旧checkpoint：若不同于current则独立读请求checkpoint，存在时必须consultation/thread/run与请求身份关联，否则INCONSISTENT/REQUEST_CHECKPOINT_SCOPE_INVALID；旧非当前checkpoint不存在不构成当前硬指针损坏。随后按顺序：请求run或checkpoint不等当前→STALE/REQUEST_NOT_CURRENT；consultation.rowVersion>effect.committedRowVersion→STALE/CONSULTATION_ADVANCED；thread WAIT_CHECKPOINTED→STALE/THREAD_WAIT_CHECKPOINTED |
+| P10 最终MATCH | 其余MATCH必要状态全部满足→MATCH/WAIT_CHAIN_MATCH；未知/未覆盖shape→INCONSISTENT/UNSUPPORTED_SHAPE，不fallback MATCH |
 
-binding必须consultation/cdp等于consultation且thread等于请求thread；runtime_authority固定CLINICAL_RUNTIME_V1；scope_version/capability_set_version/contract_version与fixture manifest精确一致。run.consultation/thread与binding相同，run.status允许OPEN/CLOSED，只核对已知值和关联，不宣称F8可恢复；based_on_clinical_state_version非负且与checkpoint captured version相等仅作为此fixture冻结关系，不读取CDP当前临床版本。
+P5 binding必须consultation/cdp等于根且thread等于请求thread；runtime_authority固定CLINICAL_RUNTIME_V1；scope_version/capability_set_version/contract_version与fixture manifest精确一致。thread.consultation、请求run.consultation/thread均匹配binding，thread.rowVersion非负；请求run.status允许OPEN/CLOSED、based_on_clinical_state_version>=0。旧请求run的历史version不拿来与当前checkpoint比较；请求run缺失或错scope仍按P5硬失败，不藏入STALE。
 
-effect必须COMMITTED、expected_prior_lifecycle ACTIVE、committed_lifecycle WAITING_USER；priorRowVersion>=0，committedRowVersion=prior+1（检查overflow）；question/delivery/parent IDs非空。此关系基于当前单saveAndFlush的fixture，不宣称未来所有writer同一版本演进。current effect从consultation指针读取。
+P6 effect版本是consultation rowVersion的单saveAndFlush fixture关系，不是clinical version。P8 current run必须consultation/thread匹配根/binding、status为OPEN/CLOSED、based_on_clinical_state_version非负；其version=当前checkpoint.capturedClinicalVersion，只对当前run/checkpoint匹配比较，不读取CDP当前状态。current checkpoint必须ACTIVE、capturedClinicalVersion>=0；consultation/thread/run与当前对象相同；consultation_wait_effect_id=根当前wait；question/delivery等于effect；question_delivered_wait_effect_id=effect.parent_delivered_wait_effect_id=thread.current_wait_effect_id。pending/selection/delivery/confirmation refs及fingerprint非空但不认证独立业务权威。
 
-checkpoint必须ACTIVE、capturedClinicalVersion>=0，consultation/thread/run与当前binding/thread/run一致；consultation_wait_effect_id=consultation.current_wait_effect_id；question_id/delivery_id=effect对应字段；question_delivered_wait_effect_id=effect.parent_delivered_wait_effect_id=thread.current_wait_effect_id。thread current checkpoint/run与被读当前对象一致。pending_question_ref/selection/delivery/confirmation refs及fingerprint要求非空，但只作为结构字段，不视为question当前事实、实际receipt或digest独立验证。
+P8在同一个scope内多个硬错误时按current run→current checkpoint存在/shape→scope关联→parent→question→delivery→captured version→其他必填ref顺序返回确定reason。P6的effect硬错误优先于VERSION_REGRESSION，后者优先于所有P7/P9阶段STALE；前置资源/授权失败只返回其本身原因，不读取后续对象。中间态“不读未来对象”不被称为完整链验证。
 
-MATCH另要求consultation WAITING_USER、thread AWAITING_USER、consultation.rowVersion=effect.committedRowVersion。WAIT_CHECKPOINTED只属于thread；checkpoint没有该枚举。请求旧checkpoint允许STALE，不因其不是current便将正常current链改称损坏。实现应读取/核验当前checkpoint和当前run的scope后再区分请求是否current；请求run错scope仍按8失败，避免跨scope请求藏入STALE。
+MATCH另要求consultation WAITING_USER、thread AWAITING_USER、effect合法、current/request run/checkpoint完全同一、根rowVersion=effect.committedRowVersion。WAIT_CHECKPOINTED只属thread；checkpoint仅接受ACTIVE。run已知OPEN/CLOSED状态在本slice不产生F8可恢复语义。authority始终UNKNOWN，非MATCH payload为空。
+
+### 3.5 资源生命周期与计数验收（O1-R01-R2）
+
+构造前后、invalid input、scope DENIED/null/异常、outer事务拒绝，均计数getConnection/SQL为0（从资源对象构造前开始计数，禁止把startup I/O从统计中剔除）。scope允许请求在P2第一次开启连接；每请求metadata检查与owner读都计入该请求SQL记录。未批准profile/URL在P0配置异常，即使fixture port愿意ALLOW也不会触及port/DB。
+
+preflight无自动startup命令、无缓存positive结果、无另一个preflight connection。完整授权请求的MySQL/engine/schema检查发生在事务内的metadata阶段，首个owner一致性读仍为P3 consultation SELECT。查询日志不得打印payload或未经授权的ID；测试spy只记录statement类别/connection计数和fixture correlation。DB preflight失败不返回旧snapshot，资源close交由TransactionTemplate，异常统一typed UNAVAILABLE。
 
 ## 4. 阻断项与后续真实写接入门禁
 
@@ -123,7 +123,7 @@ O-B01/02/03/04/05不妨碍明确label的D5-O1隔离结构reader设计，但阻�
 Bootstrap固定源manifest原DDL内容digest/Git blob，实际加载V2、V3、V6原始bytes；V6会创建额外u06_delivery/trace表，但reader不获其权限。workflow MySQL8.0容器端口33325，新schema u07_owner_readback，合成fixture，禁止任意外部URL。每次报告实际engine、isolation、autocommit、受测checkout/sourceDDL SHA与manifest，不把配置值当观测值。数据库账号bootstrap root、reader SELECT-only、writer仅fixture所需UPDATE分离。
 
 测试分组与最小判定：
-1. 矩阵各独立条件及优先级组合：MATCH仍authority UNKNOWN；invalid input、根ABSENT、ACTIVE无wait、ACTIVE残留指针、thread阶段、每类missing硬指针、旧请求、各版本方向/overflow、未知枚举及所有关联错scope。非MATCH全部无row payload。
+1. P0..P10各独立条件及优先级组合：MATCH仍authority UNKNOWN；invalid input、根ABSENT、ACTIVE无wait、ACTIVE残留指针、thread阶段、每类missing硬指针、旧请求、各版本方向/overflow、未知枚举及所有关联错scope。非MATCH全部无row payload。
 2. scope任一字段替换/缺失、未知schema/kind/profile/manifest、任意ALLOW企图绕过production/错URL、port异常；通过connection/query计数证实前置拒绝零连接/SQL。authority UNKNOWN为不可修改结果常量。
 3. schema six-engine/shape不匹配、错误manager/DS、outer事务/autoCommit/隔离/connection漂移；真实路径与故障代理分开标记。
 4. MVCC barrier：reader完成首次consultation普通consistent SELECT后通知writer；独立writer UPDATE同时改变consultation指针/版本和thread指针并COMMIT，writer通知reader继续；本reader其余SELECT仍观察旧完整snapshot，返回旧MATCH；下一新reader观察新链的相应状态。barrier设有timeout/finally释放，不依靠sleep或connection ID单独证明MVCC。
@@ -131,7 +131,7 @@ Bootstrap固定源manifest原DDL内容digest/Git blob，实际加载V2、V3、V6
 6. reader INSERT/UPDATE/DELETE/DDL被真实DB拒绝；读取前后六表关键列的canonical摘要相同，摘要在fixture内部比对不打印敏感数据。静态依赖/SQL清单及账号无F8表权限证明无F8调用能力；不查询不存在f8表冒充行数0。
 7. 不做生产profile数据库执行、真实数据、writer共享guard认证、临床current CDP/APPLIED/readmission/effect/outbox。129基线为已有实测，不称新slice已执行。
 
-## 5.1 修订状态与逐项响应
+## 5.1 修订状态与逐项响应（v0.3）
 
 | Finding | 本次修订 | 状态 |
 | --- | --- | --- |
@@ -139,7 +139,31 @@ Bootstrap固定源manifest原DDL内容digest/Git blob，实际加载V2、V3、V6
 | O1-B02 | immutable TEST_SCOPE字段+精确绑定检查、前置零SQL、authorizer不可信输入禁止、production/未知profile与非精确URL工厂硬拒绝 | REMEDIATED_FOR_RE_REVIEW |
 | O1-R01 | MySQL/InnoDB/实际隔离/单connection前提、原DDL顺序与digest、13文件inventory、barrier及约束保留测试 | REMEDIATED_FOR_RE_REVIEW |
 
-DESIGN_V02=TARGETED_REMEDIATION_COMPLETE；IMPLEMENTATION_READINESS=RE_REVIEW_PENDING，未授权实施或合并。没有新测试执行或运行时认证；O-B01..06真实接入门禁均不变。下一步v0.2定向设计复审，之后才决定D5-O1隔离实施。
+DESIGN_V03=TARGETED_REMEDIATION_COMPLETE；IMPLEMENTATION_READINESS=RE_REVIEW_PENDING，未授权实施或合并。没有新测试执行或运行时认证；O-B01..06真实接入门禁均不变。下一步v0.3两项定向设计复审，之后才决定D5-O1隔离实施。
+
+## 5.2 v0.3 两项修订响应及组合验收
+
+#414（56109e9825cc567033cba0414e0b860a794449ad）：
+- O1-B01-R2=REMEDIATED_FOR_RE_REVIEW：废除旧首命中序号表，冻结P0..P10单真源；current effect/版本回退、current run/checkpoint完整性先于后续STALE。
+- O1-R01-R2=REMEDIATED_FOR_RE_REVIEW：取消自动startup I/O，lazy资源＋授权/outer检查后同请求事务内非缓存preflight；统计覆盖构造全生命周期。
+
+冻结反例验收（仅设计oracle，尚未运行）：
+| 组合fixture | 预期 |
+| --- | --- |
+| 旧请求+当前checkpoint错parent | INCONSISTENT/CHECKPOINT_LINK_INVALID，不得STALE |
+| 旧请求+当前错question或delivery | INCONSISTENT/CHECKPOINT_LINK_INVALID |
+| 旧请求+根rowVersion低于effect committed | INCONSISTENT/VERSION_REGRESSION |
+| thread ACTIVE三指针空+根版本回退 | INCONSISTENT/VERSION_REGRESSION，先于THREAD_WAIT_NOT_ESTABLISHED |
+| 当前链完全合法+同scope旧run/checkpoint | STALE/REQUEST_NOT_CURRENT |
+| 当前checkpoint缺失+旧请求 | INCONSISTENT/CURRENT_OWNER_MISSING |
+| 当前parent损坏+根rowVersion较新 | INCONSISTENT/CHECKPOINT_LINK_INVALID，先于CONSULTATION_ADVANCED |
+| 完整当前链WAIT_CHECKPOINTED+旧请求 | STALE/REQUEST_NOT_CURRENT（P9固定先后） |
+| ACTIVE无wait且未来checkpoint不存在 | STALE/NO_CURRENT_WAIT，仅根状态观察 |
+| 构造lazy资源后invalid/scope拒绝/outer拒绝 | 无连接/SQL，无row payload |
+| 同resources连续两个获授权read，中间engine/shape前提损坏 | 第二次重新preflight→UNAVAILABLE，无缓存MATCH |
+| 获授权首次preflight失败 | UNAVAILABLE，owner SELECT计数0 |
+
+13文件范围、固定DDL/source、SELECT-only、production硬拒绝和六类真实owner门禁保持不变。本轮未实施/执行测试/合并，待针对两项复审，不自动升级READY。
 
 ## 6. 本轮具体源码依据
 
