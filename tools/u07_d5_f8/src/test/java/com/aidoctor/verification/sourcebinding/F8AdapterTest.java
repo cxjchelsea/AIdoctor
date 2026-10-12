@@ -228,4 +228,66 @@ class F8AdapterTest {
   assertEquals(0,admin.queryForObject("SELECT COUNT(*) FROM f8_decision WHERE canonical_id=?",Integer.class,f.event));
  }
 
+ // Native INSERT fault fixture: all JPA/JDBC resources use this same DS and physical connection.
+ static final class NativeClaimConflictDataSource extends DelegatingDataSource {
+  final java.util.concurrent.atomic.AtomicBoolean armed=new java.util.concurrent.atomic.AtomicBoolean();
+  final AtomicInteger originalExecutions=new AtomicInteger(),seedRows=new AtomicInteger(),vendor=new AtomicInteger();
+  String sqlState,observedSql;long connectionId;
+  NativeClaimConflictDataSource(){super(new DriverManagerDataSource(URL,"f8_adapter","synthetic-f8-only"));}
+  @Override public Connection getConnection()throws SQLException{return observe(super.getConnection());}
+  @Override public Connection getConnection(String user,String password)throws SQLException{return observe(super.getConnection(user,password));}
+  Connection observe(Connection raw){
+   return (Connection)java.lang.reflect.Proxy.newProxyInstance(Connection.class.getClassLoader(),new Class[]{Connection.class},(proxy,method,args)->{
+    try{
+     Object result=method.invoke(raw,args);
+     if(method.getName().equals("prepareStatement")&&args!=null&&args[0] instanceof String
+       &&((String)args[0]).startsWith("INSERT INTO f8_claim(wait_key,")){
+      String sql=(String)args[0];PreparedStatement original=(PreparedStatement)result;
+      List<java.lang.reflect.Method> setters=new ArrayList<>();List<Object[]> values=new ArrayList<>();
+      return java.lang.reflect.Proxy.newProxyInstance(PreparedStatement.class.getClassLoader(),new Class[]{PreparedStatement.class},(statement,m,a)->{
+       if(m.getName().startsWith("set")&&a!=null&&a.length>=2&&a[0] instanceof Integer){setters.add(m);values.add(a.clone());}
+       if(m.getName().equals("executeUpdate")&&armed.compareAndSet(true,false)){
+        observedSql=sql;assertFalse(raw.getAutoCommit(),"fixture must stay inside the owned transaction");
+        try(Statement query=raw.createStatement();ResultSet row=query.executeQuery("SELECT CONNECTION_ID()")){assertTrue(row.next());connectionId=row.getLong(1);}
+        // Seed on the SAME real connection; let the adapter's original statement hit the real PK.
+        try(PreparedStatement seed=raw.prepareStatement(sql)){
+         for(int n=0;n<setters.size();n++)setters.get(n).invoke(seed,values.get(n));
+         seedRows.set(seed.executeUpdate());
+        }
+        originalExecutions.incrementAndGet();
+        try{return m.invoke(original,a);}catch(java.lang.reflect.InvocationTargetException failure){
+         Throwable cause=failure.getCause();if(cause instanceof SQLException){vendor.set(((SQLException)cause).getErrorCode());sqlState=((SQLException)cause).getSQLState();}
+         throw cause;
+        }
+       }
+       try{return m.invoke(original,a);}catch(java.lang.reflect.InvocationTargetException failure){throw failure.getCause();}
+      });
+     }
+     return result;
+    }catch(java.lang.reflect.InvocationTargetException failure){throw failure.getCause();}
+   });
+  }
+ }
+ @Configuration @EnableTransactionManagement @EnableJpaRepositories(basePackageClasses=CanonicalBusinessEventRepository.class)
+ static class NativeConflictConfig extends Config {
+  @Override @Bean DataSource dataSource(){if(!URL.equals(System.getenv("U07_F8_ADAPTER_URL")))throw new IllegalArgumentException("fixed disposable database required");return new NativeClaimConflictDataSource();}
+ }
+ @Test void nativeAdapterClaimInsert1062RollsBackActualDatabaseAttempt(){
+  Fixture f=new Fixture();F8Identity i=f.identity();AtomicInteger sentinelCompleted=new AtomicInteger();
+  try(AnnotationConfigApplicationContext isolated=new AnnotationConfigApplicationContext(NativeConflictConfig.class)){
+   NativeClaimConflictDataSource observed=(NativeClaimConflictDataSource)isolated.getBean(DataSource.class);
+   EntityManager joined=SharedEntityManagerCreator.createSharedEntityManager(isolated.getBean(EntityManagerFactory.class));
+   observed.armed.set(true);
+   F8Result r=new F8Adapter(observed,isolated.getBean(PlatformTransactionManager.class),joined,box,BindingCodec.PROFILE,T,
+    phase->{if(phase.equals("after_sentinel"))sentinelCompleted.incrementAndGet();}).finalizeAnswer(f.req(),f.scope());
+   assertEquals(1,observed.seedRows.get());assertEquals(1,observed.originalExecutions.get());assertEquals(0,sentinelCompleted.get());
+   assertNotNull(observed.observedSql);assertTrue(observed.observedSql.startsWith("INSERT INTO f8_claim(wait_key,"));
+   assertTrue(observed.connectionId>0);assertEquals(1062,observed.vendor.get());assertEquals("23000",observed.sqlState);
+   assertEquals(Operational.RETRYABLE_FAILURE,r.operational);assertEquals(Attempt.ATTEMPTED,r.attempt);
+   assertEquals(Durability.NOT_COMMITTED,r.durability);assertEquals(Reason.DB_FAILURE,r.reason);assertEquals(i.decisionId,r.queryKey);assertNull(r.confirmed);
+   assertEquals(0,claims(i));assertEquals(0,decisions(i));assertEquals(F8HistoricalReader.State.ABSENT,adapter().read(f.req(),f.scope()).state);
+   assertEquals(Verdict.ACCEPTED,adapter().finalizeAnswer(f.req(),f.scope()).confirmed.verdict);
+  }
+ }
+
 }
