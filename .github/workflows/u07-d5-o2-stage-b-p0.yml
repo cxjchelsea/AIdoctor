@@ -25,6 +25,8 @@ jobs:
           --health-cmd="mysqladmin ping -h localhost -psynthetic-stageb-root"
           --health-interval=5s --health-timeout=5s --health-retries=30
     env:
+      U07_D5O2_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      U07_D5O2_PR_NUMBER: ${{ github.event.pull_request.number }}
       U07_D5O2_PROFILE: U07_D5O2_STAGE_B_P0_SYNTHETIC
       U07_D5O2_SCHEMA: u07_d5o2_stage_b_p0
       U07_D5O2_URL: jdbc:mysql://127.0.0.1:33327/u07_d5o2_stage_b_p0?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
@@ -45,6 +47,8 @@ jobs:
           test "$U07_D5O2_SCHEMA" = u07_d5o2_stage_b_p0
           test "$U07_D5O2_URL" = 'jdbc:mysql://127.0.0.1:33327/u07_d5o2_stage_b_p0?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC'
           git rev-parse HEAD
+          test -n "$U07_D5O2_PR_HEAD_SHA"
+          test "$(git rev-parse HEAD^2)" = "$U07_D5O2_PR_HEAD_SHA"
           java -version
       - name: Original immutable DDL with least-privilege P0 roles
         env:
