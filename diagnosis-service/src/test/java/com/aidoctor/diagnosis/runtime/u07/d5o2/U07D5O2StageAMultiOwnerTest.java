@@ -8,6 +8,10 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -26,6 +30,25 @@ public class U07D5O2StageAMultiOwnerTest {
         return jdbc.queryForObject(sql, new Object[] {id}, Integer.class);
     }
 
+    private static int readerCount(String table, String column, String id) throws Exception {
+        if (!("clinical_consultation_wait_effect".equals(table)
+                && "wait_effect_id".equals(column))
+                && !("clinical_runtime_wait_checkpoint".equals(table)
+                && "checkpoint_id".equals(column)))
+            throw new IllegalArgumentException("STAGE_A_READER_TABLE_DENIED");
+        try (Connection c = DriverManager.getConnection(
+                U07D5O2StageAFixtureConfig.FIXED_URL,
+                "stagea_reader", "synthetic-stagea-reader");
+             PreparedStatement p = c.prepareStatement(
+                "SELECT COUNT(*) FROM " + table + " WHERE " + column + "=?")) {
+            p.setString(1, id);
+            try (ResultSet rs = p.executeQuery()) {
+                assertTrue(rs.next());
+                return rs.getInt(1);
+            }
+        }
+    }
+
     private static ConsultationRecord consultation(String consultationId) {
         U01StartCommand cmd = new U01StartCommand(id(), id(), "synthetic-user", "SELF",
             null, "synthetic-only", "IN_SCOPE", false);
@@ -38,7 +61,7 @@ public class U07D5O2StageAMultiOwnerTest {
     }
 
     @Test
-    public void consultationAndWaitEffectRollBackTogether() {
+    public void consultationAndWaitEffectRollBackTogether() throws Exception {
         U07D5O2StageAFixtureConfig.requireEnvironment();
         try (AnnotationConfigApplicationContext ctx =
                  new AnnotationConfigApplicationContext(U07D5O2StageAFixtureConfig.class)) {
@@ -57,8 +80,7 @@ public class U07D5O2StageAMultiOwnerTest {
                 throw new IllegalStateException("STAGE_A_TWO_OWNER_ROLLBACK");
             }));
             assertEquals("STAGE_A_TWO_OWNER_ROLLBACK", injected.getMessage());
-            assertEquals(0, count(jdbc,
-                "SELECT COUNT(*) FROM clinical_consultation_wait_effect WHERE wait_effect_id=?", eid));
+            assertEquals(0, readerCount("clinical_consultation_wait_effect", "wait_effect_id", eid));
             assertEquals("ACTIVE", jdbc.queryForObject(
                 "SELECT lifecycle_status FROM clinical_consultation WHERE consultation_id=?",
                 new Object[]{cid}, String.class));
@@ -67,7 +89,7 @@ public class U07D5O2StageAMultiOwnerTest {
     }
 
     @Test
-    public void checkpointAndThreadRollBackTogetherAndStageIsVisibleWhenCommitted() {
+    public void checkpointAndThreadRollBackTogetherAndStageIsVisibleWhenCommitted() throws Exception {
         U07D5O2StageAFixtureConfig.requireEnvironment();
         try (AnnotationConfigApplicationContext ctx =
                  new AnnotationConfigApplicationContext(U07D5O2StageAFixtureConfig.class)) {
@@ -91,8 +113,7 @@ public class U07D5O2StageAMultiOwnerTest {
                 throw new IllegalStateException("STAGE_A_CHECKPOINT_ROLLBACK");
             }));
             assertEquals("STAGE_A_CHECKPOINT_ROLLBACK", injected.getMessage());
-            assertEquals(0, count(jdbc,
-                "SELECT COUNT(*) FROM clinical_runtime_wait_checkpoint WHERE checkpoint_id=?", cp));
+            assertEquals(0, readerCount("clinical_runtime_wait_checkpoint", "checkpoint_id", cp));
             assertEquals("ACTIVE", jdbc.queryForObject(
                 "SELECT runtime_status FROM clinical_runtime_thread_state WHERE thread_id=?",
                 new Object[]{tid}, String.class));
@@ -102,8 +123,7 @@ public class U07D5O2StageAMultiOwnerTest {
             assertEquals("WAIT_CHECKPOINTED", jdbc.queryForObject(
                 "SELECT runtime_status FROM clinical_runtime_thread_state WHERE thread_id=?",
                 new Object[]{tid}, String.class));
-            assertEquals(1, count(jdbc,
-                "SELECT COUNT(*) FROM clinical_runtime_wait_checkpoint WHERE checkpoint_id=?", cp));
+            assertEquals(1, readerCount("clinical_runtime_wait_checkpoint", "checkpoint_id", cp));
             tx.execute(s -> { cps.deleteById(cp); threads.deleteById(tid); return null; });
         }
     }
