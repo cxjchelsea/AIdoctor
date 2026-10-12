@@ -1,0 +1,87 @@
+{
+  "schema": "U07_D5O2_STAGE_B_P1B_MANIFEST_V1",
+  "sourceMainSha": "e7562bd9b5390c85e14c3c01424c1004b1479ebc",
+  "profile": "U07_D5O2_STAGE_B_P1B_SYNTHETIC",
+  "database": "u07_d5o2_stage_b_p1b",
+  "port": 33329,
+  "authority": "TEST_ONLY",
+  "downstreamAuthority": false,
+  "fullSixTableReplaySafe": false,
+  "originalStoreModified": false,
+  "ddl": [
+    {
+      "path": "diagnosis-service/src/main/resources/db/migration/V2__create_clinical_runtime_foundation.sql",
+      "gitBlob": "73029495c5f46e8576e34f8c9a77644fb8c1c4c4"
+    },
+    {
+      "path": "diagnosis-service/src/main/resources/db/migration/V3__create_clinical_consultation.sql",
+      "gitBlob": "ccc1aa30b8e9405bd07249bae1d3531853f7510b"
+    },
+    {
+      "path": "diagnosis-service/src/main/resources/db/migration/V6__add_u06_wait_runtime.sql",
+      "gitBlob": "7ed5a82bfba3b3fed2666bee969a7fe276e67566"
+    }
+  ],
+  "cases": {
+    "partial01": {
+      "class": "StageBP1BPartialLedgerTest",
+      "caseId": "P1-PARTIAL-01"
+    },
+    "partial02": {
+      "class": "StageBP1BPartialLedgerTest",
+      "caseId": "P1-PARTIAL-02"
+    },
+    "partial03": {
+      "class": "StageBP1BPartialLedgerTest",
+      "caseId": "P1-PARTIAL-03"
+    },
+    "partial04": {
+      "class": "StageBP1BPartialLedgerTest",
+      "caseId": "P1-PARTIAL-04"
+    },
+    "partial05": {
+      "class": "StageBP1BPartialLedgerTest",
+      "caseId": "P1-PARTIAL-05"
+    },
+    "partial06": {
+      "class": "StageBP1BPartialLedgerTest",
+      "caseId": "P1-PARTIAL-06"
+    },
+    "conflict01": {
+      "class": "StageBP1BReplayConflictTest",
+      "caseId": "P1-CONFLICT-01"
+    },
+    "conflict02": {
+      "class": "StageBP1BReplayConflictTest",
+      "caseId": "P1-CONFLICT-02"
+    },
+    "conflict03": {
+      "class": "StageBP1BReplayConflictTest",
+      "caseId": "P1-CONFLICT-03"
+    },
+    "conflict04": {
+      "class": "StageBP1BReplayConflictTest",
+      "caseId": "P1-CONFLICT-04"
+    },
+    "conflict05": {
+      "class": "StageBP1BReplayConflictTest",
+      "caseId": "P1-CONFLICT-05"
+    },
+    "conflict06A": {
+      "class": "StageBP1BReplayConflictTest",
+      "caseId": "P1-CONFLICT-06A"
+    },
+    "conflict06B": {
+      "class": "StageBP1BReplayConflictTest",
+      "caseId": "P1-CONFLICT-06B"
+    },
+    "conflict06C": {
+      "class": "StageBP1BReplayConflictTest",
+      "caseId": "P1-CONFLICT-06C"
+    },
+    "conflict06D": {
+      "class": "StageBP1BReplayConflictTest",
+      "caseId": "P1-CONFLICT-06D"
+    }
+  }
+}
