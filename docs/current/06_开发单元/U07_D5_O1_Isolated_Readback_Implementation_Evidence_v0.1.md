@@ -25,3 +25,30 @@ MVCC barrier在首次owner SELECT后放行独立writer改根/thread并COMMIT；�
 ISOLATED_IMPLEMENTED_AND_PHYSICALLY_VERIFIED_IN_LISTED_SCOPE。待实现与证据定向审查，不声称独立人员批准、验证全部闭合或merge授权。没有合并。
 真实scope/action、delivery/eligibility、question/pending/current CDP、APPLIED/Source、writer共同协议及outbox门禁均OPEN；REAL_D5=NOT_READY。
 下一步针对#416 reader实现、scope/资源夹具、manifest权限和MVCC证据做定向审查，再决定有限验证收口及集成就绪。
+
+## #417 定向修复与测试复审（2026-10-12）
+
+复审所指旧 HEAD 为 0f365a3737e9b82fbff28b8c3c0acedeab1fb58b。本次受测代码 HEAD 为 4683195864c07c978d7d5d657ec33ab3c1c2c05f（修复提交 e8544988d7b19f618662f8c52aebc94f136b82c1，随后兼容两种 JDBC statement 故障注入路径）。本次仅改资源 preflight、schema manifest、reader 测试；保留原 DDL、所有原13文件范围及生产隔离边界。
+
+- O1-I01：manifest 将有序 primary_key 与普通 unique keys 分开；preflight 从实际索引集合取出 PRIMARY，验证存在且列序精确相等，再独立比较普通 unique 列集合。普通 unique 索引名称不作为冻结角色。六表主键和原唯一约束逐项核对。
+- 新增真实 MySQL 主键负向回归：正常 MATCH 后，临时将 clinical_runtime_run PRIMARY(run_id) 替换为同列 UNIQUE，预期 UNAVAILABLE/RESOURCE_PRECONDITION_FAILED、payload null，owner SELECT 计数0；finally 恢复原主键，下一次请求恢复 MATCH。仅限 disposable 故障 fixture，不修改原迁移，不将删约束变为正常 writer 协议。
+- O1-R02：新增报告 autoCommit=true 的 connection proxy 回归，断言拒绝且SQL/owner读计数0；新增根读后报告 CONNECTION_ID 改变的 ResultSet proxy 回归，断言拒绝、payload null、owner读只有根1次，不继续子查询。故障注入支持 Statement/PreparedStatement；这是报告值注入，并非真实 autoCommit 切换或连接漂移的认证。
+
+实际 checkout 4e410949fde306dc6ce430a32924b31bda8f2ff4，parents 精确为 main750770e81af79b764cc4148d7fa856363c89972a 与代码HEAD4683195864c07c978d7d5d657ec33ab3c1c2c05f，tree f2f65e63378adf41fb1706ae70a758ea1f8935ca 与受测候选一致。
+
+| 本轮执行 | job | 结果 |
+| --- | --- | --- |
+| [O1 38197094938](https://github.com/cxjchelsea/AIdoctor/actions/runs/38197094938) | 114642072886 | 72 reader + 1 MVCC = 73；0 failure/error/skip，BUILD SUCCESS |
+| [U02 38197094425](https://github.com/cxjchelsea/AIdoctor/actions/runs/38197094425) | Java 114642071603 | 434，0 failure/error，1 skip，BUILD SUCCESS |
+| 同 U02 | Python 114642071449 | 11+9+1 passed |
+| [U03 38197094540](https://github.com/cxjchelsea/AIdoctor/actions/runs/38197094540) | 114642071882 | 434，0 failure/error，1 skip，BUILD SUCCESS |
+
+三个 run 均 completed/success，四 job 完整日志核验，实际 Java8/Spring JDBC/MySQL8。CD08显式参数harness skip不算通过，重复434不算独立增量。129 F8/Source既有基线未重跑。本地diff check、六manifest角色核对、原DDL digest bootstrap通过；本地未执行Java/MySQL测试。
+
+### 修复后定向复审与范围决定
+
+复审按 #417 的两个 finding 验收条件检查代码、真实DDL回归与计数断言，结果 PASS_WITH_BOUNDED_SCOPE；未发现本次修复新增阻断项。O1-I01=CLOSED_BOUNDED；O1-R02=CLOSED_BOUNDED，限所列主键角色拒绝与代理故障拒绝测试。旧 #417 文档是旧HEAD审查记录，不用覆盖历史报告冒充当时已关闭。
+
+这不是独立人员批准、生产拓扑认证、完整物理前提全组合证明或合并授权。其他未列明故障组合未因此关闭。REAL_D5=NOT_READY；生产scope/action、delivery/eligibility、question/pending/current CDP、APPLIED/Source、共同writer协议与outbox继续OPEN。
+
+下一步：隔离验证收口与集成就绪评估，然后如需整理 main-based 候选，再进行精确 main-target 差异复审和合并授权评估。本次仅补证据文档，测试代码blob不变；最终文档HEAD自动CI如重跑，其结果写PR body，避免无限文档提交。
