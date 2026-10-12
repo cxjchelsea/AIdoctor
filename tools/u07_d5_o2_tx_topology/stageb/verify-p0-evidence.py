@@ -35,7 +35,7 @@ def main():
  ddl=[]
  for entry in d["ddl"]:
   raw=(ROOT/entry["path"]).read_bytes()
-  digest=hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\\0"+raw).hexdigest()
+  digest=hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
   if digest!=entry["gitBlob"]:raise SystemExit("P0_DDL_MISMATCH")
   ddl.append({"path":entry["path"],"blob":digest,"sha256":hashlib.sha256(raw).hexdigest()})
  result={"schema":"STAGE_B_P0_ISOLATED_EVIDENCE_V1","sourceMainSha":d["sourceMainSha"],
