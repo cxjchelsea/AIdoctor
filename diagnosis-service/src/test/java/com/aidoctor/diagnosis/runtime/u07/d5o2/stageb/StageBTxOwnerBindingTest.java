@@ -86,4 +86,26 @@ public class StageBTxOwnerBindingTest {
    clean();
   }
  }
+ @Test public void p0WrongManagerDifferentDatasourceCannotBindExpectedResource(){
+  StageBTestConfig.requireEnvironment();
+  try(AnnotationConfigApplicationContext ctx=new AnnotationConfigApplicationContext(StageBTestConfig.class)){
+   DataSource expected=ctx.getBean("stageBDataSource",DataSource.class);
+   org.springframework.jdbc.datasource.DriverManagerDataSource incorrect=
+     new org.springframework.jdbc.datasource.DriverManagerDataSource(StageBTestConfig.URL,
+       "stageb_writer","synthetic-stageb-writer");
+   TransactionTemplate wrong=template(new DataSourceTransactionManager(incorrect));
+   clean();
+   try{
+    wrong.execute(status->{
+     assertTrue(TransactionSynchronizationManager.isActualTransactionActive());
+     assertFalse(TransactionSynchronizationManager.hasResource(expected));
+     assertTrue(TransactionSynchronizationManager.hasResource(incorrect));
+     throw new IllegalStateException("STAGE_B_WRONG_MANAGER_DATASOURCE_DENIED");
+    });
+    fail("wrong resource must be denied");
+   }catch(IllegalStateException ex){
+    assertEquals("STAGE_B_WRONG_MANAGER_DATASOURCE_DENIED",ex.getMessage());
+   }finally{clean();}
+  }
+ }
 }
