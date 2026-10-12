@@ -24,9 +24,10 @@ public class StageBP1ReplayConflictTest {
      ()->new JdbcU06DeliveryStore(hook).reconcileConfirmed(cmd));
    assertFalse(result.replay);assertEquals("CONFIRMED",result.confirmationStatus);
    assertEquals(6,hook.writes());
-   int[] six;
+   int[] six;String afterGraph;
    try(Connection c=StageBP1Evidence.reader()){
-    StageBP1Evidence.complete(c,cmd);
+    StageBP1Evidence.assertReaderPermission(c);
+    afterGraph=StageBP1Evidence.graphDigest(c,cmd);
     six=StageBP1Evidence.counts(c,cmd.deliveryEffectId);
    }
    Map<String,Object> facts=StageBP1Evidence.facts("happy01","P1-HAPPY-01");
@@ -34,6 +35,10 @@ public class StageBP1ReplayConflictTest {
    facts.put("physicalTransactionResult","COMMITTED_OBSERVED");
    facts.put("successfulOriginalSqlWrites",hook.writes());
    facts.put("sixAfter",six);facts.put("testVerdict","ATOMICITY_PASS");
+   facts.put("sixTableGraphSha256",afterGraph);
+   facts.put("candidateEffectSha256",StageBP1Evidence.effectDigest(cmd.deliveryEffectId));
+   facts.put("readerDmlDenied",true);facts.put("writerIsolation",java.sql.Connection.TRANSACTION_SERIALIZABLE);
+   facts.put("sqlSignatureStrict",true);
    StageBP1Evidence.emit(facts);
   }
  }
@@ -47,9 +52,10 @@ public class StageBP1ReplayConflictTest {
    U06DeliveryStore.Snapshot original=StageBP1Evidence.execute(ds,tm,
      ()->new JdbcU06DeliveryStore(first).reconcileConfirmed(cmd));
    assertFalse(original.replay);assertEquals(6,first.writes());
-   int[] before,after;
+   int[] before,after;String beforeGraph,afterGraph;
    try(Connection c=StageBP1Evidence.reader()){
-    StageBP1Evidence.complete(c,cmd);before=StageBP1Evidence.counts(c,cmd.deliveryEffectId);
+    StageBP1Evidence.assertReaderPermission(c);
+    beforeGraph=StageBP1Evidence.graphDigest(c,cmd);before=StageBP1Evidence.counts(c,cmd.deliveryEffectId);
    }
    StageBP1Evidence.Hook second=new StageBP1Evidence.Hook(ds,0);
    U06DeliveryStore.Snapshot repeated=StageBP1Evidence.execute(ds,tm,
@@ -57,14 +63,20 @@ public class StageBP1ReplayConflictTest {
    assertTrue(repeated.replay);assertEquals("CONFIRMED",repeated.confirmationStatus);
    assertEquals(0,second.writes());
    try(Connection fresh=StageBP1Evidence.reader()){
-    StageBP1Evidence.complete(fresh,cmd);after=StageBP1Evidence.counts(fresh,cmd.deliveryEffectId);
+    afterGraph=StageBP1Evidence.graphDigest(fresh,cmd);after=StageBP1Evidence.counts(fresh,cmd.deliveryEffectId);
    }
    assertArrayEquals(before,after);
+   assertEquals(beforeGraph,afterGraph,"P1A_REPLAY_MUTATED_SIX_TABLE_GRAPH");
    Map<String,Object> facts=StageBP1Evidence.facts("replay01","P1-REPLAY-01");
    facts.put("methodOutcome","ORIGINAL_REPLAY_TRUE");
    facts.put("physicalTransactionResult","COMMITTED_OBSERVED");
    facts.put("successfulOriginalSqlWrites",second.writes());
    facts.put("sixBefore",before);facts.put("sixAfter",after);
+   facts.put("sixTableGraphBeforeSha256",beforeGraph);
+   facts.put("sixTableGraphAfterSha256",afterGraph);
+   facts.put("candidateEffectSha256",StageBP1Evidence.effectDigest(cmd.deliveryEffectId));
+   facts.put("readerDmlDenied",true);facts.put("writerIsolation",java.sql.Connection.TRANSACTION_SERIALIZABLE);
+   facts.put("sqlSignatureStrict",true);
    facts.put("testVerdict","SOURCE_CHARACTERIZATION_PASS");
    StageBP1Evidence.emit(facts);
   }
