@@ -30,6 +30,7 @@
   "expectedTestMethods": [
     "p0OwnerIdentityJdbcAndJpaEffectiveIsolation",
     "p0NestedManagerAndResidualResourcesFailClosed",
-    "p0PostWriteHookIsRealAndRollsBack"
+    "p0PostWriteHookIsRealAndRollsBack",
+    "p0WrongManagerDifferentDatasourceCannotBindExpectedResource"
   ]
 }
