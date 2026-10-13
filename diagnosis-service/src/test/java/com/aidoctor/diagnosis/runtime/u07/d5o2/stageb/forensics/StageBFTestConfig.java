@@ -15,6 +15,7 @@ final class StageBFTestConfig implements AutoCloseable {
  static final String URL="jdbc:mysql://127.0.0.1:33331/"+DB+"?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
  final HikariDataSource writer;
  final DataSourceTransactionManager tx;
+ final java.util.concurrent.ExecutorService networkTimeoutExecutor=java.util.concurrent.Executors.newSingleThreadExecutor(r->{Thread t=new Thread(r,"f-jdbc-timeout");t.setDaemon(true);return t;});
  StageBFTestConfig(){
   if(!"true".equals(System.getenv("GITHUB_ACTIONS"))||
      !"true".equals(System.getenv("U07_F_ISOLATED"))||
@@ -39,13 +40,15 @@ final class StageBFTestConfig implements AutoCloseable {
   String v=System.getenv(key);if(v==null||v.length()<24)throw new IllegalStateException("F_MISSING_SECRET_"+key);
   return v;
  }
- static Connection connection(String user,String key)throws SQLException{
+ Connection connection(String user,String key)throws SQLException{
   String jdbcUrl=user.equals("stagebf_observer_ps")?URL.replace("/"+DB+"?","/performance_schema?"):URL;
   Connection c=DriverManager.getConnection(jdbcUrl,user,secret(key));
-  c.setNetworkTimeout(java.util.concurrent.Executors.newSingleThreadExecutor(r->{
-   Thread t=new Thread(r,"f-jdbc-timeout");t.setDaemon(true);return t;
-  }),3000);
+  c.setNetworkTimeout(networkTimeoutExecutor,3000);
   return c;
  }
- @Override public void close(){writer.close();}
+ @Override public void close(){writer.close();networkTimeoutExecutor.shutdownNow();
+  try{if(!networkTimeoutExecutor.awaitTermination(5,java.util.concurrent.TimeUnit.SECONDS))
+    throw new IllegalStateException("F_NETWORK_EXECUTOR_NOT_TERMINATED");}
+  catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException("F_NETWORK_EXECUTOR_INTERRUPTED");}
+ }
 }
