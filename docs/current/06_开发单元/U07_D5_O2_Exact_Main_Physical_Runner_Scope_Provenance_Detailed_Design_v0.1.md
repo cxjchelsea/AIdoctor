@@ -68,3 +68,44 @@ An *independent* Python verifier (not the PR-head one) validates the three JSON 
 | MR-G8 Scope of claim | Historical main snapshot vs current main correctly distinguished; original first-attempt failure never rewritten |
 
 **Implementation readiness decision for this file:** `RUNNER_FILE_SCOPE_PROPOSED`; `RUNNER_DESIGN_INDEPENDENT_REVIEW=PENDING`; `EXACT_MAIN_RUNNER_IMPLEMENTATION_AUTHORIZATION=NOT_GRANTED`; `POST_MAIN_PHYSICAL_BASELINE=PENDING`; `PR465_MERGE_AUTHORIZATION=NOT_GRANTED`.
+
+---
+
+## 8. MR-R1 — executable dual-tree / historical Store bytecode provenance
+
+**Two immutable checkouts:** `CONTROL` is independently reviewed runner commit `runnerControlSha`, containing the six candidate runner files. `SOURCE` is the independently checked out `33c0914e843d7976c7ff2272338377aa4925f443` historical main. Paths under `$RUNNER_TEMP/control` and `$RUNNER_TEMP/source` never overlap. Neither is a PR synthetic merge; pin both HEADs and tree hashes, and reject uncommitted tracked-file changes. Build output may be created only in disposable Maven `target/` and isolated local artifact cache.
+
+**Candidate Java8 build sequence (needs smoke proof):**
+1. On SOURCE, assert HEAD, tree, `JdbcU06DeliveryStore.java` Git blob hash, `diagnosis-service/pom.xml` blob and DDL blob manifest. Install SOURCE `contracts/v1/bindings/java` dependency. `mvn -B -f diagnosis-service/pom.xml -DskipTests test-compile` builds historical main sources. Record hash of SOURCE `target/classes/com/aidoctor/diagnosis/runtime/u06/delivery/JdbcU06DeliveryStore.class`, class version 52, Java8 and Maven versions.
+2. Compile only CONTROL `mainexact` test Java sources to a **separate augmentation folder** using the SOURCE test-scope resolved dependency classpath and SOURCE `target/classes`; no POM or source edits. Reject CONTROL attempting to define Store production classes or shadow their package/name. The exact Maven classpath derivation/test discovery behavior is **not demonstrated** and is a pre-implementation blocker.
+3. Execute exclusively selected new JUnit tests with an explicitly assembled classpath or independently checked Surefire mode. In particular, Surefire often loads `target/test-classes` ahead of `target/classes`, so forbid duplicate Store classes and assert the **actual live ClassLoader CodeSource canonical path** matches SOURCE `target/classes`. Extract runtime .class bytes, SHA256-match the freshly compiled SOURCE Store hash, and assert SOURCE production Store has not been copied from CONTROL. A test shadow-class injection must fail before any DB write.
+4. Bind `compiledStoreSha256`, `sourceStoreBlobSha`, `sourcePomBlobSha`, `sourceTreeSha`, CONTROL Java test class digests and dependency/classpath digest into each evidence artifact. Require reproducibility/clean checkout and reject stale output. `git rev-parse` alone is insufficient physical bytecode proof.
+
+**Six-file feasibility decision:** proposed inventory remains the maximum ADD-only bound, **not sufficient-by-assertion**. If no six-file, no-POM, unmodified-Store Java8 build/test selection can be independently demonstrated, return to design for scope amendment. No implementation authorized.
+
+## 9. MR-R2/R6 — immutable control-plane lifecycle and historical/current-main distinction
+
+- Separate `runnerControlSha` from `sourceUnderTestSha`. The new workflow can only be dispatched from a reviewed control commit on default branch; no user-controlled ref or target SHA input. Validate event type, actor/repository/ref and control workflow Git blob. `GITHUB_SHA` identifies *control event* and may legitimately differ from SOURCE SHA, but it cannot silently substitute for the target witness. Pin workflow and manifest blobs and runner control commit, and independently verify CONTROL checkout.
+- Because a new workflow must be merged into main before standard `workflow_dispatch`, its introduction changes main from `33c0914e`. A run pinned to the old SHA is a `HISTORICAL_POST_463_SOURCE_WITNESS`, **not** `CURRENT_MAIN_PHYSICAL_VERIFIED`. A new exact-current-main gate requires a fresh target and verification after the new workflow merge.
+- Two independently reviewed source/control code origins, minimal `contents: read` permission, no arbitrary fork code, no production data or credentials. A failed identity comparison prevents witness, evidence admission and artifact upload. Runner disable/removal requires separate controlled change; never auto-rebase the historical source target.
+
+## 10. MR-R3/R4 — explicit six-file roles, immutable evidence and negative witnesses
+
+Workflow: checkout/run control and source identities, Java8/MySQL8, real failure-path upload admission. `MainExactForensicsTest`: isolated Store invocations. `MainExactEvidence`: six-table readback, loaded-class provenance and allowlist evidence. `MainExactTestConfig`: disposable connection roles/transaction ownership. `manifest.json`: both source and CONTROL binding authority, DDL/dependency hashes. `bootstrap-and-verify.py`: separate main schema validator, provenance binding, privilege/redaction negatives and fail-closed safe upload. Existing PR-only F workflow and all production/POM/DDL untouched.
+
+Mandatory shared evidence tuple:
+```text
+schemaVersion, sourceUnderTestSha, sourceTreeSha,
+sourceStoreBlobSha, sourcePomBlobSha, compiledStoreSha256,
+loadedStoreCodeSource, runnerControlSha, runnerWorkflowBlobSha,
+runnerManifestBlobSha, workflowRunId, runAttempt,
+executionMode=HISTORICAL_MAIN_EXACT, testCaseId,
+writerConnectionIds, readerConnectionId, mysqlVersion, javaVersion
+```
+Three admitted JSON files must agree on shared values (or reference an independently validated immutable digest). Reject stale run attempt, partial/unknown JSON keys, symlinks/hardlinks, nonregular or oversized files, path traversal, SHA mismatch, Store class shadowing, and artifact leftovers after injected failure. No raw SQL, secrets, LOCK_DATA, patient identifiers, stack traces in console or artifact. GitHub Actions prints `run:` scripts into public logs: do not include literal secret/test-sentinel contents in that script even when redirecting command output. Negative tests must prove actual `upload-artifact` skipped, not only Python parser returns nonzero.
+
+## 11. MR-R5 — separated result verdicts and no causal overclaim
+
+`sourceFirstAttemptVerdict = BOTH_NEW_SUCCESS | FAILED_1213 | FAILED_OTHER | UNKNOWN`; when first attempt 1213 victim rolled back and counterpart committed, `FAILED_1213` is mandatory. `eventualRetryVerdict=NOT_EXECUTED` always for this Runner. `lockGraphVerdict=NO_EDGE_CAPTURED | PARTIAL_EDGE_ONLY | LIVE_TWO_WRITER_CYCLE_BOUND`, diagnostic only. `physicalBaselineVerdict=SOURCE_EXECUTION_VERIFIED | EVIDENCE_REJECTED | NOT_RUN` requires Java8, MySQL8, exact loaded Store bytecode, least-privilege negatives and independent six-table readback; it never rewrites original RACE-05 first-attempt failing business verdict.
+
+**MR-R1..06 proposed disposition:** `TARGETED_DESIGN_SUBMITTED`, `DUAL_TREE_COMPILE_TEST_FEASIBILITY=UNPROVEN`, `RUNNER_IMPLEMENTATION_AUTHORIZATION=NOT_GRANTED`, `CURRENT_MAIN_PHYSICAL_BASELINE=PENDING`.
