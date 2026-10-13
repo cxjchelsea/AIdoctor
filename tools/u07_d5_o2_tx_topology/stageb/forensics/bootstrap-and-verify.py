@@ -6,6 +6,8 @@ import json
 import os
 import re
 import subprocess
+import tempfile
+import copy
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -164,11 +166,16 @@ def graph_recompute(obj):
     return "PARTIAL_EDGE_ONLY" if edges else "NO_EDGE_CAPTURED"
 
 
-def safety_only():
-    if not OUT.exists():
+def safety_only(out=None, summary=None):
+    # Failure-path admission must never publish partial or stale evidence.
+    out = OUT if out is None else out
+    summary = ROOT / "diagnosis-service/target/f-isolated-verification.json" if summary is None else summary
+    if not out.is_dir() or out.is_symlink():
         return False
-    observed=list(OUT.iterdir())
-    if any(p.name not in ("forensic-incident.json","role-negative.json") for p in observed):
+    observed=list(out.iterdir())
+    if {p.name for p in observed} != {"forensic-incident.json","role-negative.json"}:
+        return False
+    if not summary.is_file() or summary.is_symlink():
         return False
     try:
         for p in observed:
@@ -182,8 +189,7 @@ def safety_only():
                     or obj.get("downstreamAuthority") is not False
                     or obj.get("businessCompletion") != "NOT_AUTHORIZED_TO_ATTEST"):
                 return False
-        summary=ROOT / "diagnosis-service/target/f-isolated-verification.json"
-        if summary.exists():
+        if True:
             if summary.is_symlink() or not summary.is_file() or summary.stat().st_size > 65536:
                 return False
             x=json.loads(summary.read_text())
@@ -197,8 +203,18 @@ def safety_only():
             raw=json.dumps(x,sort_keys=True)
             if any(word in raw for word in BLOCKED) or "FAKE_UNKNOWN_SECRET_4192" in raw:
                 return False
+        # An upload is admissible only when summary and both records agree.
+        e=json.loads((out / "forensic-incident.json").read_text())
+        r=json.loads((out / "role-negative.json").read_text())
+        for field in ("sourceMainSha","candidateHead","checkoutSha","runId","runAttempt"):
+            if e.get(field) != r.get(field) or str(e.get(field)) != str(x.get(field)):
+                return False
+        if (e.get("forensicVerdict") != x.get("forensicVerdict")
+                or e.get("sourceVerdict") != x.get("sourceVerdict")
+                or x.get("caseCount") != 1):
+            return False
         return True
-    except (SystemExit, ValueError, UnicodeError, OSError, TypeError):
+    except (SystemExit, ValueError, UnicodeError, OSError, TypeError, KeyError):
         return False
 
 
@@ -363,6 +379,77 @@ def verify(m):
           == "LIVE_TWO_WRITER_CYCLE_BOUND").lower())
 
 
+def residual_adversarial_tests():
+    """Deterministic contract-only tests: no DB, no patient data, no uploads."""
+    def edge(requester, blocker, epoch, at=101, bt=202):
+        return dict(epoch=epoch, requester=requester, blocker=blocker,
+                    table="u06_delivery_authority", index="PRIMARY",
+                    engine="INNODB", requestMode="S", requestStatus="WAITING",
+                    blockMode="X", blockStatus="GRANTED", requestType="RECORD",
+                    blockType="RECORD",
+                    requestThread=at if requester=="A" else bt,
+                    blockThread=at if blocker=="A" else bt)
+    base=dict(writerAThreadId=101, writerBThreadId=202,
+              sourceVerdict="ROLLBACK_CONFIRMED_1213", selectedEdges=[])
+    cases=[
+        ([], "NO_EDGE_CAPTURED"),
+        ([edge("A","B",1)], "PARTIAL_EDGE_ONLY"),
+        ([edge("A","B",1),edge("B","A",2)], "PARTIAL_EDGE_ONLY"),
+        ([edge("A","B",1),edge("B","A",1)], "LIVE_TWO_WRITER_CYCLE_BOUND"),
+    ]
+    for edges, expected in cases:
+        facts=dict(base, selectedEdges=edges)
+        ensure_safe(facts)
+        if graph_recompute(facts)!=expected:
+            die("DETERMINISTIC_GRAPH_CONTRACT")
+    no1213=dict(base, sourceVerdict="NO_1213_OBSERVED",
+                selectedEdges=[edge("A","B",1),edge("B","A",1)])
+    if graph_recompute(no1213)!="PARTIAL_EDGE_ONLY":
+        die("FALSE_CAUSAL_PROOF")
+    for change in (
+        lambda e:e.update(index="nonexistent_index"),
+        lambda e:e.update(requestThread=999),
+        lambda e:e.update(requestStatus="GRANTED"),
+        lambda e:e.update(table="private_patient"),
+    ):
+        bad=copy.deepcopy(edge("A","B",1))
+        change(bad)
+        obj=dict(base, selectedEdges=[bad])
+        try:
+            ensure_safe(obj)
+            graph_recompute(obj)
+        except SystemExit:
+            continue
+        die("INVALID_EDGE_ACCEPTED")
+    # A failure or partial trace must never be admitted for upload.
+    with tempfile.TemporaryDirectory(prefix="f-isolated-negative-") as td:
+        root=Path(td)
+        out=root/"evidence"
+        out.mkdir()
+        summary=root/"summary.json"
+        if safety_only(out, summary):
+            die("EMPTY_UPLOAD_ACCEPTED")
+        (out/"forensic-incident.json").write_text("{}")
+        if safety_only(out, summary):
+            die("PARTIAL_UPLOAD_ACCEPTED")
+        (out/"role-negative.json").write_text("{}")
+        if safety_only(out, summary):
+            die("MISSING_SUMMARY_ACCEPTED")
+        summary.write_text("{}")
+        if safety_only(out, summary):
+            die("INVALID_SUMMARY_ACCEPTED")
+        (out/"forensic-incident.json").write_text('{"caseId":"FAKE_PATIENT_6271"}')
+        if safety_only(out, summary):
+            die("UNREDACTED_UPLOAD_ACCEPTED")
+        (out/"forensic-incident.json").unlink()
+        (out/"forensic-incident.json").symlink_to(summary)
+        if safety_only(out, summary):
+            die("SYMLINK_UPLOAD_ACCEPTED")
+    print("F_ISOLATED_RESIDUAL_ADVERSARIAL_CONTRACT=PASS")
+    print("F_ISOLATED_DETERMINISTIC_EDGE_CASES=9")
+    print("F_ISOLATED_FAIL_CLOSED_UPLOAD_NEGATIVES=5")
+
+
 def negative_parser_tests():
     for marker in BLOCKED + ("FAKE_UNKNOWN_SECRET_4192",):
         unsafe = {"caseId": marker}
@@ -375,8 +462,12 @@ def negative_parser_tests():
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("mode", choices=("bootstrap", "verify", "safe-upload"))
+    p.add_argument("mode", choices=("bootstrap", "verify", "safe-upload", "adversarial"))
     arg = p.parse_args()
+    if arg.mode == "adversarial":
+        negative_parser_tests()
+        residual_adversarial_tests()
+        raise SystemExit(0)
     m, ddl = validate_manifest()
     negative_parser_tests()
     if arg.mode == "bootstrap":
