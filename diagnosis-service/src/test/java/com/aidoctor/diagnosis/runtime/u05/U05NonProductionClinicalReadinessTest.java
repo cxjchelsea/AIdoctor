@@ -1,6 +1,9 @@
 package com.aidoctor.diagnosis.runtime.u05;
 
 import com.aidoctor.contracts.v1.StateTypes;
+import com.aidoctor.diagnosis.runtime.u06.U05QuestionRouteAdmissionAdapter;
+import com.aidoctor.diagnosis.runtime.u06.U06AdmissionEvidence;
+import com.aidoctor.diagnosis.runtime.u06.U06AdmissionService;
 import com.aidoctor.diagnosis.runtime.effects.CanonicalEffectLedger;
 import com.aidoctor.diagnosis.runtime.effects.CanonicalEffectLedgerDecision;
 import com.aidoctor.diagnosis.runtime.effects.NonProductionFileCanonicalEffectLedger;
@@ -70,6 +73,51 @@ class U05NonProductionClinicalReadinessTest {
                 authority(a1, U05ConsumerInboundRequest.GATE_ALLOW, null, null, true));
         assertEquals(U05ExecutionResult.ROUTING_COMPLETE, admitted.getStatus());
         assertEquals("COMMITTED", admitted.getCommitResult().status);
+        assertEquals(1, fixture.repository.mutationCount());
+    }
+
+    @Test
+    void committedA1ReadinessQuestionRouteEntersRealU06AdmissionOnlyWithIndependentEvidence() {
+        String context = U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT;
+        List<U05ReadinessInput> inputs = Arrays.asList(
+                present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                present(U05ReadinessInput.F3, U05ReadinessInput.CAN_ASK_MORE, VERSION),
+                applicability(U05ReadinessInput.F5, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION),
+                applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION));
+        U05ReadinessInputManifest manifest = manifest(context, VERSION, inputs);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+        U05ExecutionResult readiness = fixture.application.execute(
+                request(manifest, context, U05ConsumerInboundRequest.GATE_ALLOW, null, null),
+                manifest,
+                authority(context, U05ConsumerInboundRequest.GATE_ALLOW, null, null, true));
+
+        assertEquals(U05ExecutionResult.ROUTING_COMPLETE, readiness.getStatus());
+        assertEquals("COMMITTED", readiness.getCommitResult().status);
+        assertEquals(U05DownstreamRoutingDecision.TO_U06_QUESTION_PATH,
+                readiness.getRoutingDecision().getDownstreamConsequence());
+        assertEquals(U05DownstreamRoutingDecision.ELIGIBLE,
+                readiness.getRoutingDecision().getRoutingStatus());
+
+        U05QuestionRouteAdmissionAdapter bridge =
+                new U05QuestionRouteAdmissionAdapter(new U06AdmissionService());
+        assertThrows(IllegalStateException.class, () -> bridge.admit(readiness, null,
+                "question-policy", "d04-policy", "synthetic-dependency", "thread-1", "run-1", 0));
+        U06AdmissionEvidence blocked = new U06AdmissionEvidence(
+                true, true, true, U06AdmissionEvidence.GATE_STALE,
+                U06AdmissionEvidence.PERMISSION_NOT_REQUIRED, true,
+                U06AdmissionEvidence.DEPENDENCY_ACTIVE_SYNTHETIC, false, true);
+        assertEquals(U06AdmissionService.REJECTED_GATE,
+                bridge.admit(readiness, blocked, "question-policy", "d04-policy",
+                        "synthetic-dependency", "thread-1", "run-1", 0).getStatus());
+
+        U06AdmissionService.Admission admitted = bridge.admit(
+                readiness, U06AdmissionEvidence.syntheticCurrentAllow(),
+                "question-policy", "d04-policy", "synthetic-dependency", "thread-1", "run-1", 0);
+        assertEquals(U06AdmissionService.ADMITTED, admitted.getStatus());
+        assertEquals(readiness.getRoutingDecision().getDownstreamRouteAuthorizationId(),
+                admitted.getRequest().getSourceAuthorityRef());
+        assertEquals(readiness.getCommitResult().committedVersion.intValue(),
+                admitted.getRequest().getAuthoritativeClinicalStateVersion());
         assertEquals(1, fixture.repository.mutationCount());
     }
 
