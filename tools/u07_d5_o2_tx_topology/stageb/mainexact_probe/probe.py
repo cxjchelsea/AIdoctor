@@ -45,9 +45,11 @@ def cmd(argv, cwd=None, env=None, expect=0):
         # Never echo full Maven/JDBC logs.
         safe = [ln for ln in p.stdout.splitlines() if
                 "BUILD FAILURE" in ln or "BUILD SUCCESS" in ln or
-                "Tests run:" in ln or "PROBE_" in ln or "No tests" in ln]
+                "Tests run:" in ln or "PROBE_" in ln or "No tests" in ln or
+                ("[ERROR]" in ln and ("Error" in ln or "Failure" in ln or
+                 "Tests run" in ln or "There are test failures" in ln))]
         raise RuntimeError("COMMAND_FAILED " + argv[0] + " rc=" +
-                           str(p.returncode) + " signals=" + repr(safe[-12:])[:1200])
+                           str(p.returncode) + " signals=" + repr(safe[-28:])[:2500])
     return p
 def git(repo, *args): return cmd(["git", "-C", str(repo), *args]).stdout.strip()
 def suite_xml(source):
@@ -170,6 +172,7 @@ def main():
     # retain Surefire case identities, then run exact 11 exclusions.
     reports = source / "diagnosis-service/target/surefire-reports"
     if reports.exists(): shutil.rmtree(reports)
+    print("PROBE_STAGE=FULL_BASELINE_EXPECTED_FAIL", flush=True)
     base_run = cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
                           "surefire:test"], env=runenv, expect=1)
     check(base_run.returncode != 0, "SEL_BASELINE_UNEXPECTEDLY_GREEN")
@@ -185,6 +188,7 @@ def main():
     if reports.exists(): shutil.rmtree(reports)
     candidate = "*,!" + ",!".join(DEDICATED)
     check(candidate.count(",!") == 11, "SEL_EXCLUSIONS_NOT_EXACT_11")
+    print("PROBE_STAGE=EXACT_ELEVEN_NEGATIVE_SELECTOR", flush=True)
     cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
                "-Dtest=" + candidate, "surefire:test"], env=runenv)
     selected_cases = suite_xml(source)
@@ -204,6 +208,7 @@ def main():
     # the isolated class must execute and fail its normal disposable guard.
     if reports.exists(): shutil.rmtree(reports)
     mutation = "*,!" + ",!".join(DEDICATED[:-1])
+    print("PROBE_STAGE=MISSING_ONE_EXCLUSION_EXPECTED_FAIL", flush=True)
     bad_selection = cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
                               "-Dtest=" + mutation, "surefire:test"],
                         env=runenv, expect=1)
