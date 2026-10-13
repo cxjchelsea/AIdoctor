@@ -1,0 +1,55 @@
+name: U07 limited closure cross-unit nonproduction regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/u07-limited-closure-regression.yml'
+      - 'diagnosis-service/src/main/java/**'
+      - 'diagnosis-service/src/test/java/**'
+      - 'contracts/v1/bindings/java/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nonproduction-cross-unit-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      U07_RECOVERY_SCHEDULER_MODE: SYNTHETIC_ONLY
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+      - name: Compile shared Java contract
+        run: mvn -B -ntp -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Execute existing U03 U05 U06 isolated tests on same checkout
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U03NonProductionRuntimeE2ETest,U05NonProductionClinicalReadinessTest,U06ProfileBStructuralTest test
+      - name: Assert all requested suites actually executed
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree
+          directory = Path("diagnosis-service/target/surefire-reports")
+          expected = (
+              "U03NonProductionRuntimeE2ETest",
+              "U05NonProductionClinicalReadinessTest",
+              "U06ProfileBStructuralTest",
+          )
+          for name in expected:
+              files = list(directory.glob("TEST-*" + name + ".xml"))
+              assert len(files) == 1, (name, files)
+              root = ElementTree.parse(files[0]).getroot()
+              assert int(root.attrib.get("tests", "0")) > 0, name
+              for field in ("failures", "errors", "skipped"):
+                  assert int(root.attrib.get(field, "0")) == 0, (name, field)
+          print("U07_LIMITED_CROSS_UNIT_REGRESSION=PASS")
+          print("NOT_A_U01_TO_U07_END_TO_END_INTEGRATION_CLAIM")
+          PY
