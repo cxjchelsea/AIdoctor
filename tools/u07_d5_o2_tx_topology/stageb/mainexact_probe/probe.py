@@ -70,8 +70,16 @@ def suite_xml(source):
     return out
 def parse_executable_test_selector(text):
     # Names in comments, display titles or shell echo are not executable ownership.
-    commands = re.findall(r"^\s*mvn\s+[^\n]*?-Dtest=([A-Za-z0-9_,]+)\s+test\s*$",
-                          text, flags=re.MULTILINE)
+    commands = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        # Main test commands use 'mvn ...'; F-ISOLATED deliberately captures
+        # exit status with 'if ! mvn ... test >private_log 2>&1; then'.
+        if not (line.startswith("mvn ") or line.startswith("if ! mvn ")):
+            continue
+        match = re.search(r"-Dtest=([A-Za-z0-9_,]+)\s+test(?:\s|$)", line)
+        if match:
+            commands.append(match.group(1))
     check(len(commands) == 1, "SEL_EXECUTABLE_MAVEN_TEST_COMMAND_NOT_UNIQUE")
     names = commands[0].split(",")
     check(len(names) == len(set(names)), "SEL_EXECUTABLE_SELECTOR_DUPLICATE")
