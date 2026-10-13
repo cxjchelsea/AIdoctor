@@ -1,0 +1,83 @@
+name: U07 D5-O2 Stage B F-ISOLATED L0 deadlock forensics
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/d5o2/stageb/forensics/**'
+      - 'diagnosis-service/src/test/resources/u07/d5o2/stageb/forensics/**'
+      - 'tools/u07_d5_o2_tx_topology/stageb/forensics/**'
+      - '.github/workflows/u07-d5-o2-stage-b-forensics.yml'
+permissions:
+  contents: read
+jobs:
+  l0-observer-privilege-and-forensic-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: synthetic-f-disposable-root
+          MYSQL_DATABASE: u07_d5o2_f_deadlock
+        ports:
+          - 127.0.0.1:33331:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -psynthetic-f-disposable-root"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      U07_F_PROFILE: U07_D5_O2_RACE05_F_ISOLATED_SYNTHETIC
+      U07_F_ISOLATED: 'true'
+      U07_F_URL: jdbc:mysql://127.0.0.1:33331/u07_d5o2_f_deadlock?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      U07_F_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Verify synthetic merge and test-only runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^2)" = "$U07_F_PR_HEAD_SHA"
+          test "$U07_F_PROFILE" = "U07_D5_O2_RACE05_F_ISOLATED_SYNTHETIC"
+          test "$U07_F_ISOLATED" = true
+          java -version
+      - name: Bootstrap immutable DDL and least-privilege accounts
+        shell: bash
+        env:
+          MYSQL_PWD: synthetic-f-disposable-root
+        run: |
+          set -euo pipefail
+          for role in WRITER READER OBSERVER; do
+            value="$(openssl rand -hex 24)"
+            echo "::add-mask::$value"
+            printf 'F_%s_PWD=%s\n' "$role" "$value" >> "$GITHUB_ENV"
+            export "F_${role}_PWD=$value"
+          done
+          umask 077
+          python3 tools/u07_d5_o2_tx_topology/stageb/forensics/bootstrap-and-verify.py bootstrap >/tmp/f-isolated-schema.sql
+          mysql -h127.0.0.1 -P33331 -uroot u07_d5o2_f_deadlock </tmp/f-isolated-schema.sql
+          rm -f /tmp/f-isolated-schema.sql
+      - name: Java8 binding compile
+        run: mvn -B -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Java8 F-ISOLATED test compile
+        run: mvn -B -f diagnosis-service/pom.xml -DskipTests test-compile
+      - name: Real MySQL8 L0 privilege, redaction and deadlock observation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -f diagnosis-service/pom.xml -Dtest=StageBFDeadlockForensicsTest test
+          python3 tools/u07_d5_o2_tx_topology/stageb/forensics/bootstrap-and-verify.py verify
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: u07-d5-o2-f-isolated-l0-evidence
+          path: |
+            diagnosis-service/target/stage-b-f-observations/forensic-incident.json
+            diagnosis-service/target/stage-b-f-observations/role-negative.json
+            diagnosis-service/target/f-isolated-verification.json
