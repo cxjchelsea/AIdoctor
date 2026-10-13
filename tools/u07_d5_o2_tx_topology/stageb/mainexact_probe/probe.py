@@ -310,12 +310,7 @@ def main():
     evidence_path.write_text(json.dumps(evidence, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
     check(json.loads(evidence_path.read_text(encoding="utf-8")) == evidence, "PROBE_EVIDENCE_ROUNDTRIP")
     print(json.dumps(evidence, sort_keys=True))
-def verify_evidence():
-    # Admission accepts only a fixed local path and typed primitive allowlist.
-    path = Path(os.environ["RUNNER_TEMP"]) / "u07-nondb-probe-evidence.json"
-    check(path.is_file() and not path.is_symlink() and
-          path.stat().st_size < 4096, "PROBE_EVIDENCE_FILE_NOT_SAFE")
-    obj = json.loads(path.read_text(encoding="utf-8"))
+def validate_evidence_object(obj):
     allowed = {
         "schemaVersion", "runId", "runAttempt", "verdict",
         "sourceSha", "controlSha", "storeSourceBlob",
@@ -345,10 +340,45 @@ def verify_evidence():
               "ordinaryPerCaseStatusPreserved", "missingExclusionNegativeRejected",
               "shadowClassNegativeRejected"):
         check(obj[k] is True, "PROBE_EVIDENCE_REQUIRED_NEGATIVE_MISSING")
-    check(re.fullmatch(r"[0-9a-f]{64}", obj["storeCompiledSha256"]) is not None,
+    check(type(obj["storeCompiledSha256"]) is str and
+          re.fullmatch(r"[0-9a-f]{64}", obj["storeCompiledSha256"]) is not None,
           "PROBE_EVIDENCE_SHA_FORMAT")
-    check(json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n" ==
-          path.read_text(encoding="utf-8"), "PROBE_EVIDENCE_NONCANONICAL")
+
+def verify_evidence():
+    # lstat, not stat: refuse symlink or multiple-hardlink artifact aliases.
+    path = Path(os.environ["RUNNER_TEMP"]) / "u07-nondb-probe-evidence.json"
+    check(path.parent.is_dir() and not path.is_symlink() and path.is_file() and
+          path.stat().st_nlink == 1 and path.stat().st_size < 4096,
+          "PROBE_EVIDENCE_FILE_NOT_SAFE")
+    raw = path.read_text(encoding="utf-8")
+    obj = json.loads(raw)
+    validate_evidence_object(obj)
+    check(json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n" == raw,
+          "PROBE_EVIDENCE_NONCANONICAL")
+    # Real validator invocation on adversarial copies: no disk mutation.
+    mutants = []
+    for key, value in (("controlSha", "0" * 40),
+                       ("runAttempt", "99999"),
+                       ("sourceSha", "0" * 40),
+                       ("ordinaryTestsPreserved", 434),
+                       ("badHashRejected", False),
+                       ("storeCompiledSha256", "invalid")):
+        wrong = dict(obj)
+        wrong[key] = value
+        mutants.append(wrong)
+    missing = dict(obj)
+    del missing["shadowClassNegativeRejected"]
+    mutants.append(missing)
+    extra = dict(obj)
+    extra["secret"] = "never-admit"
+    mutants.append(extra)
+    for index, mutant in enumerate(mutants):
+        try:
+            validate_evidence_object(mutant)
+        except (RuntimeError, KeyError, TypeError):
+            continue
+        raise RuntimeError("PROBE_ADMISSION_MUTANT_ACCEPTED_" + str(index))
+    print("PROBE_EVIDENCE_NEGATIVE_MUTANTS_REJECTED=" + str(len(mutants)))
     print("PROBE_EVIDENCE_SAFE_UPLOAD_ADMISSION=PASS")
 
 
