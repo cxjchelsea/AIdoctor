@@ -71,7 +71,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mvn -B -f diagnosis-service/pom.xml -Dtest=StageBFDeadlockForensicsTest test
+          private_log="$RUNNER_TEMP/f-isolated-private-maven.log"
+          trap 'rm -f "$private_log"' EXIT
+          if ! mvn -B -f diagnosis-service/pom.xml -Dtest=StageBFDeadlockForensicsTest test >"$private_log" 2>&1; then
+            echo F_ISOLATED_MAVEN_FAILED
+            exit 1
+          fi
+          echo F_ISOLATED_MAVEN_PASSED
           python3 tools/u07_d5_o2_tx_topology/stageb/forensics/bootstrap-and-verify.py verify
       - name: Fail-closed safe-artifact admission (independent of test result)
         if: always()
