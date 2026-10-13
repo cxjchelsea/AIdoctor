@@ -111,9 +111,9 @@ public class StageBP1CConcurrencyTest {
      assertArrayEquals(isNew(b)?new int[]{1,1,1,1,1,1}:new int[6],sixB);
     }
    }
-   if(replayMode!=0){
+   if(replayMode!=0||scenario==1){
     StageBP1CEvidence.Actor winner=isNew(a)?a:b;
-    U06DeliveryStore.Command follow=replayMode==1?winner.command:
+    U06DeliveryStore.Command follow=(replayMode==1||scenario==1)?winner.command:
       StageBP1CEvidence.change(winner.command,2);
     StageBP1CEvidence.Actor serial=StageBP1CEvidence.invoke(env,new StageBP1CEvidence.Actor(follow));
     fact.put("sequential",StageBP1CEvidence.actor(serial));
@@ -123,7 +123,7 @@ public class StageBP1CConcurrencyTest {
      StageBP1CEvidence.full(r,winner.command);
      fact.put("afterSequentialDigest",after.digest);
     }
-    if(replayMode==1){assertEquals("ORIGINAL_REPLAY_TRUE",serial.outcome);assertEquals(0,serial.hook.writes);}
+    if(replayMode==1||scenario==1){assertEquals("ORIGINAL_REPLAY_TRUE",serial.outcome);assertEquals(0,serial.hook.writes);}
     else {assertEquals("ORIGINAL_THROW_TYPED_CONFLICT",serial.outcome);assertEquals(0,serial.hook.writes);}
     StageBP1CEvidence.emit(method,fact);
    }
