@@ -45,11 +45,11 @@ def cmd(argv, cwd=None, env=None, expect=0):
         # Never echo full Maven/JDBC logs.
         safe = [ln for ln in p.stdout.splitlines() if
                 "BUILD FAILURE" in ln or "BUILD SUCCESS" in ln or
-                "Tests run:" in ln or "PROBE_" in ln or "No tests" in ln or
+                ("[ERROR]" in ln and "Tests run:" in ln) or "PROBE_" in ln or "No tests" in ln or
                 ("[ERROR]" in ln and ("Error" in ln or "Failure" in ln or
                  "Tests run" in ln or "There are test failures" in ln))]
         raise RuntimeError("COMMAND_FAILED " + argv[0] + " rc=" +
-                           str(p.returncode) + " signals=" + repr(safe[-28:])[:2500])
+                           str(p.returncode) + " signals=" + repr(safe[:16])[:1700])
     return p
 def git(repo, *args): return cmd(["git", "-C", str(repo), *args]).stdout.strip()
 def suite_xml(source):
@@ -236,5 +236,5 @@ def main():
 if __name__ == "__main__":
     try: main()
     except Exception as exc:
-        print("NON_DB_PROBE_FAILURE=" + str(exc)[:650], file=sys.stderr)
+        print("NON_DB_PROBE_FAILURE=" + str(exc)[:1900], file=sys.stderr)
         sys.exit(1)
