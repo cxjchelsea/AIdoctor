@@ -117,14 +117,14 @@ jobs:
           trap 'rm -f "$private_log"' EXIT
           if ! mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=StageBSixTableReplayTest,StageBBoundedWholeTxRetryTest,StageBUnknownCommitReadbackFenceTest,StageBDurableRecoveryCasTest,StageBRecoverySchedulerGateTest,StageBRecoveryIntakeOutboxFenceTest,StageBPrecommitCrashIntakeTest,StageBHistoricalFlywayUpgradeTest surefire:test >"$private_log" 2>&1; then
             echo SIX_TABLE_REPLAY_REAL_MYSQL8_TEST_FAILED
-            python3 - <<'PY'
-            import glob,xml.etree.ElementTree as ET
-            for name in glob.glob('diagnosis-service/target/surefire-reports/TEST-*StageB*Test.xml'):
-                root=ET.parse(name).getroot()
-                for testcase in root.findall('.//testcase'):
-                    for issue in list(testcase.findall('error'))+list(testcase.findall('failure')):
-                        print('FAILED_CASE',testcase.attrib.get('name','unknown'),issue.attrib.get('type','unknown'),(issue.attrib.get('message','') or '')[:450])
-            PY
+          python3 - <<'PY'
+          import glob,xml.etree.ElementTree as ET
+          for name in glob.glob('diagnosis-service/target/surefire-reports/TEST-*StageB*Test.xml'):
+              root=ET.parse(name).getroot()
+              for testcase in root.findall('.//testcase'):
+                  for issue in list(testcase.findall('error'))+list(testcase.findall('failure')):
+                      print('FAILED_CASE',testcase.attrib.get('name','unknown'),issue.attrib.get('type','unknown'),(issue.attrib.get('message','') or '')[:450])
+          PY
             exit 1
           fi
           python3 - <<'PY'
