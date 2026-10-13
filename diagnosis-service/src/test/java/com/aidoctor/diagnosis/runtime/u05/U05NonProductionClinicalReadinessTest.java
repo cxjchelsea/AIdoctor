@@ -106,9 +106,9 @@ class U05NonProductionClinicalReadinessTest {
                 true, true, true, U06AdmissionEvidence.GATE_STALE,
                 U06AdmissionEvidence.PERMISSION_NOT_REQUIRED, true,
                 U06AdmissionEvidence.DEPENDENCY_ACTIVE_SYNTHETIC, false, true);
-        assertEquals(U06AdmissionService.REJECTED_GATE,
-                bridge.admit(readiness, blocked, "question-policy", "d04-policy",
-                        "synthetic-dependency", "thread-1", "run-1", 0).getStatus());
+        assertThrows(IllegalStateException.class,
+                () -> bridge.admit(readiness, blocked, "question-policy", "d04-policy",
+                        "synthetic-dependency", "thread-1", "run-1", 0));
 
         U06AdmissionService.Admission admitted = bridge.admit(
                 readiness, U06AdmissionEvidence.syntheticCurrentAllow(),
