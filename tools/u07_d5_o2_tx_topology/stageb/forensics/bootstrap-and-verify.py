@@ -172,11 +172,33 @@ def safety_only():
         return False
     try:
         for p in observed:
-            if not p.is_file() or p.stat().st_size > 65536:
+            if not p.is_file() or p.is_symlink() or p.stat().st_size > 65536:
                 return False
-            ensure_safe(json.loads(p.read_text()))
+            obj=json.loads(p.read_text())
+            ensure_safe(obj)
+            if obj.get("schema") != "U07_F_ISOLATED_L0_EVIDENCE_V1":
+                return False
+            if (obj.get("L1Verdict") != "L1_NOT_ENABLED"
+                    or obj.get("downstreamAuthority") is not False
+                    or obj.get("businessCompletion") != "NOT_AUTHORIZED_TO_ATTEST"):
+                return False
+        summary=ROOT / "diagnosis-service/target/f-isolated-verification.json"
+        if summary.exists():
+            if summary.is_symlink() or not summary.is_file() or summary.stat().st_size > 65536:
+                return False
+            x=json.loads(summary.read_text())
+            keys={"schema","sourceMainSha","candidateHead","checkoutSha","runId",
+                  "runAttempt","caseCount","sourceVerdict","forensicVerdict","L1",
+                  "businessCompletion"}
+            if set(x) != keys or x.get("schema") != "F_L0_ADMISSION_V1":
+                return False
+            if x.get("L1") != "NOT_AUTHORIZED" or x.get("businessCompletion") is not False:
+                return False
+            raw=json.dumps(x,sort_keys=True)
+            if any(word in raw for word in BLOCKED) or "FAKE_UNKNOWN_SECRET_4192" in raw:
+                return False
         return True
-    except (SystemExit, ValueError, UnicodeError, OSError):
+    except (SystemExit, ValueError, UnicodeError, OSError, TypeError):
         return False
 
 
