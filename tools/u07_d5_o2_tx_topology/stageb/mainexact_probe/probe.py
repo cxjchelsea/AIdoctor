@@ -186,7 +186,7 @@ def main():
     baseline_errors = sum(e + failure for _,_,failure,e,_ in baseline_cases)
     check(baseline_errors > 0, "SEL_BASELINE_EXPECTED_ISOLATED_FAILURE_MISSING")
     if reports.exists(): shutil.rmtree(reports)
-    candidate = "*,!" + ",!".join(DEDICATED)
+    candidate = "Test*,*Test,*Tests,*TestCase,!" + ",!".join(DEDICATED)
     check(candidate.count(",!") == 11, "SEL_EXCLUSIONS_NOT_EXACT_11")
     print("PROBE_STAGE=EXACT_ELEVEN_NEGATIVE_SELECTOR", flush=True)
     cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
@@ -207,7 +207,7 @@ def main():
     # Negative selector: intentionally delete one of 11 exclusions, then
     # the isolated class must execute and fail its normal disposable guard.
     if reports.exists(): shutil.rmtree(reports)
-    mutation = "*,!" + ",!".join(DEDICATED[:-1])
+    mutation = "Test*,*Test,*Tests,*TestCase,!" + ",!".join(DEDICATED[:-1])
     print("PROBE_STAGE=MISSING_ONE_EXCLUSION_EXPECTED_FAIL", flush=True)
     bad_selection = cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
                               "-Dtest=" + mutation, "surefire:test"],
