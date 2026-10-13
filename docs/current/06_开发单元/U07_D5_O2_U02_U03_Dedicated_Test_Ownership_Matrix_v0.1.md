@@ -59,3 +59,44 @@ All these runner workflows are **pull_request-triggered**. A prior PR-head succe
 6. Targeted independent re-review before authorizing any workflow edits.
 
 **Current decisions:** `DEDICATED_TEST_STATIC_OWNERSHIP=ALL_11_MAPPED`; `DEDICATED_EXACT_MAIN_PHYSICAL_COVERAGE=PENDING`; `EXACT_BASE_SAME_PROFILE_REPRODUCTION=PENDING`; `U02_U03_REMEDIATION_DESIGN=READY_FOR_RE_REVIEW`; `U02_U03_REMEDIATION_IMPLEMENTATION=NOT_AUTHORIZED`; `PR465_MERGE_AUTHORIZATION=NOT_GRANTED`.
+
+---
+
+## 6. Exact-class selection adversarial design — SEL-01..16 (DESIGN ONLY)
+
+**Scope:** The main `.github/workflows/u02-verification.yml` and `.github/workflows/u03-verification.yml` both execute full `mvn -f diagnosis-service/pom.xml test`, which picks up disposable-MySQL8 tests whose runtime guards are not satisfied. The exact 11 failing class names and 5 dedicated `-Dtest` owners in §1–3 are the current candidate isolation manifest. Neither the Maven Surefire exclude syntax nor a repaired run has been physically verified yet.
+
+**Candidate least-change selector:** retain normal Maven test discovery and explicitly remove *exactly* the 11 dedicated full-class identities via a versioned exclusion manifest, scoped to the generic U02/U03 CI job only. Never edit the individual isolated-test guards, never set synthetic DB env vars in generic CI, and never introduce broad `**/u07/**` patterns or `-DskipTests`. A Surefire `-Dtest` negative selector like `-Dtest='*,!SomeClass,...'` is ONLY a candidate until its exact Surefire 2.22.2 behavior and package/collision semantics are empirically verified. The Maven `-Dtest` argument may replace normal selection; if it loses ordinary test coverage, reject it and consider a separately authorized explicit plugin/profile configuration. No change to `diagnosis-service/pom.xml` is authorized here.
+
+**Build/evaluation stages:**
+- `SEL-P0` enumerate SOURCE HEAD `33c0914e` all test source FQCNs and ordinary Maven/Surefire discovered test class names. Preserve pinned full inventory and counts, not just the 11 prior failures.
+- `SEL-P1` parse each five dedicated YAML file's exact `-Dtest` names and compare with the 11 allowlisted exclusions. Require `11/11`, exactly one designated dedicated owner per class, zero orphan or duplicated owner entries.
+- `SEL-P2` run baseline *generic* U02 and U03 same-profile test commands on exact SOURCE main to establish what fails without specialized env. Do not claim this is already executed.
+- `SEL-P3` test proposed exclusions with Java8 and exact Surefire provider. Compare class/test-case `surefire-reports` XML to full selection. **Invariant:** `DiscoveredOrdinaryBefore == ExecutedOrdinaryAfter`; no ordinary test silently skipped; each excluded class absent from generic executed list and present in the dedicated suite plan.
+- `SEL-P4` execute all five dedicated runners against appropriate exact-source evidence, or formally mark `PENDING` for unavailable main-only reruns; a `PASS` is prohibited solely from YAML selector coverage. Dedicated test guards stay authoritative.
+- `SEL-P5` run deterministic mutant controls below and independent CI review before any code/CI implementation authorization.
+
+| Negative ID | Adversarial mutation | Required outcome |
+|---|---|---|
+| SEL-N01 | Exclusion missing one of 11 dedicated classes | fail inventory equality |
+| SEL-N02 | Extra exclusion of ordinary unrelated Java test | fail ordinary coverage invariant |
+| SEL-N03 | Broad exclude `**/u07/**` or `*Stage*` | fail selector validation |
+| SEL-N04 | Case typo, package collision or duplicate simple class name | fail FQCN disambiguation |
+| SEL-N05 | Class renamed/moved while manifest unchanged | fail source-to-owner match |
+| SEL-N06 | Dedicated YAML drops selected class | fail ownership coverage |
+| SEL-N07 | Same class ambiguously selected by two unrelated dedicated runner owners | fail unique owner contract |
+| SEL-N08 | `-DskipTests`, `maven.test.skip`, `failIfNoTests=false`, or zero tests from `-Dtest` | fail execution gate |
+| SEL-N09 | Surefire provider loads zero JUnit5 tests | fail executed XML count |
+| SEL-N10 | New `*Test.java` with disposable env guard but no dedicated owner | fail orphan discovery |
+| SEL-N11 | Inject synthetic DB profile into generic U02/U03 to bypass guard | fail runner profile separation |
+| SEL-N12 | Dedicated job skipped/failed but generic exclusion treated as covered | fail physical coverage evidence gate |
+| SEL-N13 | Test class disappears from ordinary suite due negative-selector override | fail ordinary before/after equality |
+| SEL-N14 | Manifest based on candidate PR HEAD rather than frozen main source | fail SHA provenance equality |
+| SEL-N15 | Failed physical test misclassified as test skipped or optional | fail required-check invariant |
+| SEL-N16 | Newly added main-exact class inadvertently included in generic suite | fail missing category/owner |
+
+**Executable result minimum:** U02 Java focused tests remain explicitly executed; U03 predecessor focused tests remain explicitly executed; generic regression suite emits machine-readable XML for every non-isolated class and retains all their assertions. The negative test matrix must include both discovery and execution path and cannot rely solely on command text inspection. A generic failure caused by isolated-runner guard is a truthful failure of the current CI job, not evidence of a broken business Store nor a waiver.
+
+**CI implementation candidate, separate authorization:** only `.github/workflows/u02-verification.yml`, `.github/workflows/u03-verification.yml` and one immutable manifest/validator new file, if feasible; exact three-file scope is provisional until class exclusion command has been proven. Changes to source tests, POM, existing dedicated workflow, or exclusion by broad regex are escalations requiring renewed scope approval.
+
+**Gate:** `CLASS_TO_OWNER_STATIC_MAPPING=PASS_11_OF_11`; `CI_EXACT_CLASS_SELECTOR_DESIGN=SUBMITTED`; `SUREFIRE_NEGATIVE_SELECTION_PHYSICAL_PROOF=PENDING`; `U02_U03_EXACT_BASE_SAME_PROFILE_RUN=PENDING`; `DEDICATED_PHYSICAL_COVERAGE=PENDING`; `CI_IMPLEMENTATION_AUTHORIZATION=NOT_GRANTED`.
