@@ -12,8 +12,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * Explicitly invoked, DB-only transaction retry boundary.
  * No network/tool/notification operation is executed by this adapter.
  */
-public final class BoundedU06WholeTxRetry {
+public final class BoundedU06WholeTxRetry implements U06DeliveryStore {
     private static final int MAX_ATTEMPTS = 2;
+    private static final long TOTAL_BUDGET_NANOS = 12_000_000_000L;
     private final JdbcTemplate jdbc;
     private final DataSourceTransactionManager txManager;
 
@@ -27,16 +28,24 @@ public final class BoundedU06WholeTxRetry {
         this.txManager = txManager;
     }
 
+    @Override
     public U06DeliveryStore.Snapshot reconcileConfirmed(U06DeliveryStore.Command command) {
         if (command == null) throw new IllegalArgumentException("U06_RETRY_COMMAND_REQUIRED");
         if (TransactionSynchronizationManager.isActualTransactionActive())
             throw new IllegalStateException("U06_RETRY_AMBIENT_TRANSACTION_FORBIDDEN");
+        // A bounded operation-wide budget, measured on a monotonic clock.
+        // It controls whether another DB-only attempt may START; it does not
+        // establish crash-recovery authority for an ambiguous commit.
+        final long startedAt = System.nanoTime();
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             ensureNotCancelled();
+            long remaining = TOTAL_BUDGET_NANOS - (System.nanoTime() - startedAt);
+            if (remaining <= 0) throw new IllegalStateException("U06_RETRY_DEADLINE_EXCEEDED");
             TransactionTemplate tx = new TransactionTemplate(txManager);
             tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
             tx.setIsolationLevel(TransactionDefinition.ISOLATION_SERIALIZABLE);
-            tx.setTimeout(10);
+            long seconds = (remaining + 999_999_999L) / 1_000_000_000L;
+            tx.setTimeout((int) Math.min(10L, Math.max(1L, seconds)));
             try {
                 return tx.execute(status -> {
                     ensureNotCancelled();
