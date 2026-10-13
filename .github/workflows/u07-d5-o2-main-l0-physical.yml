@@ -1,0 +1,141 @@
+name: U07 D5-O2 current-main L0 original Store physical witness
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/u07-d5-o2-main-l0-physical.yml'
+      - 'tools/u07_d5_o2_tx_topology/stageb/mainl0/**'
+permissions:
+  contents: read
+jobs:
+  exact-main-source-l0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: synthetic-main-l0-root
+          MYSQL_DATABASE: u07_d5o2_f_deadlock
+        ports:
+          - 127.0.0.1:33331:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -psynthetic-main-l0-root"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      MAIN_L0_SOURCE_SHA: 8614b1ee94ab4640d412c9b29d9cd237a8930814
+      MAIN_L0_CONTROL_SHA: ${{ github.event.pull_request.head.sha }}
+      U07_F_PROFILE: U07_D5_O2_RACE05_F_ISOLATED_SYNTHETIC
+      U07_F_ISOLATED: 'true'
+      U07_F_URL: jdbc:mysql://127.0.0.1:33331/u07_d5o2_f_deadlock?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      U07_F_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: control
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 8614b1ee94ab4640d412c9b29d9cd237a8930814
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+      - name: Pin original Store and current-main identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 control/tools/u07_d5_o2_tx_topology/stageb/mainl0/verify-current-main.py preflight
+      - name: Bootstrap pinned DDL and least-privilege MySQL8 identities
+        shell: bash
+        env:
+          MYSQL_PWD: synthetic-main-l0-root
+        run: |
+          set -euo pipefail
+          for role in WRITER READER OBSERVER; do
+            value="$(openssl rand -hex 24)"
+            echo "::add-mask::$value"
+            printf 'F_%s_PWD=%s\n' "$role" "$value" >> "$GITHUB_ENV"
+            export "F_${role}_PWD=$value"
+          done
+          umask 077
+          private_sql="$(mktemp "$RUNNER_TEMP/main-l0-ddl-XXXXXX")"
+          trap 'rm -f "$private_sql"' EXIT
+          python3 source/tools/u07_d5_o2_tx_topology/stageb/forensics/bootstrap-and-verify.py bootstrap >"$private_sql"
+          mysql -h127.0.0.1 -P33331 -uroot u07_d5o2_f_deadlock <"$private_sql"
+          python3 source/tools/u07_d5_o2_tx_topology/stageb/forensics/bootstrap-and-verify.py adversarial
+      - name: Compile exact pinned original Store with Java8
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f source/contracts/v1/bindings/java/pom.xml install -DskipTests
+          mvn -B -ntp -f source/diagnosis-service/pom.xml -DskipTests test-compile
+          class="source/diagnosis-service/target/classes/com/aidoctor/diagnosis/runtime/u06/delivery/JdbcU06DeliveryStore.class"
+          test -f "$class"
+          digest="$(sha256sum "$class" | cut -d' ' -f1)"
+          echo "MAIN_L0_COMPILED_STORE_SHA256=$digest" >> "$GITHUB_ENV"
+      - name: Original SERIALIZABLE Store two-writer MySQL8 L0 forensic run
+        shell: bash
+        run: |
+          set -euo pipefail
+          private_log="$(mktemp "$RUNNER_TEMP/main-l0-mvn-XXXXXX")"
+          trap 'rm -f "$private_log"' EXIT
+          if ! (export GITHUB_SHA="$MAIN_L0_SOURCE_SHA"; mvn -B -ntp -f source/diagnosis-service/pom.xml -Dtest=StageBFDeadlockForensicsTest surefire:test) >"$private_log" 2>&1; then
+            echo MAIN_L0_REAL_MYSQL8_MAVEN_FAILED
+            exit 1
+          fi
+          python3 control/tools/u07_d5_o2_tx_topology/stageb/mainl0/verify-current-main.py admit
+      - name: Safe evidence admission
+        id: safe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 control/tools/u07_d5_o2_tx_topology/stageb/mainl0/verify-current-main.py safe-upload
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+      - name: Upload only admitted current-main source witness
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: success() && steps.safe.outputs.approved == 'true'
+        with:
+          name: u07-d5-o2-current-main-source-l0-only
+          path: ${{ runner.temp }}/u07-main-l0-admitted.json
+          if-no-files-found: error
+          retention-days: 7
+  fail-closed-no-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      MAIN_L0_CONTROL_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: control
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 8614b1ee94ab4640d412c9b29d9cd237a8930814
+          path: source
+          persist-credentials: false
+      - name: Missing source evidence must be rejected
+        id: negative
+        run: python3 control/tools/u07_d5_o2_tx_topology/stageb/mainl0/verify-current-main.py negative
+      - name: Negative upload must stay skipped
+        id: upload
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: u07-main-l0-negative-MUST-NOT-EXIST
+          path: ${{ runner.temp }}/u07-main-l0-admitted.json
+          if-no-files-found: error
+      - name: Assert actual skip
+        if: always()
+        env:
+          NEGATIVE: ${{ steps.negative.outcome }}
+          UPLOAD: ${{ steps.upload.outcome }}
+        run: |
+          test "$NEGATIVE" = success
+          test "$UPLOAD" = skipped
+          echo MAIN_L0_ACTUAL_NO_EVIDENCE_UPLOAD_SKIPPED=PASS
