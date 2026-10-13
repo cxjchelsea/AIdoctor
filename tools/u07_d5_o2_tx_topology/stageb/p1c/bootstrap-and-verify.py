@@ -164,12 +164,12 @@ def verify(d):
             else:
                 if sorted([f.get("effectAAfterVector"),f.get("effectBAfterVector")]) != sorted([FULL,EMPTY]):
                     fail("DISTINCT_WINNER_LOSER")
-        if method in ("race06A","race06B"):
+        if method in ("race01","race06A","race06B"):
             if not isinstance(f.get("sequential"),dict) or not digest(f.get("afterSequentialDigest")):
                 fail("SEQUENTIAL_EVIDENCE")
             if f.get("afterSequentialDigest") != f.get("effectAAfterDigest"):
                 fail("SEQUENTIAL_INVARIANT")
-            expected = "ORIGINAL_REPLAY_TRUE" if method=="race06A" else "ORIGINAL_THROW_TYPED_CONFLICT"
+            expected = "ORIGINAL_THROW_TYPED_CONFLICT" if method=="race06B" else "ORIGINAL_REPLAY_TRUE"
             if f["sequential"].get("sourceOutcome") != expected or f["sequential"].get("writes") != 0:
                 fail("SEQUENTIAL_SOURCE")
         facts[method] = f
