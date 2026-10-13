@@ -124,6 +124,10 @@ def verify(d):
             f.get("workerTimeout") is not False or
             f.get("harnessVerdict") != "OBSERVED_OVERLAP" or
             f.get("readerDeleteDenied") is not True or
+            f.get("caseAcceptance") != "ACCEPTED_SOURCE_CHARACTERIZATION_ONLY" or
+            f.get("diagnosticStage") not in ("SIX_TABLE_IDENTITIES_CHECKED",
+                                              "BOTH_PHYSICAL_GROUPS_READ_BEFORE_ASSERTIONS") or
+            f.get("finalReaderRole", "").startswith("stagebp1c_reader@") is not True or
             f.get("physicalSixTableSafety") != "VERIFIED_BY_FRESH_READER" or
             not isinstance(f.get("finalReaderConnectionId"), int) or
             f.get("finalReaderConnectionId") <= 0 or
