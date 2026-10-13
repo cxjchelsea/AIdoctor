@@ -42,6 +42,38 @@ class U05NonProductionClinicalReadinessTest {
     private static final int VERSION = 12;
 
     @Test
+    void u04EligibilityAloneCannotBypassA1SafetyBarrierOrTriggerReadinessCommit() {
+        // The U04 ordinary eligibility is NOT an authoritative A1 post-barrier
+        // admission. Even matching current gate and route claims cannot enable U05.
+        String context = U05ConsumerInboundRequest.POST_SAFETY_INITIAL;
+        U05ReadinessInputManifest manifest = pol005Manifest(context, VERSION);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+
+        U05ExecutionResult direct = fixture.application.execute(
+                request(manifest, context, U05ConsumerInboundRequest.GATE_ALLOW, null, null),
+                manifest,
+                authority(context, U05ConsumerInboundRequest.GATE_ALLOW, null, null, true));
+        assertEquals(U05ExecutionResult.ADMISSION_REJECTED, direct.getStatus());
+        assertEquals(U05AdmissionService.CONTEXT_MISMATCH, direct.getAdmission().getReasonCode());
+        assertNull(direct.getDecision());
+        assertNull(direct.getCommitResult());
+        assertNull(direct.getRoutingDecision());
+        assertEquals(0, fixture.repository.mutationCount());
+
+        // Only the separately admitted A1 current authority is a positive
+        // U05 entry. It must not inherit permission from the rejected attempt.
+        String a1 = U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT;
+        U05ReadinessInputManifest afterBarrier = pol005Manifest(a1, VERSION);
+        U05ExecutionResult admitted = fixture.application.execute(
+                request(afterBarrier, a1, U05ConsumerInboundRequest.GATE_ALLOW, null, null),
+                afterBarrier,
+                authority(a1, U05ConsumerInboundRequest.GATE_ALLOW, null, null, true));
+        assertEquals(U05ExecutionResult.ROUTING_COMPLETE, admitted.getStatus());
+        assertEquals("COMMITTED", admitted.getCommitResult().status);
+        assertEquals(1, fixture.repository.mutationCount());
+    }
+
+    @Test
     void pol005ReadyCommitsAndRoutesOnlyToU08Eligibility() {
         U05ReadinessInputManifest manifest = pol005Manifest(
                 U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
