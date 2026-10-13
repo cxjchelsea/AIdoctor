@@ -83,7 +83,7 @@ jobs:
           paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*StageBSixTableReplayTest.xml")
           assert len(paths)==1, "EXPECTED_EXACTLY_ONE_REPORT"
           root=ET.parse(paths[0]).getroot()
-          assert int(root.get("tests","-1"))==6, "EXPECTED_SIX_TESTS"
+          assert int(root.get("tests","-1"))==7, "EXPECTED_SEVEN_TESTS"
           assert all(int(root.get(k,"-1"))==0 for k in ("failures","errors","skipped")), "SIX_TABLE_REPLAY_NOT_GREEN"
           print("U07_SIX_TABLE_DURABLE_REPLAY_REAL_MYSQL8=PASS")
           PY
