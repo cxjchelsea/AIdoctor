@@ -92,13 +92,14 @@ public class StageBFDeadlockForensicsTest {
   StageBFObserverEvidence.emit("forensic-incident",
       StageBFObserverEvidence.evidence("CAPTURE_NOT_STARTED",facts));
   try(StageBFTestConfig env=new StageBFTestConfig();
-      Connection reader=StageBFTestConfig.connection("stagebf_reader","F_READER_PWD");
+      Connection reader=env.connection("stagebf_reader","F_READER_PWD");
       Connection observer=StageBFTestConfig.connection("stagebf_observer_ps","F_OBSERVER_PWD");
       Connection wcheck=StageBFTestConfig.connection("stagebf_writer","F_WRITER_PWD")){
    StageBFObserverEvidence.permissions(wcheck,reader,observer);
    facts.put("observerRole","L0_TABLE_SELECT_ONLY");
    facts.put("rolesVerified",true);
    facts.put("roleNegativePassed",true);
+   facts.put("roleNegativeMatrix",StageBFObserverEvidence.roleNegativeMatrix());
    StageBFObserverEvidence.emit("role-negative",StageBFObserverEvidence.evidence("ROLE_NEGATIVES_PASS",facts));
    CountDownLatch ready=new CountDownLatch(2),start=new CountDownLatch(1);
    AtomicInteger finished=new AtomicInteger();
@@ -152,12 +153,15 @@ public class StageBFDeadlockForensicsTest {
    int[] ca=StageBFObserverEvidence.rows(reader,a.cmd.deliveryEffectId);
    int[] cb=StageBFObserverEvidence.rows(reader,b.cmd.deliveryEffectId);
    facts.put("readerId",StageBFObserverEvidence.id(reader));
+   facts.put("observerConnectionId",StageBFObserverEvidence.id(observer));
    facts.put("effectAVector",ca);facts.put("effectBVector",cb);
    boolean aSuccess=a.returned&&"ORIGINAL_NEW_SUCCESS".equals(a.outcome);
    boolean bSuccess=b.returned&&"ORIGINAL_NEW_SUCCESS".equals(b.outcome);
    boolean victim="ORIGINAL_SQL_1213".equals(a.outcome)||"ORIGINAL_SQL_1213".equals(b.outcome);
-   if(aSuccess)Assertions.assertArrayEquals(new int[]{1,1,1,1,1,1},ca);
-   if(bSuccess)Assertions.assertArrayEquals(new int[]{1,1,1,1,1,1},cb);
+   if(aSuccess){Assertions.assertArrayEquals(new int[]{1,1,1,1,1,1},ca);
+    StageBFObserverEvidence.assertFullIdentity(reader,a.cmd);}
+   if(bSuccess){Assertions.assertArrayEquals(new int[]{1,1,1,1,1,1},cb);
+    StageBFObserverEvidence.assertFullIdentity(reader,b.cmd);}
    if(victim){
     if("ORIGINAL_SQL_1213".equals(a.outcome))Assertions.assertArrayEquals(new int[6],ca);
     if("ORIGINAL_SQL_1213".equals(b.outcome))Assertions.assertArrayEquals(new int[6],cb);
@@ -166,13 +170,21 @@ public class StageBFDeadlockForensicsTest {
    // Never promote a mere pair of observed edges into proof unless both were captured
    // in one sampling epoch and tied to real 1213.
    if("LIVE_TWO_WRITER_CYCLE_BOUND".equals(verdict)&&!victim)verdict="PARTIAL_EDGE_ONLY";
+   facts.put("completeSixIdentityA",aSuccess);facts.put("completeSixIdentityB",bSuccess);
+   facts.put("writerAThreadId",sample==null?0:sample.aThread);
+   facts.put("writerBThreadId",sample==null?0:sample.bThread);
+   facts.put("selectedEdges",sample==null?new java.util.ArrayList<Map<String,Object>>():sample.selected);
+   facts.put("sampleEpochs",sample==null?0:sample.count);
    facts.put("sourceVerdict",victim?"ROLLBACK_CONFIRMED_1213":"NO_1213_OBSERVED");
    facts.put("liveLockGraphVerdict",verdict);
    facts.put("observerSamples",sample==null?0:sample.count);
    facts.put("readerRole","SIX_TABLE_SELECT_ONLY");
    facts.put("caseAcceptance","DIAGNOSTIC_PIPELINE_ONLY");
    StageBFObserverEvidence.emit("forensic-incident",StageBFObserverEvidence.evidence(verdict,facts));
-   Assertions.assertTrue(aSuccess||bSuccess||victim,"NO_PHYSICAL_OBSERVATION");
+   Assertions.assertTrue((aSuccess&&bSuccess)||
+    (aSuccess&&"ORIGINAL_SQL_1213".equals(b.outcome))||
+    (bSuccess&&"ORIGINAL_SQL_1213".equals(a.outcome)),
+    "F_UNEXPECTED_SECOND_ACTOR");
   }
  }
 }
