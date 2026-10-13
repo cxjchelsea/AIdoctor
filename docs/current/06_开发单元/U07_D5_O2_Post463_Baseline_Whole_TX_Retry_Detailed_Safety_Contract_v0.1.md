@@ -152,3 +152,77 @@ Every physical test must record Java 8 / MySQL 8 versions, clean schema, exact m
 2. Controlled main-only physical runner design, exact-main test-only authorization, and physical evidence.
 3. Revise typed contracts from reviewer findings; independently re-review and formally freeze once blockers close.
 4. Only after separate explicit authorization may a **test-only**, disposable-DB coordinator prototype be contemplated. Production Store fixes, SQL/isolation changes, external delivery and B2 remain out of scope.
+
+---
+
+## 10. R2-D01 remediation — concrete transaction-owner / authority seam (design candidate)
+
+**Entry boundary.** A future `CallerOwnedWholeTxAttemptPort.executeOnce(ImmutableDeliveryCommand, AttemptId, Deadline)` is invoked from a **non-transactional** caller; it must test `TransactionSynchronizationManager.isActualTransactionActive() == false` and no bound transaction resource for the target transaction manager *before attempting*. Reject `AMBIENT_TX_PRESENT`. Do not infer that the existing `JdbcU06DeliveryStore.reconcileConfirmed` annotation creates a new transaction when invoked directly through `new JdbcU06DeliveryStore(jdbc)`: the Spring proxy is absent. The future port must own one injected `DataSourceTransactionManager` and wrap exactly one `TransactionTemplate` configured with SERIALIZABLE and REQUIRES_NEW only **after rejecting an existing outer transaction**. `REQUIRES_NEW` alone is not proof of isolation or source authority.
+
+**Critical return boundary.** Returning from `TransactionTemplate.execute` means transaction-manager commit processing returned, but callback return alone is not commit proof. The port returns a typed outcome only after transaction-manager completion, resource unbinding, and a separate six-table readback. An exception propagating through execute is not by itself an authoritative rollback certificate. For a verified 1213 victim, require (a) exact error chain; (b) transaction manager's afterCompletion status `ROLLED_BACK` for that attempt; (c) no rollback/cleanup exception; (d) connection/resource ownership release; (e) independent readback `ZERO_SIX` scoped to **that exact fresh effect**. If any condition is absent/conflicting: `TX_OUTCOME_UNKNOWN`; do not retry. This conservative definition deliberately rejects safe but unverifiable attempts.
+
+**Rollback-victim limitations.** An independent readback of six zero rows is supporting evidence, not sufficient proof of rollback when an effect may have pre-existed or another writer is concurrent. This coordinator is only admissible for an immutable, previously absent synthetic effect validated *before* first attempt. Any pre-existing identity or concurrent identical-effect writers makes the negative inference invalid and must stop/reconcile.
+
+**Commit recognition.** Only a successful transaction-manager terminal signal followed by independent, consistent six-table readback is `COMMITTED_AND_VERIFIED`. If the commit returned but readback is partial/unavailable => `COMMIT_UNVERIFIED`; no retry. If commit connection lost => `TX_OUTCOME_UNKNOWN`, even when later readback might show rows; an explicit reconciliation authority must handle it.
+
+**Ownership authority:** `AttemptOwner` = caller-approved test-only attempt executor; `TransactionManager` = terminal lifecycle signal producer; `ReadbackVerifier` = independent six-table evidence producer; `RetryCoordinator` = policy consumer only; `L0Observer` = diagnostic consumer (no retry policy vote). Every typed evidence object carries `sourceKind`, `runId`, `attemptId`, `txCompletionStatus`, `connectionId`, `capturedAt`, `authorityVersion`, and `evidenceDigest`. Unknown fields/enums fail closed.
+
+## 11. R2-D02 remediation — precise classifier, budget and transition precedence
+
+Classify exceptions by traversing the bounded cause chain including `SQLException.getNextException()`, with cycle detection. `DEADLOCK_1213` requires observed MySQL `errorCode==1213` AND `SQLState=="40001"`; ambiguous SQL error mixes, translation failures, missing state, conflicting nested codes => `UNKNOWN_ERROR`. `1205`, `1062`, generic `40001`, timeouts and `DataAccessException` text never grant admission. Neither `1213` nor a complete rollback certificate alone guarantees eligibility; all TX-01/02/03/05/06/09 gates must pass.
+
+Order of decision: **(1)** cancellation/deadline; **(2)** ambient transaction/authority conflict; **(3)** unknown commit or uncertain rollback; **(4)** identity/scope/side-effect fence conflict; **(5)** precise error category and confirmed rollback; **(6)** budget; **(7)** new attempt admission. An unknown or unsafe state dominates retry eligibility. Backoff uses monotonic clock, never extends deadline; interruption before/during wait terminalizes to `CANCELLED`. No other worker is allowed to start a retry on the same operation while terminal reconciliation is unresolved.
+
+Candidate data model: `AttemptPhase {ALLOCATED, ACTIVE, CALLBACK_RETURNED, COMMITTING, COMMITTED_KNOWN, ROLLBACK_KNOWN, UNKNOWN_TERMINAL}`, `RetryEligibility {ELIGIBLE_CONFIRMED_ROLLBACK_1213, REJECT_NON_RETRYABLE, REJECT_AMBIENT_TX, REJECT_IDENTITY, REJECT_BUDGET, REJECT_SIDE_EFFECT, QUARANTINE_UNKNOWN}`, and `EvidenceAuthority {TX_MANAGER, READBACK_VERIFIER, CALLER_FENCE, DIAGNOSTIC_ONLY}`. Lifecycle recording is **post-fact**, not an authorization to issue writes.
+
+A retry never begins until prior attempt has terminated and been closed, including its JDBC connection, Spring synchronization and executor resources. Crash before terminal event => `UNKNOWN_TERMINAL`, and crash after commit-before-readback => `COMMIT_UNVERIFIED`; durable reconciliation is outside this prototype. Proposed test-only budget remains **at most 3 total attempts / 15 seconds including readback**, but exact clock source, budget and backoff parameters must receive independent freeze approval; they are not production defaults.
+
+## 12. R2-D03 remediation — six-table independent proof contract
+
+Run fresh reader **after** attempt termination, on a different physical connection (assert distinct JDBC CONNECTION_ID), autocommit-readonly consistent snapshot or explicit read-only REPEATABLE READ transaction. Snapshot boundary begins only after observed terminal attempt status. Read all six tables within one consistent reader transaction; no individual `READ_COMMITTED` snapshots stitched together. Verify exact effect key, delivery identity, authority selection effect, intent question/content/endpoint/idempotency, attempt ID/status, receipt ID/status/evidence type, confirmation evaluation ID/status/fingerprint, ledger canonical fingerprint/status and timestamps against immutable command. Check exact cardinality `[1,1,1,1,1,1]`, reject duplicates, nullable/missing mismatches, unknown statuses, orphan rows and extra same-effect rows. Use full row identities rather than a hash or row counts alone. For *rollback evidence* require `[0,0,0,0,0,0]` under qualified unique-effect precondition; if any nonzero or unconfirmed reader consistency, fail closed.
+
+The readback must never call `JdbcU06DeliveryStore.find()` or trust its `replay=true` because its existing four-way JOIN omits attempt/receipt. A separate six-table readback implementation is mandatory. A first attempt that returns replay on four tables when missing attempt/receipt is `REPLAY_INCOMPLETE`, never eventual completion and never retry-eligible. Reader outage after known commit => `COMMIT_UNVERIFIED`; readback itself shall not emit side effects. A concurrent writer or uncertain snapshot => `INDETERMINATE`, no success.
+
+## 13. R2-D04/05 remediation — side-effect fence and verdict records
+
+`SideEffectFence` is a precondition supplied by a separate test harness that has **no real delivery adapters or external tool credentials**; only synthetic, no-op witness probes are permitted. Record capability discovery and denied-real-tool invocation counters; a missing or weakened fence, downstream callback registration, nonzero side-effect counter, or unknown delivery history forces `REJECT_SIDE_EFFECT`. Do not treat synthetic `u06_delivery_receipt` as proof of SMS/call/tool dispatch. Real outbox/external delivery idempotency, crash-safe fencing and permission models remain unimplemented / not authorized.
+
+`FirstAttemptSourceEvidence` stores `RACE05_FIRST_ATTEMPT_BOTH_NEW_SUCCESS` or `RACE05_FIRST_ATTEMPT_FAILED_1213`, immutable once observed, independently of retries. `EventualCompletionEvidence` has `NOT_RUN | VERIFIED_FULL_SIX | REJECTED | UNKNOWN` and references the complete list of distinct attempts plus readback authority. One successful retry may establish eventual success while first-attempt source verdict stays failed. Never silently rewrite original PR #457 source-only RACE-05 gate.
+
+Proof provenance requires exact main SHA, exact candidate/test SHA, Java8/MySQL8 runtime versions, workflow run/attempt, synthetic schema identity, operationId/effectId digest (not raw patient identifiers), all transaction and reader connection IDs, monotonic timestamps, writer outcome vector and evidence digests. White-listed fields only; preserve logs' no-raw-SQL/no-secret redaction.
+
+## 14. R2-D06 — CI baseline triage and acceptance rule
+
+PR #465 at `0569bfaab6ab402f20059967e45119a7c8ba98d2` ran #38338977269 (U02 Java failed, Python succeeded) and #38338977155 (U03 Java failed). Logs show `StageBP1BPartialLedgerTest` and `StageBP1BReplayConflictTest` `P1B_NOT_DIS...` test environment guards; in one full suite: **473 tests, 0 failures, 38 errors, 1 skipped**. Since the only PR diff was a new markdown file, **causation is not established**, but these CI checks remain failed. To close attribution: run *identical* failing job profile against exact base main SHA `33c0914e` on a correctly configured runner; compare Java version, test selector, P1B env gates, network/db configuration and test results. No claim of pre-existing baseline failure without this run.
+
+A documentation PR may be assessed separately from these failures only by an expressly approved CI exception with exact base evidence and owner decision; absence of a changed Java file does not waive a failing required check.
+
+## 15. Separate exact-main physical runner — design only, no trigger change authorized
+
+**MR-01 Isolation:** New separately reviewed workflow file, not modification of the merged PR-only F-ISOLATED workflow. Event strategy must restrict execution to the exact `main` commit, avoiding arbitrary ref inputs and untrusted fork code; an explicit one-shot pinned commit checkout in a disposable CI environment is preferred. Minimum workflow permission `contents: read`, no write token, no patient data or production credentials. The runner must assert `git rev-parse HEAD == EXPECTED_MAIN_SHA` and `git rev-parse HEAD^2` is **not** used as PR identity. Freeze exact commit before a run.
+
+**MR-02 Adapter incompatibility:** Current workflow sets `U07_F_PR_HEAD_SHA=github.event.pull_request.head.sha` and checks `HEAD^2`; Python `verify()` enforces `HEAD^2==head` and `sha==GITHUB_SHA`; Java `evidence()` binds `candidateHead=U07_F_PR_HEAD_SHA`. Thus a main-only runner cannot simply enable `push` / `workflow_dispatch` without violating existing proof contracts. Propose *separate test-only main provenance adapter* with `sourceMainSha=EXPECTED_MAIN_SHA`, `checkoutSha=EXPECTED_MAIN_SHA`, `runnerEvent=main_exact`, `runId`, `attempt`; version this schema distinctly from PR evidence. No main witness may be mislabelled as a PR HEAD witness.
+
+**MR-03 Physical target:** Temurin Java8, pinned Docker MySQL8 image/digest where feasible, one-use localhost disposable schema, only `performance_schema.data_locks/data_lock_waits/threads` table-level L0 SELECT for observer, no PROCESS and no L1. Reuse original six owner-table DDL by verified blob IDs; no schema migrations or Store edits. Writer/readback roles remain least-privileged, credentials ephemeral and masked; no external network side effects.
+
+**MR-04 Witness:** Execute original Store's two independent synthetic SERIALIZABLE writers, L0 observer, negative role grants, exception/rollback proof, actual six-table rows, redaction and same-epoch edge logic; accept `NO_EDGE_CAPTURED` as diagnostic uncertainty rather than causal proof. Test-only main adapter is not permitted to rewrite original PR RACE-05 first-attempt result.
+
+**MR-05 Negative CI and artifact:** Independently inject command failure and verify `always()` safe admission rejection, upload skipped, no artifact. Three artifact files with *main-specific schema/version*, SHA/CRC independently downloadable, allowlisted fields, console logs sanitized. An artifact from PR-head workflow must never satisfy main-baseline closure.
+
+**MR-06 Safety and scope:** No test code, workflow, manifest, script or privilege changes are authorized by this document. First submit independent detailed design review, then a separate **limited test-only implementation authorization** with frozen explicit file inventory and rollback strategy. Keep main `33c0914e` unchanged pending that process.
+
+**Main baseline pass** requires: separately executed and independently verified evidence of actual checkout main SHA `33c0914e`, Java8/MySQL8 witness, role/redaction negative controls, no unauthorized artifacts, and precise provenance. If the expected main SHA changes, restart the exact-main gate rather than silently rebasing the target.
+
+## 16. R2 remediation traceability and decision
+
+| Finding | This design remediation | Implementation proof still missing |
+|---|---|---|
+| R2-D01 | Section 10 owner, Spring proxy, transaction terminal signal | Transaction-manager adapter and rollback signal physical tests |
+| R2-D02 | Section 11 typed classifier, precedence, resource closure | Crash/cancel/deadline deterministic & physical oracle |
+| R2-D03 | Section 12 independent consistent six-table reader | Full field-level reader implementation and fault injection |
+| R2-D04 | Section 13 no-real-tool synthetic side-effect fence | Isolated capability/permission runtime enforcement |
+| R2-D05 | Section 13 source-vs-eventual evidence contract | Typed schema registry and cross-run compatibility checks |
+| R2-D06 | Section 14 CI failure attribution, base-run criteria | Exact-main comparison CI and owner authorization |
+| Main runner | Section 15 MR-01..06 design | Separate file inventory, independent review, implementation authorization |
+
+**Updated proposed gate:** `TARGETED_DESIGN_REMEDIATION=SUBMITTED_FOR_RE_REVIEW`; `DESIGN_FREEZE=PENDING_RE_REVIEW`; `EXACT_MAIN_RUNNER_DESIGN=CANDIDATE_ONLY`; `MAIN_PHYSICAL_VERIFICATION=PENDING`; `PRODUCTION_RETRY=NOT_AUTHORIZED`; `PR465_MERGE_AUTHORIZATION=NOT_GRANTED`.
