@@ -40,8 +40,8 @@ public class StageBP1CConcurrencyTest {
     if(!readyOk)throw new IllegalStateException("P1C_READY_TIMEOUT");
     releaseNano=System.nanoTime();start.countDown();
     long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(15);
-    a=fa.get(Math.max(1,deadline-System.nanoTime()),TimeUnit.NANOSECONDS);
-    b=fb.get(Math.max(1,deadline-System.nanoTime()),TimeUnit.NANOSECONDS);
+    fa.get(Math.max(1,deadline-System.nanoTime()),TimeUnit.NANOSECONDS);
+    fb.get(Math.max(1,deadline-System.nanoTime()),TimeUnit.NANOSECONDS);
    }catch(Exception ex){
     timedOut=true;
     if(fa!=null)fa.cancel(true);
