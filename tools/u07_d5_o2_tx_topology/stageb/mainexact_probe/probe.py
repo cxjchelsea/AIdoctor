@@ -166,10 +166,52 @@ def main():
                "-Dtest=" + ORDINARY + ",!" + DEDICATED[-1], "surefire:test"], env=runenv)
     report = suite_xml(source)
     check(any(ORDINARY in t[0] for t in report), "SEL_SAFE_ORDINARY_NOT_RUN")
-    # Full 11-class selector expression static resolution; running whole suite
-    # requires a separate dedicated-runner coverage and baseline authorization.
+    # Execute unmodified generic test selection as an EXPECTED FAIL baseline,
+    # retain Surefire case identities, then run exact 11 exclusions.
+    reports = source / "diagnosis-service/target/surefire-reports"
+    if reports.exists(): shutil.rmtree(reports)
+    base_run = cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
+                          "surefire:test"], env=runenv, expect=1)
+    check(base_run.returncode != 0, "SEL_BASELINE_UNEXPECTEDLY_GREEN")
+    baseline_cases = suite_xml(source)
+    check(len(baseline_cases) >= 11, "SEL_BASELINE_XML_NOT_COMPLETE")
+    baseline_by_class = {c.split(".")[-1] for c, _, _, _, _ in baseline_cases}
+    check(set(DEDICATED).issubset(baseline_by_class),
+          "SEL_BASELINE_MISSING_DEDICATED_TEST_CLASS")
+    ordinary_before = sorted((c, n) for c,n,_,_,_ in baseline_cases
+                             if c.split(".")[-1] not in DEDICATED)
+    baseline_errors = sum(e + failure for _,_,failure,e,_ in baseline_cases)
+    check(baseline_errors > 0, "SEL_BASELINE_EXPECTED_ISOLATED_FAILURE_MISSING")
+    if reports.exists(): shutil.rmtree(reports)
     candidate = "*,!" + ",!".join(DEDICATED)
     check(candidate.count(",!") == 11, "SEL_EXCLUSIONS_NOT_EXACT_11")
+    cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
+               "-Dtest=" + candidate, "surefire:test"], env=runenv)
+    selected_cases = suite_xml(source)
+    check(len(selected_cases) > 0, "SEL_ALL_TESTS_WERE_EXCLUDED")
+    check(not any(c.split(".")[-1] in DEDICATED
+                  for c,_,_,_,_ in selected_cases),
+          "SEL_DEDICATED_TEST_EXECUTED_IN_GENERIC")
+    ordinary_after = sorted((c,n) for c,n,_,_,_ in selected_cases)
+    check(ordinary_before == ordinary_after,
+          "SEL_ORDINARY_TEST_COVERAGE_DIFFERENCE"
+          + " before=" + str(len(ordinary_before))
+          + " after=" + str(len(ordinary_after)))
+    check(not any(failure or error or skipped
+                  for _,_,failure,error,skipped in selected_cases),
+          "SEL_ORDINARY_TEST_FAILURE_OR_SKIP")
+    # Negative selector: intentionally delete one of 11 exclusions, then
+    # the isolated class must execute and fail its normal disposable guard.
+    if reports.exists(): shutil.rmtree(reports)
+    mutation = "*,!" + ",!".join(DEDICATED[:-1])
+    bad_selection = cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
+                              "-Dtest=" + mutation, "surefire:test"],
+                        env=runenv, expect=1)
+    missing_class_cases = suite_xml(source)
+    check(bad_selection.returncode != 0 and
+          any(c.split(".")[-1] == DEDICATED[-1] and (failure or err)
+              for c,_,failure,err,_ in missing_class_cases),
+          "SEL_MISSING_ONE_EXCLUSION_MUTANT_NOT_REJECTED")
     check(git(source, "status", "--porcelain") == "", "FEA_TRACKED_SOURCE_MUTATED")
     print(json.dumps({
       "verdict":"NON_DB_PROBE_FEASIBILITY_POSITIVE",
@@ -179,7 +221,10 @@ def main():
       "originTestExecuted":len(pos),
       "badHashRejected":True,"zeroTestsRejected":True,
       "safeOrdinarySelectorExecuted":True,
-      "exact11SelectorExecution":"NOT_RUN",
+      "exact11SelectorExecution":"PASS_11_EXCLUDED",
+      "ordinaryTestsPreserved":len(ordinary_after),
+      "missingExclusionNegativeRejected":True,
+      "unfilteredBaselineErrors":baseline_errors,
       "fullSEL_N01_16":"NOT_RUN",
       "mainMySQLPhysical":"NOT_RUN"
     }, sort_keys=True))
