@@ -30,11 +30,12 @@ public class StageBHistoricalFlywayUpgradeTest {
         Path folder=Files.createTempDirectory("u07-flyway-history-");
         try {
             for(int i=1;i<=6;i++) {
+                final int version=i;
                 final String prefix="V"+i+"__";
                 try(Stream<Path> paths=Files.list(original)) {
                     Path source=paths.filter(p->p.getFileName().toString().startsWith(prefix))
                         .findFirst().orElseThrow(()->new IllegalStateException(
-                            "U07_HISTORICAL_MIGRATION_MISSING_"+i));
+                            "U07_HISTORICAL_MIGRATION_MISSING_"+version));
                     Files.copy(source,folder.resolve(source.getFileName()));
                 }
             }
