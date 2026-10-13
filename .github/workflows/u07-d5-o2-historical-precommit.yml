@@ -134,8 +134,8 @@ jobs:
             paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*"+name+".xml")
             assert len(paths)==1, "EXPECTED_REPORT_"+name
             root=ET.parse(paths[0]).getroot()
-            expected = {"StageBSixTableReplayTest":7,"StageBBoundedWholeTxRetryTest":8,"StageBUnknownCommitReadbackFenceTest":5,"StageBDurableRecoveryCasTest":6,"StageBRecoverySchedulerGateTest":4,"StageBRecoveryIntakeOutboxFenceTest":5,"StageBPrecommitCrashIntakeTest":3,"StageBHistoricalFlywayUpgradeTest":1}[name]
+            expected = {"StageBSixTableReplayTest":7,"StageBBoundedWholeTxRetryTest":8,"StageBUnknownCommitReadbackFenceTest":5,"StageBDurableRecoveryCasTest":6,"StageBRecoverySchedulerGateTest":4,"StageBRecoveryIntakeOutboxFenceTest":5,"StageBPrecommitCrashIntakeTest":3,"StageBHistoricalFlywayUpgradeTest":2}[name]
             assert int(root.get("tests","-1"))==expected, "EXPECTED_COUNT_"+name
             assert all(int(root.get(k,"-1"))==0 for k in ("failures","errors","skipped")), "FAILED_"+name
-          print("U07_HISTORICAL_FLYWAY_PRECOMMIT_MYSQL8_39_CASES=PASS")
+          print("U07_HISTORICAL_BLOCKER_STAGED_MIGRATION_PRECOMMIT_MYSQL8_40_CASES=PASS")
           PY
