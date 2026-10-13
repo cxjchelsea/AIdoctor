@@ -44,13 +44,16 @@ def cmd(argv, cwd=None, env=None, expect=0):
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=240)
     if expect is not None and (p.returncode == 0) != (expect == 0):
         # Never echo full Maven/JDBC logs.
-        safe = [ln for ln in p.stdout.splitlines() if
-                "BUILD FAILURE" in ln or "BUILD SUCCESS" in ln or
-                ("[ERROR]" in ln and "Tests run:" in ln) or "PROBE_" in ln or "No tests" in ln or
-                ("[ERROR]" in ln and ("Error" in ln or "Failure" in ln or
-                 "Tests run" in ln or "There are test failures" in ln))]
-        raise RuntimeError("COMMAND_FAILED " + argv[0] + " rc=" +
-                           str(p.returncode) + " signals=" + repr(safe[:16])[:1700])
+        # Strict, typed boolean signals only: never forward arbitrary Maven/SQL output.
+        signals = {
+            "buildFailure": "BUILD FAILURE" in p.stdout,
+            "testFailures": "There are test failures" in p.stdout,
+            "noTests": ("No tests were executed" in p.stdout or
+                        "No tests matching pattern" in p.stdout),
+            "nonzero": p.returncode != 0,
+        }
+        raise RuntimeError("COMMAND_FAILED_" + Path(argv[0]).name +
+                           "_SIGNALS_" + json.dumps(signals, sort_keys=True))
     return p
 def git(repo, *args): return cmd(["git", "-C", str(repo), *args]).stdout.strip()
 def suite_xml(source):
@@ -236,7 +239,10 @@ def main():
               for c,_,failure,err,_,_ in missing_class_cases),
           "SEL_MISSING_ONE_EXCLUSION_MUTANT_NOT_REJECTED")
     check(git(source, "status", "--porcelain") == "", "FEA_TRACKED_SOURCE_MUTATED")
-    print(json.dumps({
+    evidence = {
+      "schemaVersion":"U07_D5_O2_NONDB_PROBE_V1",
+      "runId":os.environ.get("GITHUB_RUN_ID", ""),
+      "runAttempt":os.environ.get("GITHUB_RUN_ATTEMPT", ""),
       "verdict":"NON_DB_PROBE_FEASIBILITY_POSITIVE",
       "sourceSha":head,"controlSha":ctrl,
       "storeSourceBlob":EXPECTED_STORE_BLOB,
@@ -251,7 +257,12 @@ def main():
       "unfilteredBaselineErrors":baseline_errors,
       "fullSEL_N01_16":"NOT_RUN",
       "mainMySQLPhysical":"NOT_RUN"
-    }, sort_keys=True))
+    }
+    check(bool(evidence["runId"]) and bool(evidence["runAttempt"]), "PROBE_RUN_IDENTITY_MISSING")
+    evidence_path = Path(os.environ["RUNNER_TEMP"]) / "u07-nondb-probe-evidence.json"
+    evidence_path.write_text(json.dumps(evidence, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+    check(json.loads(evidence_path.read_text(encoding="utf-8")) == evidence, "PROBE_EVIDENCE_ROUNDTRIP")
+    print(json.dumps(evidence, sort_keys=True))
 if __name__ == "__main__":
     try: main()
     except Exception as exc:
