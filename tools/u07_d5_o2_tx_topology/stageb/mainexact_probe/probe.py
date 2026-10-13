@@ -12,6 +12,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 EXPECTED = "33c0914e843d7976c7ff2272338377aa4925f443"
+EXPECTED_STORE_BLOB = "6b67b75bb121410a0a78b6cbf188a5369ad5d1fb"
 TEST = "ProbeStoreOriginTest"
 RESOURCE = "com/aidoctor/diagnosis/runtime/u06/delivery/JdbcU06DeliveryStore.class"
 ORDINARY = "U02ClinicalFactFormationTest"
@@ -55,22 +56,26 @@ def git(repo, *args): return cmd(["git", "-C", str(repo), *args]).stdout.strip()
 def suite_xml(source):
     reports = source / "diagnosis-service/target/surefire-reports"
     out = []
-    for path in reports.glob("TEST-*.xml"):
+    for path in sorted(reports.glob("TEST-*.xml")):
         root = ET.parse(path).getroot()
         for tc in root.findall(".//testcase"):
+            skips = tc.findall("skipped")
+            status = "ERROR" if tc.findall("error") else ("FAIL" if tc.findall("failure") else ("SKIP" if skips else "PASS"))
             out.append((tc.attrib.get("classname", ""), tc.attrib.get("name", ""),
-                        len(tc.findall("failure")), len(tc.findall("error")),
-                        len(tc.findall("skipped"))))
+                        int(bool(tc.findall("failure"))), int(bool(tc.findall("error"))),
+                        int(bool(skips)), status))
     return out
 def validate_selector(source):
     wf = source / ".github/workflows"
     all_owners = []
     for owner, classes in OWNERS.items():
         text = (wf / SELECTORS[owner]).read_text(encoding="utf-8")
-        # Verify exact dedicated selectors with literal test names.
-        for name in classes:
-            check(re.search(r"\b" + re.escape(name) + r"\b", text) is not None,
-                  "SEL_OWNER_SELECTOR_ABSENT_" + name)
+        # Extract executable Maven -Dtest= selector; a name in a comment is not proof.
+        matches = re.findall(r"-Dtest=([A-Za-z0-9_,]+)", text)
+        check(len(matches) == 1, "SEL_OWNER_SELECTOR_UNIQUE_" + owner)
+        actual = matches[0].split(",")
+        check(len(actual) == len(set(actual)), "SEL_OWNER_DUPLICATE_" + owner)
+        check(set(actual) == set(classes), "SEL_OWNER_EXECUTABLE_SCOPE_MISMATCH_" + owner)
         all_owners.extend(classes)
     check(len(all_owners) == len(set(all_owners)) == 11, "SEL_NOT_UNIQUE_11")
     tree = source / "diagnosis-service/src/test/java"
@@ -105,6 +110,7 @@ def main():
     check(head == EXPECTED, "FEA_SOURCE_SHA_NOT_EXACT")
     check(ctrl == os.environ["PROBE_CONTROL_HEAD"], "FEA_CONTROL_SHA_NOT_EXACT")
     check(git(source, "status", "--porcelain") == "", "FEA_SOURCE_DIRTY")
+    check(git(source, "rev-parse", "HEAD:diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/delivery/JdbcU06DeliveryStore.java") == EXPECTED_STORE_BLOB, "FEA_SOURCE_STORE_BLOB_MISMATCH")
     check(git(control, "status", "--porcelain") == "", "FEA_CONTROL_DIRTY")
     validate_selector(source)
     selector_mutants()
@@ -146,6 +152,7 @@ def main():
     check(sha256(store) == store_hash, "FEA_STORE_OVERWRITTEN")
     runenv = dict(env, PROBE_SOURCE_CLASSES=str(sourceclasses.resolve()),
                   PROBE_STORE_CLASS_SHA256=store_hash,
+                  PROBE_STORE_SOURCE_BLOB=EXPECTED_STORE_BLOB,
                   PROBE_TARGET_MAIN_SHA=EXPECTED)
     # Verify Surefire 2.22.x sees a staged JUnit5 class, executes exactly 1.
     cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
@@ -159,10 +166,18 @@ def main():
     wrong = dict(runenv, PROBE_STORE_CLASS_SHA256="0" * 64)
     bad = cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
                      "-Dtest=" + TEST, "surefire:test"], env=wrong, expect=1)
-    check(bad.returncode != 0, "FEA_BAD_HASH_MUTANT_ACCEPTED")
+    bad_errors = suite_xml(source)
+    check(bad.returncode != 0 and any(c.endswith("." + TEST) and e and
+          "loadedStoreMustBeFromPinnedHistoricalSource" == n for c,n,_,e,_,_ in bad_errors),
+          "FEA_BAD_HASH_MUTANT_CAUSE_UNVERIFIED")
+    check("PROBE_STORE_RUNTIME_BYTES_MISMATCH" in bad.stdout or
+          "PROBE_STORE_LOADED_BYTES_MISMATCH" in bad.stdout,
+          "FEA_BAD_HASH_EXPECTED_ASSERTION_MISSING")
     absent = cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
                         "-Dtest=DefinitelyNoSuchTest_U07", "surefire:test"], env=runenv, expect=1)
-    check(absent.returncode != 0, "FEA_ZERO_TEST_MUTANT_ACCEPTED")
+    check(absent.returncode != 0 and ("No tests were executed" in absent.stdout or
+          "No tests matching pattern" in absent.stdout),
+          "FEA_ZERO_TEST_REASON_UNVERIFIED")
     # Actual exact exclusion syntax smoke on selected safe ordinary test.
     cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
                "-Dtest=" + ORDINARY + ",!" + DEDICATED[-1], "surefire:test"], env=runenv)
@@ -178,14 +193,13 @@ def main():
     check(base_run.returncode != 0, "SEL_BASELINE_UNEXPECTEDLY_GREEN")
     baseline_cases = suite_xml(source)
     check(len(baseline_cases) >= 11, "SEL_BASELINE_XML_NOT_COMPLETE")
-    baseline_by_class = {c.split(".")[-1] for c, _, _, _, _ in baseline_cases}
+    baseline_by_class = {c.split(".")[-1] for c, _, _, _, _, _ in baseline_cases}
     check(set(DEDICATED).issubset(baseline_by_class),
           "SEL_BASELINE_MISSING_DEDICATED_TEST_CLASS")
-    ordinary_before = sorted((c, n) for c,n,_,_,_ in baseline_cases
+    ordinary_before = sorted((c, n, status) for c,n,_,_,_,status in baseline_cases
                              if c.split(".")[-1] not in DEDICATED)
-    baseline_errors = sum(e + failure for _,_,failure,e,_ in baseline_cases)
-    ordinary_skips_before = sum(skipped for c,_,_,_,skipped in baseline_cases
-                                if c.split(".")[-1] not in DEDICATED)
+    check(len(ordinary_before) == len(set((c,n) for c,n,_ in ordinary_before)), "SEL_ORDINARY_DUPLICATE_CASE")
+    baseline_errors = sum(e + failure for _,_,failure,e,_,_ in baseline_cases)
     check(baseline_errors > 0, "SEL_BASELINE_EXPECTED_ISOLATED_FAILURE_MISSING")
     if reports.exists(): shutil.rmtree(reports)
     candidate = "Test*,*Test,*Tests,*TestCase,!" + ",!".join(DEDICATED)
@@ -196,18 +210,17 @@ def main():
     selected_cases = suite_xml(source)
     check(len(selected_cases) > 0, "SEL_ALL_TESTS_WERE_EXCLUDED")
     check(not any(c.split(".")[-1] in DEDICATED
-                  for c,_,_,_,_ in selected_cases),
+                  for c,_,_,_,_,_ in selected_cases),
           "SEL_DEDICATED_TEST_EXECUTED_IN_GENERIC")
-    ordinary_after = sorted((c,n) for c,n,_,_,_ in selected_cases)
+    ordinary_after = sorted((c,n,status) for c,n,_,_,_,status in selected_cases)
+    check(len(ordinary_after) == len(set((c,n) for c,n,_ in ordinary_after)), "SEL_SELECTED_DUPLICATE_CASE")
     check(ordinary_before == ordinary_after,
-          "SEL_ORDINARY_TEST_COVERAGE_DIFFERENCE"
+          "SEL_ORDINARY_PER_CASE_STATUS_DRIFT"
           + " before=" + str(len(ordinary_before))
           + " after=" + str(len(ordinary_after)))
     check(not any(failure or error
-                  for _,_,failure,error,skipped in selected_cases),
+                  for _,_,failure,error,_,_ in selected_cases),
           "SEL_ORDINARY_TEST_FAILURE")
-    check(sum(skipped for _,_,_,_,skipped in selected_cases) == ordinary_skips_before,
-          "SEL_ORDINARY_SKIP_STATUS_DRIFT")
     # Negative selector: intentionally delete one of 11 exclusions, then
     # the isolated class must execute and fail its normal disposable guard.
     if reports.exists(): shutil.rmtree(reports)
@@ -219,19 +232,20 @@ def main():
     missing_class_cases = suite_xml(source)
     check(bad_selection.returncode != 0 and
           any(c.split(".")[-1] == DEDICATED[-1] and (failure or err)
-              for c,_,failure,err,_ in missing_class_cases),
+              for c,_,failure,err,_,_ in missing_class_cases),
           "SEL_MISSING_ONE_EXCLUSION_MUTANT_NOT_REJECTED")
     check(git(source, "status", "--porcelain") == "", "FEA_TRACKED_SOURCE_MUTATED")
     print(json.dumps({
       "verdict":"NON_DB_PROBE_FEASIBILITY_POSITIVE",
       "sourceSha":head,"controlSha":ctrl,
-      "storeSourceBlob":git(source,"rev-parse","HEAD:diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/delivery/JdbcU06DeliveryStore.java"),
+      "storeSourceBlob":EXPECTED_STORE_BLOB,
       "storeCompiledSha256":store_hash,
       "originTestExecuted":len(pos),
       "badHashRejected":True,"zeroTestsRejected":True,
       "safeOrdinarySelectorExecuted":True,
       "exact11SelectorExecution":"PASS_11_EXCLUDED",
       "ordinaryTestsPreserved":len(ordinary_after),
+      "ordinaryPerCaseStatusPreserved":True,
       "missingExclusionNegativeRejected":True,
       "unfilteredBaselineErrors":baseline_errors,
       "fullSEL_N01_16":"NOT_RUN",
