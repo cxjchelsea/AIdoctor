@@ -1,0 +1,36 @@
+name: U07 D5-O2 Flyway historical checksum preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/u07-d5-o2-flyway-history-gate.yml'
+      - 'tools/u07_d5_o2_tx_topology/production_candidate/verify_flyway_history.py'
+      - 'tools/u07_d5_o2_tx_topology/production_candidate/test_flyway_history.py'
+      - 'tools/u07_d5_o2_tx_topology/production_candidate/HISTORICAL_RELEASE_DECISION.md'
+
+permissions:
+  contents: read
+
+jobs:
+  flyway-history-preflight-synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Offline fail-closed MySQL8 / Oracle history admission unit verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/u07_d5_o2_tx_topology/production_candidate/test_flyway_history.py -v
+          python3 - <<'PY'
+          from pathlib import Path
+          mysql = Path("diagnosis-service/src/main/resources/db/migration")
+          oracle = Path("diagnosis-service/src/main/resources/db/migration-oracle")
+          for root in (mysql,oracle):
+              assert sorted(int(p.name.split("__")[0][1:]) for p in root.glob("V*.sql")) == list(range(1,7))
+          print("U07_FROZEN_FLYWAY_DEFAULT_MIGRATION_V1_V6_UNMODIFIED=PASS")
+          print("U07_HISTORY_ADMISSION_SYNTHETIC_TESTS=PASS_12")
+          PY
