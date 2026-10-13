@@ -84,7 +84,8 @@ jobs:
             paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*"+name+".xml")
             assert len(paths)==1, "EXPECTED_REPORT_"+name
             root=ET.parse(paths[0]).getroot()
-            assert int(root.get("tests","-1"))==7, "EXPECTED_SEVEN_"+name
+            expected = 8 if name == "StageBBoundedWholeTxRetryTest" else 7
+            assert int(root.get("tests","-1"))==expected, "EXPECTED_COUNT_"+name
             assert all(int(root.get(k,"-1"))==0 for k in ("failures","errors","skipped")), "FAILED_"+name
-          print("U07_CONSOLIDATED_MAIN_REPLAY_RETRY_MYSQL8_14_CASES=PASS")
+          print("U07_CONSOLIDATED_MAIN_REPLAY_RETRY_MYSQL8_15_CASES=PASS")
           PY
