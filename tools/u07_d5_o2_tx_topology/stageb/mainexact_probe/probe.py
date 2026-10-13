@@ -68,15 +68,40 @@ def suite_xml(source):
                         int(bool(tc.findall("failure"))), int(bool(tc.findall("error"))),
                         int(bool(skips)), status))
     return out
+def parse_executable_test_selector(text):
+    # Names in comments, display titles or shell echo are not executable ownership.
+    commands = re.findall(r"^\\s*mvn\\s+[^\\n]*?-Dtest=([A-Za-z0-9_,]+)\\s+test\\s*$",
+                          text, flags=re.MULTILINE)
+    check(len(commands) == 1, "SEL_EXECUTABLE_MAVEN_TEST_COMMAND_NOT_UNIQUE")
+    names = commands[0].split(",")
+    check(len(names) == len(set(names)), "SEL_EXECUTABLE_SELECTOR_DUPLICATE")
+    return names
+
+def selector_parser_negatives():
+    legitimate = "  mvn -B -f diagnosis-service/pom.xml -Dtest=AlphaTest,BetaTest test\\n"
+    check(parse_executable_test_selector(legitimate.replace("\\\\n", "\\n")) == ["AlphaTest", "BetaTest"],
+          "SEL_PARSER_POSITIVE_REJECTED")
+    mutations = [
+      "# mvn -B -f diagnosis-service/pom.xml -Dtest=AlphaTest,BetaTest test\\n",
+      "name: -Dtest=AlphaTest,BetaTest\\n",
+      "echo mvn -Dtest=AlphaTest,BetaTest test\\n",
+      "mvn -Dtest=AlphaTest,AlphaTest test\\n",
+      "mvn -Dtest=AlphaTest test\\nmvn -Dtest=BetaTest test\\n",
+    ]
+    for i, raw in enumerate(mutations):
+        try:
+            parse_executable_test_selector(raw.replace("\\\\n", "\\n"))
+        except RuntimeError:
+            continue
+        raise RuntimeError("SEL_PARSER_MUTANT_ACCEPTED_" + str(i))
+
 def validate_selector(source):
     wf = source / ".github/workflows"
     all_owners = []
     for owner, classes in OWNERS.items():
         text = (wf / SELECTORS[owner]).read_text(encoding="utf-8")
         # Extract executable Maven -Dtest= selector; a name in a comment is not proof.
-        matches = re.findall(r"-Dtest=([A-Za-z0-9_,]+)", text)
-        check(len(matches) == 1, "SEL_OWNER_SELECTOR_UNIQUE_" + owner)
-        actual = matches[0].split(",")
+        actual = parse_executable_test_selector(text)
         check(len(actual) == len(set(actual)), "SEL_OWNER_DUPLICATE_" + owner)
         check(set(actual) == set(classes), "SEL_OWNER_EXECUTABLE_SCOPE_MISMATCH_" + owner)
         all_owners.extend(classes)
@@ -115,6 +140,7 @@ def main():
     check(git(source, "status", "--porcelain") == "", "FEA_SOURCE_DIRTY")
     check(git(source, "rev-parse", "HEAD:diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/delivery/JdbcU06DeliveryStore.java") == EXPECTED_STORE_BLOB, "FEA_SOURCE_STORE_BLOB_MISMATCH")
     check(git(control, "status", "--porcelain") == "", "FEA_CONTROL_DIRTY")
+    selector_parser_negatives()
     validate_selector(source)
     selector_mutants()
     m2 = Path(tempfile.mkdtemp(prefix="u07-probe-m2-"))
