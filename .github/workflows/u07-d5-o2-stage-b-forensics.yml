@@ -63,6 +63,11 @@ jobs:
           python3 tools/u07_d5_o2_tx_topology/stageb/forensics/bootstrap-and-verify.py bootstrap >/tmp/f-isolated-schema.sql
           mysql -h127.0.0.1 -P33331 -uroot u07_d5o2_f_deadlock </tmp/f-isolated-schema.sql
           rm -f /tmp/f-isolated-schema.sql
+      - name: Deterministic fail-closed and lock-edge adversarial contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/u07_d5_o2_tx_topology/stageb/forensics/bootstrap-and-verify.py adversarial
       - name: Java8 binding compile
         run: mvn -B -f contracts/v1/bindings/java/pom.xml install -DskipTests
       - name: Java8 F-ISOLATED test compile
