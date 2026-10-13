@@ -69,28 +69,44 @@ public class StageBP1CConcurrencyTest {
    int successes=(isNew(a)?1:0)+(isNew(b)?1:0);
    int replay=(isReplay(a)?1:0)+(isReplay(b)?1:0);
    fact.put("newSuccessCount",successes);fact.put("replayCount",replay);
+   // Fail-closed witness: no completeness assertion may erase the actor and physical readback facts.
+   fact.put("caseAcceptance","DIAGNOSTIC_ONLY_NOT_ACCEPTED");
+   fact.put("physicalSixTableSafety","UNVERIFIED_OR_FAILED");
+   fact.put("diagnosticStage","WORKERS_TERMINATED");
+   StageBP1CEvidence.emit(method,fact);
    String groupA,groupB;
-   int[] sixA,sixB;long readerId;
+   int[] sixA,sixB;
+   long readerId;
    try(Connection r=StageBP1CEvidence.reader()){
     readerId=StageBP1CEvidence.id(r);
+    fact.put("finalReaderConnectionId",readerId);
+    fact.put("finalReaderRole",StageBP1CEvidence.role(r));
+    fact.put("readerDeleteDenied",true);
+    StageBP1CEvidence.emit(method,fact);
     assertNotEquals(readerId,a.hook.writerId);
     assertNotEquals(readerId,b.hook.writerId);
     StageBP1CEvidence.Group ga=StageBP1CEvidence.read(r,first.deliveryEffectId);
     StageBP1CEvidence.Group gb=StageBP1CEvidence.read(r,second.deliveryEffectId);
     groupA=ga.digest;groupB=gb.digest;sixA=ga.counts;sixB=gb.counts;
+    fact.put("effectAAfterVector",sixA);fact.put("effectBAfterVector",sixB);
+    fact.put("effectAAfterDigest",groupA);fact.put("effectBAfterDigest",groupB);
+    fact.put("effectsShared",first.deliveryEffectId.equals(second.deliveryEffectId));
+    fact.put("diagnosticStage","BOTH_PHYSICAL_GROUPS_READ_BEFORE_ASSERTIONS");
+    StageBP1CEvidence.emit(method,fact);
     if(scenario==6){
      StageBP1CEvidence.full(r,first);StageBP1CEvidence.full(r,second);
     }else{
      if(isNew(a))StageBP1CEvidence.full(r,first);
      if(isNew(b))StageBP1CEvidence.full(r,second);
     }
+   }catch(Exception ex){
+    fact.put("physicalReadErrorClass",ex.getClass().getName());
+    fact.put("physicalReadSqlError",StageBP1CEvidence.sqlError(ex));
+    fact.put("caseAcceptance","DIAGNOSTIC_ONLY_NOT_ACCEPTED");
+    StageBP1CEvidence.emit(method,fact);
+    throw ex;
    }
-   fact.put("finalReaderConnectionId",readerId);fact.put("readerDeleteDenied",true);
-   fact.put("effectAAfterVector",sixA);fact.put("effectBAfterVector",sixB);
-   fact.put("effectAAfterDigest",groupA);fact.put("effectBAfterDigest",groupB);
-   fact.put("effectsShared",first.deliveryEffectId.equals(second.deliveryEffectId));
-   fact.put("physicalSixTableSafety","VERIFIED_BY_FRESH_READER");
-   // Preserve observed facts even if original Store concurrency violates the expected invariant.
+   fact.put("diagnosticStage","SIX_TABLE_IDENTITIES_CHECKED");
    StageBP1CEvidence.emit(method,fact);
    assertTrue(overlapping,"P1C_NO_OBSERVED_TX_OVERLAP");
    if(scenario==6){
@@ -111,6 +127,7 @@ public class StageBP1CConcurrencyTest {
      assertArrayEquals(isNew(b)?new int[]{1,1,1,1,1,1}:new int[6],sixB);
     }
    }
+   // Accepted attestation is emitted only after both actor and DB-state invariants pass.
    if(replayMode!=0||scenario==1){
     StageBP1CEvidence.Actor winner=isNew(a)?a:b;
     U06DeliveryStore.Command follow=(replayMode==1||scenario==1)?winner.command:
@@ -125,8 +142,10 @@ public class StageBP1CConcurrencyTest {
     }
     if(replayMode==1||scenario==1){assertEquals("ORIGINAL_REPLAY_TRUE",serial.outcome);assertEquals(0,serial.hook.writes);}
     else {assertEquals("ORIGINAL_THROW_TYPED_CONFLICT",serial.outcome);assertEquals(0,serial.hook.writes);}
-    StageBP1CEvidence.emit(method,fact);
    }
+   fact.put("physicalSixTableSafety","VERIFIED_BY_FRESH_READER");
+   fact.put("caseAcceptance","ACCEPTED_SOURCE_CHARACTERIZATION_ONLY");
+   StageBP1CEvidence.emit(method,fact);
   }
  }
  private static StageBP1CEvidence.Actor worker(StageBP1CTestConfig env,StageBP1CEvidence.Actor actor,
