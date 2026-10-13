@@ -133,4 +133,15 @@ public class StageBSixTableReplayTest {
             counts(env, c, 1,1,1,1,1,1);
         }
     }
+    @Test
+    public void changedConfirmationStatusFailsClosed() throws Exception {
+        try (StageBFTestConfig env = new StageBFTestConfig()) {
+            U06DeliveryStore.Command c = command();
+            write(env, c);
+            admin(c, "UPDATE u06_delivery_confirmation SET confirmation_status='CORRUPTED' WHERE delivery_effect_id=?");
+            conflict(env, c);
+            counts(env, c, 1,1,1,1,1,1);
+        }
+    }
+
 }
