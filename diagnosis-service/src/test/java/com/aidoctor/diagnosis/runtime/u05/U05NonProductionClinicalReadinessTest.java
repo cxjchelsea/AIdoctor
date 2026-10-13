@@ -4,6 +4,8 @@ import com.aidoctor.contracts.v1.StateTypes;
 import com.aidoctor.diagnosis.runtime.u06.U05QuestionRouteAdmissionAdapter;
 import com.aidoctor.diagnosis.runtime.u06.U06AdmissionEvidence;
 import com.aidoctor.diagnosis.runtime.u06.U06AdmissionService;
+import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01Runtime;
+import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01TestFactory;
 import com.aidoctor.diagnosis.runtime.effects.CanonicalEffectLedger;
 import com.aidoctor.diagnosis.runtime.effects.CanonicalEffectLedgerDecision;
 import com.aidoctor.diagnosis.runtime.effects.NonProductionFileCanonicalEffectLedger;
@@ -110,10 +112,18 @@ class U05NonProductionClinicalReadinessTest {
                 () -> bridge.admit(readiness, blocked, VERSION + 1, "question-policy", "d04-policy",
                         "synthetic-dependency", "thread-1", "run-1", 0));
 
+        // This is the actual U06 test runtime, not the U05 state repository.
+        // Its state starts at v0, so a U05 v13 route must NOT execute against
+        // it merely because an adapter caller can repeat "13".
+        U06SyntheticP01Runtime independentU06State = U06SyntheticP01TestFactory.create(
+                "separate-u06-store", "consult-1", "cdp-1", CLOCK);
+        assertEquals(0, independentU06State.readCurrent().getVersion());
         assertThrows(IllegalStateException.class,
                 () -> bridge.admit(readiness, U06AdmissionEvidence.syntheticCurrentAllow(),
-                        VERSION, "question-policy", "d04-policy",
+                        independentU06State.readCurrent().getVersion(),
+                        "question-policy", "d04-policy",
                         "synthetic-dependency", "thread-1", "run-1", 0));
+        assertEquals(0, independentU06State.getMutationCount());
 
         U06AdmissionService.Admission admitted = bridge.admit(
                 readiness, U06AdmissionEvidence.syntheticCurrentAllow(), VERSION + 1,
