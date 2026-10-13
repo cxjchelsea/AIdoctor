@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
-import java.util.Collections;
 import java.util.Enumeration;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -42,6 +41,8 @@ public final class ProbeStoreOriginTest {
         }
         Assertions.assertEquals("33c0914e843d7976c7ff2272338377aa4925f443",
                 required("PROBE_TARGET_MAIN_SHA"), "PROBE_SOURCE_SHA_MISMATCH");
+        Assertions.assertEquals("6b67b75bb121410a0a78b6cbf188a5369ad5d1fb",
+                required("PROBE_STORE_SOURCE_BLOB"), "PROBE_SOURCE_BLOB_MISMATCH");
         System.out.println("PROBE_ORIGINAL_STORE_RUNTIME_CLASS_AUTHORITY=PASS");
     }
     private static String required(String k) {
