@@ -53,11 +53,11 @@ final class StageBFObserverEvidence {
   deny(w,"UPDATE u06_delivery_ledger SET confirmation_status='X' WHERE delivery_effect_id='f-denied'");
   deny(r,"INSERT INTO u06_delivery_ledger(delivery_effect_id) VALUES ('f-denied')");
   deny(r,"DELETE FROM u06_delivery_ledger WHERE delivery_effect_id='f-denied'");
-  deny(o,"SELECT delivery_effect_id FROM u06_delivery_ledger LIMIT 1");
-  deny(o,"DELETE FROM u06_delivery_ledger WHERE delivery_effect_id='f-denied'");
-  deny(o,"UPDATE u06_delivery_ledger SET confirmation_status='X' WHERE delivery_effect_id='f-denied'");
-  deny(o,"INSERT INTO u06_delivery_ledger(delivery_effect_id) VALUES ('f-denied')");
-  deny(o,"CREATE TABLE stagebf_illegal(a int)");
+  deny(o,"SELECT delivery_effect_id FROM u07_d5o2_f_deadlock.u06_delivery_ledger LIMIT 1");
+  deny(o,"DELETE FROM u07_d5o2_f_deadlock.u06_delivery_ledger WHERE delivery_effect_id='f-denied'");
+  deny(o,"UPDATE u07_d5o2_f_deadlock.u06_delivery_ledger SET confirmation_status='X' WHERE delivery_effect_id='f-denied'");
+  deny(o,"INSERT INTO u07_d5o2_f_deadlock.u06_delivery_ledger(delivery_effect_id) VALUES ('f-denied')");
+  deny(o,"CREATE TABLE u07_d5o2_f_deadlock.stagebf_illegal(a int)");
   deny(o,"SHOW ENGINE INNODB STATUS");
   try(Statement p=o.createStatement()){p.setQueryTimeout(2);
    try(ResultSet rs=p.executeQuery("SHOW GRANTS")){
