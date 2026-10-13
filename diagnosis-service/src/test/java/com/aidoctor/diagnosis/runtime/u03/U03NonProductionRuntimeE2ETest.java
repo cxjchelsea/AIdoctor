@@ -1,6 +1,15 @@
 package com.aidoctor.diagnosis.runtime.u03;
 
 import com.aidoctor.contracts.v1.StateTypes;
+import com.aidoctor.diagnosis.runtime.u04.U04AdmissionService;
+import com.aidoctor.diagnosis.runtime.u04.U04CommitService;
+import com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult;
+import com.aidoctor.diagnosis.runtime.u04.U04NonProductionApplicationService;
+import com.aidoctor.diagnosis.runtime.u04.U04RoutingEligibility;
+import com.aidoctor.diagnosis.runtime.u04.U04SafetyGateDecision;
+import com.aidoctor.diagnosis.runtime.u04.U04SafetyGatePolicy;
+import com.aidoctor.diagnosis.runtime.u04.U04ScopeContext;
+import com.aidoctor.diagnosis.runtime.u04.U04StateProposalFactory;
 import com.aidoctor.diagnosis.runtime.governance.CapabilityBindingRecord;
 import com.aidoctor.diagnosis.runtime.governance.CapabilityExecutionContext;
 import com.aidoctor.diagnosis.runtime.governance.CapabilityInvocationGuard;
@@ -137,6 +146,25 @@ class U03NonProductionRuntimeE2ETest {
 
         assertTrue(repositoryOrder.size() > 0);
         assertEquals(8, repository.currentVersion("cdp-e2e-1"));
+
+        // Real U03 outbound -> real U04 admission / safety gate / commit on the
+        // same synthetic state repository and the exact committed U03 version.
+        U04NonProductionApplicationService u04 = new U04NonProductionApplicationService(
+                new U04AdmissionService(),
+                new U04SafetyGatePolicy(),
+                new U04StateProposalFactory(),
+                new U04CommitService(committer));
+        U04ExecutionResult gate = u04.execute(
+                outbound, 8, U04ScopeContext.current(true, true), "ci-nonprod-e2e");
+        assertEquals(U04ExecutionResult.COMMIT_COMPLETE, gate.getStatus());
+        assertEquals(U04SafetyGateDecision.RESTRICTED, gate.getDecision().getGate());
+        assertEquals("COMMITTED", gate.getCommitResult().status);
+        assertEquals(Integer.valueOf(9), gate.getCommitResult().committedVersion);
+        assertTrue(gate.getRoutingEligibility().isU05Eligible());
+        assertFalse(gate.getRoutingEligibility().isU11Eligible());
+        assertFalse(gate.getRoutingEligibility().isU14Eligible());
+        assertEquals(9, repository.currentVersion("cdp-e2e-1"));
+        assertEquals(2, repository.commitCalls());
     }
 
     private static U03NonProductionExecutionContext context() {
