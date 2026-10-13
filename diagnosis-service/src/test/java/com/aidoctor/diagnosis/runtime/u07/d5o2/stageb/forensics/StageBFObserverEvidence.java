@@ -48,6 +48,8 @@ final class StageBFObserverEvidence {
   "PRIMARY","uk_u06_delivery_authority_effect","uk_u06_delivery_intent_id",
   "uk_u06_delivery_intent_idem"));
  private StageBFObserverEvidence(){}
+ private static final java.util.Map<String,String> DENIALS=new java.util.LinkedHashMap<String,String>();
+ static Map<String,String> roleNegativeMatrix(){return new LinkedHashMap<String,String>(DENIALS);}
  static long id(Connection c)throws SQLException{
   try(Statement p=c.createStatement()){p.setQueryTimeout(2);
    try(ResultSet r=p.executeQuery("SELECT CONNECTION_ID()")){Assertions.assertTrue(r.next());return r.getLong(1);}
@@ -63,8 +65,10 @@ final class StageBFObserverEvidence {
    try(Statement p=c.createStatement()){p.setQueryTimeout(2);p.execute(sql);}
   });
   Assertions.assertEquals("42000",e.getSQLState());
+  DENIALS.put("p"+DENIALS.size(),e.getSQLState()+":"+e.getErrorCode());
  }
  static void permissions(Connection w,Connection r,Connection o)throws SQLException{
+  DENIALS.clear();
   Assertions.assertTrue(user(w).startsWith("stagebf_writer@"));
   Assertions.assertTrue(user(r).startsWith("stagebf_reader@"));
   Assertions.assertTrue(user(o).startsWith("stagebf_observer_ps@"));
@@ -241,6 +245,29 @@ final class StageBFObserverEvidence {
       "LOCK_DATA","SELECT *","INSERT INTO","password"}){
    Map<String,Object> m=new HashMap<String,Object>();m.put("unauthorized",bad);
    Assertions.assertThrows(IllegalStateException.class,()->validateSafe(m));
+  }
+ }
+ static void assertFullIdentity(Connection c,com.aidoctor.diagnosis.runtime.u06.delivery.U06DeliveryStore.Command cmd)throws SQLException{
+  String[][] f={
+   {"selection_effect_id",cmd.selectionEffectId,"delivery_id",cmd.deliveryId,"authority_status","CONFIRMED_TERMINAL"},
+   {"delivery_id",cmd.deliveryId,"question_id",cmd.questionId,"content_fingerprint",cmd.contentFingerprint,
+    "endpoint_ref",cmd.endpointRef,"idempotency_key",cmd.idempotencyKey,"intent_status","READY"},
+   {"attempt_id",cmd.deliveryEffectId+":attempt:1","delivery_id",cmd.deliveryId,"attempt_status","SYNTHETIC_ACCEPTED"},
+   {"receipt_id",cmd.deliveryEffectId+":receipt:1","delivery_id",cmd.deliveryId,"receipt_status","SYNTHETIC_CONFIRMED","evidence_type","SYNTHETIC"},
+   {"confirmation_evaluation_id",cmd.confirmationEvaluationId,"delivery_id",cmd.deliveryId,
+     "confirmation_status","CONFIRMED","confirmation_fingerprint",cmd.confirmationFingerprint},
+   {"delivery_id",cmd.deliveryId,"confirmation_status","CONFIRMED","canonical_fingerprint",cmd.confirmationFingerprint}
+  };
+  for(int i=0;i<TABLES.length;i++)try(PreparedStatement p=c.prepareStatement(
+    "SELECT * FROM "+TABLES[i]+" WHERE delivery_effect_id=?")){
+   p.setQueryTimeout(2);p.setString(1,cmd.deliveryEffectId);
+   try(ResultSet r=p.executeQuery()){
+    Assertions.assertTrue(r.next(),"F_MISSING_IDENTITY");
+    Assertions.assertEquals(cmd.deliveryEffectId,r.getString("delivery_effect_id"));
+    Assertions.assertEquals(cmd.createdAt,r.getString("created_at"));
+    for(int j=0;j<f[i].length;j+=2)Assertions.assertEquals(f[i][j+1],r.getString(f[i][j]));
+    Assertions.assertFalse(r.next(),"F_EXTRA_IDENTITY");
+   }
   }
  }
  static int[] rows(Connection c,String effect)throws SQLException{
