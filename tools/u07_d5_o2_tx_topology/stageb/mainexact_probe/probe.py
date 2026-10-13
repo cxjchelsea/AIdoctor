@@ -167,8 +167,9 @@ def main():
     bad = cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
                      "-Dtest=" + TEST, "surefire:test"], env=wrong, expect=1)
     bad_errors = suite_xml(source)
-    check(bad.returncode != 0 and any(c.endswith("." + TEST) and e and
-          "loadedStoreMustBeFromPinnedHistoricalSource" == n for c,n,_,e,_,_ in bad_errors),
+    check(bad.returncode != 0 and any(c.endswith("." + TEST) and (failure or error) and
+          "loadedStoreMustBeFromPinnedHistoricalSource" == n
+          for c,n,failure,error,_,_ in bad_errors),
           "FEA_BAD_HASH_MUTANT_CAUSE_UNVERIFIED")
     check("PROBE_STORE_RUNTIME_BYTES_MISMATCH" in bad.stdout or
           "PROBE_STORE_LOADED_BYTES_MISMATCH" in bad.stdout,
