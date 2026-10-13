@@ -73,8 +73,16 @@ jobs:
           set -euo pipefail
           mvn -B -f diagnosis-service/pom.xml -Dtest=StageBFDeadlockForensicsTest test
           python3 tools/u07_d5_o2_tx_topology/stageb/forensics/bootstrap-and-verify.py verify
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - name: Fail-closed safe-artifact admission (independent of test result)
         if: always()
+        id: safe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/u07_d5_o2_tx_topology/stageb/forensics/bootstrap-and-verify.py safe-upload
+          echo 'safe=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && steps.safe.outputs.safe == 'true'
         with:
           name: u07-d5-o2-f-isolated-l0-evidence
           path: |
