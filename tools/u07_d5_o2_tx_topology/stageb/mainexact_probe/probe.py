@@ -70,7 +70,7 @@ def suite_xml(source):
     return out
 def parse_executable_test_selector(text):
     # Names in comments, display titles or shell echo are not executable ownership.
-    commands = re.findall(r"^\\s*mvn\\s+[^\\n]*?-Dtest=([A-Za-z0-9_,]+)\\s+test\\s*$",
+    commands = re.findall(r"^\s*mvn\s+[^\n]*?-Dtest=([A-Za-z0-9_,]+)\s+test\s*$",
                           text, flags=re.MULTILINE)
     check(len(commands) == 1, "SEL_EXECUTABLE_MAVEN_TEST_COMMAND_NOT_UNIQUE")
     names = commands[0].split(",")
@@ -78,19 +78,19 @@ def parse_executable_test_selector(text):
     return names
 
 def selector_parser_negatives():
-    legitimate = "  mvn -B -f diagnosis-service/pom.xml -Dtest=AlphaTest,BetaTest test\\n"
-    check(parse_executable_test_selector(legitimate.replace("\\\\n", "\\n")) == ["AlphaTest", "BetaTest"],
+    legitimate = "  mvn -B -f diagnosis-service/pom.xml -Dtest=AlphaTest,BetaTest test\n"
+    check(parse_executable_test_selector(legitimate) == ["AlphaTest", "BetaTest"],
           "SEL_PARSER_POSITIVE_REJECTED")
     mutations = [
-      "# mvn -B -f diagnosis-service/pom.xml -Dtest=AlphaTest,BetaTest test\\n",
-      "name: -Dtest=AlphaTest,BetaTest\\n",
-      "echo mvn -Dtest=AlphaTest,BetaTest test\\n",
-      "mvn -Dtest=AlphaTest,AlphaTest test\\n",
-      "mvn -Dtest=AlphaTest test\\nmvn -Dtest=BetaTest test\\n",
+      "# mvn -B -f diagnosis-service/pom.xml -Dtest=AlphaTest,BetaTest test\n",
+      "name: -Dtest=AlphaTest,BetaTest\n",
+      "echo mvn -Dtest=AlphaTest,BetaTest test\n",
+      "mvn -Dtest=AlphaTest,AlphaTest test\n",
+      "mvn -Dtest=AlphaTest test\nmvn -Dtest=BetaTest test\n",
     ]
     for i, raw in enumerate(mutations):
         try:
-            parse_executable_test_selector(raw.replace("\\\\n", "\\n"))
+            parse_executable_test_selector(raw)
         except RuntimeError:
             continue
         raise RuntimeError("SEL_PARSER_MUTANT_ACCEPTED_" + str(i))
