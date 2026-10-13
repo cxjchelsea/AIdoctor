@@ -40,7 +40,8 @@ final class StageBFTestConfig implements AutoCloseable {
   return v;
  }
  static Connection connection(String user,String key)throws SQLException{
-  Connection c=DriverManager.getConnection(URL,user,secret(key));
+  String jdbcUrl=user.equals("stagebf_observer_ps")?URL.replace("/"+DB+"?","/performance_schema?"):URL;
+  Connection c=DriverManager.getConnection(jdbcUrl,user,secret(key));
   c.setNetworkTimeout(java.util.concurrent.Executors.newSingleThreadExecutor(r->{
    Thread t=new Thread(r,"f-jdbc-timeout");t.setDaemon(true);return t;
   }),3000);
