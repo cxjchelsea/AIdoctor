@@ -93,8 +93,8 @@ public class StageBFDeadlockForensicsTest {
       StageBFObserverEvidence.evidence("CAPTURE_NOT_STARTED",facts));
   try(StageBFTestConfig env=new StageBFTestConfig();
       Connection reader=env.connection("stagebf_reader","F_READER_PWD");
-      Connection observer=StageBFTestConfig.connection("stagebf_observer_ps","F_OBSERVER_PWD");
-      Connection wcheck=StageBFTestConfig.connection("stagebf_writer","F_WRITER_PWD")){
+      Connection observer=env.connection("stagebf_observer_ps","F_OBSERVER_PWD");
+      Connection wcheck=env.connection("stagebf_writer","F_WRITER_PWD")){
    StageBFObserverEvidence.permissions(wcheck,reader,observer);
    facts.put("observerRole","L0_TABLE_SELECT_ONLY");
    facts.put("rolesVerified",true);
