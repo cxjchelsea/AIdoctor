@@ -113,9 +113,7 @@ jobs:
         run: |
           set -euo pipefail
           fixture="$RUNNER_TEMP/u07-fresh-v1-v8"
-          python3 tools/u07_d5_o2_tx_topology/production_candidate/build_fresh_mysql8_fixture.py \\
-            --repo . --output "$fixture" \\
-            --ack U07_D5_O2_FRESH_INSTALL_SYNTHETIC_ONLY
+          python3 tools/u07_d5_o2_tx_topology/production_candidate/build_fresh_mysql8_fixture.py --repo . --output "$fixture" --ack U07_D5_O2_FRESH_INSTALL_SYNTHETIC_ONLY
           echo "U07_FRESH_INSTALL_FIXTURE_DIR=$fixture" >> "$GITHUB_ENV"
           test "$(find "$fixture" -maxdepth 1 -name 'V*.sql' | wc -l)" -eq 8
       - name: Execute exact historical V1 negative and separate compatibility-copy Flyway tests
