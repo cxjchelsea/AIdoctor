@@ -28,6 +28,25 @@ final class StageBFObserverEvidence {
  "u06_delivery_receipt","u06_delivery_confirmation","u06_delivery_ledger"};
  static final Set<String> TABLE_ALLOW=new HashSet<String>(Arrays.asList(TABLES));
  static final String[] P_S={"data_locks","data_lock_waits","threads"};
+ static final Set<String> ROOT_KEYS=new HashSet<String>(Arrays.asList(
+  "schema","sourceMainSha","candidateHead","checkoutSha","runId","runAttempt","profile",
+  "database","L1Verdict","sourceReplayGap","downstreamAuthority","businessCompletion",
+  "forensicVerdict","caseId","caseAcceptance","observerRole","rolesVerified",
+  "roleNegativePassed","roleNegativeMatrix","actorA","actorB","bothReady",
+  "executorTerminated","harnessTimeout","observerSampleCount","observerSamples",
+  "readerId","effectAVector","effectBVector","sourceVerdict","liveLockGraphVerdict",
+  "readerRole","sampleEpochs","observerConnectionId","writerAThreadId","writerBThreadId",
+  "selectedEdges","completeSixIdentityA","completeSixIdentityB","harnessFailure",
+  "physicalReadStatus","physicalReadSqlState"));
+ static final Set<String> ACTOR_KEYS=new HashSet<String>(Arrays.asList(
+  "effectDigest","connectionId","outcome","sqlError","txReturned","resourcesClear",
+  "beginNano","endNano","successfulInsertCount"));
+ static final Set<String> EDGE_KEYS=new HashSet<String>(Arrays.asList(
+  "epoch","requester","blocker","table","index","engine","requestMode","requestStatus",
+  "blockMode","blockStatus","requestType","blockType","requestThread","blockThread"));
+ static final Set<String> INDEX_ALLOW=new HashSet<String>(Arrays.asList(
+  "PRIMARY","uk_u06_delivery_authority_effect","uk_u06_delivery_intent_id",
+  "uk_u06_delivery_intent_idem"));
  private StageBFObserverEvidence(){}
  static long id(Connection c)throws SQLException{
   try(Statement p=c.createStatement()){p.setQueryTimeout(2);
@@ -81,11 +100,35 @@ final class StageBFObserverEvidence {
   }catch(Exception e){throw new IllegalStateException("DIGEST_UNAVAILABLE");}
  }
  static void validateSafe(Map<String,Object> m){
+  for(Map.Entry<String,Object> e:m.entrySet()){
+   if(!ROOT_KEYS.contains(e.getKey()))throw new IllegalStateException("FORENSIC_UNKNOWN_FIELD");
+   Object v=e.getValue();
+   if("actorA".equals(e.getKey())||"actorB".equals(e.getKey())){
+    if(!(v instanceof Map))throw new IllegalStateException("FORENSIC_ACTOR_TYPE");
+    for(Object k:((Map<?,?>)v).keySet())if(!ACTOR_KEYS.contains(k))
+     throw new IllegalStateException("FORENSIC_ACTOR_EXTRA_FIELD");
+   }else if("selectedEdges".equals(e.getKey())){
+    if(!(v instanceof List)||((List<?>)v).size()>24)throw new IllegalStateException("FORENSIC_EDGES_SIZE");
+    for(Object item:(List<?>)v){
+     if(!(item instanceof Map))throw new IllegalStateException("FORENSIC_EDGE_TYPE");
+     Map<?,?> edge=(Map<?,?>)item;
+     if(!EDGE_KEYS.containsAll(edge.keySet()))throw new IllegalStateException("FORENSIC_EDGE_EXTRA_FIELD");
+     if(!TABLE_ALLOW.contains(edge.get("table"))||!INDEX_ALLOW.contains(edge.get("index")))
+      throw new IllegalStateException("FORENSIC_EDGE_DDL");
+     if(!"A".equals(edge.get("requester"))&&!"B".equals(edge.get("requester")))
+      throw new IllegalStateException("FORENSIC_REQUESTER");
+     if(!"A".equals(edge.get("blocker"))&&!"B".equals(edge.get("blocker")))
+      throw new IllegalStateException("FORENSIC_BLOCKER");
+    }
+   }else if(v instanceof Map && !"roleNegativeMatrix".equals(e.getKey()))
+    throw new IllegalStateException("FORENSIC_NESTED_FIELD");
+  }
   String x;
   try{x=new ObjectMapper().writeValueAsString(m);}catch(Exception e){throw new IllegalStateException("JSON");}
   if(x.getBytes(StandardCharsets.UTF_8).length>65536)throw new IllegalStateException("EVIDENCE_SIZE");
   for(String bad:new String[]{"F_FAKE_SECRET_9271","FAKE_PATIENT_6271","13900009999",
-    "LOCK_DATA","SELECT *","INSERT INTO","SHOW ENGINE INNODB STATUS","rawSql","password","PROCESSLIST_INFO"})
+    "LOCK_DATA","SELECT *","INSERT INTO","SHOW ENGINE INNODB STATUS","rawSql","password","PROCESSLIST_INFO",
+    "jdbc:mysql://","CREATE USER","IDENTIFIED BY","FAKE_UNKNOWN_SECRET_4192"})
    if(x.contains(bad))throw new IllegalStateException("REDACTION_REJECTED");
  }
  static Map<String,Object> evidence(String verdict,Map<String,Object> more){
@@ -100,6 +143,8 @@ final class StageBFObserverEvidence {
   m.put("database",StageBFTestConfig.DB);
   m.put("L1Verdict","L1_NOT_ENABLED");m.put("sourceReplayGap","CONFIRMED_NOT_SAFE");
   m.put("downstreamAuthority",false);m.put("businessCompletion","NOT_AUTHORIZED_TO_ATTEST");
+  for(String key:more.keySet())if(m.containsKey(key)||!ROOT_KEYS.contains(key))
+   throw new IllegalStateException("FORENSIC_RESERVED_OR_UNKNOWN_FIELD");
   m.put("forensicVerdict",verdict);m.putAll(more);validateSafe(m);return m;
  }
  static void emit(String file,Map<String,Object> m){
@@ -134,9 +179,11 @@ final class StageBFObserverEvidence {
    if(at!=null&&bt!=null){
     out.aThread=at;out.bThread=bt;
     String sql="SELECT w.REQUESTING_THREAD_ID,w.BLOCKING_THREAD_ID,"+
-      "req.OBJECT_SCHEMA,req.OBJECT_NAME,req.INDEX_NAME,req.LOCK_TYPE,req.LOCK_MODE,req.LOCK_STATUS "+
+      "req.OBJECT_SCHEMA,req.OBJECT_NAME,req.INDEX_NAME,req.LOCK_TYPE,req.LOCK_MODE,req.LOCK_STATUS,"+
+      "blk.OBJECT_SCHEMA,blk.OBJECT_NAME,blk.INDEX_NAME,blk.LOCK_TYPE,blk.LOCK_MODE,blk.LOCK_STATUS,req.ENGINE "+
       "FROM performance_schema.data_lock_waits w "+
       "JOIN performance_schema.data_locks req ON req.ENGINE=w.ENGINE AND req.ENGINE_LOCK_ID=w.REQUESTING_ENGINE_LOCK_ID "+
+      "JOIN performance_schema.data_locks blk ON blk.ENGINE=w.ENGINE AND blk.ENGINE_LOCK_ID=w.BLOCKING_ENGINE_LOCK_ID "+
       "WHERE w.REQUESTING_THREAD_ID IN (?,?) AND w.BLOCKING_THREAD_ID IN (?,?)";
     try(PreparedStatement p=o.prepareStatement(sql)){
      p.setQueryTimeout(2);p.setLong(1,at);p.setLong(2,bt);p.setLong(3,at);p.setLong(4,bt);
@@ -147,20 +194,29 @@ final class StageBFObserverEvidence {
        String schema=r.getString(3),table=r.getString(4),idx=r.getString(5);
        if(!StageBFTestConfig.DB.equals(schema)||!TABLE_ALLOW.contains(table))
         throw new IllegalStateException("FORENSIC_UNAUTHORIZED_SCHEMA");
-       if(idx!=null&&!idx.matches("[A-Za-z0-9_]{1,64}"))
-        throw new IllegalStateException("FORENSIC_INDEX_REJECTED");
+       if(!INDEX_ALLOW.contains(idx)||!StageBFTestConfig.DB.equals(r.getString(9))||
+         !table.equals(r.getString(10))||!INDEX_ALLOW.contains(r.getString(11)))
+        throw new IllegalStateException("FORENSIC_DDL_INDEX_OR_BLOCK_MISMATCH");
        if(!(request==at&&block==bt)&&!(request==bt&&block==at))
         throw new IllegalStateException("FORENSIC_UNBOUND_EDGE");
        Map<String,Object> edge=new LinkedHashMap<String,Object>();
+       edge.put("epoch",out.count);
        edge.put("requester",request==at?"A":"B");edge.put("blocker",block==at?"A":"B");
+       edge.put("requestThread",request);edge.put("blockThread",block);
        edge.put("table",table);edge.put("index",idx);
-       for(int c=6;c<=8;c++){
-        String k=c==6?"lockType":c==7?"lockMode":"lockStatus",v=r.getString(c);
+       edge.put("engine",r.getString(15));
+       int[] columns={6,7,8,12,13,14};
+       String[] keys={"requestType","requestMode","requestStatus","blockType","blockMode","blockStatus"};
+       for(int j=0;j<columns.length;j++){
+        String v=r.getString(columns[j]);
         if(v==null||!v.matches("[A-Za-z0-9_, ]{1,64}"))
          throw new IllegalStateException("FORENSIC_LOCK_ENUM_REJECTED");
-        edge.put(k,v);
+        edge.put(keys[j],v);
        }
-       validateSafe(edge);
+       if(!"INNODB".equals(edge.get("engine")))
+        throw new IllegalStateException("FORENSIC_ENGINE");
+       if(!"WAITING".equals(edge.get("requestStatus"))||!"GRANTED".equals(edge.get("blockStatus")))
+        throw new IllegalStateException("FORENSIC_LOCK_STATE");
        if(out.selected.size()<24)out.selected.add(edge);
        out.edges++;
        if(request==at)ab=true;else ba=true;
@@ -177,6 +233,10 @@ final class StageBFObserverEvidence {
   return out;
  }
  static void negativeRedactionTests(){
+  Map<String,Object> unknown=new HashMap<String,Object>();unknown.put("invented","FAKE_UNKNOWN_SECRET_4192");
+  Assertions.assertThrows(IllegalStateException.class,()->validateSafe(unknown));
+  Map<String,Object> fake=new HashMap<String,Object>();fake.put("caseId","FAKE_UNKNOWN_SECRET_4192");
+  Assertions.assertThrows(IllegalStateException.class,()->validateSafe(fake));
   for(String bad:new String[]{"F_FAKE_SECRET_9271","FAKE_PATIENT_6271","13900009999",
       "LOCK_DATA","SELECT *","INSERT INTO","password"}){
    Map<String,Object> m=new HashMap<String,Object>();m.put("unauthorized",bad);
