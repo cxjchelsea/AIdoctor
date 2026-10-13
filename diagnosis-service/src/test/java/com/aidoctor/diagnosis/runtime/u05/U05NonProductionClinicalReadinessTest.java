@@ -100,24 +100,34 @@ class U05NonProductionClinicalReadinessTest {
 
         U05QuestionRouteAdmissionAdapter bridge =
                 new U05QuestionRouteAdmissionAdapter(new U06AdmissionService());
-        assertThrows(IllegalStateException.class, () -> bridge.admit(readiness, null,
+        assertThrows(IllegalStateException.class, () -> bridge.admit(readiness, null, VERSION + 1,
                 "question-policy", "d04-policy", "synthetic-dependency", "thread-1", "run-1", 0));
         U06AdmissionEvidence blocked = new U06AdmissionEvidence(
                 true, true, true, U06AdmissionEvidence.GATE_STALE,
                 U06AdmissionEvidence.PERMISSION_NOT_REQUIRED, true,
                 U06AdmissionEvidence.DEPENDENCY_ACTIVE_SYNTHETIC, false, true);
         assertThrows(IllegalStateException.class,
-                () -> bridge.admit(readiness, blocked, "question-policy", "d04-policy",
+                () -> bridge.admit(readiness, blocked, VERSION + 1, "question-policy", "d04-policy",
+                        "synthetic-dependency", "thread-1", "run-1", 0));
+
+        assertThrows(IllegalStateException.class,
+                () -> bridge.admit(readiness, U06AdmissionEvidence.syntheticCurrentAllow(),
+                        VERSION, "question-policy", "d04-policy",
                         "synthetic-dependency", "thread-1", "run-1", 0));
 
         U06AdmissionService.Admission admitted = bridge.admit(
-                readiness, U06AdmissionEvidence.syntheticCurrentAllow(),
+                readiness, U06AdmissionEvidence.syntheticCurrentAllow(), VERSION + 1,
                 "question-policy", "d04-policy", "synthetic-dependency", "thread-1", "run-1", 0);
         assertEquals(U06AdmissionService.ADMITTED, admitted.getStatus());
         assertEquals(readiness.getRoutingDecision().getDownstreamRouteAuthorizationId(),
                 admitted.getRequest().getSourceAuthorityRef());
         assertEquals(readiness.getCommitResult().committedVersion.intValue(),
                 admitted.getRequest().getAuthoritativeClinicalStateVersion());
+        U06AdmissionService.Admission replay = bridge.admit(
+                readiness, U06AdmissionEvidence.syntheticCurrentAllow(), VERSION + 1,
+                "question-policy", "d04-policy", "synthetic-dependency", "thread-1", "run-1", 0);
+        assertTrue(replay.isReplay());
+        assertEquals(admitted.getAdmissionId(), replay.getAdmissionId());
         assertEquals(1, fixture.repository.mutationCount());
     }
 
