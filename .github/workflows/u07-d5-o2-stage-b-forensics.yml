@@ -100,3 +100,56 @@ jobs:
             diagnosis-service/target/stage-b-f-observations/forensic-incident.json
             diagnosis-service/target/stage-b-f-observations/role-negative.json
             diagnosis-service/target/f-isolated-verification.json
+
+  fail-closed-real-workflow-negative:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      U07_F_ISOLATED: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Deliberately fail a synthetic test command without public diagnostic output
+        id: injected
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          private_log="$RUNNER_TEMP/f-isolated-injected-failure.log"
+          trap 'rm -f "$private_log"' EXIT
+          bash -c 'echo SYNTHETIC_PRIVATE_SQL_SENTINEL >&2; exit 42' >"$private_log" 2>&1
+      - name: Fail-closed gate must reject missing authoritative evidence
+        id: safe
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/u07_d5_o2_tx_topology/stageb/forensics/bootstrap-and-verify.py safe-upload
+          echo 'safe=true' >> "$GITHUB_OUTPUT"
+      - name: Negative-path upload (must be skipped)
+        id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && steps.safe.outputs.safe == 'true'
+        with:
+          name: u07-d5-o2-f-isolated-negative-MUST-NOT-EXIST
+          path: |
+            diagnosis-service/target/stage-b-f-observations/forensic-incident.json
+            diagnosis-service/target/stage-b-f-observations/role-negative.json
+            diagnosis-service/target/f-isolated-verification.json
+      - name: Assert actual Actions step outcomes and no upload
+        if: always()
+        env:
+          INJECTION: ${{ steps.injected.outcome }}
+          SAFE: ${{ steps.safe.outcome }}
+          UPLOAD: ${{ steps.upload.outcome }}
+          SAFE_OUTPUT: ${{ steps.safe.outputs.safe }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$INJECTION" = failure
+          test "$SAFE" = failure
+          test "$UPLOAD" = skipped
+          test -z "$SAFE_OUTPUT"
+          echo 'F_ISOLATED_ACTUAL_WORKFLOW_FAILURE_UPLOAD_SKIPPED=PASS'
