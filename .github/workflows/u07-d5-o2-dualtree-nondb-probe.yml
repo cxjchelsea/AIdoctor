@@ -41,3 +41,17 @@ jobs:
           test "$(git -C source rev-parse HEAD)" = 33c0914e843d7976c7ff2272338377aa4925f443
           test "$(java -version 2>&1 | head -n1 | grep -c '1.8')" = 1
           python3 control/tools/u07_d5_o2_tx_topology/stageb/mainexact_probe/probe.py
+
+      - name: Independent allowlist and run-identity evidence admission
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 control/tools/u07_d5_o2_tx_topology/stageb/mainexact_probe/probe.py --verify
+      - name: Upload exclusively admitted non-DB evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: success()
+        with:
+          name: u07-d5-o2-exact-head-nondb-probe-evidence
+          path: ${{ runner.temp }}/u07-nondb-probe-evidence.json
+          if-no-files-found: error
+          retention-days: 7
