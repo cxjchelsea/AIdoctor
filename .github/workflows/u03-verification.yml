@@ -42,5 +42,10 @@ jobs:
           mvn -f diagnosis-service/pom.xml
           -Dtest='U03GovernanceBoundaryTest,U03RiskAssessmentFlowTest,Foundation1GovernanceTest,U02ClinicalFactFormationTest,U02ClinicalFactCommitServiceTest,U02ClinicalFactApplicationServiceTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
           test
-      - name: Run diagnosis-service regression suite
-        run: mvn -f diagnosis-service/pom.xml test
+      # Dedicated U07 physical suites require the isolated MySQL runner and must
+      # not be started on this non-database U03 verification job.
+      - name: Run U01-U06 non-database regression suite
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest='U01*Test,U02*Test,U03*Test,U04*Test,U05*Test,U06*Test'
+          test
