@@ -47,6 +47,16 @@ public final class U05QuestionRouteAdmissionAdapter {
         if (hostEvidence == null) {
             throw new IllegalStateException("U06_INDEPENDENT_HOST_EVIDENCE_REQUIRED");
         }
+        if (U06AdmissionEvidence.GATE_STALE.equals(hostEvidence.getGateState())
+                || ("ALLOW".equals(route.getGateValue())
+                    && !U06AdmissionEvidence.GATE_ALLOW_CURRENT.equals(hostEvidence.getGateState()))
+                || ("RESTRICTED".equals(route.getGateValue())
+                    && (!U06AdmissionEvidence.GATE_RESTRICTED_CURRENT.equals(hostEvidence.getGateState())
+                        || !U06AdmissionEvidence.PERMISSION_ALLOWED.equals(hostEvidence.getPermissionState())))
+                || (!"ALLOW".equals(route.getGateValue())
+                    && !"RESTRICTED".equals(route.getGateValue()))) {
+            throw new IllegalStateException("U05_U06_GATE_EVIDENCE_MISMATCH");
+        }
         if (!required(questionPolicyRef) || !required(d04PolicyRef)
                 || !required(dependencyRef) || !required(threadId) || !required(runId)) {
             throw new IllegalArgumentException("U06 question execution bindings required");
