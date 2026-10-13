@@ -1,0 +1,166 @@
+name: U07 D5-O2 exact merged main physical suite Java8 MySQL8
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/u07-d5-o2-exact-main-physical.yml'
+
+permissions:
+  contents: read
+jobs:
+  exact-main-42-case-java8-mysql8:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: synthetic-replay-disposable-root
+          MYSQL_DATABASE: u07_d5o2_f_deadlock
+        ports:
+          - 127.0.0.1:33331:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -psynthetic-replay-disposable-root"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      U07_F_PROFILE: U07_D5_O2_RACE05_F_ISOLATED_SYNTHETIC
+      U07_F_ISOLATED: 'true'
+      U07_RECOVERY_SCHEDULER_MODE: SYNTHETIC_ONLY
+      U07_F_URL: jdbc:mysql://127.0.0.1:33331/u07_d5o2_f_deadlock?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      U07_REPLAY_SYNTHETIC_ADMIN_PWD: synthetic-replay-disposable-root
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: 8bc9c4c288aa65748daed2b0e5e7012c577883bd
+      - name: Prove exact production main checkout (no PR-merge checkout)
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="8bc9c4c288aa65748daed2b0e5e7012c577883bd"
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$expected"
+          echo "U07_D5_O2_EXACT_MERGED_MAIN_SHA=$actual"
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+      - name: Verify disposable fixture and exact implementation-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$U07_F_ISOLATED" = true
+          test "$U07_F_PROFILE" = U07_D5_O2_RACE05_F_ISOLATED_SYNTHETIC
+          java -version
+      - name: Bootstrap immutable six-table DDL and synthetic isolated identities
+        shell: bash
+        env:
+          MYSQL_PWD: synthetic-replay-disposable-root
+        run: |
+          set -euo pipefail
+          for role in WRITER READER OBSERVER; do
+            value="$(openssl rand -hex 24)"
+            echo "::add-mask::$value"
+            printf 'F_%s_PWD=%s\n' "$role" "$value" >> "$GITHUB_ENV"
+            export "F_${role}_PWD=$value"
+          done
+          umask 077
+          private_sql="$(mktemp "$RUNNER_TEMP/six-table-ddl-XXXXXX")"
+          trap 'rm -f "$private_sql"' EXIT
+          python3 tools/u07_d5_o2_tx_topology/stageb/forensics/bootstrap-and-verify.py bootstrap >"$private_sql"
+          mysql -h127.0.0.1 -P33331 -uroot u07_d5o2_f_deadlock <"$private_sql"
+      - name: Provision isolated recovery CAS test-only table and writer grants
+        shell: bash
+        env:
+          MYSQL_PWD: synthetic-replay-disposable-root
+        run: |
+          set -euo pipefail
+          umask 077
+          fixture_sql="$(mktemp "$RUNNER_TEMP/recovery-cas-schema-XXXXXX")"
+          trap 'rm -f "$fixture_sql"' EXIT
+          cp tools/u07_d5_o2_tx_topology/production_candidate/mysql8/V7__u07_recovery_claim.sql "$fixture_sql"
+          printf '%s\n' "GRANT SELECT, INSERT, UPDATE ON u07_d5o2_f_deadlock.u07_d5o2_recovery_claim TO 'stagebf_writer'@'%';" >> "$fixture_sql"
+          mysql -h127.0.0.1 -P33331 -uroot u07_d5o2_f_deadlock <"$fixture_sql"
+      - name: Apply candidate V8 only inside disposable MySQL8
+        shell: bash
+        env:
+          MYSQL_PWD: synthetic-replay-disposable-root
+        run: |
+          set -euo pipefail
+          test "$U07_F_ISOLATED" = true
+          candidate=tools/u07_d5_o2_tx_topology/production_candidate/mysql8/V8__u07_outbox_no_dispatch.sql
+          mysql -h127.0.0.1 -P33331 -uroot u07_d5o2_f_deadlock < "$candidate"
+          mysql -h127.0.0.1 -P33331 -uroot u07_d5o2_f_deadlock -e "GRANT SELECT, INSERT, UPDATE ON u07_d5o2_f_deadlock.u07_d5o2_outbox_fence TO 'stagebf_writer'@'%';"
+      - name: Verify Flyway production migration remains unmodified and gated
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          base=Path("diagnosis-service/src/main/resources/db")
+          for folder in ("migration","migration-oracle"):
+              versions=sorted(p.name for p in (base/folder).glob("V*.sql"))
+              assert len(versions)==6, (folder, versions)
+              assert {int(name.split("__",1)[0][1:]) for name in versions} == set(range(1,7)),folder
+          assert Path("tools/u07_d5_o2_tx_topology/production_candidate/mysql8/V8__u07_outbox_no_dispatch.sql").is_file()
+          assert Path("tools/u07_d5_o2_tx_topology/production_candidate/oracle/V8__u07_outbox_no_dispatch.sql").is_file()
+          print("U07_PRODUCTION_FLYWAY_AUTOMIGRATION_UNCHANGED=PASS")
+          PY
+
+
+      - name: Compile Java8 shared contract and diagnosis service
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f contracts/v1/bindings/java/pom.xml install -DskipTests
+          mvn -B -ntp -f diagnosis-service/pom.xml -DskipTests test-compile
+      - name: Execute all integrated D5-O2 Java8/MySQL8 physical tests on pinned main
+        shell: bash
+        run: |
+          set -euo pipefail
+          logfile="$(mktemp "$RUNNER_TEMP/d5-o2-merged-main-XXXXXX")"
+          trap 'rm -f "$logfile"' EXIT
+          if ! mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=StageBSixTableReplayTest,StageBBoundedWholeTxRetryTest,StageBUnknownCommitReadbackFenceTest,StageBDurableRecoveryCasTest,StageBRecoverySchedulerGateTest,StageBRecoveryIntakeOutboxFenceTest,StageBPrecommitCrashIntakeTest,StageBHistoricalFlywayUpgradeTest,StageBLegacyV1CompatibilityTest surefire:test >"$logfile" 2>&1; then
+            python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          for file in glob.glob('diagnosis-service/target/surefire-reports/TEST-*StageB*Test.xml'):
+              root = ET.parse(file).getroot()
+              for case in root.findall('.//testcase'):
+                  for issue in list(case.findall('error'))+list(case.findall('failure')):
+                      print('FAILED_CASE',case.attrib.get('name','unknown'),issue.attrib.get('type','unknown'),(issue.attrib.get('message','') or '')[:300])
+          PY
+            exit 1
+          fi
+          python3 - <<'PY'
+          import glob
+          import xml.etree.ElementTree as ET
+          expected = {
+              'StageBSixTableReplayTest':7,
+              'StageBBoundedWholeTxRetryTest':8,
+              'StageBUnknownCommitReadbackFenceTest':5,
+              'StageBDurableRecoveryCasTest':6,
+              'StageBRecoverySchedulerGateTest':4,
+              'StageBRecoveryIntakeOutboxFenceTest':5,
+              'StageBPrecommitCrashIntakeTest':3,
+              'StageBHistoricalFlywayUpgradeTest':2,
+              'StageBLegacyV1CompatibilityTest':2,
+          }
+          total = 0
+          for name, count in expected.items():
+              files=glob.glob('diagnosis-service/target/surefire-reports/TEST-*'+name+'.xml')
+              assert len(files)==1, ('REPORT_MISSING_OR_DUPLICATE',name)
+              root=ET.parse(files[0]).getroot()
+              assert int(root.get('tests','-1'))==count,(name,'COUNT_MISMATCH')
+              assert all(int(root.get(k,'-1'))==0 for k in ('failures','errors','skipped')),(name,'NOT_GREEN')
+              total+=count
+          assert total==42,total
+          print('U07_D5_O2_EXACT_MERGED_MAIN_MYSQL8_JAVA8_42_CASES=PASS')
+          print('U07_LEGACY_FROZEN_V1_COMPATIBILITY=EXPECTED_NEGATIVE_BLOCKER_RETAINED')
+          PY
+      - name: Run 12 policy-admission adversarial tests on exact main
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/u07_d5_o2_tx_topology/production_candidate/test_flyway_history.py -v
+          echo U07_D5_O2_EXACT_MAIN_FLYWAY_HISTORY_12_CASES=PASS
