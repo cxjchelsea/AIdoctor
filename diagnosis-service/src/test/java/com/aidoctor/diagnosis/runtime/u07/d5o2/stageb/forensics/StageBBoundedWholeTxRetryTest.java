@@ -2,6 +2,7 @@ package com.aidoctor.diagnosis.runtime.u07.d5o2.stageb.forensics;
 
 import com.aidoctor.diagnosis.runtime.u06.delivery.BoundedU06WholeTxRetry;
 import com.aidoctor.diagnosis.runtime.u06.delivery.U06DeliveryStore;
+import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryService;
 import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -143,4 +144,35 @@ public class StageBBoundedWholeTxRetryTest {
             assertSix(env,c,1);
         }
     }
+    @Test
+    public void explicitSyntheticDeliveryServiceCanConsumeBoundedStoreWithoutExternalEffects() {
+        try (StageBFTestConfig env = new StageBFTestConfig()) {
+            U06DeliveryStore store = new BoundedU06WholeTxRetry(
+                new JdbcTemplate(env.writer), env.tx);
+            U06SyntheticDeliveryService service = new U06SyntheticDeliveryService(store);
+            String k=UUID.randomUUID().toString();
+            String consult="synthetic-consult-"+k;
+            U06SyntheticDeliveryService.ScopeAuthorization scope =
+                new U06SyntheticDeliveryService.ScopeAuthorization(
+                    "scope-"+k,"authorization-"+k,"CURRENT",consult,
+                    "SYNTHETIC_STRUCTURAL_NONPROD","fixture-"+k,"fixture-review-"+k,
+                    "state-"+k,"ci-disposable-mysql","synthetic-endpoint-"+k,
+                    "2026-10-14T00:00:00Z",false,false,false);
+            U06SyntheticDeliveryService.Confirmation first=service.confirm(
+                consult,"selection-"+k,"question-"+k,"content-"+k,scope,
+                "2026-10-13T08:00:00Z");
+            Assertions.assertFalse(first.isReplay());
+            U06SyntheticDeliveryService.Confirmation second=service.confirm(
+                consult,"selection-"+k,"question-"+k,"content-"+k,scope,
+                "2026-10-13T08:00:00Z");
+            Assertions.assertTrue(second.isReplay());
+            U06DeliveryStore.Command expected=new U06DeliveryStore.Command(
+                "selection-"+k,first.getDeliveryEffectId(),first.getDeliveryId(),
+                "question-"+k,"content-"+k,"synthetic-endpoint-"+k,
+                "unused-for-readback","unused-for-readback","unused-for-readback",
+                "2026-10-13T08:00:00Z");
+            assertSix(env,expected,1);
+        }
+    }
+
 }
