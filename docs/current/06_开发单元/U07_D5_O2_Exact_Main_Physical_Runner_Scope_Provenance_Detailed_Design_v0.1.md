@@ -109,3 +109,40 @@ Three admitted JSON files must agree on shared values (or reference an independe
 `sourceFirstAttemptVerdict = BOTH_NEW_SUCCESS | FAILED_1213 | FAILED_OTHER | UNKNOWN`; when first attempt 1213 victim rolled back and counterpart committed, `FAILED_1213` is mandatory. `eventualRetryVerdict=NOT_EXECUTED` always for this Runner. `lockGraphVerdict=NO_EDGE_CAPTURED | PARTIAL_EDGE_ONLY | LIVE_TWO_WRITER_CYCLE_BOUND`, diagnostic only. `physicalBaselineVerdict=SOURCE_EXECUTION_VERIFIED | EVIDENCE_REJECTED | NOT_RUN` requires Java8, MySQL8, exact loaded Store bytecode, least-privilege negatives and independent six-table readback; it never rewrites original RACE-05 first-attempt failing business verdict.
 
 **MR-R1..06 proposed disposition:** `TARGETED_DESIGN_SUBMITTED`, `DUAL_TREE_COMPILE_TEST_FEASIBILITY=UNPROVEN`, `RUNNER_IMPLEMENTATION_AUTHORIZATION=NOT_GRANTED`, `CURRENT_MAIN_PHYSICAL_BASELINE=PENDING`.
+
+---
+
+## 12. Six-file / no-POM Java8 JUnit5 executable feasibility contract — FEA-01..12 (DESIGN ONLY)
+
+**Pinned baseline and observed constraints.** The historical SOURCE `33c0914e843d7976c7ff2272338377aa4925f443` has `diagnosis-service/pom.xml` using Java8, Spring Boot parent 2.7.8, `spring-boot-starter-test` (test scope), and no explicit `maven-surefire-plugin` configuration; prior CI logs identify Maven Surefire 2.22.2. Existing `StageBFDeadlockForensicsTest` uses JUnit Jupiter `org.junit.jupiter.api.Test` and is selected with `-Dtest=StageBFDeadlockForensicsTest`. This establishes a repository JUnit5 **precedent**, not that dynamically added CONTROL tests are executable against SOURCE without POM changes.
+
+**Preferred feasibility path:** SOURCE compile with its unchanged Maven POM and controlled additive test overlay in *build output only*, never in the Git tracked source tree. The CONTROL-only `MainExact*.java` source files must be compiled into a separate temporary Java8 test class output and then placed (or securely linked with exact hashes) into SOURCE's `target/test-classes` *after* SOURCE's own `test-compile`, because Surefire 2.22.2 normally discovers test classes from that directory. The proposed use of a pure external JUnit ConsoleLauncher is a fallback requiring explicit dependency/provider proof, not a guaranteed existing runtime. No CTRL production classes may be compiled into or placed ahead of SOURCE's `target/classes`. Maven `-Dtest=MainExactForensicsTest` is the only permitted witness selection and requires a strict target test-count assertion.
+
+**Critical security distinction:** `-DskipTests test-compile` means tests are still compiled but not executed; the selected `-Dtest=...` invocation must truly execute the CONTROL-added class. No `-DskipTests`, `-Dmaven.test.skip=true`, or generic global `mvn test` is an execution witness.
+
+| Feasibility gate | Candidate command / observable property | Fail-closed negative |
+|---|---|---|
+| FEA-01 checkout | two clean independent Git worktrees; `SOURCE HEAD=33c0914e`, CONTROL exact reviewed SHA; reject checkout/ref mismatch | wrong SHA, dirty tracked tree |
+| FEA-02 source dependency | SOURCE `mvn -B -f contracts/v1/bindings/java/pom.xml install -DskipTests` in isolated Maven repo | resolver reaches mismatched local cache |
+| FEA-03 source compile | SOURCE `mvn -B -f diagnosis-service/pom.xml -DskipTests test-compile`; `target/classes/.../JdbcU06DeliveryStore.class` exists, major 52 | missing/incorrect class version |
+| FEA-04 provenance | source `git hash-object` agrees with frozen Store/POM blobs; SHA256 compiled Store class before augmentation | git SHA correct but class stale |
+| FEA-05 test dependencies | `mvn ... dependency:build-classpath -Dmdep.includeScope=test` against SOURCE POM, with frozen plugin/artifact version before execution; extract SOURCE `target/classes` + `target/test-classes` + resolved test dependencies | dependency path/versions differ or command unavailable |
+| FEA-06 controller compile | `javac -source 8 -target 8 -cp <pinned-source-classpath> -d <control-test-output> MainExact*.java` | class missing, duplicate package Store |
+| FEA-07 selected class staging | copy exactly listed compiled CONTROL class files only into SOURCE `target/test-classes`; attest names/digests; forbid extra .class | unallowlisted or stale test class |
+| FEA-08 run JUnit | `mvn -B -f diagnosis-service/pom.xml -Dtest=MainExactForensicsTest test` against SOURCE build tree; assert Surefire XML `tests>0`, exact class name and zero errors/failures, no skipping | test not found / 0 tests / skipped |
+| FEA-09 live classloader | `JdbcU06DeliveryStore.class.getProtectionDomain().getCodeSource()` canonical URL equals SOURCE `target/classes`; read resource `.class` stream SHA256 equals FEA-04; reject competing class resource URLs | CTRL shadow bytecode, malicious classpath order |
+| FEA-10 no source overwrite | before/after SOURCE tracked tree same; compiled SOURCE Store .class digest same; only allowed target test-classes additions | Store recompile from CONTROL or patched tracked file |
+| FEA-11 negative runtime | test wrong source SHA, class swap, duplicate Store class, bad plugin/provider and stale overlay; all must fail *before* DB writes | any mutation accepted |
+| FEA-12 physical progression | only after 01..11 pass, disposable MySQL8 L0 role and actual original Store two-writer readback may execute | no physical attestations / false success |
+
+**JUnit test file ownership:** three CONTROL Java files use a package distinct from historical Store; CONTROL test compilation must use exactly SOURCE-declared test dependency closure. If CONTROL test classes require an unavailable new dependency or a POM/plugin edit, six-file no-POM feasibility is **NOT READY** and the design must be amended before implementation. Maven `dependency:build-classpath` may download a dependency-plugin not currently pinned; do not claim hermeticity unless its plugin SHA/version and repository cache are recorded. Java build/test success on a PR *synthetic merge* is insufficient to prove historical SOURCE execution.
+
+**Positive evidence:** `sourceHead`, `sourceTree`, `storeSourceBlob`, `storeCompiledClassSha256`, `runtimeLoadedClassSha256`, `loadedCodeSource`, `controlHead`, `controlJavaClassHashes`, `testDependencyClasspathDigest`, `surefireProviderIdentity`, `executedTestCount`, `skippedTestCount`, `workflowRunId/Attempt`; all are mandatory and cryptographically cross-checked. A Maven summary alone without a loaded Store witness is insufficient.
+
+**Feasibility gate decision:** `STATIC_JAVA8_JUNIT5_PRECEDENT=CONFIRMED`; `FEA_01_12_COMMANDS=DESIGN_DEFINED`; `FEA_01_12_REAL_EXECUTION=NOT_PERFORMED`; `SIX_FILE_NO_POM_RUNTIME_FEASIBILITY=NOT_PROVEN`; `RUNNER_IMPLEMENTATION_AUTHORIZATION=NOT_GRANTED`.
+
+## 13. Detailed six-file fixed-scope decision and scope-escalation triggers
+
+The existing proposed six ADD-only paths (§2) remain the upper bound. The workflow may contain the orchestration commands; Python helper must implement classfile manifest and protected worktree inspections; three test-only Java classes must include the runtime loaded-class identity assertion and synthetic witness. Test resource manifest pins SOURCE and reviewed CONTROL identity separately. **Control SHA self-reference trap:** a manifest stored *inside the commit it hashes* cannot contain its own final containing-commit SHA without further commitment; store/control SHA must be bound by workflow event/checkout + external Git commit API and hash of manifest blob, not by a circular embedded current HEAD constant. Explicitly reject self-referential SHA assertions.
+
+Before any implementation decision, submit independent execution-graph review covering: (a) Surefire discovering augmented test class; (b) ClassLoader CodeSource proving actual historical Store; (c) no seventh file or POM change; (d) immutable independent Java8 dependency resolution; (e) actual denial probes, failsafe artifact negative. If any cannot be solved inside scope, stop and request an amended inventory rather than silently modifying other files.
