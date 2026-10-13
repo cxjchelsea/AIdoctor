@@ -238,6 +238,26 @@ def main():
           any(c.split(".")[-1] == DEDICATED[-1] and (failure or err)
               for c,_,failure,err,_,_ in missing_class_cases),
           "SEL_MISSING_ONE_EXCLUSION_MUTANT_NOT_REJECTED")
+    # Real classpath-shadow mutation: stage a duplicate original Store class in
+    # test-classes (which Surefire loads first); assertion must reject code origin.
+    shadow_file = testclasses / RESOURCE
+    check(not shadow_file.exists(), "FEA_SHADOW_PREEXISTS")
+    shadow_file.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(store, shadow_file)
+    try:
+        shadow_run = cmd(mvn + ["-f", str(source / "diagnosis-service/pom.xml"),
+                               "-Dtest=" + TEST, "surefire:test"], env=runenv, expect=1)
+        shadow_cases = suite_xml(source)
+        check(shadow_run.returncode != 0 and
+              any(c.endswith("." + TEST) and (failure or error)
+                  for c,n,failure,error,_,_ in shadow_cases),
+              "FEA_SHADOW_MUTANT_NOT_REJECTED")
+        check("PROBE_STORE_CODESOURCE_MISMATCH" in shadow_run.stdout or
+              "PROBE_STORE_DUPLICATE_RESOURCE" in shadow_run.stdout,
+              "FEA_SHADOW_CAUSAL_MARKER_MISSING")
+    finally:
+        shadow_file.unlink(missing_ok=True)
+    check(sha256(store) == store_hash, "FEA_SOURCE_STORE_CHANGED_AFTER_SHADOW")
     check(git(source, "status", "--porcelain") == "", "FEA_TRACKED_SOURCE_MUTATED")
     evidence = {
       "schemaVersion":"U07_D5_O2_NONDB_PROBE_V1",
@@ -254,6 +274,7 @@ def main():
       "ordinaryTestsPreserved":len(ordinary_after),
       "ordinaryPerCaseStatusPreserved":True,
       "missingExclusionNegativeRejected":True,
+      "shadowClassNegativeRejected":True,
       "unfilteredBaselineErrors":baseline_errors,
       "fullSEL_N01_16":"NOT_RUN",
       "mainMySQLPhysical":"NOT_RUN"
@@ -263,8 +284,56 @@ def main():
     evidence_path.write_text(json.dumps(evidence, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
     check(json.loads(evidence_path.read_text(encoding="utf-8")) == evidence, "PROBE_EVIDENCE_ROUNDTRIP")
     print(json.dumps(evidence, sort_keys=True))
+def verify_evidence():
+    # Admission accepts only a fixed local path and typed primitive allowlist.
+    path = Path(os.environ["RUNNER_TEMP"]) / "u07-nondb-probe-evidence.json"
+    check(path.is_file() and not path.is_symlink() and
+          path.stat().st_size < 4096, "PROBE_EVIDENCE_FILE_NOT_SAFE")
+    obj = json.loads(path.read_text(encoding="utf-8"))
+    allowed = {
+        "schemaVersion", "runId", "runAttempt", "verdict",
+        "sourceSha", "controlSha", "storeSourceBlob",
+        "storeCompiledSha256", "originTestExecuted",
+        "badHashRejected", "zeroTestsRejected",
+        "safeOrdinarySelectorExecuted", "exact11SelectorExecution",
+        "ordinaryTestsPreserved", "ordinaryPerCaseStatusPreserved",
+        "missingExclusionNegativeRejected", "shadowClassNegativeRejected",
+        "unfilteredBaselineErrors", "fullSEL_N01_16", "mainMySQLPhysical"
+    }
+    check(type(obj) is dict and set(obj) == allowed, "PROBE_EVIDENCE_SCHEMA_INVALID")
+    check(obj["schemaVersion"] == "U07_D5_O2_NONDB_PROBE_V1" and
+          obj["verdict"] == "NON_DB_PROBE_FEASIBILITY_POSITIVE" and
+          obj["sourceSha"] == EXPECTED and
+          obj["storeSourceBlob"] == EXPECTED_STORE_BLOB and
+          obj["controlSha"] == os.environ["PROBE_CONTROL_HEAD"] and
+          obj["runId"] == os.environ["GITHUB_RUN_ID"] and
+          obj["runAttempt"] == os.environ["GITHUB_RUN_ATTEMPT"],
+          "PROBE_EVIDENCE_PROVENANCE_MISMATCH")
+    check(obj["originTestExecuted"] == 1 and
+          obj["ordinaryTestsPreserved"] == 435 and
+          obj["unfilteredBaselineErrors"] == 38 and
+          obj["exact11SelectorExecution"] == "PASS_11_EXCLUDED" and
+          obj["fullSEL_N01_16"] == "NOT_RUN" and
+          obj["mainMySQLPhysical"] == "NOT_RUN", "PROBE_EVIDENCE_VERDICT_MISMATCH")
+    for k in ("badHashRejected", "zeroTestsRejected", "safeOrdinarySelectorExecuted",
+              "ordinaryPerCaseStatusPreserved", "missingExclusionNegativeRejected",
+              "shadowClassNegativeRejected"):
+        check(obj[k] is True, "PROBE_EVIDENCE_REQUIRED_NEGATIVE_MISSING")
+    check(re.fullmatch(r"[0-9a-f]{64}", obj["storeCompiledSha256"]) is not None,
+          "PROBE_EVIDENCE_SHA_FORMAT")
+    check(json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n" ==
+          path.read_text(encoding="utf-8"), "PROBE_EVIDENCE_NONCANONICAL")
+    print("PROBE_EVIDENCE_SAFE_UPLOAD_ADMISSION=PASS")
+
+
 if __name__ == "__main__":
-    try: main()
+    try:
+        if sys.argv[1:] == ["--verify"]:
+            verify_evidence()
+        elif not sys.argv[1:]:
+            main()
+        else:
+            raise RuntimeError("PROBE_UNKNOWN_COMMAND")
     except Exception as exc:
         print("NON_DB_PROBE_FAILURE=" + str(exc)[:1900], file=sys.stderr)
         sys.exit(1)
