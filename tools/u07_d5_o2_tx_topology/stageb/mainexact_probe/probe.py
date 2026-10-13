@@ -184,6 +184,8 @@ def main():
     ordinary_before = sorted((c, n) for c,n,_,_,_ in baseline_cases
                              if c.split(".")[-1] not in DEDICATED)
     baseline_errors = sum(e + failure for _,_,failure,e,_ in baseline_cases)
+    ordinary_skips_before = sum(skipped for c,_,_,_,skipped in baseline_cases
+                                if c.split(".")[-1] not in DEDICATED)
     check(baseline_errors > 0, "SEL_BASELINE_EXPECTED_ISOLATED_FAILURE_MISSING")
     if reports.exists(): shutil.rmtree(reports)
     candidate = "Test*,*Test,*Tests,*TestCase,!" + ",!".join(DEDICATED)
@@ -201,9 +203,11 @@ def main():
           "SEL_ORDINARY_TEST_COVERAGE_DIFFERENCE"
           + " before=" + str(len(ordinary_before))
           + " after=" + str(len(ordinary_after)))
-    check(not any(failure or error or skipped
+    check(not any(failure or error
                   for _,_,failure,error,skipped in selected_cases),
-          "SEL_ORDINARY_TEST_FAILURE_OR_SKIP")
+          "SEL_ORDINARY_TEST_FAILURE")
+    check(sum(skipped for _,_,_,_,skipped in selected_cases) == ordinary_skips_before,
+          "SEL_ORDINARY_SKIP_STATUS_DRIFT")
     # Negative selector: intentionally delete one of 11 exclusions, then
     # the isolated class must execute and fail its normal disposable guard.
     if reports.exists(): shutil.rmtree(reports)
