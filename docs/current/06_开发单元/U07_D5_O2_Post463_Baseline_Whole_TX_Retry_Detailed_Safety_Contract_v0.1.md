@@ -226,3 +226,24 @@ A documentation PR may be assessed separately from these failures only by an exp
 | Main runner | Section 15 MR-01..06 design | Separate file inventory, independent review, implementation authorization |
 
 **Updated proposed gate:** `TARGETED_DESIGN_REMEDIATION=SUBMITTED_FOR_RE_REVIEW`; `DESIGN_FREEZE=PENDING_RE_REVIEW`; `EXACT_MAIN_RUNNER_DESIGN=CANDIDATE_ONLY`; `MAIN_PHYSICAL_VERIFICATION=PENDING`; `PRODUCTION_RETRY=NOT_AUTHORIZED`; `PR465_MERGE_AUTHORIZATION=NOT_GRANTED`.
+
+---
+
+## 17. R2-D06 exact failure-source attribution — confirmed static cause, physical base comparison pending
+
+**Observed exact PR SHA:** `429e8ff2c24db714d1e5ae7f81c2fadc7ffece20`, runs `38339448690` U02 and `38339448656` U03; Java jobs fail in the `Run diagnosis-service regression suite` step, whereas U02 Python succeeds. Job logs show `StageBP1BReplayConflictTest` `P1B_NOT_DISPOSABLE_RUNNER`; prior run had 473 tests and 38 errors, not 38 assertion failures.
+
+**Verified on unchanged main `33c0914e...` source:** `.github/workflows/u02-verification.yml` and `.github/workflows/u03-verification.yml` run `mvn -f diagnosis-service/pom.xml test` for the generic Java suite. Neither supplies `U07_D5O2_P1B_PROFILE`, `U07_D5O2_P1B_ISOLATED`, `U07_D5O2_P1B_URL` nor a P1B MySQL8 service. The already-main source `StageBP1BTestConfig` throws `IllegalStateException("P1B_NOT_DISPOSABLE_RUNNER")` if any of these exact isolated environment gates is absent, *before* connecting to the database. The specific test `StageBP1BReplayConflictTest` constructs this config and is included in generic `test`. `.github/workflows/u07-d5-o2-stage-b-p1b.yml` is a separate MySQL8 isolated runner that supplies all three gates, bootstrap, and a narrow `-Dtest=...` selection.
+
+**Attribution verdict:** `STATIC_BASELINE_RUNNER_CONTRACT_MISMATCH=CONFIRMED`; `PR465_DESIGN_CHANGE_CAUSED_FAILURE=NOT_SUPPORTED`; `EXACT_BASE_SAME_PROFILE_PHYSICAL_COMPARISON=NOT_RUN`; `CI_REQUIRED_CHECK_WAIVER=NOT_GRANTED`. This avoids incorrectly claiming a full main-based execution has passed or failed.
+
+**Separate CI corrective design (not authorized here):** generic U02/U03 suite must explicitly select its non-isolated unit/integration set, with a versioned exclusion manifest for dedicated disposable-database suites (rather than broad wildcard deletion); independent dedicated P1B runner remains authoritative for P1B tests. Verify that ordinary Java coverage is not silently lost. A precise Maven Surefire selection, metadata/annotation-based category tagging, or a separate test source-set split needs its own change inventory, review, exact-base comparison and CI. Do **not** export P1B isolation variables into ordinary workflows; that would bypass the safety model and still lack the expected schema/credentials.
+
+## 18. Concrete pre-freeze blockers after static attribution
+
+- `BD-01`: Exact-base same-profile runtime comparison still missing; do not mark CI baseline formally closed.
+- `BD-02`: Whole-TX typed schemas still need nullability, enum wire IDs, JDBC/JTA transaction authority evidence and field-level DDL registry frozen.
+- `BD-03`: Separate exact-main physical Runner remains **design only**; no writable or deployable workflow has been authorized.
+- `BD-04`: The four-table Store replay gap remains confirmed unsafe; production retry cannot be implemented as a workaround.
+
+**Decision:** `R2_D06_STATIC_ATTRIBUTION=PASS`, `R2_D06_EXACT_BASE_PHYSICAL_ATTRIBUTION=PENDING`, `WHOLE_TX_DESIGN_FREEZE=NOT_GRANTED`, `PR465_MERGE_AUTHORIZATION=NOT_GRANTED`, `RUNNER_DESIGN=READY_FOR_INDEPENDENT_REVIEW`.
