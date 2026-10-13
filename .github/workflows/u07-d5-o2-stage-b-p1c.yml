@@ -1,0 +1,83 @@
+name: U07 D5-O2 Stage B P1C isolated concurrent replay smoke
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u07/d5o2/stageb/p1c/**'
+      - 'diagnosis-service/src/test/resources/u07/d5o2/stageb/p1c/**'
+      - 'tools/u07_d5_o2_tx_topology/stageb/p1c/**'
+      - '.github/workflows/u07-d5-o2-stage-b-p1c.yml'
+permissions:
+  contents: read
+jobs:
+  p1c-concurrent-source-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: synthetic-p1c-disposable-root
+          MYSQL_DATABASE: u07_d5o2_stage_b_p1c
+        ports:
+          - 33330:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -psynthetic-p1c-disposable-root"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      U07_D5O2_P1C_PROFILE: U07_D5O2_STAGE_B_P1C_SYNTHETIC
+      U07_D5O2_P1C_ISOLATED: 'true'
+      U07_D5O2_P1C_URL: jdbc:mysql://127.0.0.1:33330/u07_d5o2_stage_b_p1c?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      U07_P1C_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Verify isolated synthetic merge checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^2)" = "$U07_P1C_PR_HEAD_SHA"
+          test "$U07_D5O2_P1C_PROFILE" = U07_D5O2_STAGE_B_P1C_SYNTHETIC
+          test "$U07_D5O2_P1C_ISOLATED" = true
+          java -version
+      - name: Mint restricted credentials and bootstrap original DDL
+        shell: bash
+        env:
+          MYSQL_PWD: synthetic-p1c-disposable-root
+        run: |
+          set -euo pipefail
+          for role in WRITER READER; do
+            value="$(openssl rand -hex 24)"
+            echo "::add-mask::$value"
+            printf 'P1C_%s_PWD=%s\n' "$role" "$value" >> "$GITHUB_ENV"
+            export "P1C_${role}_PWD=$value"
+          done
+          umask 077
+          python3 tools/u07_d5_o2_tx_topology/stageb/p1c/bootstrap-and-verify.py bootstrap >/tmp/p1c-schema.sql
+          mysql -h 127.0.0.1 -P 33330 -uroot u07_d5o2_stage_b_p1c </tmp/p1c-schema.sql
+          rm -f /tmp/p1c-schema.sql
+      - name: Compile shared bindings with Java8
+        run: mvn -B -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Compile P1C isolated tests
+        run: mvn -B -f diagnosis-service/pom.xml -DskipTests test-compile
+      - name: Run eight physical two-writer races and verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -f diagnosis-service/pom.xml -Dtest=StageBP1CConcurrencyTest test
+          python3 tools/u07_d5_o2_tx_topology/stageb/p1c/bootstrap-and-verify.py verify
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: u07-d5-o2-stage-b-p1c-evidence
+          path: |
+            diagnosis-service/target/surefire-reports/TEST-*StageBP1C*.xml
+            diagnosis-service/target/stage-b-p1c-observations/*.json
+            diagnosis-service/target/u07-d5o2-stage-b-p1c-evidence.json
