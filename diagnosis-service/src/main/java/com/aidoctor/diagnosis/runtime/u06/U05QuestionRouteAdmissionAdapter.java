@@ -20,6 +20,7 @@ public final class U05QuestionRouteAdmissionAdapter {
     public U06AdmissionService.Admission admit(
             U05ExecutionResult upstream,
             U06AdmissionEvidence hostEvidence,
+            int actualCurrentU06StateVersion,
             String questionPolicyRef,
             String d04PolicyRef,
             String dependencyRef,
@@ -63,6 +64,9 @@ public final class U05QuestionRouteAdmissionAdapter {
         }
 
         int version = route.getSourceReadinessCommittedVersion();
+        if (actualCurrentU06StateVersion != version) {
+            throw new IllegalStateException("U05_U06_CURRENT_STATE_VERSION_MISMATCH");
+        }
         U06ProfileBRequest request = new U06ProfileBRequest(
                 "u05-u06-" + route.getRouteEffectId(),
                 route.getConsultationId(), route.getCdpId(),
@@ -78,7 +82,7 @@ public final class U05QuestionRouteAdmissionAdapter {
                 threadId, runId, expectedConsultationRowVersion,
                 route.getCorrelationId(), route.getTraceId(), route.getCreatedAt(),
                 hostEvidence);
-        return admission.admit(request, version);
+        return admission.admit(request, actualCurrentU06StateVersion);
     }
 
     private static boolean required(String value) {
