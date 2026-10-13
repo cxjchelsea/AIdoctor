@@ -64,7 +64,7 @@ public final class JdbcU06DeliveryStore implements U06DeliveryStore {
                     "a.delivery_id,a.authority_status,i.delivery_id,i.intent_status," +
                     "t.attempt_id,t.delivery_id,t.attempt_status," +
                     "r.receipt_id,r.delivery_id,r.receipt_status,r.evidence_type," +
-                    "c.delivery_id " +
+                    "c.delivery_id,c.confirmation_status " +
                     "FROM u06_delivery_ledger l " +
                     "JOIN u06_delivery_authority a ON a.delivery_effect_id=l.delivery_effect_id " +
                     "JOIN u06_delivery_intent i ON i.delivery_effect_id=l.delivery_effect_id " +
@@ -78,7 +78,7 @@ public final class JdbcU06DeliveryStore implements U06DeliveryStore {
                             rs.getString(6),rs.getString(7),rs.getString(8),rs.getString(9),rs.getString(10),rs.getString(11),
                             rs.getString(12),rs.getString(13),rs.getString(14),rs.getString(15),
                             rs.getString(16),rs.getString(17),rs.getString(18),rs.getString(19),
-                            rs.getString(20),rs.getString(21),rs.getString(22),rs.getString(23)));
+                            rs.getString(20),rs.getString(21),rs.getString(22),rs.getString(23),rs.getString(24)));
         } catch (EmptyResultDataAccessException e) {
             throw new IllegalStateException("U06_DELIVERY_REPLAY_INCOMPLETE", e);
         } catch (org.springframework.dao.IncorrectResultSizeDataAccessException e) {
@@ -91,12 +91,12 @@ public final class JdbcU06DeliveryStore implements U06DeliveryStore {
         final String questionId,contentFingerprint,endpointRef,idempotencyKey,confirmationEvaluationId,confirmationFingerprint;
         final String authorityDeliveryId,authorityStatus,intentDeliveryId,intentStatus;
         final String attemptId,attemptDeliveryId,attemptStatus,receiptId,receiptDeliveryId,receiptStatus,evidenceType;
-        final String confirmationDeliveryId;
+        final String confirmationDeliveryId, confirmationRecordStatus;
 
         Existing(String s,String e,String d,String status,String canonical,String q,String content,String endpoint,
                  String idem,String eval,String confirmFp,String authorityD,String authorityS,
                  String intentD,String intentS,String attempt,String attemptD,String attemptS,
-                 String receipt,String receiptD,String receiptS,String evidence,String confirmationD) {
+                 String receipt,String receiptD,String receiptS,String evidence,String confirmationD,String confirmationS) {
             selectionEffectId=s;deliveryEffectId=e;deliveryId=d;confirmationStatus=status;
             canonicalFingerprint=canonical;questionId=q;contentFingerprint=content;endpointRef=endpoint;
             idempotencyKey=idem;confirmationEvaluationId=eval;confirmationFingerprint=confirmFp;
@@ -104,7 +104,7 @@ public final class JdbcU06DeliveryStore implements U06DeliveryStore {
             intentDeliveryId=intentD;intentStatus=intentS;
             attemptId=attempt;attemptDeliveryId=attemptD;attemptStatus=attemptS;
             receiptId=receipt;receiptDeliveryId=receiptD;receiptStatus=receiptS;
-            evidenceType=evidence;confirmationDeliveryId=confirmationD;
+            evidenceType=evidence;confirmationDeliveryId=confirmationD;confirmationRecordStatus=confirmationS;
         }
 
         boolean matches(Command c) {
@@ -129,7 +129,8 @@ public final class JdbcU06DeliveryStore implements U06DeliveryStore {
                     &&eq(receiptDeliveryId,c.deliveryId)
                     &&eq(receiptStatus,"SYNTHETIC_CONFIRMED")
                     &&eq(evidenceType,"SYNTHETIC")
-                    &&eq(confirmationDeliveryId,c.deliveryId);
+                    &&eq(confirmationDeliveryId,c.deliveryId)
+                    &&eq(confirmationRecordStatus,"CONFIRMED");
         }
 
         private static boolean eq(String a,String b){return a==null?b==null:a.equals(b);}
