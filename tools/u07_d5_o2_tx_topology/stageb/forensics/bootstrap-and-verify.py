@@ -180,25 +180,109 @@ def safety_only():
         return False
 
 
-def adversarial_mutations(original):
+def validate_fact_bundle(evidence, role, manifest, head, checkout, run, attempt):
+    for obj in (evidence, role):
+        ensure_safe(obj)
+        if (obj.get("schema") != "U07_F_ISOLATED_L0_EVIDENCE_V1"
+                or obj.get("sourceMainSha") != manifest["sourceMainSha"]
+                or obj.get("candidateHead") != head
+                or obj.get("checkoutSha") != checkout
+                or obj.get("runId") != run
+                or str(obj.get("runAttempt")) != attempt
+                or obj.get("profile") != manifest["profile"]
+                or obj.get("database") != manifest["database"]
+                or obj.get("L1Verdict") != "L1_NOT_ENABLED"
+                or obj.get("businessCompletion") != "NOT_AUTHORIZED_TO_ATTEST"
+                or obj.get("downstreamAuthority") is not False
+                or obj.get("sourceReplayGap") != "CONFIRMED_NOT_SAFE"):
+            die("FACT_PROVENANCE")
+    if (role.get("rolesVerified") is not True
+            or role.get("roleNegativePassed") is not True):
+        die("GRANT_NEGATIVES")
+    if evidence.get("roleNegativeMatrix") != role.get("roleNegativeMatrix"):
+        die("NEGATIVE_MATRIX_ALIGNMENT")
+    if (evidence.get("rolesVerified") is not True
+            or evidence.get("executorTerminated") is not True
+            or evidence.get("harnessTimeout") is not False
+            or evidence.get("bothReady") is not True
+            or evidence.get("caseAcceptance") != "DIAGNOSTIC_PIPELINE_ONLY"
+            or evidence.get("forensicVerdict") not in
+            ("NO_EDGE_CAPTURED", "PARTIAL_EDGE_ONLY", "LIVE_TWO_WRITER_CYCLE_BOUND")
+            or evidence.get("liveLockGraphVerdict") != evidence.get("forensicVerdict")
+            or graph_recompute(evidence) != evidence.get("forensicVerdict")):
+        die("FACT_ATTESTATION")
+    actors=[evidence.get("actorA"),evidence.get("actorB")]
+    if any(not isinstance(a,dict) or a.get("resourcesClear") is not True
+           or a.get("outcome") not in ("ORIGINAL_NEW_SUCCESS","ORIGINAL_SQL_1213")
+           or not re.fullmatch(r"[0-9a-f]{64}",a.get("effectDigest",""))
+           or not isinstance(a.get("successfulInsertCount"),int)
+           or not 0<=a["successfulInsertCount"]<=6
+           for a in actors):
+        die("ACTOR_OUTCOME")
+    actor_ids=[a["connectionId"] for a in actors]
+    obs=evidence.get("observerConnectionId")
+    reader=evidence.get("readerId")
+    if not isinstance(obs,int) or not isinstance(reader,int) or len(set(actor_ids+[obs,reader]))!=4:
+        die("FOUR_PHYSICAL_CONNECTIONS")
+    if evidence.get("sourceVerdict")=="ROLLBACK_CONFIRMED_1213":
+        if sum(a["outcome"]=="ORIGINAL_SQL_1213" for a in actors)!=1:
+            die("WRONG_VICTIM_COUNT")
+        if sum(a["outcome"]=="ORIGINAL_NEW_SUCCESS" for a in actors)!=1:
+            die("MISSING_WINNER")
+    elif evidence.get("sourceVerdict")=="NO_1213_OBSERVED":
+        if any(a["outcome"]!="ORIGINAL_NEW_SUCCESS" for a in actors):
+            die("NO_1213_BUT_UNKNOWN_OUTCOME")
+    else:
+        die("SOURCE_VERDICT")
+    for i,a in enumerate(actors):
+        vect=evidence.get("effectAVector" if i==0 else "effectBVector")
+        full=evidence.get("completeSixIdentityA" if i==0 else "completeSixIdentityB")
+        if a["outcome"]=="ORIGINAL_NEW_SUCCESS":
+            if vect!=[1]*6 or full is not True or not a.get("txReturned") or a["successfulInsertCount"]!=6:
+                die("FULL_SIX_IDENTITY")
+        else:
+            if vect!=[0]*6 or full is not False or a.get("txReturned"):
+                die("ROLLBACK_GRAPH")
+    if (evidence.get("observerSamples")!=evidence.get("sampleEpochs")
+            or evidence.get("observerSamples",0)>100
+            or not isinstance(evidence.get("observerSamples"),int)):
+        die("SAMPLE_BUDGET")
+    if evidence.get("forensicVerdict")=="LIVE_TWO_WRITER_CYCLE_BOUND" and evidence.get("sourceVerdict")!="ROLLBACK_CONFIRMED_1213":
+        die("FALSE_CYCLE")
+
+
+def adversarial_mutations(original, role, manifest, head, checkout, run, attempt):
     import copy
     variants=[]
-    variants.append(dict(original, invented="FAKE_UNKNOWN_SECRET_4192"))
-    variants.append(dict(original, sourceMainSha="f"*40))
-    variants.append(dict(original, forensicVerdict="LIVE_TWO_WRITER_CYCLE_BOUND"))
-    variants.append(dict(original, selectedEdges=[{"rawSql":"SELECT *"}]))
-    if original.get("selectedEdges"):
-        mutant=copy.deepcopy(original);mutant["selectedEdges"][0]["index"]="wrong_index";variants.append(mutant)
-    for v in variants:
+    def evil(change,role_change=None):
+        e=copy.deepcopy(original);r=copy.deepcopy(role)
+        change(e)
+        if role_change:role_change(r)
+        variants.append((e,r))
+    evil(lambda e:e.update(invented="FAKE_UNKNOWN_SECRET_4192"))
+    evil(lambda e:e.update(sourceMainSha="f"*40))
+    evil(lambda e:e.update(candidateHead="e"*40))
+    evil(lambda e:e.update(forensicVerdict="LIVE_TWO_WRITER_CYCLE_BOUND"))
+    evil(lambda e:e.update(selectedEdges=[{"rawSql":"SELECT *"}]))
+    evil(lambda e:e.update(roleNegativeMatrix={}))
+    evil(lambda e:e.update(observerConnectionId=e["actorA"]["connectionId"]))
+    evil(lambda e:e.update(effectAVector=[0]*6 if e["actorA"]["outcome"]=="ORIGINAL_NEW_SUCCESS" else [1]*6))
+    evil(lambda e:e.update(L1Verdict="PROCESS_ENABLED"))
+    evil(lambda e:e.update(selectedEdges=[dict(
+      epoch=1,requester="A",blocker="B",table="u06_delivery_ledger",
+      index="wrong_index",engine="INNODB",requestMode="S",requestStatus="WAITING",
+      blockMode="X",blockStatus="GRANTED",requestType="RECORD",blockType="RECORD",
+      requestThread=1,blockThread=2)]))
+    evil(lambda e:e.update(caseAcceptance="BUSINESS_COMPLETE"))
+    evil(lambda e:None,lambda r:r.update(roleNegativeMatrix={"p0":"42000:1142"}))
+    for n,(e,r) in enumerate(variants):
         try:
-            ensure_safe(v)
-            if v.get("sourceMainSha") != original.get("sourceMainSha"):
-                continue  # provenance rejection is enforced by verify()
-            if v.get("forensicVerdict") != graph_recompute(v):
-                continue
-        except (SystemExit, KeyError, TypeError):
+            validate_fact_bundle(e,r,manifest,head,checkout,run,attempt)
+        except (SystemExit, ValueError, KeyError, TypeError):
             continue
-        die("MUTANT_ACCEPTED")
+        die("MUTANT_ACCEPTED_"+str(n))
+    print("F_ISOLATED_ADVERSARIAL_MUTANTS_REJECTED="+str(len(variants)))
+
 
 def verify(m):
     if os.getenv("GITHUB_ACTIONS") != "true" or os.getenv("U07_F_ISOLATED") != "true":
@@ -231,59 +315,8 @@ def verify(m):
         die("EVIDENCE_FILES")
     evidence = json.loads((OUT / "forensic-incident.json").read_text())
     role = json.loads((OUT / "role-negative.json").read_text())
-    for obj in (evidence, role):
-        ensure_safe(obj)
-        if (obj.get("schema") != "U07_F_ISOLATED_L0_EVIDENCE_V1"
-                or obj.get("sourceMainSha") != m["sourceMainSha"]
-                or obj.get("candidateHead") != head
-                or obj.get("checkoutSha") != sha
-                or obj.get("runId") != run
-                or str(obj.get("runAttempt")) != attempt
-                or obj.get("profile") != m["profile"]
-                or obj.get("database") != m["database"]
-                or obj.get("L1Verdict") != "L1_NOT_ENABLED"
-                or obj.get("businessCompletion") != "NOT_AUTHORIZED_TO_ATTEST"
-                or obj.get("downstreamAuthority") is not False
-                or obj.get("sourceReplayGap") != "CONFIRMED_NOT_SAFE"):
-            die("FACT_PROVENANCE")
-    if role.get("rolesVerified") is not True or role.get("roleNegativePassed") is not True:
-        die("GRANT_NEGATIVES")
-    if graph_recompute(evidence) != evidence.get("forensicVerdict"):
-        die("FORGED_GRAPH")
-    if evidence.get("observerConnectionId",0) in (
-            evidence.get("actorA",{}).get("connectionId"),
-            evidence.get("actorB",{}).get("connectionId")):
-        die("OBSERVER_SESSION_COLLISION")
-    adversarial_mutations(evidence)
-    if False:
-        die("GRANT_NEGATIVES")
-    if (evidence.get("rolesVerified") is not True
-            or evidence.get("executorTerminated") is not True
-            or evidence.get("harnessTimeout") is not False
-            or evidence.get("bothReady") is not True
-            or evidence.get("caseAcceptance") != "DIAGNOSTIC_PIPELINE_ONLY"
-            or evidence.get("forensicVerdict") not in
-            ("NO_EDGE_CAPTURED", "PARTIAL_EDGE_ONLY", "LIVE_TWO_WRITER_CYCLE_BOUND")
-            or evidence.get("liveLockGraphVerdict") != evidence.get("forensicVerdict")):
-        die("FACT_ATTESTATION")
-    for key in ("actorA", "actorB"):
-        actor = evidence.get(key, {})
-        if (actor.get("resourcesClear") is not True
-                or not isinstance(actor.get("connectionId"), int)
-                or actor["connectionId"] <= 0
-                or actor.get("outcome") not in (
-                    "ORIGINAL_NEW_SUCCESS", "ORIGINAL_SQL_1213",
-                    "ORIGINAL_REPLAY_TRUE", "OTHER_SQL_ERROR", "OTHER_EXCEPTION")
-                or not re.fullmatch(r"[0-9a-f]{64}", actor.get("effectDigest", ""))):
-            die("ACTOR")
-    if evidence["actorA"]["connectionId"] == evidence["actorB"]["connectionId"]:
-        die("ACTOR_SEPARATION")
-    if evidence.get("sourceVerdict") == "ROLLBACK_CONFIRMED_1213":
-        if not any(evidence[k]["outcome"] == "ORIGINAL_SQL_1213" for k in ("actorA", "actorB")):
-            die("FALSE_DEADLOCK")
-    if evidence["forensicVerdict"] == "LIVE_TWO_WRITER_CYCLE_BOUND":
-        if evidence.get("sourceVerdict") != "ROLLBACK_CONFIRMED_1213":
-            die("FALSE_GRAPH")
+    validate_fact_bundle(evidence, role, m, head, sha, run, attempt)
+    adversarial_mutations(evidence, role, m, head, sha, run, attempt)
     for path in [reports[0], OUT / "forensic-incident.json", OUT / "role-negative.json"]:
         raw = path.read_bytes()
         if len(raw) > 1024 * 1024:
@@ -309,11 +342,13 @@ def verify(m):
 
 
 def negative_parser_tests():
-    for marker in BLOCKED:
-        unsafe = {"schema": "INVALID", "raw": marker}
-        serialized = json.dumps(unsafe)
-        if marker not in serialized:
-            die("NEGATIVE_TEST_BROKEN")
+    for marker in BLOCKED + ("FAKE_UNKNOWN_SECRET_4192",):
+        unsafe = {"caseId": marker}
+        try:
+            ensure_safe(unsafe)
+        except SystemExit:
+            continue
+        die("NEGATIVE_TEST_ACCEPTED")
 
 
 if __name__ == "__main__":
