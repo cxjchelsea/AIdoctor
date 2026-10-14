@@ -323,10 +323,14 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
 
             tx.execute(status -> {
                 CDP cdp = repo.findByIdWithLock(id).get();
-                Map<String,Object> gate =
-                        (Map<String,Object>) cdp.getPatientState().get("safety_gate");
+                Map<String,Object> state =
+                        new LinkedHashMap<String,Object>(cdp.getPatientState());
+                Map<String,Object> gate = new LinkedHashMap<String,Object>(
+                        (Map<String,Object>) state.get("safety_gate"));
                 gate.put("safety_gate", "ALLOW");
                 gate.put("u04_policy_ref", U04ScopeContext.FROZEN_POLICY_REF);
+                state.put("safety_gate", gate);
+                cdp.setPatientState(state);
                 repo.saveAndFlush(cdp);
                 return null;
             });
@@ -338,9 +342,13 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
 
             tx.execute(status -> {
                 CDP cdp = repo.findByIdWithLock(id).get();
-                Map<String,Object> gate =
-                        (Map<String,Object>) cdp.getPatientState().get("safety_gate");
+                Map<String,Object> state =
+                        new LinkedHashMap<String,Object>(cdp.getPatientState());
+                Map<String,Object> gate = new LinkedHashMap<String,Object>(
+                        (Map<String,Object>) state.get("safety_gate"));
                 gate.put("u04_policy_ref", "UNAPPROVED_POLICY");
+                state.put("safety_gate", gate);
+                cdp.setPatientState(state);
                 repo.saveAndFlush(cdp);
                 return null;
             });
