@@ -287,23 +287,23 @@ public class U07U06SelectionPhysicalMysqlTest {
                             request.getConsultationId(), id, request.getThreadId(),
                             request.getRunId(), persistedWait.checkpointId,
                             "synthetic-question-1", fixture.deliveryId, "synthetic-person",
-                            "synthetic-answer-event", "I have no fever",
+                            "synthetic-answer-event", "I have severe difficulty breathing",
                             "synthetic-answer-correlation", "synthetic-answer-trace");
             assertEquals(10, answer.baseClinicalStateVersion);
-            assertEquals("I have no fever", answer.rawClinicalText);
+            assertEquals("I have severe difficulty breathing", answer.rawClinicalText);
             assertThrows(IllegalStateException.class, () ->
                     f8Admission.requireWaitingAnswer(
                             request.getConsultationId(), id, "wrong-thread",
                             request.getRunId(), persistedWait.checkpointId,
                             "synthetic-question-1", fixture.deliveryId, "synthetic-person",
-                            "synthetic-answer-event", "I have no fever",
+                            "synthetic-answer-event", "I have severe difficulty breathing",
                             "synthetic-answer-correlation", "synthetic-answer-trace"));
             assertThrows(IllegalStateException.class, () ->
                     f8Admission.requireWaitingAnswer(
                             request.getConsultationId(), id, request.getThreadId(),
                             request.getRunId(), persistedWait.checkpointId,
                             "wrong-question", fixture.deliveryId, "synthetic-person",
-                            "synthetic-answer-event", "I have no fever",
+                            "synthetic-answer-event", "I have severe difficulty breathing",
                             "synthetic-answer-correlation", "synthetic-answer-trace"));
 
             assertEquals(10, cdps.findById(id).get().getVersion().intValue());
@@ -360,7 +360,7 @@ public class U07U06SelectionPhysicalMysqlTest {
             assertEquals(answer.eventId, resumed.eventId);
             assertEquals(10, resumed.baseClinicalStateVersion);
             assertEquals("PATIENT_REPORTED", resumed.sourceType);
-            assertEquals("I have no fever", resumed.rawClinicalText);
+            assertEquals("I have severe difficulty breathing", resumed.rawClinicalText);
 
             // Actual U02 business path, P01 commit and P05 trace on the same
             // physical MySQL DB. C01 interpretation is an explicit fixture.
@@ -448,10 +448,10 @@ public class U07U06SelectionPhysicalMysqlTest {
         com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse.ObservationCandidate fact =
                 new com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse.ObservationCandidate();
         fact.setObservationId("fixture-answer-obs");
-        fact.setConceptId("TEST:FEVER");
-        fact.setConceptDisplay("synthetic fever");
+        fact.setConceptId("EV-RF-RESP-001");
+        fact.setConceptDisplay("synthetic severe respiratory distress red flag");
         fact.setRawTextRef("sha256:synthetic-answer-evidence");
-        fact.setValueSemantics("NO");
+        fact.setValueSemantics("YES");
         fact.setSourceType("PATIENT_REPORTED");
         fact.setLifecycle("CONFIRMED");
         fact.setConfidenceOrUncertainty(0.95d);
