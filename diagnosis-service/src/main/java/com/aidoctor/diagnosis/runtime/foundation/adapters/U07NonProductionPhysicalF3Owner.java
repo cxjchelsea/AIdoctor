@@ -63,10 +63,20 @@ public final class U07NonProductionPhysicalF3Owner
             throw new IllegalStateException("U07_F3_APPROVED_PATCH_REQUIRED");
         // The owner only accepts a dedicated F3 assessment mutation, never
         // a generic patient/permission/safety patch smuggled into this boundary.
-        if (decision.patch.operations.size() != 1
+        if (decision.patch.operations.size() > 2
                 || !"/patient_state/f3_gap_assessment".equals(
                         decision.patch.operations.get(0).path))
             throw new IllegalStateException("U07_F3_PATCH_SCOPE_INVALID");
+        if (decision.patch.operations.size() == 2) {
+            String path = decision.patch.operations.get(1).path;
+            Object gap = decision.patch.operations.get(1).value;
+            if (path == null || !path.startsWith("/patient_state/information_gaps/")
+                    || path.length() == "/patient_state/information_gaps/".length()
+                    || !(gap instanceof Map<?, ?>)
+                    || !path.substring("/patient_state/information_gaps/".length())
+                            .equals(((Map<?, ?>) gap).get("gap_id")))
+                throw new IllegalStateException("U07_F3_GAP_PATCH_SCOPE_INVALID");
+        }
         Object payload = decision.patch.operations.get(0).value;
         if (!(payload instanceof Map<?, ?>)
                 || !decision.effectId.equals(
