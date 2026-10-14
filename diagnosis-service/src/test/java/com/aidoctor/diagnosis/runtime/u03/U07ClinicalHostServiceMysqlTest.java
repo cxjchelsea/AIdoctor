@@ -384,6 +384,71 @@ public class U07ClinicalHostServiceMysqlTest {
     }
 
     @Test
+    public void unifiedU06Mode1UsesGovernedCommitAndPhysicalMysqlReadback() {
+        try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
+            ctx.register(U07WorkpackACdpPhysicalMysqlTest.IsolatedConfig.class,
+                    ScopedTestCommitter.class);
+            ctx.refresh();
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            String id = "u06-unified-" + UUID.randomUUID().toString();
+            tx.execute(status -> {
+                CDP cdp = CDP.builder().id(id).patientId("synthetic-only")
+                        .sessionId("synthetic-only").version(8).build();
+                Map<String,Object> initial = new LinkedHashMap<String,Object>();
+                initial.put("information_gaps", new LinkedHashMap<String,Object>());
+                cdp.setPatientState(initial);
+                repo.saveAndFlush(cdp);
+                return null;
+            });
+
+            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest request =
+                    new com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest(
+                            "u06-unified-req", "consult-unified", id,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.A1_PRE_READINESS_ROUTING,
+                            "source-u04", 8, 8,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
+                            "synthetic-dependency", "f3-policy", null, null,
+                            "canonical-event", "business-event", null, null, 0L,
+                            "correlation", "trace", "2026-09-18T00:00:00Z",
+                            com.aidoctor.diagnosis.runtime.u06.U06AdmissionEvidence.syntheticCurrentAllow());
+            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle decision =
+                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle(
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,
+                            "unified-effect", "unified-gap", "DECISION_MATERIAL", true,
+                            null, null, null, null, null, null, null, null, null);
+            com.aidoctor.diagnosis.runtime.u06.U06ProfileBApplicationService service =
+                    new com.aidoctor.diagnosis.runtime.u06.U06ProfileBApplicationService(
+                            new com.aidoctor.diagnosis.runtime.u06.U06NonProductionPhysicalMode1Service(
+                                    repo, ctx.getBean(StateCommitter.class),
+                                    new com.aidoctor.diagnosis.runtime.u06.U06AdmissionService(),
+                                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier()));
+            com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult denied = service.execute(
+                    request, decision, null,
+                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier.Evidence(
+                            "BLOCKED", "nonprod-evidence"));
+            assertEquals(com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult.MODE1_SAFETY_BLOCKED,
+                    denied.getStatus());
+            assertEquals("COMMITTED", denied.getCommitStatus());
+            assertEquals(9, repo.findById(id).get().getVersion().intValue());
+            Map<String,Object> stored = repo.findById(id).get().getPatientState();
+            assertEquals("unified-effect",
+                    ((Map<?,?>) stored.get("f3_gap_assessment")).get("f3_canonical_effect_id"));
+            assertEquals("QUESTIONABLE_ONLINE",
+                    ((Map<?,?>) ((Map<?,?>) stored.get("information_gaps"))
+                            .get("unified-gap")).get("status"));
+            assertEquals(1, ctx.getBean(com.aidoctor.diagnosis.repository.CDPVersionRepository.class)
+                    .findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertThrows(IllegalStateException.class, () -> service.execute(request, decision, null,
+                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier.Evidence(
+                            "ALLOWED", "nonprod-evidence")));
+            assertEquals(9, repo.findById(id).get().getVersion().intValue());
+        }
+    }
+
+    @Test
     public void disabledByDefaultProvidesNoClinicalHostServices() {
         try (AnnotationConfigApplicationContext ctx =
                      new AnnotationConfigApplicationContext(U07ClinicalHostServicesConfig.class)) {
