@@ -145,6 +145,59 @@ public class U07U06SelectionPhysicalMysqlTest {
                     "SELECT COUNT(*) FROM u07_question_wait_evidence WHERE cdp_id=?",
                     Integer.class, id).intValue());
             assertEquals(9, cdps.findById(id).get().getVersion().intValue());
+
+            // Test-only exact receipt fixture: exercises delivery CDP persistence,
+            // not a real independently confirmed external patient delivery.
+            U07NonProductionDeliveryWaitRecovery.Receipt fixture =
+                    new U07NonProductionDeliveryWaitRecovery.Receipt(
+                            request, decision, "fixture-delivery-id",
+                            "fixture-delivery-effect", "fixture-confirmation");
+            AtomicInteger unavailableWaitCalls = new AtomicInteger();
+            U07NonProductionDeliveryWaitRecovery.DeliveryVerifier fixtureVerifier =
+                    receipt -> "fixture-confirmation".equals(receipt.confirmationRef)
+                            && "fixture-delivery-id".equals(receipt.deliveryId)
+                            && "fixture-delivery-effect".equals(receipt.deliveryEffectId);
+            U07NonProductionDeliveryWaitRecovery.WaitAuthority unavailableWait =
+                    (receipt, version) -> {
+                        unavailableWaitCalls.incrementAndGet();
+                        throw new IllegalStateException("TEST_DURABLE_WAIT_UNAVAILABLE");
+                    };
+            U07NonProductionDeliveryWaitRecovery delivery =
+                    new U07NonProductionDeliveryWaitRecovery(
+                            cdps, jdbc, tx, committer, fixtureVerifier, unavailableWait);
+            delivery.accept(fixture);
+            assertThrows(IllegalStateException.class, () -> delivery.recover(fixture));
+            CDP afterDelivery = cdps.findById(id).orElseThrow(IllegalStateException::new);
+            assertEquals(10, afterDelivery.getVersion().intValue());
+            Map<?,?> deliveredQuestions = (Map<?,?>) afterDelivery.getPatientState()
+                    .get("questions");
+            assertEquals("DELIVERED_TO_USER", ((Map<?,?>) deliveredQuestions
+                    .get("synthetic-question-1")).get("status"));
+            assertTrue(afterDelivery.getPatientState().containsKey("pending_question"));
+            assertEquals(2, history.findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertEquals(1, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_question_delivery_evidence WHERE cdp_id=?",
+                    Integer.class, id).intValue());
+            assertEquals(0, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_question_wait_evidence WHERE cdp_id=?",
+                    Integer.class, id).intValue());
+
+            // Simulate a new process/owner retry: no duplicate delivery commit
+            // and no manufactured WAIT when the durable host is unavailable.
+            U07NonProductionDeliveryWaitRecovery restarted =
+                    new U07NonProductionDeliveryWaitRecovery(
+                            cdps, jdbc, tx, committer, fixtureVerifier, unavailableWait);
+            restarted.accept(fixture);
+            assertThrows(IllegalStateException.class, () -> restarted.recover(fixture));
+            assertEquals(2, unavailableWaitCalls.get());
+            assertEquals(10, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(2, history.findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertEquals(1, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_question_delivery_evidence WHERE cdp_id=?",
+                    Integer.class, id).intValue());
+            assertEquals(0, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_question_wait_evidence WHERE cdp_id=?",
+                    Integer.class, id).intValue());
         }
     }
 }
