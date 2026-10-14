@@ -3,6 +3,7 @@ package com.aidoctor.diagnosis.runtime.foundation.adapters;
 import com.aidoctor.diagnosis.runtime.u04.*;
 import com.aidoctor.diagnosis.runtime.u05.*;
 import com.aidoctor.diagnosis.state.committer.StateCommitter;
+import com.aidoctor.diagnosis.repository.CDPRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -20,6 +21,23 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(prefix = "aidoctor.u07.clinical-host",
         name = "nonproduction-enabled", havingValue = "true", matchIfMissing = false)
 public class U07ClinicalHostServicesConfig {
+    /**
+     * Explicitly opt-in only with an independently authenticated A1 source.
+     * No default source, no synthetic issuer and no production traffic switch.
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "aidoctor.u07.clinical-host",
+            name = "attested-a1-enabled", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnBean({
+        CDPRepository.class,
+        ClinicalCdpF3BoundA1AuthorityPort.IndependentlyAttestedA1Source.class
+    })
+    public U04A1U05AuthorityBridge.A1BarrierAuthorityPort u07HostAttestedA1(
+            CDPRepository repository,
+            ClinicalCdpF3BoundA1AuthorityPort.IndependentlyAttestedA1Source source) {
+        return new ClinicalCdpF3BoundA1AuthorityPort(repository, source);
+    }
+
     /**
      * An independent host-owned A1 attestation MUST be provided; the CDP gate
      * alone cannot issue F3/A1 routing permission. No default/fake A1 bean.
