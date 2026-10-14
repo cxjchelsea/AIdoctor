@@ -59,7 +59,10 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
     @Configuration
     @EnableTransactionManagement
     @EnableJpaRepositories(
-            basePackages = "com.aidoctor.diagnosis.repository",
+            basePackages = {"com.aidoctor.diagnosis.repository",
+                    "com.aidoctor.diagnosis.runtime.u01",
+                    "com.aidoctor.diagnosis.runtime.u06.wait",
+                    "com.aidoctor.diagnosis.runtime.foundation"},
             includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                     classes = {CDPRepository.class, CDPVersionRepository.class,
                             com.aidoctor.diagnosis.runtime.u01.ConsultationRepository.class,
