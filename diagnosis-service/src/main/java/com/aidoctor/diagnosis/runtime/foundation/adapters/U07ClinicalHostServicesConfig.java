@@ -34,10 +34,12 @@ public class U07ClinicalHostServicesConfig {
     @ConditionalOnProperty(prefix = "aidoctor.u07.clinical-host",
             name = "persisted-f3-evidence-nonproduction-enabled",
             havingValue = "true", matchIfMissing = false)
-    @ConditionalOnBean(JdbcTemplate.class)
+    @ConditionalOnBean({JdbcTemplate.class,
+        U07PersistedF3OwnerBarrierRevalidationEvidence.TrustedEvidenceVerifier.class})
     public U07DurableNonProductionA1Issuer.VerifiedPostF3EvidencePort
-            u07PersistedF3Evidence(JdbcTemplate jdbc) {
-        return new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc);
+            u07PersistedF3Evidence(JdbcTemplate jdbc,
+                    U07PersistedF3OwnerBarrierRevalidationEvidence.TrustedEvidenceVerifier trusted) {
+        return new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc, trusted);
     }
 
     /**
