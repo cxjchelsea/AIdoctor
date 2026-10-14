@@ -258,6 +258,53 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
     }
 
     @Test
+    public void nonproductionF3OwnerPhysicallyCommitsAndReadsBackCanonicalEffect() {
+        authorize();
+        try (AnnotationConfigApplicationContext ctx =
+                     new AnnotationConfigApplicationContext(IsolatedConfig.class)) {
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            StateRepositoryPort writer = ctx.getBean(StateRepositoryPort.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            String id = tx.execute(status -> seed(repo));
+            U07NonProductionPhysicalF3Owner owner = new U07NonProductionPhysicalF3Owner(
+                    writer, repo, (consultation, cdp, version) -> {
+                        StateRepositoryPort.AtomicCommitCommand command =
+                                clinicalPatch(cdp, version,
+                                        "/patient_state/f3_gap_assessment", "physical-f3",
+                                        "f3_canonical_effect_id", "physical-effect");
+                        return new U07NonProductionPhysicalF3Owner.PreparedF3(
+                                "physical-effect", command.patchId, command.idempotencyKey,
+                                command.patch);
+                    });
+            U07NonProductionF3A1U05Flow.F3Committed result =
+                    owner.executeAndReadback("consult-1", id);
+            assertTrue(result.committedAndReadback);
+            assertEquals(9, result.persistedVersion);
+            assertEquals("physical-effect", result.effectId);
+            assertEquals("physical-effect", ((Map<?, ?>) repo.findById(id)
+                    .get().getPatientState().get("f3_gap_assessment"))
+                    .get("f3_canonical_effect_id"));
+            assertEquals(1, ctx.getBean(CDPVersionRepository.class)
+                    .findByCdpIdOrderByVersionNumberDesc(id).size());
+            // This phase requires a new, current F3 version: a second call
+            // must not silently treat a stale decision as a new authorization.
+            U07NonProductionPhysicalF3Owner stale = new U07NonProductionPhysicalF3Owner(
+                    writer, repo, (consultation, cdp, version) -> {
+                        StateRepositoryPort.AtomicCommitCommand command =
+                                clinicalPatch(cdp, 8,
+                                        "/patient_state/f3_gap_assessment", "physical-stale",
+                                        "f3_canonical_effect_id", "stale-effect");
+                        return new U07NonProductionPhysicalF3Owner.PreparedF3(
+                                "stale-effect", command.patchId, command.idempotencyKey,
+                                command.patch);
+                    });
+            assertThrows(IllegalStateException.class,
+                    () -> stale.executeAndReadback("consult-1", id));
+            assertEquals(9, repo.findById(id).get().getVersion().intValue());
+        }
+    }
+
+    @Test
     public void optInSpringReadbackUsesRealCommittedCdpAndRejectsStaleOrMissingAuthority() {
         authorize();
         try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
