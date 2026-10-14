@@ -60,6 +60,13 @@ public class U01U02RealFactCommitMysqlTest {
                 "NO_HIGH_RISK_SIGNAL", U04SafetyGateDecision.ALLOW);
     }
 
+    @Test
+    public void insufficientRiskEvidenceCannotBecomeSafeGate() {
+        runScenario("insufficient", U03GateCClinicalInput.builder()
+                .evidence("EV-RF-RESP-001", "UNKNOWN").build(),
+                "INSUFFICIENT_INFORMATION", null);
+    }
+
     private void runScenario(String scenario, U03GateCClinicalInput scenarioInput,
             String expectedRisk, String expectedGate) {
         Assumptions.assumeTrue("DISPOSABLE_U01_U02_ONLY".equals(
@@ -186,6 +193,19 @@ public class U01U02RealFactCommitMysqlTest {
             U03GovernedCandidateGateway.GovernedResult governed = governedGateway.assess(admitted);
             U03DecisionOutcome riskDecision = new U03DecisionService(
                     new U03GateCFrozenDecisionPort()).decide(admitted, governed);
+            if ("INSUFFICIENT_INFORMATION".equals(expectedRisk)) {
+                assertEquals(U03RiskAssessmentCandidate.FAILED, riskDecision.getStatus());
+                assertNull(riskDecision.getOutcomeCode());
+                assertEquals("INSUFFICIENT_INFORMATION", riskDecision.getReasonCode());
+                assertThrows(IllegalArgumentException.class, () ->
+                        new U03StateProposalFactory()
+                                .createNonProductionValid(admitted, riskDecision, governed));
+                assertEquals(2, cdps.findById(created.getCdpId()).get()
+                        .getVersion().intValue());
+                assertFalse(cdps.findById(created.getCdpId()).get()
+                        .getPatientState().containsKey("safety_gate"));
+                return;
+            }
             assertEquals(expectedRisk, riskDecision.getOutcomeCode());
             U03StateProposal riskProposal = new U03StateProposalFactory()
                     .createNonProductionValid(admitted, riskDecision, governed);
