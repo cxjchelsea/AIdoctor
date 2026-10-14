@@ -174,7 +174,7 @@ public class U01U02RealFactCommitMysqlTest {
             U03StateProposal riskProposal = new U03StateProposalFactory()
                     .createNonProductionValid(admitted, riskDecision, governed);
             com.aidoctor.contracts.v1.StateTypes.CommitResult riskCommit =
-                    new U03CommitService(committer).commitNonProduction(admitted, riskProposal);
+                    tx.execute(status -> new U03CommitService(committer).commitNonProduction(admitted, riskProposal));
             assertEquals("COMMITTED", riskCommit.status, "P01 reason=" + riskCommit.reasonCode);
             assertEquals(Integer.valueOf(3), riskCommit.committedVersion);
             assertEquals("CAUTION", ((Map<?,?>) cdps.findById(created.getCdpId())
@@ -188,8 +188,8 @@ public class U01U02RealFactCommitMysqlTest {
             assertEquals(1, recorded.size());
             U03OutboundHandoff riskHandoff = finalized.getOutboundHandoff();
             assertEquals(Integer.valueOf(3), riskHandoff.getCommittedClinicalStateVersion());
-            U04ExecutionResult gated = safety.applyU04(riskHandoff,
-                    U04ScopeContext.current(true, true), "ci-nonprod-safety");
+            U04ExecutionResult gated = tx.execute(status -> safety.applyU04(riskHandoff,
+                    U04ScopeContext.current(true, true), "ci-nonprod-safety"));
             assertEquals(U04ExecutionResult.COMMIT_COMPLETE, gated.getStatus());
             assertEquals(U04SafetyGateDecision.RESTRICTED, gated.getDecision().getGate());
             assertEquals("COMMITTED", gated.getCommitResult().status);
