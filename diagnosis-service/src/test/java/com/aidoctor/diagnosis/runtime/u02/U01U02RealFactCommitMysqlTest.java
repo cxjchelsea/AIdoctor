@@ -128,7 +128,13 @@ public class U01U02RealFactCommitMysqlTest {
                     cdps, ctx.getBean(CapabilityCallTraceRepository.class),
                     (consultation, cdp, version, call) ->
                             new U03AcceptedEvidenceBinding("synthetic-acceptance", version,
-                                    Collections.singletonList("synthetic-observation-evidence"),
+                                    java.util.Arrays.asList(
+                                            "EV-RF-RESP-001", "EV-MNM-NEURO-001",
+                                            "EV-MNM-NEURO-002", "EV-MNM-CARD-001",
+                                            "EV-RF-ALLERGY-001", "EV-RF-APPEAR-001",
+                                            "EV-RF-NEURO-001", "EV-VS-SEPSIS-001",
+                                            "EV-VS-SEPSIS-002", "EV-VS-SEPSIS-003",
+                                            "EV-RF-SEPSIS-001"),
                                     Collections.singletonList("synthetic-source"),
                                     Collections.singletonList("synthetic-provenance")),
                     new U03NonProductionAdmissionService(), u04);
