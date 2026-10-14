@@ -257,6 +257,71 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
                 "patch-" + effectId, "idem-" + effectId, patch);
     }
 
+    private static final class TestF3CommitPort
+            implements U07NonProductionPhysicalF3Owner.F3CommitPort {
+        private final StateRepositoryPort delegate;
+        TestF3CommitPort(StateRepositoryPort delegate) { this.delegate = delegate; }
+        @Override public int currentVersion(String cdpId) {
+            return delegate.readCurrentVersion(cdpId);
+        }
+        @Override public int commitAuthorized(String cdpId, int version,
+                U07NonProductionPhysicalF3Owner.PreparedF3 decision) {
+            StateRepositoryPort.AtomicCommitOutcome result = delegate.attemptAtomicCommit(
+                    new StateRepositoryPort.AtomicCommitCommand(cdpId, version,
+                            decision.patchId, decision.idempotencyKey, decision.patch));
+            if (result.status != StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED)
+                throw new IllegalStateException("U07_TEST_F3_COMMIT_REJECTED");
+            return result.committedVersion;
+        }
+    }
+
+    @Test
+    public void nonproductionF3OwnerPhysicallyCommitsAndReadsBackCanonicalEffect() {
+        authorize();
+        try (AnnotationConfigApplicationContext ctx =
+                     new AnnotationConfigApplicationContext(IsolatedConfig.class)) {
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            StateRepositoryPort writer = ctx.getBean(StateRepositoryPort.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            String id = tx.execute(status -> seed(repo));
+            U07NonProductionPhysicalF3Owner owner = new U07NonProductionPhysicalF3Owner(
+                    new TestF3CommitPort(writer), repo, (consultation, cdp, version) -> {
+                        StateRepositoryPort.AtomicCommitCommand command =
+                                clinicalPatch(cdp, version,
+                                        "/patient_state/f3_gap_assessment", "physical-f3",
+                                        "f3_canonical_effect_id", "physical-effect");
+                        return new U07NonProductionPhysicalF3Owner.PreparedF3(
+                                "physical-effect", command.patchId, command.idempotencyKey,
+                                command.patch);
+                    });
+            U07NonProductionF3A1U05Flow.F3Committed result =
+                    owner.executeAndReadback("consult-1", id);
+            assertTrue(result.committedAndReadback);
+            assertEquals(9, result.persistedVersion);
+            assertEquals("physical-effect", result.effectId);
+            assertEquals("physical-effect", ((Map<?, ?>) repo.findById(id)
+                    .get().getPatientState().get("f3_gap_assessment"))
+                    .get("f3_canonical_effect_id"));
+            assertEquals(1, ctx.getBean(CDPVersionRepository.class)
+                    .findByCdpIdOrderByVersionNumberDesc(id).size());
+            // This phase requires a new, current F3 version: a second call
+            // must not silently treat a stale decision as a new authorization.
+            U07NonProductionPhysicalF3Owner stale = new U07NonProductionPhysicalF3Owner(
+                    new TestF3CommitPort(writer), repo, (consultation, cdp, version) -> {
+                        StateRepositoryPort.AtomicCommitCommand command =
+                                clinicalPatch(cdp, 8,
+                                        "/patient_state/f3_gap_assessment", "physical-stale",
+                                        "f3_canonical_effect_id", "stale-effect");
+                        return new U07NonProductionPhysicalF3Owner.PreparedF3(
+                                "stale-effect", command.patchId, command.idempotencyKey,
+                                command.patch);
+                    });
+            assertThrows(IllegalStateException.class,
+                    () -> stale.executeAndReadback("consult-1", id));
+            assertEquals(9, repo.findById(id).get().getVersion().intValue());
+        }
+    }
+
     @Test
     public void optInSpringReadbackUsesRealCommittedCdpAndRejectsStaleOrMissingAuthority() {
         authorize();
