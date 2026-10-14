@@ -74,18 +74,7 @@ public final class U07NonProductionF3A1U05Flow {
                 || !handoff.getCdpId().equals(u04.getCommitResult().cdpId))
             throw new IllegalStateException("U07_U04_REAL_COMMIT_REQUIRED");
 
-        // Safety is a PRECONDITION to any F3 mutation, not a post-write check.
-        // BLOCKED / UNAVAILABLE must never invoke an F3 owner or issue an A1 receipt.
-        if (u04.getDecision() == null || u04.getRoutingEligibility() == null
-                || !u04.getRoutingEligibility().isU05Eligible()
-                || (!"ALLOW".equals(u04.getDecision().getGate())
-                    && !"RESTRICTED".equals(u04.getDecision().getGate()))
-                || !handoff.getDecisionId().equals(
-                        u04.getDecision().getSourceU03DecisionRef())
-                || u04.getCommitResult().committedVersion.intValue()
-                        != u04.getDecision().getClinicalStateVersion() + 1) {
-            throw new IllegalStateException("U07_U04_SAFETY_PRE_F3_NOT_ELIGIBLE");
-        }
+        requireEligiblePreF3(handoff, u04);
 
         F3Committed f3 = owner.executeAndReadback(handoff.getConsultationId(), handoff.getCdpId());
         if (f3 == null || !f3.committedAndReadback || blank(f3.effectId)
@@ -130,6 +119,32 @@ public final class U07NonProductionF3A1U05Flow {
             throw new IllegalStateException("U07_U05_INPUT_AUTHORITY_MISMATCH");
         // U05 retains its own admission, commit and currentness guards.
         return u05.execute(request, manifest, authority);
+    }
+
+    /** Public read-only preflight to also exercise the exact guard on real CDP E2E fixtures. */
+    public static void requireEligiblePreF3(U03OutboundHandoff handoff,
+            U04ExecutionResult u04) {
+        if (handoff == null || u04 == null
+                || !U04ExecutionResult.COMMIT_COMPLETE.equals(u04.getStatus())
+                || u04.getCommitResult() == null
+                || !"COMMITTED".equals(u04.getCommitResult().status)
+                || u04.getCommitResult().committedVersion == null
+                || !handoff.getCdpId().equals(u04.getCommitResult().cdpId)) {
+            throw new IllegalStateException("U07_U04_REAL_COMMIT_REQUIRED");
+        }
+        // Safety is a PRECONDITION to any F3 mutation, not a post-write check.
+        // BLOCKED / UNAVAILABLE must never invoke an F3 owner or issue an A1 receipt.
+        if (u04.getDecision() == null || u04.getRoutingEligibility() == null
+                || !u04.getRoutingEligibility().isU05Eligible()
+                || (!"ALLOW".equals(u04.getDecision().getGate())
+                    && !"RESTRICTED".equals(u04.getDecision().getGate()))
+                || !handoff.getDecisionId().equals(
+                        u04.getDecision().getSourceU03DecisionRef())
+                || u04.getCommitResult().committedVersion.intValue()
+                        != u04.getDecision().getClinicalStateVersion() + 1) {
+            throw new IllegalStateException("U07_U04_SAFETY_PRE_F3_NOT_ELIGIBLE");
+        }
+
     }
 
     private static boolean blank(String value) {
