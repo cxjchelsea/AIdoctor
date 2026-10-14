@@ -15,6 +15,7 @@ import com.aidoctor.diagnosis.runtime.u03.*;
 import com.aidoctor.diagnosis.runtime.u04.*;
 import com.aidoctor.diagnosis.runtime.u05.U04A1U05AuthorityBridge;
 import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalFollowupCoordinator;
 import com.aidoctor.diagnosis.service.cdp.*;
 import com.aidoctor.diagnosis.state.committer.*;
 import com.aidoctor.diagnosis.state.committer.fakes.*;
@@ -256,6 +257,24 @@ public class U01U02RealFactCommitMysqlTest {
             assertEquals(1, recorded.size());
             U03OutboundHandoff riskHandoff = finalized.getOutboundHandoff();
             assertEquals(Integer.valueOf(3), riskHandoff.getCommittedClinicalStateVersion());
+            RuntimeBindingService durableBinding = ctx.getBean(RuntimeBindingService.class);
+            ClinicalRunRepository durableRuns = ctx.getBean(ClinicalRunRepository.class);
+            String persistedThread = durableBinding.requireBinding(
+                    created.getConsultationId()).getThreadId();
+            assertDoesNotThrow(() ->
+                    U07NonProductionPhysicalFollowupCoordinator.requireDurableRuntimePreF3(
+                            riskHandoff, durableBinding, durableRuns,
+                            persistedThread, created.getRunId()));
+            int beforeForgedRun = cdps.findById(created.getCdpId()).get()
+                    .getVersion().intValue();
+            assertTrue(assertThrows(IllegalStateException.class, () ->
+                    U07NonProductionPhysicalFollowupCoordinator.requireDurableRuntimePreF3(
+                            riskHandoff, durableBinding, durableRuns,
+                            persistedThread, "forged-run"))
+                    .getMessage().contains("DURABLE_THREAD_RUN_AUTHORITY_MISMATCH"));
+            assertEquals(beforeForgedRun, cdps.findById(created.getCdpId()).get()
+                    .getVersion().intValue());
+
             U04ExecutionResult gated = tx.execute(status -> safety.applyU04(riskHandoff,
                     U04ScopeContext.current(true, true), "ci-nonprod-safety"));
             assertEquals(U04ExecutionResult.COMMIT_COMPLETE, gated.getStatus());
