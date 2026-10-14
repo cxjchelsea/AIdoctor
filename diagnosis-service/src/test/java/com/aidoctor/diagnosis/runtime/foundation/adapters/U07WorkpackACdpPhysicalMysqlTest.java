@@ -71,7 +71,8 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
                             com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRepository.class,
                             com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingRepository.class,
                             com.aidoctor.diagnosis.runtime.foundation.CanonicalBusinessEventRepository.class,
-                            com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRepository.class}),
+                            com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRepository.class,
+                            com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRepository.class}),
             entityManagerFactoryRef = "entityManagerFactory",
             transactionManagerRef = "transactionManager")
     public static class IsolatedConfig {
@@ -104,6 +105,7 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
                 unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingRecord.class.getName());
                 unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.CanonicalBusinessEventRecord.class.getName());
                 unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRecord.class.getName());
             });
             java.util.Properties props = new java.util.Properties();
             props.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
