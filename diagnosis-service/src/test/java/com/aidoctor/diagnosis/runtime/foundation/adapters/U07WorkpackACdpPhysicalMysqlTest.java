@@ -616,6 +616,98 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
     }
 
     @Test
+    public void independentlyAttestedRevalidationWriterIsImmutableAndRequiredByA1() {
+        authorize();
+        try (AnnotationConfigApplicationContext ctx =
+                     new AnnotationConfigApplicationContext(IsolatedConfig.class)) {
+            JdbcTemplate jdbc = ctx.getBean(JdbcTemplate.class);
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_f3_owner_evidence ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "cdp_version INT NOT NULL, f3_effect_id VARCHAR(128) NOT NULL, "
+                    + "owner_commit_ref VARCHAR(128) NOT NULL, state VARCHAR(64) NOT NULL, "
+                    + "PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_f3_barrier_evidence ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "cdp_version INT NOT NULL, f3_effect_id VARCHAR(128) NOT NULL, "
+                    + "owner_commit_ref VARCHAR(128) NOT NULL, barrier_ref VARCHAR(128) NOT NULL, "
+                    + "outcome VARCHAR(64) NOT NULL, PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_f3_revalidation_evidence ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "cdp_version INT NOT NULL, f3_effect_id VARCHAR(128) NOT NULL, "
+                    + "owner_commit_ref VARCHAR(128) NOT NULL, barrier_ref VARCHAR(128) NOT NULL, "
+                    + "revalidation_ref VARCHAR(128) NOT NULL, outcome VARCHAR(64) NOT NULL, "
+                    + "route_source_ref VARCHAR(128) NOT NULL, "
+                    + "route_authorization_ref VARCHAR(128) NOT NULL, "
+                    + "routing_policy_version VARCHAR(128) NOT NULL, "
+                    + "PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_a1_attestation ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "cdp_version INT NOT NULL, f3_effect_id VARCHAR(128) NOT NULL, "
+                    + "barrier_ref VARCHAR(128) NOT NULL, revalidation_ref VARCHAR(128) NOT NULL, "
+                    + "route_source_ref VARCHAR(128) NOT NULL, "
+                    + "route_authorization_ref VARCHAR(128) NOT NULL, "
+                    + "routing_policy_version VARCHAR(128) NOT NULL, "
+                    + "PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+            CDPRepository repo=ctx.getBean(CDPRepository.class);
+            TransactionTemplate tx=ctx.getBean(TransactionTemplate.class);
+            String id=tx.execute(status -> {
+                String seeded=seed(repo);
+                CDP cdp=repo.findById(seeded).get();
+                Map<String,Object> state=new LinkedHashMap<String,Object>();
+                Map<String,Object> assessment=new LinkedHashMap<String,Object>();
+                assessment.put("f3_canonical_effect_id","trusted-f3-effect");
+                state.put("f3_gap_assessment",assessment);
+                cdp.setPatientState(state);
+                repo.saveAndFlush(cdp);
+                return seeded;
+            });
+            jdbc.update("INSERT INTO u07_f3_owner_evidence VALUES (?,?,?,?,?,?)",
+                    "consult-trusted",id,8,"trusted-f3-effect","owner-trusted","COMMITTED");
+            jdbc.update("INSERT INTO u07_f3_barrier_evidence VALUES (?,?,?,?,?,?,?)",
+                    "consult-trusted",id,8,"trusted-f3-effect","owner-trusted",
+                    "barrier-trusted","ALLOWED");
+            java.util.concurrent.atomic.AtomicBoolean authorized=
+                    new java.util.concurrent.atomic.AtomicBoolean(false);
+            U07TrustedF3RevalidationWriter writer=new U07TrustedF3RevalidationWriter(
+                    repo,jdbc,tx,command -> authorized.get()
+                            && "revalidation-trusted".equals(command.revalidationRef));
+            U07TrustedF3RevalidationWriter.Command command=
+                    new U07TrustedF3RevalidationWriter.Command(
+                            "consult-trusted",id,8,"trusted-f3-effect","owner-trusted",
+                            "barrier-trusted","revalidation-trusted","route-source-trusted",
+                            "route-auth-trusted","policy-v1");
+            assertThrows(IllegalStateException.class,()->writer.persist(command));
+            assertEquals(0,jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_f3_revalidation_evidence WHERE cdp_id=?",
+                    Integer.class,id).intValue());
+            U07PersistedF3OwnerBarrierRevalidationEvidence.TrustedEvidenceVerifier trusted=
+                    (consult,cdp,version,effect,owner,barrier,reval,route) ->
+                            authorized.get() && "revalidation-trusted".equals(reval)
+                            && "owner-trusted".equals(owner)
+                            && "barrier-trusted".equals(barrier)
+                            && "route-auth-trusted".equals(route);
+            U07DurableNonProductionA1Issuer issuer=new U07DurableNonProductionA1Issuer(
+                    repo,jdbc,tx,new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc,trusted));
+            assertThrows(IllegalStateException.class,()->issuer.issue("consult-trusted",id,8));
+            authorized.set(true);
+            assertEquals("revalidation-trusted",writer.persist(command));
+            assertEquals("revalidation-trusted",writer.persist(command));
+            assertEquals(1,jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_f3_revalidation_evidence WHERE cdp_id=?",
+                    Integer.class,id).intValue());
+            assertThrows(IllegalStateException.class,()->writer.persist(
+                    new U07TrustedF3RevalidationWriter.Command(
+                            "consult-trusted",id,8,"trusted-f3-effect","owner-trusted",
+                            "barrier-trusted","different-revalidation","route-source-trusted",
+                            "route-auth-trusted","policy-v1")));
+            assertEquals("revalidation-trusted",issuer.issue("consult-trusted",id,8).revalidationRef);
+            authorized.set(false);
+            assertThrows(IllegalStateException.class,()->issuer.loadAttested("consult-trusted",id,8));
+            assertEquals(8,repo.findById(id).get().getVersion().intValue());
+        }
+    }
+
+    @Test
     public void durableF3OwnerBarrierRevalidationIntakeDrivesRealMysqlA1IssuerAndFailsClosed() {
         authorize();
         try (AnnotationConfigApplicationContext ctx =
