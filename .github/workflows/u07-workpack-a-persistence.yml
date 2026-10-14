@@ -18,6 +18,9 @@ on:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06ProfileBApplicationService.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06NonProductionPhysicalMode1Service.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06NonProductionPhysicalMode23Service.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U07NonProductionDeliveryWaitRecovery.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U07ExistingU06WaitAuthority.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07TrustedF3RevalidationWriter.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06ExecutionResult.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06NonProductionPhysicalF3DecisionProvider.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionF3A1U05Flow.java'
@@ -158,12 +161,12 @@ jobs:
           paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07WorkpackACdpPhysicalMysqlTest.xml")
           assert len(paths)==1, paths
           root=ET.parse(paths[0]).getroot()
-          assert int(root.get("tests",-1))==10
+          assert int(root.get("tests",-1))==11
           assert all(int(root.get(k,-1))==0 for k in ("failures","errors","skipped"))
           clinical=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07ClinicalHostServiceMysqlTest.xml")
           assert len(clinical)==1,clinical
           host=ET.parse(clinical[0]).getroot()
-          assert int(host.get("tests",-1))==6
+          assert int(host.get("tests",-1))==7
           assert all(int(host.get(k,-1))==0 for k in ("failures","errors","skipped"))
           print("U07_WORKPACK_A_REAL_SPRING_JPA_MYSQL8_CDP_AND_HOST_U04=PASS")
           PY
