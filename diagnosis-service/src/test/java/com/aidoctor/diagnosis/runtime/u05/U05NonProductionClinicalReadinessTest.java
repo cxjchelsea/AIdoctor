@@ -2074,7 +2074,10 @@ class U05NonProductionClinicalReadinessTest {
 
         Fixture(int currentVersion, final String downstreamPermissionStatus) {
             Map<String, Object> state = new LinkedHashMap<String, Object>();
-            state.put("patient_state", new LinkedHashMap<String, Object>());
+            Map<String, Object> patientState = new LinkedHashMap<String, Object>();
+            patientState.put("questions", new LinkedHashMap<String, Object>());
+            patientState.put("information_gaps", new LinkedHashMap<String, Object>());
+            state.put("patient_state", patientState);
             Map<String, SyntheticStateSnapshot> initial =
                     new LinkedHashMap<String, SyntheticStateSnapshot>();
             initial.put("cdp-1", new SyntheticStateSnapshot(currentVersion, state));
