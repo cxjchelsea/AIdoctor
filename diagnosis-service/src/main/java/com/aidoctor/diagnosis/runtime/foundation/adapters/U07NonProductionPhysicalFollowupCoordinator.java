@@ -90,6 +90,21 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
     public Selected select(U03OutboundHandoff handoff, U04ExecutionResult u04,
             String environmentId, String authoritativeStateRef) {
         U07NonProductionF3A1U05Flow.requireEligiblePreF3(handoff, u04);
+        // Durable identity must be admitted BEFORE the F3 owner writes state.
+        RuntimeBindingRecord binding = bindings.requireBinding(handoff.getConsultationId());
+        ClinicalRunRecord activeRun = runs.findById(handoff.getRunId())
+                .orElseThrow(() -> blocked("RUN_NOT_FOUND"));
+        if (!RuntimeBindingRecord.CLINICAL_RUNTIME_V1.equals(binding.getRuntimeAuthority())
+                || !Objects.equals(handoff.getCdpId(), binding.getCdpId())
+                || !Objects.equals(handoff.getConsultationId(), activeRun.getConsultationId())
+                || !Objects.equals(handoff.getThreadId(), binding.getThreadId())
+                || !Objects.equals(binding.getThreadId(), activeRun.getThreadId())
+                || !Objects.equals(handoff.getEventId(), activeRun.getEventId())
+                || !Objects.equals(host.threadId(), binding.getThreadId())
+                || !Objects.equals(host.runId(), activeRun.getRunId())
+                || !ClinicalRunRecord.OPEN.equals(activeRun.getStatus()))
+            throw blocked("DURABLE_THREAD_RUN_AUTHORITY_MISMATCH");
+
         U05ExecutionResult readiness = f3A1U05.execute(
                 handoff, u04, environmentId, authoritativeStateRef);
         if (readiness == null
@@ -107,19 +122,6 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
         int version = currentVersion(route.getCdpId());
         U06AdmissionEvidence evidence = host.requireCurrentAdmissionEvidence(readiness);
         if (evidence == null) throw blocked("INDEPENDENT_U06_ADMISSION_MISSING");
-        RuntimeBindingRecord binding = bindings.requireBinding(handoff.getConsultationId());
-        ClinicalRunRecord activeRun = runs.findById(handoff.getRunId())
-                .orElseThrow(() -> blocked("RUN_NOT_FOUND"));
-        if (!RuntimeBindingRecord.CLINICAL_RUNTIME_V1.equals(binding.getRuntimeAuthority())
-                || !Objects.equals(handoff.getCdpId(), binding.getCdpId())
-                || !Objects.equals(handoff.getConsultationId(), activeRun.getConsultationId())
-                || !Objects.equals(handoff.getThreadId(), binding.getThreadId())
-                || !Objects.equals(binding.getThreadId(), activeRun.getThreadId())
-                || !Objects.equals(handoff.getEventId(), activeRun.getEventId())
-                || !Objects.equals(host.threadId(), binding.getThreadId())
-                || !Objects.equals(host.runId(), activeRun.getRunId())
-                || !ClinicalRunRecord.OPEN.equals(activeRun.getStatus()))
-            throw blocked("DURABLE_THREAD_RUN_AUTHORITY_MISMATCH");
         U06AdmissionService.Admission admitted = u05U06.admit(readiness, evidence,
                 version, host.questionPolicyRef(), host.d04PolicyRef(),
                 host.dependencyBindingRef(), host.threadId(), host.runId(),
