@@ -144,6 +144,19 @@ public class U01U02RealFactCommitMysqlTest {
             assertTrue(stored.getPatientState().get("clinical_fact_fixture-obs") instanceof Map);
             Map<?,?> fact = (Map<?,?>)stored.getPatientState().get("clinical_fact_fixture-obs");
             assertEquals("UNKNOWN", fact.get("value_semantics"));
+            // A real committed U02 headache observation is NOT automatically
+            // accepted as any Gate-C red-flag evidence.
+            U03CdpAcceptedEvidenceAuthority.ClinicalEvidenceAttestation noSyntheticApproval =
+                    (consultation, cdp, version, call, evidenceRefs, sourceRefs, provenanceRefs) -> {
+                        throw new AssertionError("Unmapped U02 fact must never request acceptance");
+                    };
+            U03CdpAcceptedEvidenceAuthority cdpEvidence =
+                    new U03CdpAcceptedEvidenceAuthority(cdps, noSyntheticApproval);
+            assertTrue(assertThrows(IllegalStateException.class, () ->
+                    cdpEvidence.requireAccepted(created.getConsultationId(),
+                            created.getCdpId(), 2, outcome.capabilityCallId))
+                    .getMessage().contains("NO_ACCEPTABLE_GATE_C_EVIDENCE"));
+
             assertNotEquals("NO", fact.get("value_semantics"));
             assertEquals("PATIENT_REPORTED", fact.get("source_type"));
             assertEquals(2, versionsRepo.findByCdpIdOrderByVersionNumberDesc(created.getCdpId()).size());
