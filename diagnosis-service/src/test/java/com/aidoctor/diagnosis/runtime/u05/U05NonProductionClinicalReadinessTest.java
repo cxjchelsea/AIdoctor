@@ -169,7 +169,7 @@ class U05NonProductionClinicalReadinessTest {
     }
 
     @Test
-    void u05QuestionRouteRunsRealU06DecisionWithSameAuthoritativeSyntheticStore() {
+    void u05QuestionRoutePolicyStopLeavesSharedStateUnchanged() {
         String context = U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT;
         List<U05ReadinessInput> inputs = Arrays.asList(
                 present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
