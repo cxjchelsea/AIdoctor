@@ -93,8 +93,10 @@ public final class U07NonProductionDeliveryWaitRecovery {
             throw new IllegalStateException("U07_DELIVERY_RECEIPT_NOT_TRUSTED");
         transactions.execute(status -> {
             CDP cdp = locked(receipt.request.getCdpId());
-            verifyQuestion(cdp, receipt, false);
+            boolean alreadyDelivered = verifyQuestion(cdp, receipt, true);
             List<String[]> rows = readDelivery(receipt);
+            if (alreadyDelivered && rows.isEmpty())
+                throw new IllegalStateException("U07_DELIVERY_PERSISTED_PROOF_MISSING");
             if (!rows.isEmpty()) {
                 if (rows.size() != 1 || !matches(rows.get(0), receipt))
                     throw new IllegalStateException("U07_DELIVERY_RECEIPT_REPLAY_CONFLICT");
