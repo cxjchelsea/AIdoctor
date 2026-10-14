@@ -361,6 +361,55 @@ public class U07U06SelectionPhysicalMysqlTest {
             assertEquals(10, resumed.baseClinicalStateVersion);
             assertEquals("PATIENT_ANSWER", resumed.sourceType);
             assertEquals("I have no fever", resumed.rawClinicalText);
+
+            // Actual U02 business path, P01 commit and P05 trace on the same
+            // physical MySQL DB. C01 interpretation is an explicit fixture.
+            com.aidoctor.diagnosis.runtime.governance.CapabilityInvocationGuard guard =
+                    org.mockito.Mockito.mock(com.aidoctor.diagnosis.runtime.governance.CapabilityInvocationGuard.class);
+            com.aidoctor.diagnosis.runtime.governance.CapabilityBindingRecord authorized =
+                    new com.aidoctor.diagnosis.runtime.governance.CapabilityBindingRecord(
+                            com.aidoctor.diagnosis.runtime.u02.capability.C01U02CapabilityGateway.BINDING_ID,
+                            "C01", "fixture-c01-u02-1", "aidoctor-v1-u02",
+                            "aidoctor-v1-scope", "contracts-v1", "*", "*", "*", "*",
+                            com.aidoctor.diagnosis.runtime.governance.CapabilityBindingRecord.ACTIVE,
+                            java.time.LocalDateTime.of(2026,1,1,0,0), null,
+                            java.time.LocalDateTime.of(2026,1,1,0,0));
+            org.mockito.Mockito.when(guard.authorize(
+                    org.mockito.ArgumentMatchers.eq(
+                            com.aidoctor.diagnosis.runtime.u02.capability.C01U02CapabilityGateway.BINDING_ID),
+                    org.mockito.ArgumentMatchers.eq("C01"),
+                    org.mockito.ArgumentMatchers.any())).thenReturn(authorized);
+            com.aidoctor.diagnosis.client.C01U02CapabilityClient client =
+                    org.mockito.Mockito.mock(com.aidoctor.diagnosis.client.C01U02CapabilityClient.class);
+            org.mockito.Mockito.when(client.interpret(org.mockito.ArgumentMatchers.any()))
+                    .thenReturn(resumedAnswerCandidate());
+            com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactApplicationService realU02 =
+                    new com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactApplicationService(
+                            new com.aidoctor.diagnosis.runtime.u02.capability.C01U02CapabilityGateway(
+                                    client, guard, true),
+                            new com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactBusinessOwner(),
+                            new com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactProposalFactory(),
+                            new com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactCommitService(committer),
+                            new com.aidoctor.diagnosis.runtime.u02.d05.U02DependencyInvalidationHook(),
+                            new com.aidoctor.diagnosis.runtime.governance.CapabilityTraceService(
+                                    ctx.getBean(com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRepository.class)));
+            com.aidoctor.diagnosis.runtime.u02.U02ExecutionResult updated =
+                    tx.execute(status -> realU02.execute(resumed));
+            assertEquals("COMMITTED", updated.status);
+            assertEquals("COMMITTED", updated.commitResult.status);
+            assertEquals(Integer.valueOf(11), updated.commitResult.committedVersion);
+            assertEquals(11, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(3, history.findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertTrue(cdps.findById(id).get().getPatientState()
+                    .get("clinical_fact_fixture-answer-obs") instanceof Map);
+            com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRecord persistedTrace =
+                    ctx.getBean(com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRepository.class)
+                            .findById(updated.capabilityCallId).orElseThrow(IllegalStateException::new);
+            assertEquals(freshRun, persistedTrace.getRunId());
+            assertEquals(resumed.eventId, persistedTrace.getEventId());
+            assertEquals(Integer.valueOf(10), persistedTrace.getClinicalStateVersionBefore());
+            assertEquals(Integer.valueOf(11), persistedTrace.getClinicalStateVersionAfter());
+
             assertThrows(IllegalStateException.class, () ->
                     trustedAnswer.requireAuthorizedNewRun(
                             answer, persistedWait.checkpointId, answer.runId));
@@ -378,5 +427,37 @@ public class U07U06SelectionPhysicalMysqlTest {
             assertEquals(1L, runs.count());
             assertEquals(10, cdps.findById(id).get().getVersion().intValue());
         }
+    }
+
+    private static com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse resumedAnswerCandidate() {
+        com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse response =
+                new com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse();
+        response.setBusinessStatus("SUCCESS");
+        response.setSourceAttribution("USER_TEXT");
+        com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse.BindingRef binding =
+                new com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse.BindingRef();
+        binding.setBindingId(com.aidoctor.diagnosis.runtime.u02.capability.C01U02CapabilityGateway.BINDING_ID);
+        binding.setBindingStatus(com.aidoctor.diagnosis.runtime.governance.CapabilityBindingRecord.ACTIVE);
+        binding.setCapabilityId("C01");
+        binding.setCapabilityVersion("fixture-c01-u02-1");
+        binding.setCapabilitySetVersion("aidoctor-v1-u02");
+        binding.setScopeVersion("aidoctor-v1-scope");
+        binding.setContractVersion("contracts-v1");
+        response.setBindingRef(binding);
+        com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse.ObservationCandidate fact =
+                new com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse.ObservationCandidate();
+        fact.setObservationId("fixture-answer-obs");
+        fact.setConceptId("TEST:FEVER");
+        fact.setConceptDisplay("synthetic fever");
+        fact.setRawTextRef("sha256:synthetic-answer-evidence");
+        fact.setValueSemantics("NO");
+        fact.setSourceType("PATIENT_REPORTED");
+        fact.setLifecycle("CURRENT");
+        fact.setConfidenceOrUncertainty(0.95d);
+        fact.setProvenance(java.util.Collections.singletonList("synthetic-only"));
+        fact.setAmbiguityFlags(java.util.Collections.emptyList());
+        fact.setContradictionRefs(java.util.Collections.emptyList());
+        response.setObservationCandidates(java.util.Collections.singletonList(fact));
+        return response;
     }
 }
