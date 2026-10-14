@@ -554,6 +554,11 @@ public class U07U06SelectionPhysicalMysqlTest {
             assertEquals("BLOCKED", ((Map<?,?>) cdps.findById(id).get()
                     .getPatientState().get("safety_gate")).get("safety_gate"));
             assertEquals(13, cdps.findById(id).get().getVersion().intValue());
+            // A v11 accepted-evidence execution context becomes stale once U03
+            // and U04 have committed. A second governed assessment must reload
+            // authoritative CDP rather than replay the prior clinical input.
+            assertThrows(IllegalStateException.class, () -> gateway.assess(admitted));
+            assertEquals(13, cdps.findById(id).get().getVersion().intValue());
             assertThrows(IllegalStateException.class, () ->
                     U07NonProductionF3A1U05Flow.requireEligiblePreF3(handoff, gated));
             assertEquals(com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult.ADMISSION_FAILED,
