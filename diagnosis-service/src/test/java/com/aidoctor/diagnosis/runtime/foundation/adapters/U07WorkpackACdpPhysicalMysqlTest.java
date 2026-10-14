@@ -458,6 +458,13 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
                     new ClinicalCdpF3BoundA1AuthorityPort(repo, restarted);
             assertEquals("verified-revalidation",
                     consumer.loadCurrent("consult-1", id, 9).revalidationRef);
+            // Without a CDP version change, revocation must invalidate readback.
+            barrier.set(false);
+            assertThrows(IllegalStateException.class,
+                    () -> consumer.loadCurrent("consult-1", id, 9));
+            barrier.set(true);
+            assertEquals("verified-revalidation",
+                    consumer.loadCurrent("consult-1", id, 9).revalidationRef);
 
             U07DurableNonProductionA1Issuer changed = new U07DurableNonProductionA1Issuer(
                     repo, jdbc, tx, (consultation, cdp, version, effect) ->
@@ -561,10 +568,18 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
             assertEquals(1, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM u07_a1_attestation WHERE cdp_id=?",
                     Integer.class, id).intValue());
-            assertEquals("owner-effect-1", new ClinicalCdpF3BoundA1AuthorityPort(
-                    repo, new U07DurableNonProductionA1Issuer(repo, jdbc, tx,
-                            new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc, trusted)))
-                    .loadCurrent("consult-1", id, 9).f3CommitRef);
+            ClinicalCdpF3BoundA1AuthorityPort currentA1 =
+                    new ClinicalCdpF3BoundA1AuthorityPort(repo,
+                            new U07DurableNonProductionA1Issuer(repo, jdbc, tx,
+                                    new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc, trusted)));
+            assertEquals("owner-effect-1",
+                    currentA1.loadCurrent("consult-1", id, 9).f3CommitRef);
+            independentlyApproved.set(false);
+            assertThrows(IllegalStateException.class,
+                    () -> currentA1.loadCurrent("consult-1", id, 9));
+            independentlyApproved.set(true);
+            assertEquals("owner-effect-1",
+                    currentA1.loadCurrent("consult-1", id, 9).f3CommitRef);
 
             assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
                     writer.attemptAtomicCommit(clinicalPatch(id, 9,
