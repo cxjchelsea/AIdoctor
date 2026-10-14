@@ -47,5 +47,12 @@ jobs:
           mvn -f diagnosis-service/pom.xml
           -Dtest='FoundationRuntimeBaseTest,U01LegacyBoundaryGuardTest,U01SemanticPolicyTest,U01ConsultationServiceTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
           test
-      - name: Run diagnosis-service regression suite
-        run: mvn -f diagnosis-service/pom.xml test
+      - name: Run non-isolated diagnosis regression (physical tests remain in their own MySQL CI)
+        # StageB and U07D5O2StageA tests require explicit disposable MySQL8
+        # fixtures and scoped role/environment gates. Running them here is an
+        # expected fail-closed rejection, NOT a valid production verification.
+        # These test classes remain enabled in dedicated Stage A/B workflows.
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest='*,!StageB*,!U07D5O2StageA*'
+          test
