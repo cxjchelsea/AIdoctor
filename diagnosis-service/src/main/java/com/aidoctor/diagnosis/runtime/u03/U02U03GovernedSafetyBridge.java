@@ -1,6 +1,8 @@
 package com.aidoctor.diagnosis.runtime.u03;
 
 import com.aidoctor.diagnosis.entity.CDP;
+import com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRecord;
+import com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRepository;
 import com.aidoctor.diagnosis.repository.CDPRepository;
 import com.aidoctor.diagnosis.runtime.u02.U02ExecutionResult;
 import com.aidoctor.diagnosis.runtime.u04.*;
@@ -19,17 +21,19 @@ public class U02U03GovernedSafetyBridge {
     }
 
     private final CDPRepository cdps;
+    private final CapabilityCallTraceRepository traces;
     private final AcceptedEvidenceAuthority acceptedEvidence;
     private final U03NonProductionAdmissionService admission;
     private final U04NonProductionApplicationService safetyGate;
 
     public U02U03GovernedSafetyBridge(CDPRepository cdps,
-            AcceptedEvidenceAuthority acceptedEvidence,
+            CapabilityCallTraceRepository traces, AcceptedEvidenceAuthority acceptedEvidence,
             U03NonProductionAdmissionService admission,
             U04NonProductionApplicationService safetyGate) {
-        if (cdps == null || acceptedEvidence == null || admission == null || safetyGate == null)
+        if (cdps == null || traces == null || acceptedEvidence == null || admission == null || safetyGate == null)
             throw new IllegalArgumentException("Governed safety dependencies required");
         this.cdps = cdps;
+        this.traces = traces;
         this.acceptedEvidence = acceptedEvidence;
         this.admission = admission;
         this.safetyGate = safetyGate;
@@ -64,6 +68,19 @@ public class U02U03GovernedSafetyBridge {
                 || command.clinicalStateVersion != u02.commitResult.committedVersion.intValue()) {
             throw blocked("U02_U03_IDENTITY_OR_VERSION_MISMATCH");
         }
+        CapabilityCallTraceRecord trace = traces.findById(u02.capabilityCallId)
+                .orElseThrow(() -> blocked("U02_TRACE_NOT_FOUND"));
+        if (!CapabilityCallTraceRecord.SUCCEEDED.equals(trace.getCallStatus())
+                || !"U02".equals(trace.getUnitId())
+                || !command.consultationId.equals(trace.getConsultationId())
+                || !command.threadId.equals(trace.getThreadId())
+                || !command.runId.equals(trace.getRunId())
+                || !command.eventId.equals(trace.getEventId())
+                || !u02.commitResult.previousVersion.equals(trace.getClinicalStateVersionBefore())
+                || !u02.commitResult.committedVersion.equals(trace.getClinicalStateVersionAfter())
+                || !u02.commitResult.patchId.equals(trace.getCommitRef())) {
+            throw blocked("U02_TRACE_IDENTITY_OR_COMMIT_MISMATCH");
+        }
         CDP cdp = cdps.findById(command.cdpId)
                 .orElseThrow(() -> blocked("CDP_NOT_FOUND"));
         if (cdp.getVersion() == null
@@ -84,7 +101,6 @@ public class U02U03GovernedSafetyBridge {
      * Only the U03-authorized S14 producer may supply the handoff. U04 performs
      * its own release, red-flag, policy, freshness and routing gate checks.
      */
-    @Transactional(readOnly = true)
     public U04ExecutionResult applyU04(
             U03OutboundHandoff handoff, U04ScopeContext policy, String environmentId) {
         requireNonProduction(environmentId);
