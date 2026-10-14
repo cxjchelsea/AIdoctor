@@ -175,7 +175,7 @@ public class U01U02RealFactCommitMysqlTest {
                     .createNonProductionValid(admitted, riskDecision, governed);
             com.aidoctor.contracts.v1.StateTypes.CommitResult riskCommit =
                     new U03CommitService(committer).commitNonProduction(admitted, riskProposal);
-            assertEquals("COMMITTED", riskCommit.status);
+            assertEquals("COMMITTED", riskCommit.status, "P01 reason=" + riskCommit.reasonCode);
             assertEquals(Integer.valueOf(3), riskCommit.committedVersion);
             assertEquals("CAUTION", ((Map<?,?>) cdps.findById(created.getCdpId())
                     .get().getPatientState().get("current_risk_assessment")).get("outcome_code"));
