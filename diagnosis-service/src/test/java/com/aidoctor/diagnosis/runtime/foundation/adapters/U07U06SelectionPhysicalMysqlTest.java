@@ -110,9 +110,13 @@ public class U07U06SelectionPhysicalMysqlTest {
 
             // Replaying Mode-2 cannot silently select a second question or
             // make a delivery claim with the old clinical-state version.
-            assertThrows(RuntimeException.class, () -> tx.execute(status ->
-                    physical.execute(request, decision, null)));
+            U06ExecutionResult stale = tx.execute(status ->
+                    physical.execute(request, decision, null));
+            assertEquals(U06ExecutionResult.ADMISSION_REJECTED, stale.getStatus());
+            assertEquals(U06AdmissionService.REJECTED_STALE_STATE, stale.getReasonCode());
             assertEquals(9, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(1, ((Map<?,?>) cdps.findById(id).get()
+                    .getPatientState().get("questions")).size());
             assertEquals(1, history.findByCdpIdOrderByVersionNumberDesc(id).size());
 
             AtomicInteger calledWaitOwner = new AtomicInteger();
