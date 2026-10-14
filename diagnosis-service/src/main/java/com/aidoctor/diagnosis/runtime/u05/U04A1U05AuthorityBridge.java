@@ -107,19 +107,22 @@ public final class U04A1U05AuthorityBridge {
         }
 
         GateReadback readback = gatePort.loadCurrent(handoff.getCdpId());
-        if (readback == null || readback.stateVersion != current
+        if (readback == null || readback.stateVersion < current
                 || !executed.getDecision().getGate().equals(readback.gateValue)
                 || !handoff.getDecisionId().equals(readback.sourceU03DecisionRef)
                 || !U04ScopeContext.FROZEN_POLICY_REF.equals(readback.policyRef)) {
             throw new IllegalStateException("U04_GATE_READBACK_NOT_CURRENT");
         }
 
+        // A1/F3 may commit after U04, advancing the same authoritative CDP.
+        // The gate itself must remain present with its original U04 provenance.
+        int latestVersion = readback.stateVersion;
         A1BarrierAuthority a1 = barrierPort.loadCurrent(
-                handoff.getConsultationId(), handoff.getCdpId(), current);
+                handoff.getConsultationId(), handoff.getCdpId(), latestVersion);
         if (a1 == null
                 || !handoff.getConsultationId().equals(a1.consultationId)
                 || !handoff.getCdpId().equals(a1.cdpId)
-                || a1.clinicalStateVersion != current
+                || a1.clinicalStateVersion != latestVersion
                 || blank(a1.f3CommitRef) || blank(a1.barrierRef)
                 || blank(a1.revalidationRef) || !a1.routeCurrent
                 || blank(a1.routeSourceRef) || blank(a1.routeAuthorizationRef)
@@ -133,7 +136,7 @@ public final class U04A1U05AuthorityBridge {
             throw new IllegalStateException("A1_RESTRICTED_PERMISSION_REQUIRED");
         }
         return new U05AdmissionAuthoritySnapshot(
-                handoff.getConsultationId(), handoff.getCdpId(), current,
+                handoff.getConsultationId(), handoff.getCdpId(), latestVersion,
                 authoritativeStateRef, environmentId, true,
                 true, true, executed.getDecision().getDecisionId(),
                 executed.getCommitResult().auditRef.auditId, readback.gateValue,
