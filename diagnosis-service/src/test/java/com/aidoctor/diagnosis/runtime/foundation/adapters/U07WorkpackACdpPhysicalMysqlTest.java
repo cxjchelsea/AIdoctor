@@ -170,6 +170,85 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
         }
     }
 
+    /**
+     * Physical CDP persistence handoff for the U04, F3, U05 state fields.
+     * Uses the authoritative Spring transactional adapter, not the synthetic
+     * versioned repository. This is NOT the clinical authority issuing layer.
+     */
+    @Test
+    public void physicalU04F3U05FieldTransitionsShareCdpHistoryAndRejectStaleWrites() {
+        authorize();
+        try (AnnotationConfigApplicationContext ctx =
+                     new AnnotationConfigApplicationContext(IsolatedConfig.class)) {
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            CDPVersionRepository histories = ctx.getBean(CDPVersionRepository.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            StateRepositoryPort adapter = ctx.getBean(StateRepositoryPort.class);
+            String id = tx.execute(status -> seed(repo));
+
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    adapter.attemptAtomicCommit(clinicalPatch(id, 8,
+                            "/patient_state/safety_gate", "u04-gate",
+                            "source_u03_decision_ref", "synthetic-u03")).status);
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    adapter.attemptAtomicCommit(clinicalPatch(id, 9,
+                            "/patient_state/f3_gap_assessment", "f3-effect",
+                            "f3_canonical_effect_id", "synthetic-f3")).status);
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    adapter.attemptAtomicCommit(clinicalPatch(id, 10,
+                            "/patient_state/clinical_readiness", "u05-readiness",
+                            "clinical_readiness", "CAN_ASK_MORE")).status);
+
+            assertEquals(11, repo.findById(id).get().getVersion().intValue());
+            Map<String,Object> current = repo.findById(id).get().getPatientState();
+            assertEquals("synthetic-u03", ((Map<?,?>)current.get("safety_gate"))
+                    .get("source_u03_decision_ref"));
+            assertEquals("synthetic-f3", ((Map<?,?>)current.get("f3_gap_assessment"))
+                    .get("f3_canonical_effect_id"));
+            assertEquals("CAN_ASK_MORE", ((Map<?,?>)current.get("clinical_readiness"))
+                    .get("clinical_readiness"));
+            assertEquals(3, histories.findByCdpIdOrderByVersionNumberDesc(id).size());
+
+            StateRepositoryPort.AtomicCommitOutcome rejected =
+                    adapter.attemptAtomicCommit(clinicalPatch(id, 9,
+                            "/patient_state/clinical_readiness", "stale-readiness",
+                            "clinical_readiness", "READY"));
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.CONFLICT, rejected.status);
+            assertEquals(3, histories.findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertEquals(11, repo.findById(id).get().getVersion().intValue());
+
+            assertThrows(IllegalStateException.class, () ->
+                    tx.execute(status -> {
+                        assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                                adapter.attemptAtomicCommit(clinicalPatch(id, 11,
+                                        "/patient_state/pending_question", "question-selection",
+                                        "question_id", "synthetic-question")).status);
+                        throw new IllegalStateException("SYNTHETIC_U06_ROLLBACK");
+                    }));
+            assertEquals(11, repo.findById(id).get().getVersion().intValue());
+            assertFalse(repo.findById(id).get().getPatientState().containsKey("pending_question"));
+            assertEquals(3, histories.findByCdpIdOrderByVersionNumberDesc(id).size());
+        }
+    }
+
+    private static StateRepositoryPort.AtomicCommitCommand clinicalPatch(
+            String id, int version, String path, String effectId,
+            String field, String value) {
+        StateTypes.StatePatchOperation op = new StateTypes.StatePatchOperation();
+        op.op = "ADD";
+        op.path = path;
+        Map<String,Object> body = new LinkedHashMap<String,Object>();
+        body.put("effect_id", effectId);
+        body.put(field, value);
+        op.value = body;
+        op.source = "PATIENT_FACT";
+        op.sensitivity = "PHI";
+        StateTypes.StatePatch patch = new StateTypes.StatePatch();
+        patch.operations = Arrays.asList(op);
+        return new StateRepositoryPort.AtomicCommitCommand(id, version,
+                "patch-" + effectId, "idem-" + effectId, patch);
+    }
+
     @Test
     public void noPartialCdpWriteOnInvalidSecondOperation() {
         authorize();
