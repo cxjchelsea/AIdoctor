@@ -70,6 +70,7 @@ public final class U07NonProductionF3A1U05Flow {
         if (!U04ExecutionResult.COMMIT_COMPLETE.equals(u04.getStatus())
                 || u04.getCommitResult() == null
                 || !"COMMITTED".equals(u04.getCommitResult().status)
+                || u04.getCommitResult().committedVersion == null
                 || !handoff.getCdpId().equals(u04.getCommitResult().cdpId))
             throw new IllegalStateException("U07_U04_REAL_COMMIT_REQUIRED");
 
