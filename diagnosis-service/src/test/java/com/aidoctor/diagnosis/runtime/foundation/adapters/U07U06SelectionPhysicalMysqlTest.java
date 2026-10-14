@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -38,6 +39,9 @@ public class U07U06SelectionPhysicalMysqlTest {
 
     @Test
     public void realMode2SelectionCommitsExactlyOnceAndCannotCreateWaitWithoutDelivery() {
+        Assumptions.assumeTrue("DISPOSABLE_CDP_ONLY".equals(
+                System.getenv("U07_WORKPACK_A_MYSQL_MODE")),
+                "requires dedicated disposable MySQL physical job");
         disposableOnly();
         try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(
                 U07WorkpackACdpPhysicalMysqlTest.IsolatedConfig.class)) {
