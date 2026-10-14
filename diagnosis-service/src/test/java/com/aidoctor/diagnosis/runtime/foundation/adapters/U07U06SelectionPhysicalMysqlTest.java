@@ -227,6 +227,27 @@ public class U07U06SelectionPhysicalMysqlTest {
                                             threads, checkpoints),
                                     new com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadWaitTransitionService(
                                             threads, checkpoints)));
+            // Crash-window adversary: the real WAIT host has committed,
+            // but the recovery owner dies before saving WAIT evidence.
+            U07NonProductionDeliveryWaitRecovery crashBeforeEvidence =
+                    new U07NonProductionDeliveryWaitRecovery(cdps, jdbc, tx, committer,
+                            fixtureVerifier, (receipt, version) -> {
+                                tx.execute(status -> actualWait.establish(receipt, version));
+                                throw new IllegalStateException("TEST_CRASH_AFTER_WAIT_HOST_COMMIT");
+                            });
+            assertThrows(IllegalStateException.class,
+                    () -> crashBeforeEvidence.recover(fixture));
+            assertEquals("WAITING_USER", consultations.findById(
+                    request.getConsultationId()).get().getLifecycleStatus());
+            assertEquals("AWAITING_USER", threads.findById(
+                    request.getThreadId()).get().getRuntimeStatus());
+            assertEquals(1L, checkpoints.count());
+            assertEquals(1L, waitEffects.count());
+            assertEquals(0, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_question_wait_evidence WHERE cdp_id=?",
+                    Integer.class, id).intValue());
+
+            // Reconcile existing host authority instead of starting a new WAIT.
             U07NonProductionDeliveryWaitRecovery physicalWait =
                     new U07NonProductionDeliveryWaitRecovery(cdps, jdbc, tx, committer,
                             fixtureVerifier, (receipt, version) ->
