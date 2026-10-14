@@ -31,6 +31,7 @@ on:
       - 'tools/u07_d5_o2_tx_topology/production_candidate/U07_V9_HOST_DEPLOYMENT_READINESS.md'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionTrustedAnswerU02Bridge.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionResumedClinicalPipeline.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionDurableF8Consume.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionTrustedAnswerU02BridgeTest.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06ExecutionResult.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06NonProductionPhysicalF3DecisionProvider.java'
@@ -210,6 +211,16 @@ jobs:
             dependency_binding_ref VARCHAR(128), question_policy_ref VARCHAR(128),
             payload_fingerprint VARCHAR(128) NOT NULL, checkpoint_status VARCHAR(32) NOT NULL,
             created_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE u07_f8_answer_consumption (
+            checkpoint_id VARCHAR(128) NOT NULL PRIMARY KEY,
+            consultation_id VARCHAR(128) NOT NULL,
+            waiting_run_id VARCHAR(128) NOT NULL,
+            answer_event_id VARCHAR(128) NOT NULL UNIQUE,
+            answer_digest VARCHAR(128) NOT NULL,
+            new_run_id VARCHAR(128) NOT NULL UNIQUE,
+            CONSTRAINT fk_u07_f8_wait_checkpoint FOREIGN KEY (checkpoint_id)
+              REFERENCES clinical_runtime_wait_checkpoint(checkpoint_id)
           ) ENGINE=InnoDB;
           SQL
       - name: Apply isolated V9 clinical evidence candidate on disposable MySQL8
