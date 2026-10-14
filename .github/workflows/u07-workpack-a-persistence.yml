@@ -29,6 +29,8 @@ on:
       - 'tools/u07_d5_o2_tx_topology/production_candidate/mysql8/V9__u07_clinical_receipts_no_dispatch.sql'
       - 'tools/u07_d5_o2_tx_topology/production_candidate/oracle/V9__u07_clinical_receipts_no_dispatch.sql'
       - 'tools/u07_d5_o2_tx_topology/production_candidate/U07_V9_HOST_DEPLOYMENT_READINESS.md'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionTrustedAnswerU02Bridge.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionTrustedAnswerU02BridgeTest.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06ExecutionResult.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06NonProductionPhysicalF3DecisionProvider.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionF3A1U05Flow.java'
@@ -91,6 +93,7 @@ jobs:
         run: |
           set -euo pipefail
           mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=ClinicalCdpStateRepositoryAdapterTest test
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U07NonProductionTrustedAnswerU02BridgeTest test
           python3 - <<'PY'
           import glob, xml.etree.ElementTree as ET
           paths = glob.glob('diagnosis-service/target/surefire-reports/TEST-*ClinicalCdpStateRepositoryAdapterTest.xml')
