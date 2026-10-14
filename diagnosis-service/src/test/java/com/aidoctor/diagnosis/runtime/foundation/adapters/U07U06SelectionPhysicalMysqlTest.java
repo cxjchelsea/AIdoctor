@@ -276,6 +276,36 @@ public class U07U06SelectionPhysicalMysqlTest {
             assertEquals(persistedWait.waitEffectId, replay.waitEffectId);
             assertEquals(persistedWait.checkpointId, replay.checkpointId);
             assertEquals(persistedWait.eligibilityId, replay.eligibilityId);
+
+            // F8 boundary is read-only: the persisted WAIT admits an answer
+            // candidate, but no Run/Event issuance or U02 commit is fabricated.
+            U07NonProductionAnswerResumeAdmission f8Admission =
+                    new U07NonProductionAnswerResumeAdmission(
+                            consultations, threads, checkpoints, cdps);
+            com.aidoctor.diagnosis.runtime.u02.U02ExecutionCommand answer =
+                    f8Admission.requireWaitingAnswer(
+                            request.getConsultationId(), id, request.getThreadId(),
+                            request.getRunId(), persistedWait.checkpointId,
+                            "synthetic-question-1", fixture.deliveryId, "synthetic-person",
+                            "synthetic-answer-event", "I have no fever",
+                            "synthetic-answer-correlation", "synthetic-answer-trace");
+            assertEquals(10, answer.baseClinicalStateVersion);
+            assertEquals("I have no fever", answer.rawClinicalText);
+            assertThrows(IllegalStateException.class, () ->
+                    f8Admission.requireWaitingAnswer(
+                            request.getConsultationId(), id, "wrong-thread",
+                            request.getRunId(), persistedWait.checkpointId,
+                            "synthetic-question-1", fixture.deliveryId, "synthetic-person",
+                            "synthetic-answer-event", "I have no fever",
+                            "synthetic-answer-correlation", "synthetic-answer-trace"));
+            assertThrows(IllegalStateException.class, () ->
+                    f8Admission.requireWaitingAnswer(
+                            request.getConsultationId(), id, request.getThreadId(),
+                            request.getRunId(), persistedWait.checkpointId,
+                            "wrong-question", fixture.deliveryId, "synthetic-person",
+                            "synthetic-answer-event", "I have no fever",
+                            "synthetic-answer-correlation", "synthetic-answer-trace"));
+
             assertEquals(10, cdps.findById(id).get().getVersion().intValue());
             assertEquals(2, history.findByCdpIdOrderByVersionNumberDesc(id).size());
         }
