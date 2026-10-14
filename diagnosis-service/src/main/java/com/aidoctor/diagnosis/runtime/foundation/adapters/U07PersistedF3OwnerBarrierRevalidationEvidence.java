@@ -12,11 +12,22 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 public final class U07PersistedF3OwnerBarrierRevalidationEvidence
         implements U07DurableNonProductionA1Issuer.VerifiedPostF3EvidencePort {
-    private final JdbcTemplate jdbc;
+    /** Independent host attestation; DB status fields are not proof of authority. */
+    public interface TrustedEvidenceVerifier {
+        boolean verify(String consultationId, String cdpId, int version, String effectId,
+                String ownerCommitRef, String barrierRef, String revalidationRef,
+                String routeAuthorizationRef);
+    }
 
-    public U07PersistedF3OwnerBarrierRevalidationEvidence(JdbcTemplate jdbc) {
-        if (jdbc == null) throw new IllegalArgumentException("U07_OWNER_EVIDENCE_DB_REQUIRED");
+    private final JdbcTemplate jdbc;
+    private final TrustedEvidenceVerifier trustedVerifier;
+
+    public U07PersistedF3OwnerBarrierRevalidationEvidence(JdbcTemplate jdbc,
+            TrustedEvidenceVerifier trustedVerifier) {
+        if (jdbc == null || trustedVerifier == null)
+            throw new IllegalArgumentException("U07_OWNER_EVIDENCE_AND_TRUST_REQUIRED");
         this.jdbc = jdbc;
+        this.trustedVerifier = trustedVerifier;
     }
 
     @Override
@@ -63,6 +74,10 @@ public final class U07PersistedF3OwnerBarrierRevalidationEvidence
             throw new IllegalStateException("U07_F3_REVALIDATION_NOT_CURRENT");
 
         String[] revalidated = validations.get(0);
+        // A mutable SQL status is never sufficient independent clinical authority.
+        if (!trustedVerifier.verify(consultationId, cdpId, version, effectId,
+                ownerCommit, barrier, revalidated[0], revalidated[3]))
+            throw new IllegalStateException("U07_F3_INDEPENDENT_TRUST_NOT_VERIFIED");
         return new U07DurableNonProductionA1Issuer.VerifiedEvidence(
                 effectId, barrier, revalidated[0], revalidated[2],
                 revalidated[3], revalidated[4], true, true, true);
