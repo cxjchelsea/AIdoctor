@@ -171,6 +171,31 @@ public class U01U02RealFactCommitMysqlTest {
                     new U03CommitService(committer).commitNonProduction(admitted, riskProposal);
             assertEquals("COMMITTED", riskCommit.status);
             assertEquals(Integer.valueOf(3), riskCommit.committedVersion);
+            assertEquals("CAUTION", ((Map<?,?>) cdps.findById(created.getCdpId())
+                    .get().getPatientState().get("current_risk_assessment")).get("outcome_code"));
+            java.util.List<U03RuntimeTraceRecord> recorded = new java.util.ArrayList<>();
+            U03PostCommitFinalizationOutcome finalized = new U03PostCommitFinalizer(
+                    new U03RuntimeTraceService(recorded::add),
+                    new U03OutboundProducer()).finalizeCommittedExecution(
+                            admitted, governed, riskDecision, riskProposal, riskCommit);
+            assertEquals(U03PostCommitFinalizationOutcome.DELIVERABLE, finalized.getStatus());
+            assertEquals(1, recorded.size());
+            U03OutboundHandoff riskHandoff = finalized.getOutboundHandoff();
+            assertEquals(Integer.valueOf(3), riskHandoff.getCommittedClinicalStateVersion());
+            U04ExecutionResult gated = safety.applyU04(riskHandoff,
+                    U04ScopeContext.current(true, true), "ci-nonprod-safety");
+            assertEquals(U04ExecutionResult.COMMIT_COMPLETE, gated.getStatus());
+            assertEquals(U04SafetyGateDecision.RESTRICTED, gated.getDecision().getGate());
+            assertEquals("COMMITTED", gated.getCommitResult().status);
+            assertEquals(Integer.valueOf(4), gated.getCommitResult().committedVersion);
+            assertEquals("RESTRICTED", ((Map<?,?>) cdps.findById(created.getCdpId())
+                    .get().getPatientState().get("safety_gate")).get("safety_gate"));
+            assertEquals(4, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
+                    created.getCdpId()).size());
+            U04ExecutionResult staleGate = safety.applyU04(riskHandoff,
+                    U04ScopeContext.current(true, true), "ci-nonprod-safety");
+            assertEquals(U04ExecutionResult.ADMISSION_FAILED, staleGate.getStatus());
+            assertEquals(4, cdps.findById(created.getCdpId()).get().getVersion().intValue());
             assertThrows(IllegalStateException.class, () ->
                     safety.applyU04(null, U04ScopeContext.current(true, true), "ci-nonprod-safety"));
 
