@@ -77,6 +77,12 @@ public final class U06NonProductionPhysicalMode23Service
                     "U06_RUNTIME_WAIT_INPUT_REQUIRED");
 
         Map<String, Object> patient = cdp.getPatientState();
+        Object currentAssessment = patient == null ? null : patient.get("f3_gap_assessment");
+        String currentF3 = currentAssessment instanceof Map<?, ?>
+                ? string(((Map<?, ?>) currentAssessment).get("f3_canonical_effect_id")) : null;
+        if (empty(d.getF3CanonicalEffectId())
+                || !d.getF3CanonicalEffectId().equals(currentF3))
+            throw new IllegalStateException("U06_PHYSICAL_SELECTION_F3_NOT_CURRENT");
         if (patient == null || !(patient.get("questions") instanceof Map<?, ?>))
             throw new IllegalStateException("U06_PHYSICAL_QUESTIONS_PARENT_REQUIRED");
         if (patient.containsKey("pending_question"))
