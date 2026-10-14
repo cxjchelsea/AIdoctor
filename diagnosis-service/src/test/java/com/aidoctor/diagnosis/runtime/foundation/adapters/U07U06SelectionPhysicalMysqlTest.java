@@ -39,6 +39,15 @@ public class U07U06SelectionPhysicalMysqlTest {
 
     @Test
     public void realMode2SelectionCommitsExactlyOnceAndCannotCreateWaitWithoutDelivery() {
+        runResumedClinicalSafetyScenario(false);
+    }
+
+    @Test
+    public void uncertainPatientAnswerProducesUnavailableSafetyGate() {
+        runResumedClinicalSafetyScenario(true);
+    }
+
+    private void runResumedClinicalSafetyScenario(boolean uncertainAnswer) {
         Assumptions.assumeTrue("DISPOSABLE_CDP_ONLY".equals(
                 System.getenv("U07_WORKPACK_A_MYSQL_MODE")),
                 "requires dedicated disposable MySQL physical job");
@@ -287,23 +296,23 @@ public class U07U06SelectionPhysicalMysqlTest {
                             request.getConsultationId(), id, request.getThreadId(),
                             request.getRunId(), persistedWait.checkpointId,
                             "synthetic-question-1", fixture.deliveryId, "synthetic-person",
-                            "synthetic-answer-event", "I have severe difficulty breathing",
+                            "synthetic-answer-event", uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing",
                             "synthetic-answer-correlation", "synthetic-answer-trace");
             assertEquals(10, answer.baseClinicalStateVersion);
-            assertEquals("I have severe difficulty breathing", answer.rawClinicalText);
+            assertEquals(uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing", answer.rawClinicalText);
             assertThrows(IllegalStateException.class, () ->
                     f8Admission.requireWaitingAnswer(
                             request.getConsultationId(), id, "wrong-thread",
                             request.getRunId(), persistedWait.checkpointId,
                             "synthetic-question-1", fixture.deliveryId, "synthetic-person",
-                            "synthetic-answer-event", "I have severe difficulty breathing",
+                            "synthetic-answer-event", uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing",
                             "synthetic-answer-correlation", "synthetic-answer-trace"));
             assertThrows(IllegalStateException.class, () ->
                     f8Admission.requireWaitingAnswer(
                             request.getConsultationId(), id, request.getThreadId(),
                             request.getRunId(), persistedWait.checkpointId,
                             "wrong-question", fixture.deliveryId, "synthetic-person",
-                            "synthetic-answer-event", "I have severe difficulty breathing",
+                            "synthetic-answer-event", uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing",
                             "synthetic-answer-correlation", "synthetic-answer-trace"));
 
             assertEquals(10, cdps.findById(id).get().getVersion().intValue());
@@ -360,7 +369,7 @@ public class U07U06SelectionPhysicalMysqlTest {
             assertEquals(answer.eventId, resumed.eventId);
             assertEquals(10, resumed.baseClinicalStateVersion);
             assertEquals("PATIENT_REPORTED", resumed.sourceType);
-            assertEquals("I have severe difficulty breathing", resumed.rawClinicalText);
+            assertEquals(uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing", resumed.rawClinicalText);
 
             // Actual U02 business path, P01 commit and P05 trace on the same
             // physical MySQL DB. C01 interpretation is an explicit fixture.
@@ -382,7 +391,7 @@ public class U07U06SelectionPhysicalMysqlTest {
             com.aidoctor.diagnosis.client.C01U02CapabilityClient client =
                     org.mockito.Mockito.mock(com.aidoctor.diagnosis.client.C01U02CapabilityClient.class);
             org.mockito.Mockito.when(client.interpret(org.mockito.ArgumentMatchers.any()))
-                    .thenReturn(resumedAnswerCandidate());
+                    .thenReturn(resumedAnswerCandidate(uncertainAnswer));
             com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactApplicationService realU02 =
                     new com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactApplicationService(
                             new com.aidoctor.diagnosis.runtime.u02.capability.C01U02CapabilityGateway(
@@ -493,7 +502,7 @@ public class U07U06SelectionPhysicalMysqlTest {
                                 // Test fixture scope, not inferred patient demographics.
                                 return com.aidoctor.diagnosis.runtime.u03.U03GateCClinicalInput.builder();
                             });
-            assertEquals("PRESENT",
+            assertEquals(uncertainAnswer ? "UNKNOWN" : "PRESENT",
                     input.load(riskCommand, admitted.requireAcceptedEvidenceBinding())
                             .evidenceState("EV-RF-RESP-001"));
             assertEquals("UNKNOWN",
@@ -517,17 +526,24 @@ public class U07U06SelectionPhysicalMysqlTest {
                     new com.aidoctor.diagnosis.runtime.u03.U03DecisionService(
                             new com.aidoctor.diagnosis.runtime.u03.U03GateCFrozenDecisionPort())
                             .decide(admitted, governed);
-            assertEquals("HIGH_RISK", riskDecision.getOutcomeCode());
-            com.aidoctor.diagnosis.runtime.u03.U03StateProposal proposal =
-                    new com.aidoctor.diagnosis.runtime.u03.U03StateProposalFactory()
+            assertEquals(uncertainAnswer ? "INSUFFICIENT_INFORMATION" : "HIGH_RISK",
+                    uncertainAnswer ? riskDecision.getReasonCode() : riskDecision.getOutcomeCode());
+            com.aidoctor.diagnosis.runtime.u03.U03StateProposal proposal = uncertainAnswer
+                    ? null : new com.aidoctor.diagnosis.runtime.u03.U03StateProposalFactory()
                             .createNonProductionValid(admitted, riskDecision, governed);
-            com.aidoctor.contracts.v1.StateTypes.CommitResult riskCommit =
-                    tx.execute(status -> new com.aidoctor.diagnosis.runtime.u03.U03CommitService(
+            com.aidoctor.contracts.v1.StateTypes.CommitResult riskCommit = uncertainAnswer
+                    ? null : tx.execute(status -> new com.aidoctor.diagnosis.runtime.u03.U03CommitService(
                             committer).commitNonProduction(admitted, proposal));
-            assertEquals("COMMITTED", riskCommit.status);
-            assertEquals(Integer.valueOf(12), riskCommit.committedVersion);
-            assertEquals("HIGH_RISK", ((Map<?,?>) cdps.findById(id).get()
-                    .getPatientState().get("current_risk_assessment")).get("outcome_code"));
+            if (!uncertainAnswer) {
+                assertEquals("COMMITTED", riskCommit.status);
+                assertEquals(Integer.valueOf(12), riskCommit.committedVersion);
+                assertEquals("HIGH_RISK", ((Map<?,?>) cdps.findById(id).get()
+                        .getPatientState().get("current_risk_assessment")).get("outcome_code"));
+            } else {
+                assertEquals(com.aidoctor.diagnosis.runtime.u03.U03RiskAssessmentCandidate.FAILED,
+                        riskDecision.getStatus());
+                assertEquals(11, cdps.findById(id).get().getVersion().intValue());
+            }
             java.util.List<com.aidoctor.diagnosis.runtime.u03.U03RuntimeTraceRecord> u03Traces =
                     new java.util.ArrayList<>();
             com.aidoctor.diagnosis.runtime.u03.U03PostCommitFinalizationOutcome finalized =
@@ -540,7 +556,8 @@ public class U07U06SelectionPhysicalMysqlTest {
             assertEquals("DELIVERABLE", finalized.getStatus());
             com.aidoctor.diagnosis.runtime.u03.U03OutboundHandoff handoff =
                     finalized.getOutboundHandoff();
-            assertEquals(Integer.valueOf(12), handoff.getCommittedClinicalStateVersion());
+            assertEquals(uncertainAnswer ? null : Integer.valueOf(12),
+                    handoff.getCommittedClinicalStateVersion());
             assertEquals(freshRun, handoff.getRunId());
             com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult gated =
                     tx.execute(status -> safety.applyU04(handoff,
@@ -548,17 +565,22 @@ public class U07U06SelectionPhysicalMysqlTest {
                             "ci-nonprod-resumed-risk"));
             assertEquals(com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult.COMMIT_COMPLETE,
                     gated.getStatus());
-            assertEquals(com.aidoctor.diagnosis.runtime.u04.U04SafetyGateDecision.BLOCKED,
+            assertEquals(uncertainAnswer
+                    ? com.aidoctor.diagnosis.runtime.u04.U04SafetyGateDecision.UNAVAILABLE
+                    : com.aidoctor.diagnosis.runtime.u04.U04SafetyGateDecision.BLOCKED,
                     gated.getDecision().getGate());
-            assertEquals(Integer.valueOf(13), gated.getCommitResult().committedVersion);
-            assertEquals("BLOCKED", ((Map<?,?>) cdps.findById(id).get()
+            final int finalVersion = uncertainAnswer ? 12 : 13;
+            final int historyCount = uncertainAnswer ? 4 : 5;
+            assertEquals(Integer.valueOf(finalVersion), gated.getCommitResult().committedVersion);
+            assertEquals(uncertainAnswer ? "UNAVAILABLE" : "BLOCKED",
+                    ((Map<?,?>) cdps.findById(id).get()
                     .getPatientState().get("safety_gate")).get("safety_gate"));
-            assertEquals(13, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(finalVersion, cdps.findById(id).get().getVersion().intValue());
             // A v11 accepted-evidence execution context becomes stale once U03
             // and U04 have committed. A second governed assessment must reload
             // authoritative CDP rather than replay the prior clinical input.
             assertThrows(IllegalStateException.class, () -> gateway.assess(admitted));
-            assertEquals(13, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(finalVersion, cdps.findById(id).get().getVersion().intValue());
             assertThrows(IllegalStateException.class, () ->
                     U07NonProductionF3A1U05Flow.requireEligiblePreF3(handoff, gated));
             assertEquals(com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult.ADMISSION_FAILED,
@@ -566,8 +588,8 @@ public class U07U06SelectionPhysicalMysqlTest {
                             com.aidoctor.diagnosis.runtime.u04.U04ScopeContext.current(true,true),
                             "ci-nonprod-resumed-risk").getStatus());
             // Replaying the pre-gate S14 must not mutate the committed v13 CDP.
-            assertEquals(13, cdps.findById(id).get().getVersion().intValue());
-            assertEquals(5, history.findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertEquals(finalVersion, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(historyCount, history.findByCdpIdOrderByVersionNumberDesc(id).size());
 
 
             assertThrows(IllegalStateException.class, () ->
@@ -585,12 +607,12 @@ public class U07U06SelectionPhysicalMysqlTest {
                     answer, persistedWait.checkpointId, "synthetic-answer-idem",
                     "sha256:DIFFERENT"));
             assertEquals(1L, runs.count());
-            assertEquals(13, cdps.findById(id).get().getVersion().intValue());
-            assertEquals(5, history.findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertEquals(finalVersion, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(historyCount, history.findByCdpIdOrderByVersionNumberDesc(id).size());
         }
     }
 
-    private static com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse resumedAnswerCandidate() {
+    private static com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse resumedAnswerCandidate(boolean uncertainAnswer) {
         com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse response =
                 new com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse();
         response.setBusinessStatus("SUCCESS");
@@ -611,7 +633,7 @@ public class U07U06SelectionPhysicalMysqlTest {
         fact.setConceptId("EV-RF-RESP-001");
         fact.setConceptDisplay("synthetic severe respiratory distress red flag");
         fact.setRawTextRef("sha256:synthetic-answer-evidence");
-        fact.setValueSemantics("YES");
+        fact.setValueSemantics(uncertainAnswer ? "UNKNOWN" : "YES");
         fact.setSourceType("PATIENT_REPORTED");
         fact.setLifecycle("CONFIRMED");
         fact.setConfidenceOrUncertainty(0.95d);
