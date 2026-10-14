@@ -11,6 +11,8 @@ import com.aidoctor.diagnosis.runtime.u01.*;
 import com.aidoctor.diagnosis.runtime.u01.capability.C01U01CapabilityGateway;
 import com.aidoctor.diagnosis.runtime.u02.capability.C01U02CapabilityGateway;
 import com.aidoctor.diagnosis.runtime.u02.d05.U02DependencyInvalidationHook;
+import com.aidoctor.diagnosis.runtime.u03.*;
+import com.aidoctor.diagnosis.runtime.u04.*;
 import com.aidoctor.diagnosis.service.cdp.*;
 import com.aidoctor.diagnosis.state.committer.*;
 import com.aidoctor.diagnosis.state.committer.fakes.*;
@@ -117,6 +119,30 @@ public class U01U02RealFactCommitMysqlTest {
             assertEquals(CapabilityCallTraceRecord.SUCCEEDED, trace.getCallStatus());
             assertEquals(Integer.valueOf(2), trace.getClinicalStateVersionAfter());
             assertEquals(created.getRunId(), trace.getRunId());
+            // Exact persisted U02 commit and P05 trace are the only entry
+            // to governed U03 evidence admission; no C02 risk result is invented.
+            U04NonProductionApplicationService u04 = new U04NonProductionApplicationService(
+                    new U04AdmissionService(), new U04SafetyGatePolicy(),
+                    new U04StateProposalFactory(), new U04CommitService(committer));
+            U02U03GovernedSafetyBridge safety = new U02U03GovernedSafetyBridge(
+                    cdps, ctx.getBean(CapabilityCallTraceRepository.class),
+                    (consultation, cdp, version, call) ->
+                            new U03AcceptedEvidenceBinding("synthetic-acceptance", version,
+                                    Collections.singletonList("synthetic-observation-evidence"),
+                                    Collections.singletonList("synthetic-source"),
+                                    Collections.singletonList("synthetic-provenance")),
+                    new U03NonProductionAdmissionService(), u04);
+            U03ExecutionCommand riskCommand = new U03ExecutionCommand(
+                    created.getConsultationId(), trace.getThreadId(),
+                    created.getRunId(), trace.getEventId(), created.getCdpId(),
+                    2, "synthetic-correlation", "synthetic-trace");
+            U03NonProductionExecutionContext admitted = safety.requireU03Admission(
+                    outcome, riskCommand, U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
+                    "ci-nonprod-safety");
+            assertEquals(2, admitted.requireAcceptedEvidenceBinding().getClinicalStateVersion());
+            assertThrows(IllegalStateException.class, () ->
+                    safety.applyU04(null, U04ScopeContext.current(true, true), "ci-nonprod-safety"));
+
             assertThrows(IllegalStateException.class, () -> handoff.executeCommittedStart(
                     created.getConsultationId(), created.getRunId(), raw));
             assertEquals(2, cdps.findById(created.getCdpId()).get().getVersion().intValue());
