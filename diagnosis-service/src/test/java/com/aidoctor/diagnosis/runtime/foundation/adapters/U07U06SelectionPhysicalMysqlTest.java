@@ -546,16 +546,24 @@ public class U07U06SelectionPhysicalMysqlTest {
             }
             java.util.List<com.aidoctor.diagnosis.runtime.u03.U03RuntimeTraceRecord> u03Traces =
                     new java.util.ArrayList<>();
-            com.aidoctor.diagnosis.runtime.u03.U03PostCommitFinalizationOutcome finalized =
-                    new com.aidoctor.diagnosis.runtime.u03.U03PostCommitFinalizer(
-                            new com.aidoctor.diagnosis.runtime.u03.U03RuntimeTraceService(
-                                    u03Traces::add),
-                            new com.aidoctor.diagnosis.runtime.u03.U03OutboundProducer())
-                            .finalizeCommittedExecution(admitted, governed, riskDecision,
-                                    proposal, riskCommit);
-            assertEquals("DELIVERABLE", finalized.getStatus());
-            com.aidoctor.diagnosis.runtime.u03.U03OutboundHandoff handoff =
-                    finalized.getOutboundHandoff();
+            // Failed D09 is not a canonical U03 commit: S14 must preserve the
+            // failure without fabricating risk disposition, proposal or audit.
+            com.aidoctor.diagnosis.runtime.u03.U03OutboundHandoff handoff;
+            if (uncertainAnswer) {
+                handoff = new com.aidoctor.diagnosis.runtime.u03.U03OutboundProducer()
+                        .produce(admitted, governed, riskDecision, null, null);
+                assertEquals(null, handoff.getCommittedClinicalStateVersion());
+            } else {
+                com.aidoctor.diagnosis.runtime.u03.U03PostCommitFinalizationOutcome finalized =
+                        new com.aidoctor.diagnosis.runtime.u03.U03PostCommitFinalizer(
+                                new com.aidoctor.diagnosis.runtime.u03.U03RuntimeTraceService(
+                                        u03Traces::add),
+                                new com.aidoctor.diagnosis.runtime.u03.U03OutboundProducer())
+                                .finalizeCommittedExecution(admitted, governed, riskDecision,
+                                        proposal, riskCommit);
+                assertEquals("DELIVERABLE", finalized.getStatus());
+                handoff = finalized.getOutboundHandoff();
+            }
             assertEquals(uncertainAnswer ? null : Integer.valueOf(12),
                     handoff.getCommittedClinicalStateVersion());
             assertEquals(freshRun, handoff.getRunId());
