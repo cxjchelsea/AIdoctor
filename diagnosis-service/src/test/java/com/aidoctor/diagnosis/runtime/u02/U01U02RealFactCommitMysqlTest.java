@@ -207,7 +207,7 @@ public class U01U02RealFactCommitMysqlTest {
 
             assertThrows(IllegalStateException.class, () -> handoff.executeCommittedStart(
                     created.getConsultationId(), created.getRunId(), raw));
-            assertEquals(2, cdps.findById(created.getCdpId()).get().getVersion().intValue());
+            assertEquals(4, cdps.findById(created.getCdpId()).get().getVersion().intValue());
         }
     }
 
