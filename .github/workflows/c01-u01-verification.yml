@@ -70,5 +70,10 @@ jobs:
           mvn -f diagnosis-service/pom.xml
           -Dtest='C01U01CapabilityGatewayTest,U01NaturalLanguageStartServiceTest,U01SemanticPolicyTest,U01ConsultationServiceTest,U01LegacyBoundaryGuardTest,FoundationRuntimeBaseTest,Foundation1GovernanceTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
           test
-      - name: Run diagnosis-service regression suite
-        run: mvn -f diagnosis-service/pom.xml test
+      # U07 disposable-MySQL and isolated D5 suites require their dedicated
+      # guarded runners. Avoid invoking these suites outside their profiles.
+      - name: Run V1 entry-to-U01 integration regression
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest='V1NonProductionClinicalIngressTest,V1ClinicalPublicEntryAcceptanceTest'
+          test
