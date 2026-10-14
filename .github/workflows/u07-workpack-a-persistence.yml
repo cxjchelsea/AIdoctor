@@ -166,6 +166,47 @@ jobs:
             create_time DATETIME,
             KEY idx_workpack_a_version (cdp_id, version_number)
           ) ENGINE=InnoDB;
+          CREATE TABLE clinical_consultation (
+            consultation_id VARCHAR(128) PRIMARY KEY, row_version BIGINT NOT NULL,
+            cdp_id VARCHAR(128) NOT NULL UNIQUE, user_id VARCHAR(128) NOT NULL,
+            lifecycle_status VARCHAR(32) NOT NULL, current_wait_effect_id VARCHAR(128),
+            subject_status VARCHAR(32) NOT NULL, subject_type VARCHAR(32),
+            subject_reference_id VARCHAR(128), problem_status VARCHAR(32) NOT NULL,
+            problem_text VARCHAR(2000), scope_decision VARCHAR(32) NOT NULL,
+            clarification_reason VARCHAR(128), early_safety_signal BIT NOT NULL,
+            start_event_id VARCHAR(128) NOT NULL UNIQUE, created_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE clinical_consultation_wait_effect (
+            wait_effect_id VARCHAR(128) PRIMARY KEY,
+            parent_delivered_wait_effect_id VARCHAR(128) NOT NULL UNIQUE,
+            consultation_id VARCHAR(128) NOT NULL, question_id VARCHAR(128) NOT NULL,
+            delivery_id VARCHAR(128) NOT NULL, payload_fingerprint VARCHAR(128) NOT NULL,
+            idempotency_key VARCHAR(128) NOT NULL UNIQUE,
+            expected_prior_lifecycle VARCHAR(32) NOT NULL, expected_prior_row_version BIGINT NOT NULL,
+            committed_lifecycle VARCHAR(32) NOT NULL, committed_row_version BIGINT NOT NULL,
+            effect_status VARCHAR(32) NOT NULL, created_at DATETIME NOT NULL,
+            committed_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE clinical_runtime_thread_state (
+            thread_id VARCHAR(128) PRIMARY KEY, consultation_id VARCHAR(128) NOT NULL UNIQUE,
+            row_version BIGINT NOT NULL, runtime_status VARCHAR(32) NOT NULL,
+            current_run_id VARCHAR(128), current_wait_checkpoint_id VARCHAR(128),
+            current_wait_effect_id VARCHAR(128), updated_at DATETIME NOT NULL,
+            created_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE clinical_runtime_wait_checkpoint (
+            checkpoint_id VARCHAR(128) PRIMARY KEY, consultation_id VARCHAR(128) NOT NULL,
+            thread_id VARCHAR(128) NOT NULL, run_id VARCHAR(128) NOT NULL,
+            question_id VARCHAR(128) NOT NULL, pending_question_ref VARCHAR(256) NOT NULL,
+            question_selection_effect_id VARCHAR(128) NOT NULL,
+            question_delivery_effect_id VARCHAR(128) NOT NULL,
+            question_delivered_wait_effect_id VARCHAR(128) NOT NULL UNIQUE,
+            delivery_id VARCHAR(128) NOT NULL, delivery_confirmation_ref VARCHAR(128) NOT NULL,
+            clinical_state_version INT NOT NULL, consultation_wait_effect_id VARCHAR(128) NOT NULL,
+            dependency_binding_ref VARCHAR(128), question_policy_ref VARCHAR(128),
+            payload_fingerprint VARCHAR(128) NOT NULL, checkpoint_status VARCHAR(32) NOT NULL,
+            created_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
           SQL
       - name: Apply isolated V9 clinical evidence candidate on disposable MySQL8
         shell: bash
