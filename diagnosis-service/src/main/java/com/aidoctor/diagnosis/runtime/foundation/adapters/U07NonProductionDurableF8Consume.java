@@ -5,6 +5,13 @@ import com.aidoctor.diagnosis.runtime.foundation.CanonicalBusinessEventRecord;
 import com.aidoctor.diagnosis.runtime.foundation.ClinicalRunCoordinator;
 import com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRecord;
 import com.aidoctor.diagnosis.runtime.u02.U02ExecutionCommand;
+import com.aidoctor.diagnosis.runtime.u01.ConsultationRepository;
+import com.aidoctor.diagnosis.runtime.u01.ConsultationRecord;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRepository;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRecord;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRepository;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRecord;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -22,13 +29,21 @@ public final class U07NonProductionDurableF8Consume
     private final TransactionTemplate tx;
     private final CanonicalBusinessEventLedger ledger;
     private final ClinicalRunCoordinator coordinator;
+    private final ConsultationRepository consultations;
+    private final RuntimeThreadStateRepository threads;
+    private final RuntimeWaitCheckpointRepository checkpoints;
 
     public U07NonProductionDurableF8Consume(JdbcTemplate jdbc, TransactionTemplate tx,
-            CanonicalBusinessEventLedger ledger, ClinicalRunCoordinator coordinator) {
+            CanonicalBusinessEventLedger ledger, ClinicalRunCoordinator coordinator,
+            ConsultationRepository consultations, RuntimeThreadStateRepository threads,
+            RuntimeWaitCheckpointRepository checkpoints) {
         this.jdbc = Objects.requireNonNull(jdbc);
         this.tx = Objects.requireNonNull(tx);
         this.ledger = Objects.requireNonNull(ledger);
         this.coordinator = Objects.requireNonNull(coordinator);
+        this.consultations = Objects.requireNonNull(consultations);
+        this.threads = Objects.requireNonNull(threads);
+        this.checkpoints = Objects.requireNonNull(checkpoints);
     }
 
     /** Must only be called with an authenticated, canonicalized answer digest. */
@@ -79,6 +94,27 @@ public final class U07NonProductionDurableF8Consume
             if (Objects.equals(run.getRunId(),waiting.runId)
                     || !Objects.equals(run.getThreadId(),waiting.threadId))
                 throw new IllegalStateException("U07_F8_NEW_RUN_MISMATCH");
+            ConsultationRecord consultation=consultations.findById(waiting.consultationId)
+                    .orElseThrow(() -> new IllegalStateException("U07_F8_CONSULTATION_MISSING"));
+            RuntimeThreadStateRecord thread=threads.findById(waiting.threadId)
+                    .orElseThrow(() -> new IllegalStateException("U07_F8_THREAD_MISSING"));
+            RuntimeWaitCheckpointRecord checkpoint=checkpoints.findById(checkpointId)
+                    .orElseThrow(() -> new IllegalStateException("U07_F8_CHECKPOINT_MISSING"));
+            if (!Objects.equals(consultation.getCurrentWaitEffectId(),
+                    checkpoint.getConsultationWaitEffectId())
+                    || !Objects.equals(thread.getCurrentWaitEffectId(),
+                            checkpoint.getQuestionDeliveredWaitEffectId())
+                    || !Objects.equals(checkpoint.getRunId(),waiting.runId)
+                    || !"ACTIVE".equals(checkpoint.getCheckpointStatus()))
+                throw new IllegalStateException("U07_F8_WAIT_AUTHORITY_CHANGED");
+            consultation.resumeFromWait(checkpoint.getConsultationWaitEffectId());
+            thread.resumeFromWait(waiting.runId,checkpointId,
+                    checkpoint.getQuestionDeliveredWaitEffectId(),run.getRunId(),
+                    LocalDateTime.now());
+            checkpoint.consume();
+            consultations.saveAndFlush(consultation);
+            threads.saveAndFlush(thread);
+            checkpoints.saveAndFlush(checkpoint);
             jdbc.update("INSERT INTO u07_f8_answer_consumption "
                     + "(checkpoint_id,consultation_id,waiting_run_id,answer_event_id,"
                     + "answer_digest,new_run_id) VALUES(?,?,?,?,?,?)",
