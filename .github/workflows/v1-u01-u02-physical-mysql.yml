@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/v1-u01-u02-physical-mysql.yml'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02PhysicalMysqlHandoffTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02RealFactCommitMysqlTest.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/U01U02TrustedStartContext.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/U01U02NonProductionHandoffService.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U01U02NonProductionHostConfig.java'
@@ -89,7 +90,7 @@ jobs:
         run: |
           set -euo pipefail
           mvn -B -ntp -f contracts/v1/bindings/java/pom.xml install -DskipTests
-          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U01U02PhysicalMysqlHandoffTest test
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U01U02PhysicalMysqlHandoffTest,U01U02RealFactCommitMysqlTest test
           python3 - <<'PY'
           import glob,xml.etree.ElementTree as ET
           p=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02PhysicalMysqlHandoffTest.xml")
@@ -97,5 +98,10 @@ jobs:
           r=ET.parse(p[0]).getroot()
           assert int(r.get("tests",-1))==1
           assert all(int(r.get(k,-1))==0 for k in ("errors","failures","skipped"))
-          print("V1_U01_U02_REAL_MYSQL_AUTHORITY_READBACK=PASS; CLINICAL_FACT_COMMIT=NOT_VERIFIED")
+          q=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02RealFactCommitMysqlTest.xml")
+          assert len(q)==1,q
+          r2=ET.parse(q[0]).getroot()
+          assert int(r2.get("tests",-1))==1
+          assert all(int(r2.get(k,-1))==0 for k in ("errors","failures","skipped"))
+          print("V1_U01_U02_REAL_MYSQL_SYNTHETIC_C01_P01_COMMIT=PASS; LIVE_PROVIDER_HTTP=NOT_VERIFIED")
           PY
