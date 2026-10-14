@@ -140,6 +140,37 @@ public class U01U02RealFactCommitMysqlTest {
                     outcome, riskCommand, U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
                     "ci-nonprod-safety");
             assertEquals(2, admitted.requireAcceptedEvidenceBinding().getClinicalStateVersion());
+            CapabilityBindingRecord riskBinding = new CapabilityBindingRecord(
+                    U03GovernedCandidateGateway.BINDING_ID, "C02", "1.0.0",
+                    "synthetic-risk-capset", "aidoctor-v1-scope", "contracts-v1",
+                    "*", "*", "*", "*", CapabilityBindingRecord.ACTIVE,
+                    LocalDateTime.of(2026,1,1,0,0), null, LocalDateTime.of(2026,1,1,0,0));
+            CapabilityInvocationGuard riskGuard = mock(CapabilityInvocationGuard.class);
+            when(riskGuard.authorize(eq(U03GovernedCandidateGateway.BINDING_ID),
+                    eq("C02"), any())).thenReturn(riskBinding);
+            U03GateCClinicalInputPort input = (cmd, accepted) ->
+                    U03GateCClinicalInput.builder().suspectedSepsis("TRUE")
+                            .measurement("respiratory_rate_bpm",
+                                    U03GateCClinicalInput.Measurement.present(21))
+                            .measurement("systolic_bp_mmHg",
+                                    U03GateCClinicalInput.Measurement.present(120))
+                            .measurement("usual_systolic_bp_mmHg",
+                                    U03GateCClinicalInput.Measurement.present(120))
+                            .measurement("heart_rate_bpm",
+                                    U03GateCClinicalInput.Measurement.present(80)).build();
+            U03GovernedCandidateGateway governedGateway = new U03GovernedCandidateGateway(
+                    riskGuard, new U03ReleaseRegistry(),
+                    new U03GateCFrozenRuleEvaluator(input), true);
+            U03GovernedCandidateGateway.GovernedResult governed = governedGateway.assess(admitted);
+            U03DecisionOutcome riskDecision = new U03DecisionService(
+                    new U03GateCFrozenDecisionPort()).decide(admitted, governed);
+            assertEquals("CAUTION", riskDecision.getOutcomeCode());
+            U03StateProposal riskProposal = new U03StateProposalFactory()
+                    .createNonProductionValid(admitted, riskDecision, governed);
+            com.aidoctor.contracts.v1.StateTypes.CommitResult riskCommit =
+                    new U03CommitService(committer).commitNonProduction(admitted, riskProposal);
+            assertEquals("COMMITTED", riskCommit.status);
+            assertEquals(Integer.valueOf(3), riskCommit.committedVersion);
             assertThrows(IllegalStateException.class, () ->
                     safety.applyU04(null, U04ScopeContext.current(true, true), "ci-nonprod-safety"));
 
