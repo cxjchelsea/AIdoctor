@@ -14,7 +14,7 @@ import java.security.MessageDigest;
  * This does not mint identifiers, admit new business events, or bypass P01.
  */
 @Service
-public final class U01U02TrustedStartContext {
+public class U01U02TrustedStartContext {
     private final ConsultationRepository consultations;
     private final RuntimeBindingService bindings;
     private final ClinicalRunRepository runs;
