@@ -10,12 +10,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.HashMap;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.times;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -87,6 +91,85 @@ class ClinicalCdpStateRepositoryAdapterTest {
         assertFalse(result.retryable);
         assertEquals(2, cdp.getVersion().intValue());
         assertTrue(cdp.getDdx().isEmpty());
+        verify(versionService, never()).createVersion(any(CDP.class));
+        verify(repository, never()).save(any(CDP.class));
+    }
+
+    @Test
+    void compositePatchWithMissingNestedParentFailsAtomicallyBeforeVersionHistory() {
+        CDP cdp = cdp("cdp-1", 8);
+        Map<String, Object> original = new LinkedHashMap<String, Object>();
+        original.put("original", "retained");
+        cdp.setPatientState(original);
+        when(repository.findByIdWithLock("cdp-1")).thenReturn(Optional.of(cdp));
+
+        StateTypes.StatePatch combined = patch(
+                add("/patient_state/safety_gate", "ALLOW"));
+        combined.operations = Arrays.asList(
+                add("/patient_state/safety_gate", "ALLOW"),
+                add("/patient_state/missing_parent/f3_gap", "should-not-persist"));
+        StateRepositoryPort.AtomicCommitOutcome result = adapter.attemptAtomicCommit(
+                new StateRepositoryPort.AtomicCommitCommand(
+                        "cdp-1", 8, "patch-atomic", "idem-atomic", combined));
+
+        assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.FAILED, result.status);
+        assertEquals(ClinicalCdpStateRepositoryAdapter.UNSUPPORTED_CLINICAL_PATH, result.failureCode);
+        assertEquals(8, cdp.getVersion().intValue());
+        assertEquals("retained", cdp.getPatientState().get("original"));
+        assertFalse(cdp.getPatientState().containsKey("safety_gate"));
+        verify(versionService, never()).createVersion(any(CDP.class));
+        verify(repository, never()).save(any(CDP.class));
+    }
+
+    @Test
+    void versionConflictPreventsU04GateAndF3Writes() {
+        CDP cdp = cdp("cdp-1", 10);
+        cdp.setPatientState(new LinkedHashMap<String, Object>());
+        when(repository.findByIdWithLock("cdp-1")).thenReturn(Optional.of(cdp));
+        StateTypes.StatePatch p = patch(add("/patient_state/f3_gap_assessment", "stale"));
+
+        StateRepositoryPort.AtomicCommitOutcome result = adapter.attemptAtomicCommit(
+                new StateRepositoryPort.AtomicCommitCommand(
+                        "cdp-1", 9, "patch-stale", "idem-stale", p));
+        assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.CONFLICT, result.status);
+        assertEquals(10, result.actualVersion);
+        assertFalse(cdp.getPatientState().containsKey("f3_gap_assessment"));
+        verify(versionService, never()).createVersion(any(CDP.class));
+        verify(repository, never()).save(any(CDP.class));
+    }
+
+    @Test
+    void versionHistoryFailureDoesNotWriteCdpOrAdvanceVersion() {
+        CDP cdp = cdp("cdp-1", 10);
+        cdp.setPatientState(new LinkedHashMap<String, Object>());
+        when(repository.findByIdWithLock("cdp-1")).thenReturn(Optional.of(cdp));
+        org.mockito.Mockito.when(versionService.createVersion(cdp))
+                .thenThrow(new IllegalStateException("synthetic-version-history-failure"));
+        boolean rejected = false;
+        try {
+            adapter.attemptAtomicCommit(
+                    new StateRepositoryPort.AtomicCommitCommand(
+                            "cdp-1", 10, "patch-history", "idem-history",
+                            patch(add("/patient_state/clinical_readiness", "synthetic"))));
+        } catch (IllegalStateException expected) {
+            rejected = true;
+            assertEquals("synthetic-version-history-failure", expected.getMessage());
+        }
+        assertTrue(rejected);
+        assertEquals(10, cdp.getVersion().intValue());
+        assertFalse(cdp.getPatientState().containsKey("clinical_readiness"));
+        verify(repository, never()).save(any(CDP.class));
+    }
+
+    @Test
+    void missingCdpFailsWithoutCreatingHistory() {
+        when(repository.findByIdWithLock("unknown")).thenReturn(Optional.empty());
+        StateRepositoryPort.AtomicCommitOutcome result = adapter.attemptAtomicCommit(
+                new StateRepositoryPort.AtomicCommitCommand(
+                        "unknown", 0, "patch-missing", "idem-missing",
+                        patch(add("/patient_state/safety_gate", "ALLOW"))));
+        assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.FAILED, result.status);
+        assertEquals(ClinicalCdpStateRepositoryAdapter.CDP_NOT_FOUND, result.failureCode);
         verify(versionService, never()).createVersion(any(CDP.class));
         verify(repository, never()).save(any(CDP.class));
     }
