@@ -152,6 +152,216 @@ public class U07ClinicalHostServiceMysqlTest {
     }
 
     @Test
+    public void continuousU04F3SafetyA1U05PhysicalMysqlNonproductionFlow() {
+        try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
+            Map<String,Object> flags = new HashMap<String,Object>();
+            flags.put("aidoctor.u07.clinical-host.nonproduction-enabled", "true");
+            flags.put("aidoctor.u07.persistence.readback-enabled", "true");
+            ctx.getEnvironment().getPropertySources().addFirst(
+                    new MapPropertySource("u07-full-chain-isolated", flags));
+            ctx.register(U07WorkpackACdpPhysicalMysqlTest.IsolatedConfig.class,
+                    ScopedTestCommitter.class, ScopedU05TestPorts.class,
+                    ClinicalCdpReadbackAdapter.class, U07ClinicalHostServicesConfig.class);
+            ctx.refresh();
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            org.springframework.jdbc.core.JdbcTemplate jdbc =
+                    ctx.getBean(org.springframework.jdbc.core.JdbcTemplate.class);
+            String id = "cdp-1";
+            tx.execute(status -> {
+                CDP cdp = CDP.builder().id(id).patientId("synthetic-only")
+                        .sessionId("synthetic-only").version(10).build();
+                cdp.setPatientState(new LinkedHashMap<String,Object>());
+                repo.saveAndFlush(cdp);
+                return null;
+            });
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_a1_attestation ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "cdp_version INT NOT NULL, f3_effect_id VARCHAR(128) NOT NULL, "
+                    + "barrier_ref VARCHAR(128) NOT NULL, revalidation_ref VARCHAR(128) NOT NULL, "
+                    + "route_source_ref VARCHAR(128) NOT NULL, "
+                    + "route_authorization_ref VARCHAR(128) NOT NULL, "
+                    + "routing_policy_version VARCHAR(128) NOT NULL, "
+                    + "PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+
+            U03OutboundHandoff handoff = new U03OutboundHandoff(
+                    "consult-1", id, 9, 10,
+                    "thread-1","run-1","event-1","corr-1","trace-1",ENV,
+                    U03NonProductionExecutionContext.BINDING_MODE,
+                    U03RiskAssessmentCandidate.VALID, null,
+                    Collections.<String>emptyList(), "DETERMINISTIC_FROZEN_RULE_EXECUTION",
+                    "u03-decision-1", U03RiskAssessmentCandidate.VALID,
+                    "NO_HIGH_RISK_SIGNAL", "U03_RULE_DECISION",
+                    U03GovernedCandidateGateway.BINDING_ID, Arrays.asList(
+                            U03GovernedCandidateGateway.BINDING_ID,
+                            U03ExplicitNonProductionReleaseRefs.GATE_C_KNOWLEDGE_RELEASE_REF,
+                            U03ExplicitNonProductionReleaseRefs.GATE_C_RULE_RELEASE_REF,
+                            U03ExplicitNonProductionReleaseRefs.GATE_C_COVERAGE_CONTRACT_REF,
+                            U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_RELEASE_REF,
+                            U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_PAIR_REF),
+                    "acceptance-1", Collections.singletonList("evidence-1"),
+                    Collections.singletonList("source-1"),
+                    Collections.singletonList("provenance-1"),
+                    "u03-proposal-1","COMMITTED",null,"audit-u03-1");
+            U04ExecutionResult u04 = ctx.getBean(U04NonProductionApplicationService.class)
+                    .execute(handoff, 10, U04ScopeContext.current(true, true), ENV);
+            assertEquals(U04ExecutionResult.COMMIT_COMPLETE, u04.getStatus());
+            assertEquals(11, repo.findById(id).get().getVersion().intValue());
+
+            StateRepositoryPort state = ctx.getBean(StateRepositoryPort.class);
+            com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalF3Owner.F3CommitPort
+                    f3Commit = new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalF3Owner.F3CommitPort() {
+                @Override public int currentVersion(String cdp) {
+                    return state.readCurrentVersion(cdp);
+                }
+                @Override public int commitAuthorized(String cdp, int version,
+                        com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalF3Owner.PreparedF3 d) {
+                    StateRepositoryPort.AtomicCommitOutcome result = state.attemptAtomicCommit(
+                            new StateRepositoryPort.AtomicCommitCommand(
+                                    cdp, version, d.patchId, d.idempotencyKey, d.patch));
+                    if (result.status != StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED)
+                        throw new IllegalStateException("U07_F3_TEST_COMMIT_FAILED");
+                    return result.committedVersion;
+                }
+            };
+            com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalF3Owner owner =
+                    new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalF3Owner(
+                    f3Commit, repo, (consultation, cdp, version) -> {
+                        com.aidoctor.contracts.v1.StateTypes.StatePatchOperation op =
+                                new com.aidoctor.contracts.v1.StateTypes.StatePatchOperation();
+                        op.op = "ADD";
+                        op.path = "/patient_state/f3_gap_assessment";
+                        Map<String,Object> value = new LinkedHashMap<String,Object>();
+                        value.put("f3_canonical_effect_id", "physical-e2e-f3");
+                        value.put("gap_id", "gap-e2e");
+                        op.value = value;
+                        op.source = "PATIENT_FACT";
+                        op.sensitivity = "PHI";
+                        com.aidoctor.contracts.v1.StateTypes.StatePatch patch =
+                                new com.aidoctor.contracts.v1.StateTypes.StatePatch();
+                        patch.operations = Collections.singletonList(op);
+                        return new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalF3Owner.PreparedF3(
+                                "physical-e2e-f3", "patch-e2e-f3", "idem-e2e-f3", patch);
+                    });
+            java.util.concurrent.atomic.AtomicBoolean safetyAllowed =
+                    new java.util.concurrent.atomic.AtomicBoolean(false);
+            com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier barrier =
+                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier();
+            com.aidoctor.diagnosis.runtime.foundation.adapters.U07DurableNonProductionA1Issuer.VerifiedPostF3EvidencePort
+                    verifier = (consultation, cdp, version, effect) -> {
+                        com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier.Evaluation evaluated =
+                                barrier.evaluate(consultation, effect, "COMMITTED", version,
+                                        new com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier.Evidence(
+                                                safetyAllowed.get() ? "ALLOWED" : "BLOCKED",
+                                                "isolated-independent-safety"));
+                        if (!"ALLOWED".equals(evaluated.getStatus()))
+                            throw new IllegalStateException("U07_E2E_POST_F3_SAFETY_BLOCKED");
+                        // The nonproduction revalidation input is derived from current JPA
+                        // readback, not from an inbound request assertion.
+                        CDP latest = repo.findById(cdp).get();
+                        if (latest.getVersion() == null || latest.getVersion() != version
+                                || !effect.equals(((Map<?, ?>) latest.getPatientState()
+                                .get("f3_gap_assessment")).get("f3_canonical_effect_id")))
+                            throw new IllegalStateException("U07_E2E_REVALIDATION_STALE");
+                        return new com.aidoctor.diagnosis.runtime.foundation.adapters.U07DurableNonProductionA1Issuer.VerifiedEvidence(
+                                effect, evaluated.getEvaluationId(), "isolated-current-revalidation",
+                                "route-source-" + U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                                "route-auth-" + U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                                "routing-policy-v1", true, true, true);
+                    };
+            com.aidoctor.diagnosis.runtime.foundation.adapters.U07DurableNonProductionA1Issuer issuer =
+                    new com.aidoctor.diagnosis.runtime.foundation.adapters.U07DurableNonProductionA1Issuer(
+                            repo, jdbc, tx, verifier);
+            U04A1U05AuthorityBridge bridge = new U04A1U05AuthorityBridge(
+                    new com.aidoctor.diagnosis.runtime.foundation.adapters.ClinicalCdpGateReadbackAdapter(repo),
+                    new com.aidoctor.diagnosis.runtime.foundation.adapters.ClinicalCdpF3BoundA1AuthorityPort(repo, issuer));
+            com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow flow =
+                    new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow(
+                    owner, issuer, bridge,
+                    new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow.U05InputProvider() {
+                        @Override public U05ReadinessInputManifest manifest(U05AdmissionAuthoritySnapshot authority) {
+                            return U07ClinicalHostServiceMysqlTest.manifest(
+                                    U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT, VERSION,
+                                    Arrays.asList(
+                                            present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                                            present(U05ReadinessInput.F3, U05ReadinessInput.CAN_ASK_MORE, VERSION),
+                                            applicability(U05ReadinessInput.F5, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION),
+                                            applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION)));
+                        }
+                        @Override public U05ConsumerInboundRequest request(U05AdmissionAuthoritySnapshot authority) {
+                            U05ReadinessInputManifest m = manifest(authority);
+                            return new U05ConsumerInboundRequest(
+                                    "e2e-request", "consult-1", id, VERSION,
+                                    authority.getAuthoritativeStateRef(),
+                                    U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                                    U05ConsumerInboundRequest.U04_A1_POST_BARRIER_ROUTING,
+                                    authority.getRouteSourceRef(), U05ConsumerInboundRequest.U05_ELIGIBLE,
+                                    authority.getGateRef(), authority.getGateCommitRef(),
+                                    authority.getGateValue(), authority.getRouteAuthorizationType(),
+                                    authority.getRouteAuthorizationRef(), authority.getRoutingPolicyVersion(),
+                                    "A1", null, null, m.getManifestRef(), m.getSetIdentity(),
+                                    m.authoritativeRecordRefs(), "canonical-event-1", "business-event-1",
+                                    "corr-1", "trace-1", U05AdmissionService.CONTRACT_VERSION,
+                                    ENV, "2026-09-21T08:00:00Z");
+                        }
+                    }, ctx.getBean(U05NonProductionApplicationService.class));
+
+            // Denied safety stops before U05; F3 itself remains committed.
+            assertThrows(IllegalStateException.class,
+                    () -> flow.execute(handoff, u04, ENV, "clinical-state-cdp-1-v12"));
+            assertEquals(12, repo.findById(id).get().getVersion().intValue());
+            assertEquals(0, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_a1_attestation WHERE cdp_id=?",
+                    Integer.class, id).intValue());
+            // The F3 decision may be retried only by explicit recovery orchestration.
+            // Recreate the flow with a readback-only F3 owner for this test's
+            // authorized continuation (no duplicate state mutation).
+            safetyAllowed.set(true);
+            com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow resumed =
+                    new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow(
+                    (consultation, cdp) ->
+                            new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow.F3Committed(
+                                    consultation, cdp, "physical-e2e-f3", 12, true),
+                    issuer, bridge, new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow.U05InputProvider() {
+                        @Override public U05ReadinessInputManifest manifest(U05AdmissionAuthoritySnapshot a) {
+                            return U07ClinicalHostServiceMysqlTest.manifest(
+                                    U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT, VERSION,
+                                    Arrays.asList(
+                                            present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                                            present(U05ReadinessInput.F3, U05ReadinessInput.CAN_ASK_MORE, VERSION),
+                                            applicability(U05ReadinessInput.F5, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION),
+                                            applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION)));
+                        }
+                        @Override public U05ConsumerInboundRequest request(U05AdmissionAuthoritySnapshot a) {
+                            U05ReadinessInputManifest m = manifest(a);
+                            return new U05ConsumerInboundRequest(
+                                    "e2e-request", "consult-1", id, VERSION, a.getAuthoritativeStateRef(),
+                                    U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT,
+                                    U05ConsumerInboundRequest.U04_A1_POST_BARRIER_ROUTING,
+                                    a.getRouteSourceRef(), U05ConsumerInboundRequest.U05_ELIGIBLE,
+                                    a.getGateRef(), a.getGateCommitRef(), a.getGateValue(),
+                                    a.getRouteAuthorizationType(), a.getRouteAuthorizationRef(),
+                                    a.getRoutingPolicyVersion(), "A1", null, null,
+                                    m.getManifestRef(), m.getSetIdentity(), m.authoritativeRecordRefs(),
+                                    "canonical-event-1", "business-event-1", "corr-1", "trace-1",
+                                    U05AdmissionService.CONTRACT_VERSION, ENV, "2026-09-21T08:00:00Z");
+                        }
+                    }, ctx.getBean(U05NonProductionApplicationService.class));
+            U05ExecutionResult result = resumed.execute(handoff, u04, ENV, "clinical-state-cdp-1-v12");
+            assertEquals(U05ExecutionResult.ROUTING_COMPLETE, result.getStatus());
+            assertEquals("COMMITTED", result.getCommitResult().status);
+            assertEquals(13, repo.findById(id).get().getVersion().intValue());
+            assertEquals(1, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_a1_attestation WHERE cdp_id=?",
+                    Integer.class, id).intValue());
+            assertEquals(3, ctx.getBean(com.aidoctor.diagnosis.repository.CDPVersionRepository.class)
+                    .findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertThrows(IllegalStateException.class,
+                    () -> issuer.loadAttested("consult-1", id, 12));
+        }
+    }
+
+    @Test
     public void disabledByDefaultProvidesNoClinicalHostServices() {
         try (AnnotationConfigApplicationContext ctx =
                      new AnnotationConfigApplicationContext(U07ClinicalHostServicesConfig.class)) {
