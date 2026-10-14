@@ -13,6 +13,7 @@ on:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpGateReadbackAdapter.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpF3BoundA1AuthorityPort.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07DurableNonProductionA1Issuer.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07PersistedF3OwnerBarrierRevalidationEvidence.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U07ClinicalHostServiceMysqlTest.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07WorkpackACdpPhysicalMysqlTest.java'
   workflow_dispatch:
@@ -149,7 +150,7 @@ jobs:
           paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07WorkpackACdpPhysicalMysqlTest.xml")
           assert len(paths)==1, paths
           root=ET.parse(paths[0]).getroot()
-          assert int(root.get("tests",-1))==7
+          assert int(root.get("tests",-1))==8
           assert all(int(root.get(k,-1))==0 for k in ("failures","errors","skipped"))
           clinical=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07ClinicalHostServiceMysqlTest.xml")
           assert len(clinical)==1,clinical

@@ -458,6 +458,13 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
                     new ClinicalCdpF3BoundA1AuthorityPort(repo, restarted);
             assertEquals("verified-revalidation",
                     consumer.loadCurrent("consult-1", id, 9).revalidationRef);
+            // Without a CDP version change, revocation must invalidate readback.
+            barrier.set(false);
+            assertThrows(IllegalStateException.class,
+                    () -> consumer.loadCurrent("consult-1", id, 9));
+            barrier.set(true);
+            assertEquals("verified-revalidation",
+                    consumer.loadCurrent("consult-1", id, 9).revalidationRef);
 
             U07DurableNonProductionA1Issuer changed = new U07DurableNonProductionA1Issuer(
                     repo, jdbc, tx, (consultation, cdp, version, effect) ->
@@ -479,6 +486,109 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
             assertEquals(1, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM u07_a1_attestation WHERE cdp_id=?",
                     Integer.class, id).intValue());
+        }
+    }
+
+    @Test
+    public void durableF3OwnerBarrierRevalidationIntakeDrivesRealMysqlA1IssuerAndFailsClosed() {
+        authorize();
+        try (AnnotationConfigApplicationContext ctx =
+                     new AnnotationConfigApplicationContext(IsolatedConfig.class)) {
+            JdbcTemplate jdbc = ctx.getBean(JdbcTemplate.class);
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_f3_owner_evidence ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "cdp_version INT NOT NULL, f3_effect_id VARCHAR(128) NOT NULL, "
+                    + "owner_commit_ref VARCHAR(128) NOT NULL, state VARCHAR(64) NOT NULL, "
+                    + "PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_f3_barrier_evidence ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "cdp_version INT NOT NULL, f3_effect_id VARCHAR(128) NOT NULL, "
+                    + "owner_commit_ref VARCHAR(128) NOT NULL, barrier_ref VARCHAR(128) NOT NULL, "
+                    + "outcome VARCHAR(64) NOT NULL, PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_f3_revalidation_evidence ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "cdp_version INT NOT NULL, f3_effect_id VARCHAR(128) NOT NULL, "
+                    + "owner_commit_ref VARCHAR(128) NOT NULL, barrier_ref VARCHAR(128) NOT NULL, "
+                    + "revalidation_ref VARCHAR(128) NOT NULL, outcome VARCHAR(64) NOT NULL, "
+                    + "route_source_ref VARCHAR(128) NOT NULL, "
+                    + "route_authorization_ref VARCHAR(128) NOT NULL, "
+                    + "routing_policy_version VARCHAR(128) NOT NULL, "
+                    + "PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_a1_attestation ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "cdp_version INT NOT NULL, f3_effect_id VARCHAR(128) NOT NULL, "
+                    + "barrier_ref VARCHAR(128) NOT NULL, revalidation_ref VARCHAR(128) NOT NULL, "
+                    + "route_source_ref VARCHAR(128) NOT NULL, "
+                    + "route_authorization_ref VARCHAR(128) NOT NULL, "
+                    + "routing_policy_version VARCHAR(128) NOT NULL, "
+                    + "PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            StateRepositoryPort writer = ctx.getBean(StateRepositoryPort.class);
+            String id = tx.execute(status -> seed(repo));
+            String effect = "owner-effect-1";
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    writer.attemptAtomicCommit(clinicalPatch(id, 8,
+                            "/patient_state/f3_gap_assessment", "intake-f3",
+                            "f3_canonical_effect_id", effect)).status);
+            java.util.concurrent.atomic.AtomicBoolean independentlyApproved =
+                    new java.util.concurrent.atomic.AtomicBoolean(false);
+            U07PersistedF3OwnerBarrierRevalidationEvidence.TrustedEvidenceVerifier trusted =
+                    (consultation, cdp, version, f3, owner, barrier, revalidation, route) ->
+                            independentlyApproved.get()
+                            && "owner-commit-1".equals(owner)
+                            && "barrier-1".equals(barrier)
+                            && "reval-1".equals(revalidation)
+                            && "route-auth-1".equals(route);
+            U07PersistedF3OwnerBarrierRevalidationEvidence evidence =
+                    new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc, trusted);
+            U07DurableNonProductionA1Issuer issuer = new U07DurableNonProductionA1Issuer(
+                    repo, jdbc, tx, evidence);
+            assertThrows(IllegalStateException.class,
+                    () -> issuer.issue("consult-1", id, 9));
+
+            jdbc.update("INSERT INTO u07_f3_owner_evidence VALUES (?,?,?,?,?,?)",
+                    "consult-1", id, 9, effect, "owner-commit-1", "COMMITTED");
+            assertThrows(IllegalStateException.class,
+                    () -> issuer.issue("consult-1", id, 9));
+            jdbc.update("INSERT INTO u07_f3_barrier_evidence VALUES (?,?,?,?,?,?,?)",
+                    "consult-1", id, 9, effect, "owner-commit-1", "barrier-1", "BLOCKED");
+            jdbc.update("INSERT INTO u07_f3_revalidation_evidence VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    "consult-1", id, 9, effect, "owner-commit-1", "barrier-1",
+                    "reval-1", "REVALIDATED_CURRENT", "route-source-1",
+                    "route-auth-1", "policy-v1");
+            assertThrows(IllegalStateException.class,
+                    () -> issuer.issue("consult-1", id, 9));
+            jdbc.update("UPDATE u07_f3_barrier_evidence SET outcome='ALLOWED' WHERE cdp_id=?", id);
+            // DB status mutation alone MUST NOT turn BLOCKED into authorized A1.
+            assertThrows(IllegalStateException.class,
+                    () -> issuer.issue("consult-1", id, 9));
+            independentlyApproved.set(true); // test-only independently injected proof
+            assertEquals("reval-1", issuer.issue("consult-1", id, 9).revalidationRef);
+            assertEquals(1, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_a1_attestation WHERE cdp_id=?",
+                    Integer.class, id).intValue());
+            ClinicalCdpF3BoundA1AuthorityPort currentA1 =
+                    new ClinicalCdpF3BoundA1AuthorityPort(repo,
+                            new U07DurableNonProductionA1Issuer(repo, jdbc, tx,
+                                    new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc, trusted)));
+            assertEquals("owner-effect-1",
+                    currentA1.loadCurrent("consult-1", id, 9).f3CommitRef);
+            independentlyApproved.set(false);
+            assertThrows(IllegalStateException.class,
+                    () -> currentA1.loadCurrent("consult-1", id, 9));
+            independentlyApproved.set(true);
+            assertEquals("owner-effect-1",
+                    currentA1.loadCurrent("consult-1", id, 9).f3CommitRef);
+
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    writer.attemptAtomicCommit(clinicalPatch(id, 9,
+                            "/patient_state/new_information", "supersession-1",
+                            "reason", "fresh-clinical-evidence")).status);
+            assertThrows(IllegalStateException.class,
+                    () -> issuer.loadAttested("consult-1", id, 9));
+            assertThrows(IllegalStateException.class,
+                    () -> issuer.issue("consult-1", id, 9));
         }
     }
 
