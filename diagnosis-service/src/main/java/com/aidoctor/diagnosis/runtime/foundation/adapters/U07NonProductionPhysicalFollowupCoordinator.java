@@ -3,6 +3,10 @@ package com.aidoctor.diagnosis.runtime.foundation.adapters;
 import com.aidoctor.diagnosis.entity.CDP;
 import com.aidoctor.diagnosis.repository.CDPRepository;
 import com.aidoctor.diagnosis.runtime.u03.U03OutboundHandoff;
+import com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRecord;
+import com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRepository;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingRecord;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingService;
 import com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult;
 import com.aidoctor.diagnosis.runtime.u05.U05DownstreamRoutingDecision;
 import com.aidoctor.diagnosis.runtime.u05.U05ExecutionResult;
@@ -51,15 +55,19 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
     private final U07NonProductionDeliveryWaitRecovery recovery;
     private final CDPRepository cdps;
     private final AuthorizedQuestionHost host;
+    private final RuntimeBindingService bindings;
+    private final ClinicalRunRepository runs;
 
     public U07NonProductionPhysicalFollowupCoordinator(
             U07NonProductionF3A1U05Flow f3A1U05,
             U05QuestionRouteAdmissionAdapter u05U06,
             U06NonProductionPhysicalMode23Service u06,
             U07NonProductionDeliveryWaitRecovery recovery,
-            CDPRepository cdps, AuthorizedQuestionHost host) {
+            CDPRepository cdps, RuntimeBindingService bindings,
+            ClinicalRunRepository runs, AuthorizedQuestionHost host) {
         if (f3A1U05 == null || u05U06 == null || u06 == null
-                || recovery == null || cdps == null || host == null)
+                || recovery == null || cdps == null || bindings == null
+                || runs == null || host == null)
             throw new IllegalArgumentException("U07_PHYSICAL_FOLLOWUP_DEPENDENCIES_REQUIRED");
         this.f3A1U05 = f3A1U05;
         this.u05U06 = u05U06;
@@ -67,6 +75,8 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
         this.recovery = recovery;
         this.cdps = cdps;
         this.host = host;
+        this.bindings = bindings;
+        this.runs = runs;
     }
 
     /**
@@ -93,6 +103,19 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
         int version = currentVersion(route.getCdpId());
         U06AdmissionEvidence evidence = host.requireCurrentAdmissionEvidence(readiness);
         if (evidence == null) throw blocked("INDEPENDENT_U06_ADMISSION_MISSING");
+        RuntimeBindingRecord binding = bindings.requireBinding(handoff.getConsultationId());
+        ClinicalRunRecord activeRun = runs.findById(handoff.getRunId())
+                .orElseThrow(() -> blocked("RUN_NOT_FOUND"));
+        if (!RuntimeBindingRecord.CLINICAL_RUNTIME_V1.equals(binding.getRuntimeAuthority())
+                || !Objects.equals(handoff.getCdpId(), binding.getCdpId())
+                || !Objects.equals(handoff.getConsultationId(), activeRun.getConsultationId())
+                || !Objects.equals(handoff.getThreadId(), binding.getThreadId())
+                || !Objects.equals(binding.getThreadId(), activeRun.getThreadId())
+                || !Objects.equals(handoff.getEventId(), activeRun.getEventId())
+                || !Objects.equals(host.threadId(), binding.getThreadId())
+                || !Objects.equals(host.runId(), activeRun.getRunId())
+                || !ClinicalRunRecord.OPEN.equals(activeRun.getStatus()))
+            throw blocked("DURABLE_THREAD_RUN_AUTHORITY_MISMATCH");
         U06AdmissionService.Admission admitted = u05U06.admit(readiness, evidence,
                 version, host.questionPolicyRef(), host.d04PolicyRef(),
                 host.dependencyBindingRef(), host.threadId(), host.runId(),
