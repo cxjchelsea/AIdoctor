@@ -1,0 +1,56 @@
+name: V1 Clinical Agent Public Entry Acceptance (Nonproduction)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/v1-clinical-agent-entry-acceptance.yml'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1ClinicalPublicEntryAcceptanceTest.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/DiagnosisController.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/service/DiagnosisOrchestrationService.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/service/orchestration/DiagnosisWorkflowOrchestrator.java'
+      - 'tools/v1_clinical_e2e/acceptance_gate.py'
+      - 'tools/v1_clinical_e2e/test_acceptance_gate.py'
+      - 'tools/v1_clinical_e2e/scenarios.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-entry-mockmvc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+      - name: Compile shared Java contracts
+        run: mvn -B -ntp -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Exercise public start and continue HTTP adapter
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=V1ClinicalPublicEntryAcceptanceTest test
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1ClinicalPublicEntryAcceptanceTest.xml")
+          assert len(paths)==1, paths
+          result=ET.parse(paths[0]).getroot()
+          assert int(result.get("tests",-1))==3
+          assert all(int(result.get(key,-1))==0 for key in ("errors","failures","skipped"))
+          print("V1_PUBLIC_ENTRY_MOCKMVC_BASELINE=PASS; FULL_CLINICAL_E2E=NOT_ACCEPTED")
+          PY
+      - name: Run full E2E evidence admission gate
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tools/v1_clinical_e2e -p 'test_acceptance_gate.py' -v
+          python3 tools/v1_clinical_e2e/acceptance_gate.py --scenarios tools/v1_clinical_e2e/scenarios.json > "$RUNNER_TEMP/v1-clinical-e2e-result.json"
+          python3 - "$RUNNER_TEMP/v1-clinical-e2e-result.json" <<'PY'
+          import json,sys
+          result=json.load(open(sys.argv[1],encoding="utf-8"))
+          assert result["decision"]=="NOT_ACCEPTED"
+          assert result["actual_full_e2e_cases_passed"]==0
+          assert result["reason"]=="NO_LIVE_HTTP_DB_CLINICAL_EVIDENCE"
+          print("V1_REAL_CLINICAL_E2E_GATE=PASS_BLOCK_UNSUPPORTED_CLAIMS")
+          PY
