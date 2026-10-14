@@ -49,3 +49,9 @@ This preflight cannot confirm an exported artifact came from the expected server
 - Historical Flyway preflight only assesses exported owner-approved lineage and never changes schemas. No authenticated cohort-by-cohort V1–V6 database-owner history/checksum or physical schema drift evidence was provided during this PR; no migration authorization.
 - Oracle physical migrations and dialect-specific recovery/CAS remain **BLOCK**. A MySQL 8 disposable database is not evidence of Oracle runtime compatibility.
 - **Closure decision: NOT READY FOR PRODUCTION.** Next necessary evidence is independently attested actual deployment DB and A1 issuer/authority integration, then complete production-host rehearsal and explicit authorization; no synthetic fixture may substitute for owner evidence.
+
+## F3/A1 independent authority reconciliation — 2026-10-14
+
+- An opt-in Spring A1 consumption port now checks independently attested F3 effect identity against the **current JPA CDP** at the same version. The attestation source must be supplied independently; there is no shipped default/production F3/A1 issuer and no automatic dispatch. Isolated MySQL 8 tests demonstrate exact effect binding and stale/missing attestation denial only.
+- An A1 source implementation must establish independently authenticated owner/issuer identity, durable barrier and revalidation evidence, non-replay and supersession/currentness, and transactionally consistent persistence before production use. No such implementation was authorized or validated by this change.
+- Production database cohort identification, DBA-exported authenticated Flyway checksums and schema drift, full Oracle physical testing and backup/rollback rehearsal remain unavailable. **Production deployment and external side effects remain BLOCKED.**
