@@ -5,6 +5,9 @@ on:
     paths:
       - '.github/workflows/u07-workpack-a-persistence.yml'
       - 'tools/u07_d5_o2_tx_topology/production_candidate/production_persistence_preflight.py'
+      - 'tools/u07_d5_o2_tx_topology/production_candidate/u07_release_gate.py'
+      - 'tools/u07_d5_o2_tx_topology/production_candidate/test_u07_release_gate.py'
+      - 'tools/u07_d5_o2_tx_topology/production_candidate/U07_PRODUCTION_RELEASE_DECISION.md'
       - 'tools/u07_d5_o2_tx_topology/production_candidate/test_production_persistence_preflight.py'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapterTest.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapter.java'
@@ -52,6 +55,19 @@ jobs:
           set -euo pipefail
           python3 -m unittest discover -s tools/u07_d5_o2_tx_topology/production_candidate -p 'test_production_persistence_preflight.py' -v
           python3 tools/u07_d5_o2_tx_topology/production_candidate/test_flyway_history.py -v
+          python3 -m unittest discover -s tools/u07_d5_o2_tx_topology/production_candidate -p 'test_u07_release_gate.py' -v
+          python3 tools/u07_d5_o2_tx_topology/production_candidate/u07_release_gate.py > "$RUNNER_TEMP/u07-release-gate.json" || status=$?
+          test "${status:-2}" -eq 2
+          python3 - "$RUNNER_TEMP/u07-release-gate.json" <<'PY'
+          import json,sys
+          x=json.load(open(sys.argv[1],encoding="utf-8"))
+          assert x["decision"]=="BLOCK"
+          assert x["production_migration"]=="BLOCK"
+          assert x["production_clinical_activation"]=="BLOCK"
+          assert x["production_patient_delivery"]=="BLOCK"
+          assert "EVIDENCE_MAP_MISSING" in x["failures"]
+          print("U07_PRODUCTION_EVIDENCE_RELEASE_GATE=PASS_BLOCK")
+          PY
           python3 tools/u07_d5_o2_tx_topology/production_candidate/production_persistence_preflight.py > "$RUNNER_TEMP/u07-workpack-a-inventory.json"
           python3 - "$RUNNER_TEMP/u07-workpack-a-inventory.json" <<'PY'
           import json, sys
