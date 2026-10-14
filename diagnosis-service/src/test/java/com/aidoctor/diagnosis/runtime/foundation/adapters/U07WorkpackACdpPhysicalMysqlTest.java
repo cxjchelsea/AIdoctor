@@ -257,6 +257,24 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
                 "patch-" + effectId, "idem-" + effectId, patch);
     }
 
+    private static final class TestF3CommitPort
+            implements U07NonProductionPhysicalF3Owner.F3CommitPort {
+        private final StateRepositoryPort delegate;
+        TestF3CommitPort(StateRepositoryPort delegate) { this.delegate = delegate; }
+        @Override public int currentVersion(String cdpId) {
+            return delegate.readCurrentVersion(cdpId);
+        }
+        @Override public int commitAuthorized(String cdpId, int version,
+                U07NonProductionPhysicalF3Owner.PreparedF3 decision) {
+            StateRepositoryPort.AtomicCommitOutcome result = delegate.attemptAtomicCommit(
+                    new StateRepositoryPort.AtomicCommitCommand(cdpId, version,
+                            decision.patchId, decision.idempotencyKey, decision.patch));
+            if (result.status != StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED)
+                throw new IllegalStateException("U07_TEST_F3_COMMIT_REJECTED");
+            return result.committedVersion;
+        }
+    }
+
     @Test
     public void nonproductionF3OwnerPhysicallyCommitsAndReadsBackCanonicalEffect() {
         authorize();
