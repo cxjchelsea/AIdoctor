@@ -359,7 +359,7 @@ public class U07U06SelectionPhysicalMysqlTest {
             assertNotEquals(answer.runId, resumed.runId);
             assertEquals(answer.eventId, resumed.eventId);
             assertEquals(10, resumed.baseClinicalStateVersion);
-            assertEquals("PATIENT_ANSWER", resumed.sourceType);
+            assertEquals("PATIENT_REPORTED", resumed.sourceType);
             assertEquals("I have no fever", resumed.rawClinicalText);
 
             // Actual U02 business path, P01 commit and P05 trace on the same
