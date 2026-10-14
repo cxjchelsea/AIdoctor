@@ -1,6 +1,14 @@
 package com.aidoctor.diagnosis.runtime.u03;
 
 import com.aidoctor.contracts.v1.StateTypes;
+import com.aidoctor.diagnosis.runtime.u05.*;
+import com.aidoctor.diagnosis.runtime.u06.delivery.*;
+import com.aidoctor.diagnosis.runtime.u01.ConsultationRecord;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
 import com.aidoctor.diagnosis.runtime.u04.U04AdmissionResult;
 import com.aidoctor.diagnosis.runtime.u04.U04AdmissionService;
 import com.aidoctor.diagnosis.runtime.u04.U04AdmittedInput;
@@ -62,7 +70,10 @@ class U04NonProductionSafetyGateTest {
     @Test
     void actualU04CommitReadbackRequiresIndependentA1BeforeU05Authority() {
         Map<String, Object> root = new LinkedHashMap<String, Object>();
-        root.put("patient_state", new LinkedHashMap<String, Object>());
+        Map<String, Object> patientState = new LinkedHashMap<String, Object>();
+        patientState.put("questions", new LinkedHashMap<String, Object>());
+        patientState.put("information_gaps", new LinkedHashMap<String, Object>());
+        root.put("patient_state", patientState);
         Map<String, SyntheticStateSnapshot> initial =
                 new LinkedHashMap<String, SyntheticStateSnapshot>();
         initial.put("cdp-1", new SyntheticStateSnapshot(8, root));
@@ -162,8 +173,8 @@ class U04NonProductionSafetyGateTest {
                 U06AdmissionEvidence.syntheticCurrentAllow());
         U06SyntheticDecisionBundle f3Decision = new U06SyntheticDecisionEngine().decide(
                 f3Request, new U06SyntheticDecisionInput(
-                        U06SyntheticDecisionInput.SUCCESS, false, true,
-                        null, null, false, null,
+                        U06SyntheticDecisionInput.SUCCESS, true, false,
+                        "gap-1", "DECISION_MATERIAL", true, null,
                         Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
                 u06State.readCurrent());
         U06SyntheticPostF3SafetyBarrier.Evidence safetyEvidence =
@@ -217,6 +228,160 @@ class U04NonProductionSafetyGateTest {
                                         U06SyntheticPostF3SafetyBarrier.BLOCKED,
                                         "synthetic-blocked")), rv))
                 .load(handoff, committed, ENV, "clinical-state-cdp-1-v10"));
+        // Full E2E continuation: U05 MUST consume the actual dynamic A1
+        // authority produced above; all CDP writes share 'repository'.
+        String context = U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT;
+        int readinessVersion = repository.snapshot("cdp-1").version();
+        assertEquals(10, readinessVersion);
+        assertTrue(u06State.readCurrent().exists("/patient_state/information_gaps/gap-1"));
+        List<U05ReadinessInput> inputs = Arrays.asList(
+                present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, readinessVersion),
+                present(U05ReadinessInput.F3, U05ReadinessInput.CAN_ASK_MORE, readinessVersion),
+                applicability(U05ReadinessInput.F5, U05ReadinessInput.NOT_YET_APPLICABLE, readinessVersion),
+                applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, readinessVersion));
+        U05ReadinessInputManifest manifest = manifest(context, readinessVersion, inputs);
+        U05ConsumerInboundRequest inbound = new U05ConsumerInboundRequest(
+                "full-e2e-u05-request", handoff.getConsultationId(), handoff.getCdpId(),
+                readinessVersion, currentA1.getAuthoritativeStateRef(),
+                context, U05ConsumerInboundRequest.U04_A1_POST_BARRIER_ROUTING,
+                currentA1.getRouteSourceRef(), currentA1.getRouteConsequence(),
+                currentA1.getGateRef(), currentA1.getGateCommitRef(), currentA1.getGateValue(),
+                currentA1.getRouteAuthorizationType(), currentA1.getRouteAuthorizationRef(),
+                currentA1.getRoutingPolicyVersion(), currentA1.getBootstrapArchitectureBindingRef(),
+                null, null, manifest.getManifestRef(), manifest.getSetIdentity(),
+                manifest.authoritativeRecordRefs(), "canonical-event",
+                "business-event", handoff.getCorrelationId(), handoff.getTraceId(),
+                U05AdmissionService.CONTRACT_VERSION, ENV, "2026-09-18T00:00:00Z");
+        U05RoutingCurrentnessPort routingCurrentness =
+                (input, decision, evidence) -> new U05RoutingCurrentness(
+                        evidence.getCommittedClinicalStateVersion(),
+                        "full-e2e-route-" + evidence.getEffectId(),
+                        true, true, true, true, true,
+                        input.getAcceptedU04GateRef(), input.getGateValue(),
+                        input.getAcceptedRestrictedContextRef());
+        U05DownstreamPermissionPort downstreamPermission =
+                (input, evidence, currentness, consequence, targetUnit, action) ->
+                        new U05DownstreamPermissionDecision(
+                                "synthetic-question-permission", input.getConsultationId(),
+                                input.getCdpId(), currentness.getCurrentU04GateRef(),
+                                input.getAcceptedRestrictedContextRef(), consequence, action,
+                                targetUnit, U05DownstreamPermissionDecision.PERMITTED,
+                                "synthetic-permission", "synthetic-policy", "1", "CURRENT");
+        U05NonProductionApplicationService u05 = new U05NonProductionApplicationService(
+                new U05AdmissionService(new U05InMemoryAdmissionLedger()),
+                new U05ClinicalReadinessPolicy(), new U05ReadinessStateProposalFactory(),
+                new U05CommitService(committer,
+                        new U05SyntheticClinicalReadinessSnapshotAdapter(repository)),
+                routingCurrentness,
+                new U05RoutingService(new U05InMemoryRouteLedger(), downstreamPermission));
+        U05ExecutionResult readiness = u05.execute(inbound, manifest, currentA1);
+        assertEquals(U05ExecutionResult.ROUTING_COMPLETE, readiness.getStatus());
+        assertEquals(U05DownstreamRoutingDecision.ELIGIBLE,
+                readiness.getRoutingDecision().getRoutingStatus());
+        assertEquals(U05DownstreamRoutingDecision.TO_U06_QUESTION_PATH,
+                readiness.getRoutingDecision().getDownstreamConsequence());
+        assertEquals(11, repository.snapshot("cdp-1").version());
+        U06AdmissionService questionAdmission = new U06AdmissionService();
+        U06AdmissionService.Admission admitted =
+                new U05QuestionRouteAdmissionAdapter(questionAdmission).admit(
+                        readiness, U06AdmissionEvidence.syntheticCurrentAllow(),
+                        u06State.readCurrent().getVersion(),
+                        "question-policy", "d04-policy", "synthetic-dependency",
+                        "thread-1", "run-1", 0);
+        assertTrue(admitted.isAdmitted());
+        final AtomicInteger syntheticSends = new AtomicInteger();
+        U06DeliveryStore deliveryStore = new U06DeliveryStore() {
+            private final Map<String, Snapshot> confirmations = new LinkedHashMap<String, Snapshot>();
+            public synchronized Snapshot reconcileConfirmed(Command command) {
+                Snapshot existing = confirmations.get(command.deliveryEffectId);
+                if (existing != null) return new Snapshot(
+                        existing.deliveryEffectId, existing.deliveryId, existing.confirmationStatus, true);
+                syntheticSends.incrementAndGet();
+                Snapshot confirmed = new Snapshot(command.deliveryEffectId, command.deliveryId, "CONFIRMED", false);
+                confirmations.put(command.deliveryEffectId, confirmed);
+                return confirmed;
+            }
+        };
+        U06SyntheticDeliveryService delivery=new U06SyntheticDeliveryService(deliveryStore);
+        ConsultationRepository consultations=mock(ConsultationRepository.class);
+        ConsultationWaitEffectRepository waitEffects=mock(ConsultationWaitEffectRepository.class);
+        ConsultationRecord consultation=mock(ConsultationRecord.class);
+        AtomicReference<String> consultationLifecycle=new AtomicReference<String>(ConsultationRecord.ACTIVE);
+        AtomicReference<String> consultationWaitEffect=new AtomicReference<String>();
+        AtomicReference<Long> consultationVersion=new AtomicReference<Long>(Long.valueOf(0));
+        AtomicReference<ConsultationWaitEffectRecord> waitEffectRecord=new AtomicReference<ConsultationWaitEffectRecord>();
+        when(consultations.findByIdForUpdate("consult-1")).thenReturn(Optional.of(consultation));
+        when(consultation.getLifecycleStatus()).thenAnswer(i->consultationLifecycle.get());
+        when(consultation.getCurrentWaitEffectId()).thenAnswer(i->consultationWaitEffect.get());
+        when(consultation.getRowVersion()).thenAnswer(i->consultationVersion.get());
+        doAnswer(i->{consultationLifecycle.set(ConsultationRecord.WAITING_USER);consultationWaitEffect.set(i.getArgument(0));consultationVersion.set(Long.valueOf(1));return null;})
+                .when(consultation).enterWaitingUser(anyString());
+        when(consultations.saveAndFlush(consultation)).thenReturn(consultation);
+        when(waitEffects.findById(anyString())).thenAnswer(i->{
+            ConsultationWaitEffectRecord x=waitEffectRecord.get();
+            return x!=null&&x.getWaitEffectId().equals(i.getArgument(0))?Optional.of(x):Optional.empty();
+        });
+        when(waitEffects.findByIdempotencyKey(anyString())).thenAnswer(i->{
+            ConsultationWaitEffectRecord x=waitEffectRecord.get();
+            return x!=null&&x.getIdempotencyKey().equals(i.getArgument(0))?Optional.of(x):Optional.empty();
+        });
+        when(waitEffects.saveAndFlush(any(ConsultationWaitEffectRecord.class))).thenAnswer(i->{ConsultationWaitEffectRecord x=i.getArgument(0);waitEffectRecord.set(x);return x;});
+        ConsultationWaitTransitionService consultationWait=new ConsultationWaitTransitionService(consultations,waitEffects);
+
+        RuntimeThreadStateRepository threadRepo=mock(RuntimeThreadStateRepository.class);
+        RuntimeWaitCheckpointRepository checkpointRepo=mock(RuntimeWaitCheckpointRepository.class);
+        AtomicReference<RuntimeThreadStateRecord> thread=new AtomicReference<RuntimeThreadStateRecord>();
+        AtomicReference<RuntimeWaitCheckpointRecord> checkpoint=new AtomicReference<RuntimeWaitCheckpointRecord>();
+        when(threadRepo.findById(anyString())).thenAnswer(i->Optional.ofNullable(thread.get()));
+        when(threadRepo.findByThreadIdForUpdate(anyString())).thenAnswer(i->Optional.ofNullable(thread.get()));
+        when(threadRepo.saveAndFlush(any(RuntimeThreadStateRecord.class))).thenAnswer(i->{RuntimeThreadStateRecord x=i.getArgument(0);thread.set(x);return x;});
+        when(checkpointRepo.findById(anyString())).thenAnswer(i->Optional.ofNullable(checkpoint.get()));
+        when(checkpointRepo.saveAndFlush(any(RuntimeWaitCheckpointRecord.class))).thenAnswer(i->{RuntimeWaitCheckpointRecord x=i.getArgument(0);checkpoint.set(x);return x;});
+        RuntimeWaitCheckpointService cps=new RuntimeWaitCheckpointService(threadRepo,checkpointRepo);
+        RuntimeThreadWaitTransitionService transitions=new RuntimeThreadWaitTransitionService(threadRepo,checkpointRepo);
+        U06WaitCoordinator waitCoordinator=new U06WaitCoordinator(cps,transitions);
+
+        U06GovernedExecutionTraceStore traces=new U06GovernedExecutionTraceStore(){
+            public void start(String a,String b,String c,String d,String e,String f,String g){}
+            public void complete(String a,String b,String c,String d){}
+        };
+        U06ProfileBApplicationService questionApp=new U06ProfileBApplicationService(questionAdmission,u06State,delivery,consultationWait,waitCoordinator,traces);
+
+
+        U06SyntheticDecisionBundle selected = new U06SyntheticDecisionEngine().decide(
+                admitted.getRequest(),
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS, false, false,
+                        "gap-1", "DECISION_MATERIAL", true,
+                        U06SyntheticDecisionInput.POLICY_ALLOW_CONTINUE,
+                        Collections.singletonList(new U06SyntheticDecisionInput.Candidate(
+                                "candidate-1", "question-1", "semantic-1",
+                                "synthetic-content-ref-1", "content-fingerprint-1", 10, true))),
+                u06State.readCurrent());
+        U06SyntheticDeliveryService.ScopeAuthorization scope =
+                new U06SyntheticDeliveryService.ScopeAuthorization(
+                        "scope-auth-1", "fixture-authorization-1",
+                        U06SyntheticDeliveryService.ScopeAuthorization.CURRENT,
+                        "consult-1", U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                        "fixture-scope-1", "fixture-review-1", "u04-u06-shared-store",
+                        "ci-nonprod-u06", "synthetic-endpoint-1", null,
+                        false, false, false);
+        U06ExecutionResult first = questionApp.execute(admitted.getRequest(), selected, scope);
+        assertEquals(U06ExecutionResult.WAIT_ESTABLISHED, first.getStatus());
+        assertEquals(13, repository.snapshot("cdp-1").version());
+        assertEquals(5, repository.mutationCount());
+        assertEquals(1, syntheticSends.get());
+        assertEquals(RuntimeThreadStateRecord.AWAITING_USER, thread.get().getRuntimeStatus());
+        assertTrue(u06State.readCurrent().exists("/patient_state/pending_question"));
+        U06ExecutionResult replay = questionApp.execute(admitted.getRequest(), selected, scope);
+        assertEquals(U06ExecutionResult.WAIT_ESTABLISHED, replay.getStatus());
+        assertEquals(first.getDeliveryId(), replay.getDeliveryId());
+        assertEquals(first.getWaitEffectId(), replay.getWaitEffectId());
+        assertEquals(first.getCheckpointId(), replay.getCheckpointId());
+        assertEquals(first.getU07ResumeEligibilityId(), replay.getU07ResumeEligibilityId());
+        assertEquals(5, repository.mutationCount());
+        assertEquals(1, syntheticSends.get());
+        verify(consultation, times(1)).enterWaitingUser(anyString());
     }
 
     @Test
@@ -690,6 +855,80 @@ class U04NonProductionSafetyGateTest {
                 U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_RELEASE_REF,
                 U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_PAIR_REF));
     }
+
+    private static U05ReadinessInputManifest manifest(
+            String context,
+            int version,
+            List<U05ReadinessInput> inputs) {
+        String setIdentity = U05ReadinessInputManifest.semanticSetIdentity(
+                "consult-1",
+                "cdp-1",
+                version,
+                context,
+                U05ReadinessInputManifest.RDP05_CONTRACT_VERSION,
+                inputs);
+        return new U05ReadinessInputManifest(
+                "manifest-" + context,
+                setIdentity,
+                "consult-1",
+                "cdp-1",
+                version,
+                context,
+                U05ReadinessInputManifest.RDP05_CONTRACT_VERSION,
+                inputs);
+    }
+
+
+    private static U05ReadinessInput present(String domain, String signal, int version) {
+        return new U05ReadinessInput(
+                "input-" + domain + "-" + signal,
+                domain,
+                "owner-" + domain,
+                inputKind(domain),
+                U05ReadinessInput.PRESENT,
+                signal,
+                "consult-1",
+                "cdp-1",
+                version,
+                "decision-" + domain + "-" + signal,
+                "state-" + domain,
+                "app-evidence-" + domain,
+                Collections.singletonList("evidence-" + domain),
+                Collections.singletonList("rule-" + domain),
+                "2026-09-21T08:00:00Z",
+                U05ReadinessInput.CURRENT,
+                null);
+    }
+
+    private static U05ReadinessInput applicability(String domain, String status, int version) {
+        return new U05ReadinessInput(
+                "app-" + domain + "-" + status,
+                domain,
+                "owner-" + domain,
+                inputKind(domain),
+                status,
+                null,
+                "consult-1",
+                "cdp-1",
+                version,
+                "app-decision-" + domain + "-" + status,
+                "state-" + domain,
+                "app-evidence-" + domain + "-" + status,
+                Collections.singletonList("evidence-" + domain),
+                Collections.singletonList("rule-" + domain),
+                "2026-09-21T08:00:00Z",
+                U05ReadinessInput.CURRENT,
+                U05ReadinessInput.STALE.equals(status) ? "invalidation-" + domain : null);
+    }
+
+    private static String inputKind(String domain) {
+        if (U05ReadinessInput.F1.equals(domain)) return "SCOPE_OR_FRAMING";
+        if (U05ReadinessInput.F2_CLARIFICATION.equals(domain)) return "CLARIFICATION_REQUIREMENT";
+        if (U05ReadinessInput.F3.equals(domain)) return "ONLINE_INFORMATION_GAP";
+        if (U05ReadinessInput.F5.equals(domain)) return "DDX_OR_MUST_EXCLUDE";
+        return "OFFLINE_EVIDENCE";
+    }
+
 
     private static final class Fixture {
         final List<String> order = new ArrayList<String>();
