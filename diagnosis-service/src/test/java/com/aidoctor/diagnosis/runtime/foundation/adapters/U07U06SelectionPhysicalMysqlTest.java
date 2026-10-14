@@ -330,11 +330,23 @@ public class U07U06SelectionPhysicalMysqlTest {
                     jdbc, tx,
                     new com.aidoctor.diagnosis.runtime.foundation.CanonicalBusinessEventLedger(events),
                     new com.aidoctor.diagnosis.runtime.foundation.ClinicalRunCoordinator(
-                            bindingService, events, runs));
+                            bindingService, events, runs), consultations, threads, checkpoints);
             String freshRun = consume.consume(
                     answer, persistedWait.checkpointId, "synthetic-answer-idem",
                     "sha256:synthetic-answer-digest");
             assertNotEquals(answer.runId, freshRun);
+            assertEquals("ACTIVE", consultations.findById(
+                    request.getConsultationId()).get().getLifecycleStatus());
+            assertEquals("ACTIVE", threads.findById(request.getThreadId()).get().getRuntimeStatus());
+            assertEquals("CONSUMED", checkpoints.findById(
+                    persistedWait.checkpointId).get().getCheckpointStatus());
+            assertThrows(IllegalStateException.class, () ->
+                    f8Admission.requireWaitingAnswer(
+                            request.getConsultationId(), id, request.getThreadId(),
+                            request.getRunId(), persistedWait.checkpointId,
+                            "synthetic-question-1", fixture.deliveryId, "synthetic-person",
+                            "new-answer-event", "second answer", "corr", "trace"));
+
             assertTrue(consume.consumedFor(answer.consultationId, answer.runId,
                     persistedWait.checkpointId, freshRun, answer.eventId));
             assertEquals(freshRun, consume.consume(answer, persistedWait.checkpointId,
