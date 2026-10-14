@@ -202,8 +202,20 @@ public class U01U02RealFactCommitMysqlTest {
                                 .createNonProductionValid(admitted, riskDecision, governed));
                 assertEquals(2, cdps.findById(created.getCdpId()).get()
                         .getVersion().intValue());
-                assertFalse(cdps.findById(created.getCdpId()).get()
-                        .getPatientState().containsKey("safety_gate"));
+                U03OutboundHandoff failedHandoff = new U03OutboundProducer().produce(
+                        admitted, governed, riskDecision, null, null);
+                assertEquals("FAILED", failedHandoff.getDecisionStatus());
+                assertNull(failedHandoff.getDispositionCode());
+                assertNull(failedHandoff.getCommittedClinicalStateVersion());
+                U04ExecutionResult unavailable = tx.execute(status -> safety.applyU04(
+                        failedHandoff, U04ScopeContext.current(true, true), "ci-nonprod-safety"));
+                assertEquals(U04ExecutionResult.COMMIT_COMPLETE, unavailable.getStatus());
+                assertEquals(U04SafetyGateDecision.UNAVAILABLE, unavailable.getDecision().getGate());
+                assertEquals(Integer.valueOf(3), unavailable.getCommitResult().committedVersion);
+                assertEquals("UNAVAILABLE", ((Map<?,?>) cdps.findById(created.getCdpId())
+                        .get().getPatientState().get("safety_gate")).get("safety_gate"));
+                assertEquals(3, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
+                        created.getCdpId()).size());
                 return;
             }
             assertEquals(expectedRisk, riskDecision.getOutcomeCode());
