@@ -6,6 +6,8 @@ import com.aidoctor.diagnosis.repository.CDPRepository;
 import com.aidoctor.diagnosis.entity.CDP;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 
 /**
  * Read-only, durable authority resolution for U01 -> U02 START handoff.
@@ -30,7 +32,8 @@ public final class U01U02TrustedStartContext {
     }
 
     @Transactional(readOnly = true)
-    public VerifiedStart require(String consultationId, String runId) {
+    public VerifiedStart require(String consultationId, String runId, String rawClinicalText) {
+        required(rawClinicalText);
         ConsultationRecord consultation = consultations.findById(required(consultationId))
                 .orElseThrow(() -> blocked("CONSULTATION_NOT_FOUND"));
         if (!ConsultationRecord.ACTIVE.equals(consultation.getLifecycleStatus())
@@ -64,6 +67,10 @@ public final class U01U02TrustedStartContext {
             throw blocked("EVENT_CONTEXT_MISMATCH");
         }
 
+        if (!sourceMatches(consultation, event, rawClinicalText)) {
+            throw blocked("SOURCE_FINGERPRINT_MISMATCH");
+        }
+
         CDP cdp = cdps.findById(binding.getCdpId())
                 .orElseThrow(() -> blocked("CDP_NOT_FOUND"));
         if (!consultation.getUserId().equals(cdp.getPatientId())
@@ -74,6 +81,28 @@ public final class U01U02TrustedStartContext {
         return new VerifiedStart(consultation.getUserId(), consultationId,
                 binding.getThreadId(), run.getRunId(), event.getEventId(),
                 binding.getCdpId(), cdp.getVersion());
+    }
+
+    /** Mirror the canonical raw-source digest used by U01, not the candidate problem text. */
+    private static boolean sourceMatches(ConsultationRecord consultation,
+            CanonicalBusinessEventRecord event, String rawClinicalText) {
+        String ref = consultation.getSubjectReferenceId();
+        String canonicalSource = rawClinicalText + "|subjectRef=" + (ref == null ? "" : ref);
+        String sourceFingerprint = sha256(canonicalSource);
+        String canonicalPayload = consultation.getUserId() + "|raw:" + sourceFingerprint;
+        return sha256(canonicalPayload).equals(event.getPayloadDigest());
+    }
+
+    private static String sha256(String content) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(content.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : digest) hex.append(String.format("%02x", b & 0xff));
+            return hex.toString();
+        } catch (Exception e) {
+            throw blocked("SOURCE_DIGEST_UNAVAILABLE");
+        }
     }
 
     private static String required(String value) {

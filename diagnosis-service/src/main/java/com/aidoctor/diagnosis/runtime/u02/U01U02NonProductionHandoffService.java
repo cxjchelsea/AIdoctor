@@ -40,7 +40,7 @@ public final class U01U02NonProductionHandoffService {
     public U02ExecutionResult executeCommittedStart(
             String consultationId, String runId, String rawClinicalText) {
         if (blank(rawClinicalText)) throw new IllegalArgumentException("Patient source text required");
-        U01U02TrustedStartContext.VerifiedStart verified = resolver.require(consultationId, runId);
+        U01U02TrustedStartContext.VerifiedStart verified = resolver.require(consultationId, runId, rawClinicalText);
         TraceIdentity trace = traceAuthority.requireForStart(
                 verified.consultationId, verified.runId, verified.eventId);
         if (trace == null) throw new IllegalStateException("U01_U02_HANDOFF_BLOCKED:TRACE_NOT_AUTHORIZED");

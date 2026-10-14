@@ -13,6 +13,9 @@ on:
       - 'tools/v1_clinical_e2e/acceptance_gate.py'
       - 'tools/v1_clinical_e2e/test_acceptance_gate.py'
       - 'tools/v1_clinical_e2e/scenarios.json'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U01U02NonProductionHostConfig.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02TrustedStartContextTest.java'
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,7 +36,7 @@ jobs:
       - name: Exercise public start and continue HTTP adapter
         run: |
           set -euo pipefail
-          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=V1ClinicalPublicEntryAcceptanceTest,V1NonProductionClinicalIngressTest test
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=V1ClinicalPublicEntryAcceptanceTest,V1NonProductionClinicalIngressTest,U01U02TrustedStartContextTest test
           python3 - <<'PY'
           import glob, xml.etree.ElementTree as ET
           paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1ClinicalPublicEntryAcceptanceTest.xml")
@@ -43,6 +46,11 @@ jobs:
           guarded=ET.parse(controlled[0]).getroot()
           assert int(guarded.get("tests",-1))==4
           assert all(int(guarded.get(key,-1))==0 for key in ("errors","failures","skipped"))
+          trust=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02TrustedStartContextTest.xml")
+          assert len(trust)==1,trust
+          trusted=ET.parse(trust[0]).getroot()
+          assert int(trusted.get("tests",-1))==4
+          assert all(int(trusted.get(key,-1))==0 for key in ("errors","failures","skipped"))
           result=ET.parse(paths[0]).getroot()
           assert int(result.get("tests",-1))==3
           assert all(int(result.get(key,-1))==0 for key in ("errors","failures","skipped"))
