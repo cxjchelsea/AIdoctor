@@ -43,7 +43,7 @@ public class U07NonProductionTrustedAnswerU02BridgeTest {
                 admitted.requireAuthorizedNewRun(candidate,"checkpoint-1","new-run");
         assertEquals("new-run",output.runId);
         assertEquals(10,output.baseClinicalStateVersion);
-        assertEquals("PATIENT_ANSWER",output.sourceType);
+        assertEquals("PATIENT_REPORTED",output.sourceType);
     }
 
     private static U02ExecutionCommand candidate() {
