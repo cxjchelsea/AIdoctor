@@ -61,7 +61,11 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
     @EnableJpaRepositories(
             basePackages = "com.aidoctor.diagnosis.repository",
             includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
-                    classes = {CDPRepository.class, CDPVersionRepository.class}),
+                    classes = {CDPRepository.class, CDPVersionRepository.class,
+                            com.aidoctor.diagnosis.runtime.u01.ConsultationRepository.class,
+                            com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRepository.class,
+                            com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRepository.class,
+                            com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRepository.class}),
             entityManagerFactoryRef = "entityManagerFactory",
             transactionManagerRef = "transactionManager")
     public static class IsolatedConfig {
@@ -87,6 +91,10 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
                 unit.getManagedClassNames().clear();
                 unit.getManagedClassNames().add(CDP.class.getName());
                 unit.getManagedClassNames().add(CDPVersion.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.u01.ConsultationRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRecord.class.getName());
             });
             java.util.Properties props = new java.util.Properties();
             props.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
