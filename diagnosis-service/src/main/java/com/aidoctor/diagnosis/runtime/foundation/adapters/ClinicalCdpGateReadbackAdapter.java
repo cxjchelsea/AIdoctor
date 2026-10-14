@@ -3,6 +3,7 @@ package com.aidoctor.diagnosis.runtime.foundation.adapters;
 import com.aidoctor.diagnosis.entity.CDP;
 import com.aidoctor.diagnosis.repository.CDPRepository;
 import com.aidoctor.diagnosis.runtime.u04.U04ScopeContext;
+import com.aidoctor.diagnosis.runtime.u04.U04SafetyGateDecision;
 import com.aidoctor.diagnosis.runtime.u05.U04A1U05AuthorityBridge;
 import java.util.Map;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -42,8 +43,10 @@ public final class ClinicalCdpGateReadbackAdapter
             throw new IllegalStateException("U07_GATE_EVIDENCE_MISSING");
         Map<?, ?> gate = (Map<?, ?>) state.get("safety_gate");
         String gateValue = requiredString(gate.get("safety_gate"), "U07_GATE_VALUE_INVALID");
-        if (!("ALLOW".equals(gateValue) || "RESTRICTED".equals(gateValue)
-                || "BLOCK".equals(gateValue)))
+        if (!(U04SafetyGateDecision.ALLOW.equals(gateValue)
+                || U04SafetyGateDecision.RESTRICTED.equals(gateValue)
+                || U04SafetyGateDecision.BLOCKED.equals(gateValue)
+                || U04SafetyGateDecision.UNAVAILABLE.equals(gateValue)))
             throw new IllegalStateException("U07_GATE_VALUE_INVALID");
         String sourceRef = requiredString(gate.get("source_u03_decision_ref"),
                 "U07_GATE_PROVENANCE_MISSING");
