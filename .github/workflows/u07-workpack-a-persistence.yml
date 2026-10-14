@@ -21,6 +21,9 @@ on:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U07NonProductionDeliveryWaitRecovery.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U07ExistingU06WaitAuthority.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07TrustedF3RevalidationWriter.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07DurableClinicalHostIntegrationConfig.java'
+      - 'tools/u07_d5_o2_tx_topology/production_candidate/mysql8/V9__u07_clinical_receipts_no_dispatch.sql'
+      - 'tools/u07_d5_o2_tx_topology/production_candidate/oracle/V9__u07_clinical_receipts_no_dispatch.sql'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06ExecutionResult.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06NonProductionPhysicalF3DecisionProvider.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionF3A1U05Flow.java'
@@ -145,6 +148,32 @@ jobs:
             KEY idx_workpack_a_version (cdp_id, version_number)
           ) ENGINE=InnoDB;
           SQL
+      - name: Apply isolated V9 clinical evidence candidate on disposable MySQL8
+        shell: bash
+        env:
+          MYSQL_PWD: synthetic-workpack-a-root
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$U07_WORKPACK_A_MYSQL_MODE" = DISPOSABLE_CDP_ONLY
+          mysql -h127.0.0.1 -P33332 -uroot u07_workpack_a_cdp \
+            < tools/u07_d5_o2_tx_topology/production_candidate/mysql8/V9__u07_clinical_receipts_no_dispatch.sql
+          python3 - <<'PY'
+          from pathlib import Path
+          mysql=Path("tools/u07_d5_o2_tx_topology/production_candidate/mysql8/V9__u07_clinical_receipts_no_dispatch.sql").read_text()
+          oracle=Path("tools/u07_d5_o2_tx_topology/production_candidate/oracle/V9__u07_clinical_receipts_no_dispatch.sql").read_text()
+          tables=("u07_f3_owner_evidence","u07_f3_barrier_evidence",
+                  "u07_f3_revalidation_evidence","u07_a1_attestation",
+                  "u07_question_delivery_evidence","u07_question_wait_evidence")
+          for table in tables:
+              assert "CREATE TABLE "+table in mysql
+              assert "CREATE TABLE "+table in oracle
+          for folder in ("db/migration","db/migration-oracle"):
+              from pathlib import Path
+              assert not any(p.name.startswith("V9__u07_clinical_receipts")
+                             for p in Path("diagnosis-service/src/main/resources",folder).glob("V*.sql"))
+          print("U07_ISOLATED_V9_SCHEMA_AND_PRODUCTION_FENCE=PASS")
+          PY
       - name: Install shared Java8 binding and compile exact test
         shell: bash
         run: |
