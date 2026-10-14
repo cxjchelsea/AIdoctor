@@ -267,7 +267,7 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
             TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
             String id = tx.execute(status -> seed(repo));
             U07NonProductionPhysicalF3Owner owner = new U07NonProductionPhysicalF3Owner(
-                    writer, repo, (consultation, cdp, version) -> {
+                    new TestF3CommitPort(writer), repo, (consultation, cdp, version) -> {
                         StateRepositoryPort.AtomicCommitCommand command =
                                 clinicalPatch(cdp, version,
                                         "/patient_state/f3_gap_assessment", "physical-f3",
@@ -289,7 +289,7 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
             // This phase requires a new, current F3 version: a second call
             // must not silently treat a stale decision as a new authorization.
             U07NonProductionPhysicalF3Owner stale = new U07NonProductionPhysicalF3Owner(
-                    writer, repo, (consultation, cdp, version) -> {
+                    new TestF3CommitPort(writer), repo, (consultation, cdp, version) -> {
                         StateRepositoryPort.AtomicCommitCommand command =
                                 clinicalPatch(cdp, 8,
                                         "/patient_state/f3_gap_assessment", "physical-stale",
