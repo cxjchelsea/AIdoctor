@@ -217,6 +217,7 @@ public final class U07NonProductionDeliveryWaitRecovery {
             throw new IllegalStateException("U07_DELIVERY_SELECTION_NOT_CURRENT");
         Object f3 = patient.get("f3_gap_assessment");
         if (!(f3 instanceof Map<?, ?>)
+                || receipt.decision.getF3CanonicalEffectId() == null
                 || !receipt.decision.getF3CanonicalEffectId().equals(
                         ((Map<?, ?>) f3).get("f3_canonical_effect_id")))
             throw new IllegalStateException("U07_DELIVERY_F3_NOT_CURRENT");
