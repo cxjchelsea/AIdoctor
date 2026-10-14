@@ -62,6 +62,11 @@ public final class U07NonProductionPhysicalF3Owner
                 || !"/patient_state/f3_gap_assessment".equals(
                         decision.patch.operations.get(0).path))
             throw new IllegalStateException("U07_F3_PATCH_SCOPE_INVALID");
+        Object payload = decision.patch.operations.get(0).value;
+        if (!(payload instanceof Map<?, ?>)
+                || !decision.effectId.equals(
+                        ((Map<?, ?>) payload).get("f3_canonical_effect_id")))
+            throw new IllegalStateException("U07_F3_PATCH_EFFECT_MISMATCH");
 
         StateRepositoryPort.AtomicCommitOutcome committed = state.attemptAtomicCommit(
                 new StateRepositoryPort.AtomicCommitCommand(cdpId, version,
