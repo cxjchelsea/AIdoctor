@@ -447,6 +447,20 @@ public class U07U06SelectionPhysicalMysqlTest {
                             com.aidoctor.diagnosis.runtime.u03.U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
                             "ci-nonprod-resumed-risk");
             assertEquals(11, admitted.requireAcceptedEvidenceBinding().getClinicalStateVersion());
+            // New evidence cannot be admitted with a different Thread, Run, or
+            // Event: these identities must match the persisted U02/P05 trace.
+            for (int mismatch = 0; mismatch < 3; mismatch++) {
+                final String thread = mismatch == 0 ? "wrong-thread" : resumed.threadId;
+                final String run = mismatch == 1 ? "wrong-run" : freshRun;
+                final String event = mismatch == 2 ? "wrong-event" : resumed.eventId;
+                assertThrows(IllegalStateException.class, () ->
+                        safety.requireU03Admission(updated,
+                                new com.aidoctor.diagnosis.runtime.u03.U03ExecutionCommand(
+                                        resumed.consultationId, thread, run, event,
+                                        id, 11, resumed.correlationId, resumed.traceId),
+                                com.aidoctor.diagnosis.runtime.u03.U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
+                                "ci-nonprod-resumed-risk"));
+            }
             assertThrows(IllegalStateException.class, () ->
                     safety.requireU03Admission(updated,
                             new com.aidoctor.diagnosis.runtime.u03.U03ExecutionCommand(
