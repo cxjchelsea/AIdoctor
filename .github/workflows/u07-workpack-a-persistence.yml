@@ -8,6 +8,7 @@ on:
       - 'tools/u07_d5_o2_tx_topology/production_candidate/test_production_persistence_preflight.py'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapterTest.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapter.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpReadbackAdapter.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07WorkpackACdpPhysicalMysqlTest.java'
   workflow_dispatch:
 permissions:
@@ -143,7 +144,7 @@ jobs:
           paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07WorkpackACdpPhysicalMysqlTest.xml")
           assert len(paths)==1, paths
           root=ET.parse(paths[0]).getroot()
-          assert int(root.get("tests",-1))==3
+          assert int(root.get("tests",-1))==4
           assert all(int(root.get(k,-1))==0 for k in ("failures","errors","skipped"))
           print("U07_WORKPACK_A_REAL_SPRING_JPA_MYSQL8_CDP=PASS")
           PY

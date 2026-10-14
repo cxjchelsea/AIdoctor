@@ -6,6 +6,10 @@ import com.aidoctor.diagnosis.repository.CDPRepository;
 import com.aidoctor.diagnosis.repository.CDPVersionRepository;
 import com.aidoctor.diagnosis.service.cdp.CDPVersionService;
 import com.aidoctor.diagnosis.util.JsonUtil;
+import com.aidoctor.diagnosis.runtime.u05.U05ClinicalReadinessSnapshotPort;
+import com.aidoctor.diagnosis.runtime.u05.U05ClinicalReadinessSnapshot;
+import java.util.Collections;
+import org.springframework.core.env.MapPropertySource;
 import com.aidoctor.contracts.v1.StateTypes;
 import com.aidoctor.diagnosis.state.committer.ports.StateRepositoryPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -247,6 +251,45 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
         patch.operations = Arrays.asList(op);
         return new StateRepositoryPort.AtomicCommitCommand(id, version,
                 "patch-" + effectId, "idem-" + effectId, patch);
+    }
+
+    @Test
+    public void optInSpringReadbackUsesRealCommittedCdpAndRejectsStaleOrMissingAuthority() {
+        authorize();
+        try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
+            ctx.getEnvironment().getPropertySources().addFirst(new MapPropertySource(
+                    "synthetic-u07-readback-opt-in",
+                    Collections.singletonMap("aidoctor.u07.persistence.readback-enabled", "true")));
+            ctx.register(IsolatedConfig.class, ClinicalCdpReadbackAdapter.class);
+            ctx.refresh();
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            StateRepositoryPort writer = ctx.getBean(StateRepositoryPort.class);
+            U05ClinicalReadinessSnapshotPort readback =
+                    ctx.getBean(U05ClinicalReadinessSnapshotPort.class);
+            String id = tx.execute(status -> seed(repo));
+            assertThrows(IllegalStateException.class, () -> readback.read(id, 8));
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    writer.attemptAtomicCommit(clinicalPatch(id, 8,
+                            "/patient_state/safety_gate", "u04", "gate", "ALLOW")).status);
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    writer.attemptAtomicCommit(clinicalPatch(id, 9,
+                            "/patient_state/f3_gap_assessment", "f3",
+                            "f3_canonical_effect_id", "synthetic-f3")).status);
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    writer.attemptAtomicCommit(clinicalPatch(id, 10,
+                            "/patient_state/clinical_readiness", "u05",
+                            "clinical_readiness", "CAN_ASK_MORE")).status);
+
+            U05ClinicalReadinessSnapshot accepted = readback.read(id, 11);
+            assertEquals(11, accepted.getVersion());
+            assertEquals("CAN_ASK_MORE", accepted.getReadinessPayload().get("clinical_readiness"));
+            assertThrows(IllegalStateException.class, () -> readback.read(id, 10));
+            assertThrows(IllegalStateException.class, () -> readback.read("missing-cdp", 11));
+            assertEquals(11, writer.readCurrentVersion(id));
+            assertEquals("CAN_ASK_MORE", readback.read(id, 11)
+                    .getReadinessPayload().get("clinical_readiness"));
+        }
     }
 
     @Test
