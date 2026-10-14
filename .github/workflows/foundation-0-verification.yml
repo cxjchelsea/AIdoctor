@@ -52,7 +52,9 @@ jobs:
         # fixtures and scoped role/environment gates. Running them here is an
         # expected fail-closed rejection, NOT a valid production verification.
         # These test classes remain enabled in dedicated Stage A/B workflows.
+        # *IT classes need separate live Python/external service fixtures;
+        # physical CDP MySQL8 runs in the Workpack A disposable DB job.
         run: >-
           mvn -f diagnosis-service/pom.xml
-          -Dtest='*,!StageB*,!U07D5O2StageA*'
+          -Dtest='*,!StageB*,!U07D5O2StageA*,!*IT,!U07WorkpackACdpPhysicalMysqlTest'
           test
