@@ -8,6 +8,7 @@ on:
       - 'tools/u07_d5_o2_tx_topology/production_candidate/test_production_persistence_preflight.py'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapterTest.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapter.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07WorkpackACdpPhysicalMysqlTest.java'
   workflow_dispatch:
 permissions:
   contents: read
@@ -57,4 +58,91 @@ jobs:
           assert int(report.get('tests', -1)) >= 7
           assert all(int(report.get(x,-1)) == 0 for x in ('failures','errors','skipped'))
           print('U07_WORKPACK_A_CDP_ADAPTER_SAFETY=PASS')
+          PY
+
+  physical-cdp-mysql8:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: synthetic-workpack-a-root
+          MYSQL_DATABASE: u07_workpack_a_cdp
+        ports:
+          - 127.0.0.1:33332:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -psynthetic-workpack-a-root"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      U07_WORKPACK_A_MYSQL_MODE: DISPOSABLE_CDP_ONLY
+      U07_WORKPACK_A_MYSQL_URL: jdbc:mysql://127.0.0.1:33332/u07_workpack_a_cdp?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+      - name: Bootstrap test-only CDP JPA compatibility tables on disposable MySQL8
+        shell: bash
+        env:
+          MYSQL_PWD: synthetic-workpack-a-root
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$U07_WORKPACK_A_MYSQL_MODE" = DISPOSABLE_CDP_ONLY
+          mysql -h127.0.0.1 -P33332 -uroot u07_workpack_a_cdp <<'SQL'
+          CREATE TABLE cdp (
+            id VARCHAR(64) NOT NULL PRIMARY KEY,
+            patient_id VARCHAR(64) NOT NULL,
+            session_id VARCHAR(64) NOT NULL,
+            version_no INT NOT NULL,
+            cdp_status VARCHAR(64),
+            health_state_assessment LONGTEXT,
+            wellness_plan LONGTEXT,
+            patient_state LONGTEXT,
+            ddx LONGTEXT,
+            evidence_graph LONGTEXT,
+            workup_plan LONGTEXT,
+            management_plan LONGTEXT,
+            triage LONGTEXT,
+            uncertainty LONGTEXT,
+            audit_info LONGTEXT,
+            execution_trace LONGTEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            KEY idx_patient_id (patient_id),
+            KEY idx_session_id (session_id),
+            KEY idx_version (version_no)
+          ) ENGINE=InnoDB;
+          CREATE TABLE cdp_version (
+            id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            cdp_id VARCHAR(64),
+            version_number INT,
+            cdp_data LONGTEXT,
+            create_time DATETIME,
+            KEY idx_workpack_a_version (cdp_id, version_number)
+          ) ENGINE=InnoDB;
+          SQL
+      - name: Install shared Java8 binding and compile exact test
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f contracts/v1/bindings/java/pom.xml install -DskipTests
+          mvn -B -ntp -f diagnosis-service/pom.xml -DskipTests test-compile
+      - name: Real Spring JPA CDP version CAS and rollback on disposable MySQL8
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U07WorkpackACdpPhysicalMysqlTest surefire:test
+          python3 - <<'PY'
+          import glob,xml.etree.ElementTree as ET
+          paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07WorkpackACdpPhysicalMysqlTest.xml")
+          assert len(paths)==1, paths
+          root=ET.parse(paths[0]).getroot()
+          assert int(root.get("tests",-1))==2
+          assert all(int(root.get(k,-1))==0 for k in ("failures","errors","skipped"))
+          print("U07_WORKPACK_A_REAL_SPRING_JPA_MYSQL8_CDP=PASS")
           PY
