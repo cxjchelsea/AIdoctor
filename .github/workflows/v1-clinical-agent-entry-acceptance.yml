@@ -6,7 +6,7 @@ on:
       - '.github/workflows/v1-clinical-agent-entry-acceptance.yml'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1ClinicalPublicEntryAcceptanceTest.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalIngressTest.java'
-      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/V1NonProductionClinicalIngressController.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalIngressController.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/DiagnosisController.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/service/DiagnosisOrchestrationService.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/service/orchestration/DiagnosisWorkflowOrchestrator.java'
