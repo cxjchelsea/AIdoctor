@@ -1,0 +1,128 @@
+{
+  "scope": "V1_REAL_CLINICAL_AGENT_SYNTHETIC_STAGING_E2E",
+  "requires": "live HTTP Spring Boot + nonproduction MySQL8 + approved clinical capability versions",
+  "no_real_patients": true,
+  "no_real_delivery": true,
+  "tests": [
+    {
+      "case_id": "E2E-01",
+      "purpose": "multi-turn ordinary complaint then answer",
+      "evidence_status": "NOT_EXECUTED",
+      "requires": [
+        "http_request_response",
+        "governed_runtime_routing_trace",
+        "mysql_cdp_state_readback",
+        "clinical_safety_evaluation",
+        "trace_and_version_bindings"
+      ]
+    },
+    {
+      "case_id": "E2E-02",
+      "purpose": "new red flag after previous low risk",
+      "evidence_status": "NOT_EXECUTED",
+      "requires": [
+        "http_request_response",
+        "governed_runtime_routing_trace",
+        "mysql_cdp_state_readback",
+        "clinical_safety_evaluation",
+        "trace_and_version_bindings"
+      ]
+    },
+    {
+      "case_id": "E2E-03",
+      "purpose": "UNKNOWN and UNMEASURED preserved",
+      "evidence_status": "NOT_EXECUTED",
+      "requires": [
+        "http_request_response",
+        "governed_runtime_routing_trace",
+        "mysql_cdp_state_readback",
+        "clinical_safety_evaluation",
+        "trace_and_version_bindings"
+      ]
+    },
+    {
+      "case_id": "E2E-04",
+      "purpose": "clinical history correction invalidates derived results",
+      "evidence_status": "NOT_EXECUTED",
+      "requires": [
+        "http_request_response",
+        "governed_runtime_routing_trace",
+        "mysql_cdp_state_readback",
+        "clinical_safety_evaluation",
+        "trace_and_version_bindings"
+      ]
+    },
+    {
+      "case_id": "E2E-05",
+      "purpose": "replay and stale/wrong question no duplicate effect",
+      "evidence_status": "NOT_EXECUTED",
+      "requires": [
+        "http_request_response",
+        "governed_runtime_routing_trace",
+        "mysql_cdp_state_readback",
+        "clinical_safety_evaluation",
+        "trace_and_version_bindings"
+      ]
+    },
+    {
+      "case_id": "E2E-06",
+      "purpose": "restart and durable WAIT/checkpoint resume",
+      "evidence_status": "NOT_EXECUTED",
+      "requires": [
+        "http_request_response",
+        "governed_runtime_routing_trace",
+        "mysql_cdp_state_readback",
+        "clinical_safety_evaluation",
+        "trace_and_version_bindings"
+      ]
+    },
+    {
+      "case_id": "E2E-07",
+      "purpose": "unsupported scope or dosage request safe exit",
+      "evidence_status": "NOT_EXECUTED",
+      "requires": [
+        "http_request_response",
+        "governed_runtime_routing_trace",
+        "mysql_cdp_state_readback",
+        "clinical_safety_evaluation",
+        "trace_and_version_bindings"
+      ]
+    },
+    {
+      "case_id": "E2E-08",
+      "purpose": "insufficient evidence prevents invented diagnosis",
+      "evidence_status": "NOT_EXECUTED",
+      "requires": [
+        "http_request_response",
+        "governed_runtime_routing_trace",
+        "mysql_cdp_state_readback",
+        "clinical_safety_evaluation",
+        "trace_and_version_bindings"
+      ]
+    },
+    {
+      "case_id": "E2E-09",
+      "purpose": "conflicting medical evidence remains uncertain",
+      "evidence_status": "NOT_EXECUTED",
+      "requires": [
+        "http_request_response",
+        "governed_runtime_routing_trace",
+        "mysql_cdp_state_readback",
+        "clinical_safety_evaluation",
+        "trace_and_version_bindings"
+      ]
+    },
+    {
+      "case_id": "E2E-10",
+      "purpose": "bounded traceable patient delivery after sufficient evidence",
+      "evidence_status": "NOT_EXECUTED",
+      "requires": [
+        "http_request_response",
+        "governed_runtime_routing_trace",
+        "mysql_cdp_state_readback",
+        "clinical_safety_evaluation",
+        "trace_and_version_bindings"
+      ]
+    }
+  ]
+}
