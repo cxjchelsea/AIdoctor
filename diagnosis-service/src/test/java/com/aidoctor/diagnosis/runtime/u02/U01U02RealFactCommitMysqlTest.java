@@ -14,6 +14,7 @@ import com.aidoctor.diagnosis.runtime.u02.d05.U02DependencyInvalidationHook;
 import com.aidoctor.diagnosis.runtime.u03.*;
 import com.aidoctor.diagnosis.runtime.u04.*;
 import com.aidoctor.diagnosis.runtime.u05.U04A1U05AuthorityBridge;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow;
 import com.aidoctor.diagnosis.service.cdp.*;
 import com.aidoctor.diagnosis.state.committer.*;
 import com.aidoctor.diagnosis.state.committer.fakes.*;
@@ -225,6 +226,11 @@ public class U01U02RealFactCommitMysqlTest {
                         failedHandoff, U04ScopeContext.current(true, true), "ci-nonprod-safety"));
                 assertEquals(U04ExecutionResult.COMMIT_COMPLETE, unavailable.getStatus());
                 assertEquals(U04SafetyGateDecision.UNAVAILABLE, unavailable.getDecision().getGate());
+                assertTrue(assertThrows(IllegalStateException.class, () ->
+                        U07NonProductionF3A1U05Flow.requireEligiblePreF3(
+                                failedHandoff, unavailable))
+                        .getMessage().contains("U07_U04_SAFETY_PRE_F3_NOT_ELIGIBLE"));
+
                 assertEquals(Integer.valueOf(3), unavailable.getCommitResult().committedVersion);
                 assertEquals("UNAVAILABLE", ((Map<?,?>) cdps.findById(created.getCdpId())
                         .get().getPatientState().get("safety_gate")).get("safety_gate"));
@@ -254,6 +260,20 @@ public class U01U02RealFactCommitMysqlTest {
                     U04ScopeContext.current(true, true), "ci-nonprod-safety"));
             assertEquals(U04ExecutionResult.COMMIT_COMPLETE, gated.getStatus());
             assertEquals(expectedGate, gated.getDecision().getGate());
+            int safetyCommittedVersion = cdps.findById(created.getCdpId()).get()
+                    .getVersion().intValue();
+            if (U04SafetyGateDecision.BLOCKED.equals(expectedGate)
+                    || U04SafetyGateDecision.UNAVAILABLE.equals(expectedGate)) {
+                assertTrue(assertThrows(IllegalStateException.class, () ->
+                        U07NonProductionF3A1U05Flow.requireEligiblePreF3(riskHandoff, gated))
+                        .getMessage().contains("U07_U04_SAFETY_PRE_F3_NOT_ELIGIBLE"));
+            } else {
+                assertDoesNotThrow(() ->
+                        U07NonProductionF3A1U05Flow.requireEligiblePreF3(riskHandoff, gated));
+            }
+            assertEquals(safetyCommittedVersion,
+                    cdps.findById(created.getCdpId()).get().getVersion().intValue());
+
             assertEquals("COMMITTED", gated.getCommitResult().status);
             assertEquals(Integer.valueOf(4), gated.getCommitResult().committedVersion);
             assertEquals(expectedGate, ((Map<?,?>) cdps.findById(created.getCdpId())
