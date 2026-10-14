@@ -425,7 +425,8 @@ public class U07U06SelectionPhysicalMysqlTest {
                     answer, persistedWait.checkpointId, "synthetic-answer-idem",
                     "sha256:DIFFERENT"));
             assertEquals(1L, runs.count());
-            assertEquals(10, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(11, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(3, history.findByCdpIdOrderByVersionNumberDesc(id).size());
         }
     }
 
