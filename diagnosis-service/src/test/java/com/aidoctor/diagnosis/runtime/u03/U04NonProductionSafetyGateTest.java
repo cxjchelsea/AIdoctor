@@ -15,6 +15,16 @@ import com.aidoctor.diagnosis.runtime.u04.U04StateProposal;
 import com.aidoctor.diagnosis.runtime.u04.U04StateProposalFactory;
 import com.aidoctor.diagnosis.runtime.u05.U04A1U05AuthorityBridge;
 import com.aidoctor.diagnosis.runtime.u05.U05AdmissionAuthoritySnapshot;
+import com.aidoctor.diagnosis.runtime.u06.*;
+import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01Runtime;
+import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01TestFactory;
+import com.aidoctor.diagnosis.runtime.u06.delivery.U06DeliveryStore;
+import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryService;
+import com.aidoctor.diagnosis.runtime.u06.trace.U06GovernedExecutionTraceStore;
+import com.aidoctor.diagnosis.runtime.u06.wait.*;
+import com.aidoctor.diagnosis.runtime.foundation.*;
+import com.aidoctor.diagnosis.runtime.u01.ConsultationRepository;
+import static org.mockito.Mockito.mock;
 import com.aidoctor.diagnosis.state.committer.SyntheticStateSnapshot;
 import com.aidoctor.diagnosis.state.committer.SyntheticVersionedStateRepository;
 import java.util.LinkedHashMap;
@@ -119,6 +129,94 @@ class U04NonProductionSafetyGateTest {
         assertTrue(authority.isA1CanonicalF3Complete());
         assertTrue(authority.isPostF3SafetyBarrierComplete());
         assertEquals(1, repository.mutationCount());
+
+        // Actual U06 Mode-1 F3 commit advances the SAME CDP v9 -> v10.
+        U06SyntheticP01Runtime u06State = U06SyntheticP01TestFactory.fromSharedSyntheticRepository(
+                "u04-u06-shared-store", "consult-1", "cdp-1", CLOCK, repository);
+        U06ProfileBApplicationService u06 = new U06ProfileBApplicationService(
+                new U06AdmissionService(), u06State,
+                new U06SyntheticDeliveryService(mock(U06DeliveryStore.class)),
+                new ConsultationWaitTransitionService(
+                        mock(ConsultationRepository.class), mock(ConsultationWaitEffectRepository.class)),
+                new U06WaitCoordinator(
+                        new RuntimeWaitCheckpointService(
+                                mock(RuntimeThreadStateRepository.class),
+                                mock(RuntimeWaitCheckpointRepository.class)),
+                        new RuntimeThreadWaitTransitionService(
+                                mock(RuntimeThreadStateRepository.class),
+                                mock(RuntimeWaitCheckpointRepository.class))),
+                new U06GovernedExecutionTraceStore() {
+                    public void start(String a,String b,String c,String d,String e,String f,String g) {}
+                    public void complete(String a,String b,String c,String d) {}
+                });
+        U06ProfileBRequest f3Request = new U06ProfileBRequest(
+                "a1-f3-req", "consult-1", "cdp-1",
+                U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                U06ProfileBRequest.A1_PRE_READINESS_ROUTING,
+                "a1-source-u04-" + committed.getDecision().getDecisionId(),
+                9, 9, U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING, "synthetic-dependency",
+                "f3-policy", null, null,
+                "canonical-event", "business-event", null, null, 0,
+                "corr-1", "trace-1", "2026-09-18T00:00:00Z",
+                U06AdmissionEvidence.syntheticCurrentAllow());
+        U06SyntheticDecisionBundle f3Decision = new U06SyntheticDecisionEngine().decide(
+                f3Request, new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS, false, true,
+                        null, null, false, null,
+                        Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
+                u06State.readCurrent());
+        U06SyntheticPostF3SafetyBarrier.Evidence safetyEvidence =
+                new U06SyntheticPostF3SafetyBarrier.Evidence(
+                        U06SyntheticPostF3SafetyBarrier.ALLOWED, "synthetic-a1-safety-evidence");
+        U06ExecutionResult f3Result = u06.execute(f3Request, f3Decision, null, safetyEvidence);
+        assertEquals(U06ExecutionResult.MODE1_COMMITTED, f3Result.getStatus());
+        assertEquals(10, repository.snapshot("cdp-1").version());
+        U06SyntheticPostF3SafetyBarrier.Evaluation evaluated =
+                new U06SyntheticPostF3SafetyBarrier().evaluate(
+                        "consult-1", f3Result.getEffectRef(),
+                        f3Result.getCommitStatus(), 10, safetyEvidence);
+        U06ProfileBRequest rvRequest = new U06ProfileBRequest(
+                "a1-f3-rv", "consult-1", "cdp-1",
+                U06ProfileBRequest.F3_CURRENT_VERSION_REVALIDATION,
+                U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,
+                "a1-f3-post-barrier", 10, 10,
+                U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING, "synthetic-dependency",
+                "f3-policy", null, null,
+                "canonical-event", "business-event", null, null, 0,
+                "corr-1", "trace-1", "2026-09-18T00:00:00Z",
+                U06AdmissionEvidence.syntheticCurrentAllow());
+        U06SyntheticDecisionBundle rvDecision = new U06SyntheticDecisionBundle(
+                U06SyntheticDecisionBundle.NOT_DECIDABLE, f3Result.getEffectRef(),
+                null, null, false, null, null, null, null, null, null, null,
+                U06SyntheticDecisionBundle.REVALIDATED_CURRENT, "a1-revalidation-10");
+        U06SyntheticRevalidationAuthority.Result rv =
+                new U06SyntheticRevalidationAuthority().evaluate(
+                        rvRequest, rvDecision, u06State.readCurrent().getVersion(),
+                        u06State.readCurrent().mapString(
+                                "/patient_state/f3_gap_assessment", "f3_canonical_effect_id"));
+        assertEquals(U06SyntheticDecisionBundle.REVALIDATED_CURRENT, rv.getStatus());
+
+        U04A1U05AuthorityBridge dynamicBridge = new U04A1U05AuthorityBridge(
+                readback, new U06F3SyntheticA1HostPort(
+                        "consult-1", "cdp-1", u06State, f3Result, evaluated, rv));
+        U05AdmissionAuthoritySnapshot currentA1 =
+                dynamicBridge.load(handoff, committed, ENV, "clinical-state-cdp-1-v10");
+        assertEquals(10, currentA1.getCurrentClinicalStateVersion());
+        assertEquals(f3Result.getEffectRef(),
+                u06State.readCurrent().mapString(
+                        "/patient_state/f3_gap_assessment", "f3_canonical_effect_id"));
+        assertEquals(2, repository.mutationCount());
+        assertThrows(IllegalStateException.class, () -> new U04A1U05AuthorityBridge(
+                readback, new U06F3SyntheticA1HostPort(
+                        "consult-1", "cdp-1", u06State, f3Result,
+                        new U06SyntheticPostF3SafetyBarrier().evaluate(
+                                "consult-1", f3Result.getEffectRef(), "COMMITTED", 10,
+                                new U06SyntheticPostF3SafetyBarrier.Evidence(
+                                        U06SyntheticPostF3SafetyBarrier.BLOCKED,
+                                        "synthetic-blocked")), rv))
+                .load(handoff, committed, ENV, "clinical-state-cdp-1-v10"));
     }
 
     @Test
