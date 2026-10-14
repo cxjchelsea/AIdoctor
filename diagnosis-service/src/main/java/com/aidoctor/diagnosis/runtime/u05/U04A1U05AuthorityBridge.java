@@ -87,6 +87,9 @@ public final class U04A1U05AuthorityBridge {
                 || executed.getCommitResult() == null
                 || !"COMMITTED".equals(executed.getCommitResult().status)
                 || executed.getCommitResult().committedVersion == null
+                || executed.getCommitResult().auditRef == null
+                || blank(executed.getCommitResult().auditRef.auditId)
+                || !handoff.getCdpId().equals(executed.getCommitResult().cdpId)
                 || executed.getDecision() == null
                 || executed.getRoutingEligibility() == null
                 || !executed.getRoutingEligibility().isU05Eligible()) {
@@ -133,7 +136,7 @@ public final class U04A1U05AuthorityBridge {
                 handoff.getConsultationId(), handoff.getCdpId(), current,
                 authoritativeStateRef, environmentId, true,
                 true, true, executed.getDecision().getDecisionId(),
-                executed.getCommitResult().auditId, readback.gateValue,
+                executed.getCommitResult().auditRef.auditId, readback.gateValue,
                 true, a1.routeSourceRef, "U04_A1_ROUTING_AUTHORIZATION",
                 a1.routeAuthorizationRef, U05ConsumerInboundRequest.U05_ELIGIBLE,
                 a1.routingPolicyVersion,
