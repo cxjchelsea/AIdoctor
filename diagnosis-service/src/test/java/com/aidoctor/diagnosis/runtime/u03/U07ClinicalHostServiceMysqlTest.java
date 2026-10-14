@@ -358,6 +358,17 @@ public class U07ClinicalHostServiceMysqlTest {
                     .findByCdpIdOrderByVersionNumberDesc(id).size());
             assertThrows(IllegalStateException.class,
                     () -> issuer.loadAttested("consult-1", id, 12));
+            // This legacy test suite uses a fixed CDP id in another test.
+            // Remove only this disposable E2E fixture so execution order cannot
+            // inflate the other test's history assertions.
+            tx.execute(status -> {
+                com.aidoctor.diagnosis.repository.CDPVersionRepository histories =
+                        ctx.getBean(com.aidoctor.diagnosis.repository.CDPVersionRepository.class);
+                histories.deleteAll(histories.findByCdpIdOrderByVersionNumberDesc(id));
+                repo.deleteById(id);
+                return null;
+            });
+            jdbc.update("DELETE FROM u07_a1_attestation WHERE cdp_id=?", id);
         }
     }
 
