@@ -717,6 +717,47 @@ public class U07ClinicalHostServiceMysqlTest {
     }
 
     @Test
+    public void u07DurableHostIsDefaultOffAndProductionProfileNeverWiresAuthority() {
+        try (AnnotationConfigApplicationContext disabled =
+                     new AnnotationConfigApplicationContext()) {
+            disabled.register(
+                    com.aidoctor.diagnosis.runtime.foundation.adapters.U07DurableClinicalHostIntegrationConfig.class);
+            disabled.refresh();
+            assertTrue(disabled.getBeansOfType(
+                    com.aidoctor.diagnosis.runtime.foundation.adapters.U07TrustedF3RevalidationWriter.class).isEmpty());
+            assertTrue(disabled.getBeansOfType(
+                    com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery.class).isEmpty());
+        }
+        try (AnnotationConfigApplicationContext missingAuthority =
+                     new AnnotationConfigApplicationContext()) {
+            missingAuthority.getEnvironment().getPropertySources().addFirst(
+                    new MapPropertySource("nonprod-u07-host", Collections.<String,Object>singletonMap(
+                            "aidoctor.u07.host-integration.nonproduction-enabled", "true")));
+            missingAuthority.register(
+                    com.aidoctor.diagnosis.runtime.foundation.adapters.U07DurableClinicalHostIntegrationConfig.class);
+            missingAuthority.refresh();
+            assertTrue(missingAuthority.getBeansOfType(
+                    com.aidoctor.diagnosis.runtime.foundation.adapters.U07TrustedF3RevalidationWriter.class).isEmpty());
+            assertTrue(missingAuthority.getBeansOfType(
+                    com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery.class).isEmpty());
+        }
+        try (AnnotationConfigApplicationContext production =
+                     new AnnotationConfigApplicationContext()) {
+            production.getEnvironment().setActiveProfiles("prod");
+            production.getEnvironment().getPropertySources().addFirst(
+                    new MapPropertySource("prod-u07-host", Collections.<String,Object>singletonMap(
+                            "aidoctor.u07.host-integration.nonproduction-enabled", "true")));
+            production.register(
+                    com.aidoctor.diagnosis.runtime.foundation.adapters.U07DurableClinicalHostIntegrationConfig.class);
+            production.refresh();
+            assertTrue(production.getBeansOfType(
+                    com.aidoctor.diagnosis.runtime.foundation.adapters.U07TrustedF3RevalidationWriter.class).isEmpty());
+            assertTrue(production.getBeansOfType(
+                    com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery.class).isEmpty());
+        }
+    }
+
+    @Test
     public void disabledByDefaultProvidesNoClinicalHostServices() {
         try (AnnotationConfigApplicationContext ctx =
                      new AnnotationConfigApplicationContext(U07ClinicalHostServicesConfig.class)) {
