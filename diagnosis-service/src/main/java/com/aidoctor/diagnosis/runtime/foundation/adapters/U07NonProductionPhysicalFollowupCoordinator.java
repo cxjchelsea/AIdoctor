@@ -47,7 +47,7 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
 
     private final U07NonProductionF3A1U05Flow f3A1U05;
     private final U05QuestionRouteAdmissionAdapter u05U06;
-    private final U06ProfileBApplicationService u06;
+    private final U06NonProductionPhysicalMode23Service u06;
     private final U07NonProductionDeliveryWaitRecovery recovery;
     private final CDPRepository cdps;
     private final AuthorizedQuestionHost host;
@@ -55,7 +55,7 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
     public U07NonProductionPhysicalFollowupCoordinator(
             U07NonProductionF3A1U05Flow f3A1U05,
             U05QuestionRouteAdmissionAdapter u05U06,
-            U06ProfileBApplicationService u06,
+            U06NonProductionPhysicalMode23Service u06,
             U07NonProductionDeliveryWaitRecovery recovery,
             CDPRepository cdps, AuthorizedQuestionHost host) {
         if (f3A1U05 == null || u05U06 == null || u06 == null
@@ -130,7 +130,19 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
         if (selected == null || receipt == null
                 || !U06ExecutionResult.MODE2_SELECTION_PERSISTED.equals(
                         selected.selection.getStatus())
-                || selected.request != receipt.request || selected.decision != receipt.decision
+                || !Objects.equals(selected.request.getConsultationId(),
+                        receipt.request.getConsultationId())
+                || !Objects.equals(selected.request.getCdpId(), receipt.request.getCdpId())
+                || !Objects.equals(selected.request.getSourceAuthorityRef(),
+                        receipt.request.getSourceAuthorityRef())
+                || selected.request.getAuthoritativeClinicalStateVersion()
+                        != receipt.request.getAuthoritativeClinicalStateVersion()
+                || !Objects.equals(selected.decision.getQuestionId(),
+                        receipt.decision.getQuestionId())
+                || !Objects.equals(selected.decision.getQuestionSelectionEffectId(),
+                        receipt.decision.getQuestionSelectionEffectId())
+                || !Objects.equals(selected.decision.getQuestionContentFingerprint(),
+                        receipt.decision.getQuestionContentFingerprint())
                 || !Objects.equals(selected.decision.getQuestionSelectionEffectId(),
                         selected.selection.getEffectRef()))
             throw blocked("CONFIRMED_RECEIPT_SELECTION_MISMATCH");
