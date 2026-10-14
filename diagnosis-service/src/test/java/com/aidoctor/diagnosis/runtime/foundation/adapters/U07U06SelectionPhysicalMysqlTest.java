@@ -308,6 +308,47 @@ public class U07U06SelectionPhysicalMysqlTest {
 
             assertEquals(10, cdps.findById(id).get().getVersion().intValue());
             assertEquals(2, history.findByCdpIdOrderByVersionNumberDesc(id).size());
+
+            // Real Foundation-0 ledgers on the same disposable MySQL8 DB.
+            com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingRepository bindingRepo =
+                    ctx.getBean(com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingRepository.class);
+            com.aidoctor.diagnosis.runtime.foundation.CanonicalBusinessEventRepository events =
+                    ctx.getBean(com.aidoctor.diagnosis.runtime.foundation.CanonicalBusinessEventRepository.class);
+            com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRepository runs =
+                    ctx.getBean(com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRepository.class);
+            tx.execute(status -> {
+                bindingRepo.saveAndFlush(new com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingRecord(
+                        request.getConsultationId(), id,
+                        com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingRecord.CLINICAL_RUNTIME_V1,
+                        request.getThreadId(), "synthetic-scope", "synthetic-capabilities",
+                        "contracts-v1", java.time.LocalDateTime.of(2026,10,14,0,0)));
+                return null;
+            });
+            com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingService bindingService =
+                    new com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingService(bindingRepo);
+            U07NonProductionDurableF8Consume consume = new U07NonProductionDurableF8Consume(
+                    jdbc, tx,
+                    new com.aidoctor.diagnosis.runtime.foundation.CanonicalBusinessEventLedger(events),
+                    new com.aidoctor.diagnosis.runtime.foundation.ClinicalRunCoordinator(
+                            bindingService, events, runs));
+            String freshRun = consume.consume(
+                    answer, persistedWait.checkpointId, "synthetic-answer-idem",
+                    "sha256:synthetic-answer-digest");
+            assertNotEquals(answer.runId, freshRun);
+            assertTrue(consume.consumedFor(answer.consultationId, answer.runId,
+                    persistedWait.checkpointId, freshRun, answer.eventId));
+            assertEquals(freshRun, consume.consume(answer, persistedWait.checkpointId,
+                    "synthetic-answer-idem", "sha256:synthetic-answer-digest"));
+            assertEquals(1L, events.count());
+            assertEquals(1L, runs.count());
+            assertEquals(1, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_f8_answer_consumption WHERE checkpoint_id=?",
+                    Integer.class, persistedWait.checkpointId).intValue());
+            assertThrows(IllegalStateException.class, () -> consume.consume(
+                    answer, persistedWait.checkpointId, "synthetic-answer-idem",
+                    "sha256:DIFFERENT"));
+            assertEquals(1L, runs.count());
+            assertEquals(10, cdps.findById(id).get().getVersion().intValue());
         }
     }
 }
