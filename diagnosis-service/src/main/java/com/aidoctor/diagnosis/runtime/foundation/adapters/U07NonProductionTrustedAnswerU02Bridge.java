@@ -56,7 +56,7 @@ public final class U07NonProductionTrustedAnswerU02Bridge {
         return new U02ExecutionCommand(waitingCandidate.userId,
                 waitingCandidate.consultationId, waitingCandidate.threadId,
                 newRunId, waitingCandidate.eventId, waitingCandidate.cdpId,
-                waitingCandidate.rawClinicalText, waitingCandidate.sourceType,
+                waitingCandidate.rawClinicalText, "PATIENT_REPORTED",
                 waitingCandidate.baseClinicalStateVersion,
                 waitingCandidate.correlationId, waitingCandidate.traceId,
                 waitingCandidate.registeredDependencies);
