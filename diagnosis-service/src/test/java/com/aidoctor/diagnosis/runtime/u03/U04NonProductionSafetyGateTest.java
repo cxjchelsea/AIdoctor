@@ -115,7 +115,7 @@ class U04NonProductionSafetyGateTest {
         assertEquals(9, authority.getCurrentClinicalStateVersion());
         assertEquals("ALLOW", authority.getGateValue());
         assertEquals(committed.getDecision().getDecisionId(), authority.getGateRef());
-        assertEquals(committed.getCommitResult().auditId, authority.getGateCommitRef());
+        assertEquals(committed.getCommitResult().auditRef.auditId, authority.getGateCommitRef());
         assertTrue(authority.isA1CanonicalF3Complete());
         assertTrue(authority.isPostF3SafetyBarrierComplete());
         assertEquals(1, repository.mutationCount());
