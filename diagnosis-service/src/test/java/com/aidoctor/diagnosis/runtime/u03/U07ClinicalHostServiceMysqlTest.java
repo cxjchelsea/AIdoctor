@@ -600,6 +600,118 @@ public class U07ClinicalHostServiceMysqlTest {
     }
 
     @Test
+    public void durableDeliveryReceiptCanRecoverCdpAndWaitAfterCrashWithoutResending() {
+        try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
+            ctx.register(U07WorkpackACdpPhysicalMysqlTest.IsolatedConfig.class,
+                    ScopedTestCommitter.class);
+            ctx.refresh();
+            CDPRepository repo=ctx.getBean(CDPRepository.class);
+            TransactionTemplate tx=ctx.getBean(TransactionTemplate.class);
+            org.springframework.jdbc.core.JdbcTemplate jdbc=
+                    ctx.getBean(org.springframework.jdbc.core.JdbcTemplate.class);
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_question_delivery_evidence ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "question_id VARCHAR(64) NOT NULL, selection_effect_id VARCHAR(128) NOT NULL, "
+                    + "delivery_id VARCHAR(128) NOT NULL, delivery_effect_id VARCHAR(128) NOT NULL, "
+                    + "confirmation_ref VARCHAR(128) NOT NULL, "
+                    + "PRIMARY KEY (consultation_id, cdp_id, question_id)) ENGINE=InnoDB");
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_question_wait_evidence ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "question_id VARCHAR(64) NOT NULL, wait_effect_ref VARCHAR(128) NOT NULL, "
+                    + "checkpoint_ref VARCHAR(128) NOT NULL, eligibility_ref VARCHAR(128) NOT NULL, "
+                    + "PRIMARY KEY (consultation_id, cdp_id, question_id)) ENGINE=InnoDB");
+            String id="u07-delivery-"+UUID.randomUUID().toString();
+            tx.execute(status -> {
+                CDP cdp=CDP.builder().id(id).patientId("synthetic-only")
+                        .sessionId("synthetic-only").version(8).build();
+                Map<String,Object> patient=new LinkedHashMap<String,Object>();
+                Map<String,Object> question=new LinkedHashMap<String,Object>();
+                question.put("question_id","question-1");
+                question.put("selection_effect_id","selection-effect-1");
+                question.put("content_fingerprint","fingerprint-1");
+                question.put("status","SELECTED");
+                Map<String,Object> questions=new LinkedHashMap<String,Object>();
+                questions.put("question-1",question);
+                patient.put("questions",questions);
+                Map<String,Object> f3=new LinkedHashMap<String,Object>();
+                f3.put("f3_canonical_effect_id","f3-current-1");
+                patient.put("f3_gap_assessment",f3);
+                cdp.setPatientState(patient);
+                repo.saveAndFlush(cdp);
+                return null;
+            });
+            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest request=
+                    new com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest(
+                            "delivery-request","consult-delivery",id,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.U05_QUESTION_ROUTING,
+                            "source-u05",8,8,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
+                            "synthetic-dependency","f3-policy","question-policy","d04-policy",
+                            "canonical-delivery","business-delivery","thread-1","run-1",0L,
+                            "correlation","trace","2026-09-18T00:00:00Z",
+                            com.aidoctor.diagnosis.runtime.u06.U06AdmissionEvidence.syntheticCurrentAllow());
+            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle decision=
+                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle(
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.NOT_DECIDABLE,
+                            "f3-current-1",null,null,false,
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.CONTINUE,
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.SELECTED,
+                            "selection-effect-1","question-1","semantic-1",
+                            "content-ref-1","fingerprint-1",null,null);
+            com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery.Receipt receipt=
+                    new com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery.Receipt(
+                            request,decision,"delivery-1","delivery-effect-1","confirmed-1");
+            java.util.concurrent.atomic.AtomicBoolean trusted=
+                    new java.util.concurrent.atomic.AtomicBoolean(false);
+            java.util.concurrent.atomic.AtomicInteger waitCalls=
+                    new java.util.concurrent.atomic.AtomicInteger(0);
+            com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery.WaitAuthority waits=
+                    (r,version) -> {
+                        assertEquals(9,version);
+                        if(waitCalls.incrementAndGet()==1)
+                            throw new IllegalStateException("SIMULATED_WAIT_CRASH");
+                        return new com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery.WaitReceipt(
+                                "consult-wait-1","checkpoint-1","eligibility-1");
+                    };
+            com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery recovery=
+                    new com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery(
+                            repo,jdbc,tx,ctx.getBean(StateCommitter.class),
+                            r -> trusted.get(),waits);
+            assertThrows(IllegalStateException.class,()->recovery.accept(receipt));
+            assertEquals(0,jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_question_delivery_evidence WHERE cdp_id=?",
+                    Integer.class,id).intValue());
+            trusted.set(true);
+            recovery.accept(receipt);
+            assertEquals(8,repo.findById(id).get().getVersion().intValue());
+            assertThrows(IllegalStateException.class,()->recovery.recover(receipt));
+            assertEquals(9,repo.findById(id).get().getVersion().intValue());
+            assertEquals(0,jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_question_wait_evidence WHERE cdp_id=?",
+                    Integer.class,id).intValue());
+            com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery restarted=
+                    new com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery(
+                            repo,jdbc,tx,ctx.getBean(StateCommitter.class),
+                            r -> trusted.get(),waits);
+            assertEquals("checkpoint-1",restarted.recover(receipt).checkpointId);
+            assertEquals("checkpoint-1",restarted.recover(receipt).checkpointId);
+            assertEquals(9,repo.findById(id).get().getVersion().intValue());
+            assertEquals(1,ctx.getBean(com.aidoctor.diagnosis.repository.CDPVersionRepository.class)
+                    .findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertEquals(1,jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_question_wait_evidence WHERE cdp_id=?",
+                    Integer.class,id).intValue());
+            Map<String,Object> state=repo.findById(id).get().getPatientState();
+            assertEquals("DELIVERED_TO_USER",
+                    ((Map<?,?>)((Map<?,?>)state.get("questions")).get("question-1")).get("status"));
+            assertEquals("delivery-1",
+                    ((Map<?,?>)state.get("pending_question")).get("delivery_id"));
+        }
+    }
+
+    @Test
     public void disabledByDefaultProvidesNoClinicalHostServices() {
         try (AnnotationConfigApplicationContext ctx =
                      new AnnotationConfigApplicationContext(U07ClinicalHostServicesConfig.class)) {
