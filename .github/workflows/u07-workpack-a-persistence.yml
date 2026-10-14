@@ -24,6 +24,7 @@ on:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07DurableClinicalHostIntegrationConfig.java'
       - 'tools/u07_d5_o2_tx_topology/production_candidate/mysql8/V9__u07_clinical_receipts_no_dispatch.sql'
       - 'tools/u07_d5_o2_tx_topology/production_candidate/oracle/V9__u07_clinical_receipts_no_dispatch.sql'
+      - 'tools/u07_d5_o2_tx_topology/production_candidate/U07_V9_HOST_DEPLOYMENT_READINESS.md'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06ExecutionResult.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06NonProductionPhysicalF3DecisionProvider.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionF3A1U05Flow.java'
