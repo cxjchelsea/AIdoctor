@@ -441,9 +441,11 @@ public class U07ClinicalHostServiceMysqlTest {
                             .get("unified-gap")).get("status"));
             assertEquals(1, ctx.getBean(com.aidoctor.diagnosis.repository.CDPVersionRepository.class)
                     .findByCdpIdOrderByVersionNumberDesc(id).size());
-            assertThrows(IllegalStateException.class, () -> service.execute(request, decision, null,
-                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier.Evidence(
-                            "ALLOWED", "nonprod-evidence")));
+            assertEquals(
+                    com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult.ADMISSION_REJECTED,
+                    service.execute(request, decision, null,
+                            new com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier.Evidence(
+                                    "ALLOWED", "nonprod-evidence")).getStatus());
             assertEquals(9, repo.findById(id).get().getVersion().intValue());
         }
     }
