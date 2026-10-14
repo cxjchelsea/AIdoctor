@@ -3,7 +3,6 @@ package com.aidoctor.diagnosis.controller;
 import com.aidoctor.diagnosis.runtime.u01.U01NaturalLanguageStartService;
 import com.aidoctor.diagnosis.runtime.u01.U01RawStartCommand;
 import com.aidoctor.diagnosis.runtime.u01.U01Result;
-import com.aidoctor.diagnosis.runtime.u01.V1NonProductionClinicalIngressController;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.env.MapPropertySource;
