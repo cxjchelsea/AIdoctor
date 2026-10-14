@@ -198,6 +198,65 @@ public class U07U06SelectionPhysicalMysqlTest {
             assertEquals(0, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM u07_question_wait_evidence WHERE cdp_id=?",
                     Integer.class, id).intValue());
+
+            // Independent disposable MySQL consultation fixture. The WAIT
+            // transitions themselves use actual governed JPA owners.
+            jdbc.update("INSERT INTO clinical_consultation "
+                    + "(consultation_id,row_version,cdp_id,user_id,lifecycle_status,"
+                    + "subject_status,problem_status,scope_decision,"
+                    + "early_safety_signal,start_event_id,created_at) "
+                    + "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    request.getConsultationId(), 0L, id, "synthetic-person", "ACTIVE",
+                    "KNOWN", "PRESENT", "IN_SCOPE", false,
+                    "synthetic-start-" + id, java.sql.Timestamp.valueOf(
+                            java.time.LocalDateTime.of(2026, 10, 14, 0, 0)));
+            com.aidoctor.diagnosis.runtime.u01.ConsultationRepository consultations =
+                    ctx.getBean(com.aidoctor.diagnosis.runtime.u01.ConsultationRepository.class);
+            com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRepository waitEffects =
+                    ctx.getBean(com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRepository.class);
+            com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRepository threads =
+                    ctx.getBean(com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRepository.class);
+            com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRepository checkpoints =
+                    ctx.getBean(com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRepository.class);
+            com.aidoctor.diagnosis.runtime.u06.U07ExistingU06WaitAuthority actualWait =
+                    new com.aidoctor.diagnosis.runtime.u06.U07ExistingU06WaitAuthority(
+                            new com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitTransitionService(
+                                    consultations, waitEffects),
+                            new com.aidoctor.diagnosis.runtime.u06.wait.U06WaitCoordinator(
+                                    new com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointService(
+                                            threads, checkpoints),
+                                    new com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadWaitTransitionService(
+                                            threads, checkpoints)));
+            U07NonProductionDeliveryWaitRecovery physicalWait =
+                    new U07NonProductionDeliveryWaitRecovery(cdps, jdbc, tx, committer,
+                            fixtureVerifier, (receipt, version) ->
+                                    tx.execute(status -> actualWait.establish(receipt, version)));
+            U07NonProductionDeliveryWaitRecovery.WaitReceipt persistedWait =
+                    physicalWait.recover(fixture);
+            assertNotNull(persistedWait);
+            assertEquals("WAITING_USER", consultations.findById(
+                    request.getConsultationId()).get().getLifecycleStatus());
+            assertEquals("AWAITING_USER", threads.findById(
+                    request.getThreadId()).get().getRuntimeStatus());
+            assertTrue(checkpoints.findById(persistedWait.checkpointId).isPresent());
+            assertTrue(waitEffects.findById(persistedWait.waitEffectId).isPresent());
+            assertEquals(1, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_question_wait_evidence WHERE cdp_id=?",
+                    Integer.class, id).intValue());
+
+            // Recreate the recovery service and assert full durable readback.
+            U07NonProductionDeliveryWaitRecovery afterRestart =
+                    new U07NonProductionDeliveryWaitRecovery(cdps, jdbc, tx, committer,
+                            fixtureVerifier, (receipt, version) -> {
+                                throw new AssertionError("Completed WAIT must not be reissued");
+                            });
+            U07NonProductionDeliveryWaitRecovery.WaitReceipt replay =
+                    afterRestart.recover(fixture);
+            assertEquals(persistedWait.waitEffectId, replay.waitEffectId);
+            assertEquals(persistedWait.checkpointId, replay.checkpointId);
+            assertEquals(persistedWait.eligibilityId, replay.eligibilityId);
+            assertEquals(10, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(2, history.findByCdpIdOrderByVersionNumberDesc(id).size());
         }
     }
 }
