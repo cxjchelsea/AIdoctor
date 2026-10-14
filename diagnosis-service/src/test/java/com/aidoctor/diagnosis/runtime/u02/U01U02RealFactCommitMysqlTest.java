@@ -37,7 +37,31 @@ import static org.mockito.ArgumentMatchers.*;
  */
 public class U01U02RealFactCommitMysqlTest {
     @Test
-    public void actualU01ThenU02CommitsUnknownWithTraceAndVersion() {
+    public void cautionProducesRestrictedGate() {
+        runScenario("caution", U03GateCClinicalInput.builder()
+                .suspectedSepsis("TRUE")
+                .measurement("respiratory_rate_bpm", U03GateCClinicalInput.Measurement.present(21))
+                .measurement("systolic_bp_mmHg", U03GateCClinicalInput.Measurement.present(120))
+                .measurement("usual_systolic_bp_mmHg", U03GateCClinicalInput.Measurement.present(120))
+                .measurement("heart_rate_bpm", U03GateCClinicalInput.Measurement.present(80))
+                .build(), "CAUTION", U04SafetyGateDecision.RESTRICTED);
+    }
+
+    @Test
+    public void highRiskMustBlock() {
+        runScenario("high", U03GateCClinicalInput.builder()
+                .evidence("EV-RF-RESP-001", "PRESENT")
+                .build(), "HIGH_RISK", U04SafetyGateDecision.BLOCKED);
+    }
+
+    @Test
+    public void completeNoHighRiskSignalCanAllow() {
+        runScenario("none", U03GateCClinicalInput.builder().build(),
+                "NO_HIGH_RISK_SIGNAL", U04SafetyGateDecision.ALLOW);
+    }
+
+    private void runScenario(String scenario, U03GateCClinicalInput scenarioInput,
+            String expectedRisk, String expectedGate) {
         Assumptions.assumeTrue("DISPOSABLE_U01_U02_ONLY".equals(
                 System.getenv("V1_U01_U02_MYSQL_MODE")));
         try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(
@@ -67,7 +91,8 @@ public class U01U02RealFactCommitMysqlTest {
                     ctx.getBean(ConsultationRepository.class), u01Gateway, business);
             final String raw = "synthetic symptom: I do not know if headache is present";
             U01RawStartCommand rawStart = new U01RawStartCommand(
-                    "real-u01-u02-event", "real-u01-u02-idem", "synthetic-person", raw, null);
+                    "real-u01-u02-event-" + scenario, "real-u01-u02-idem-" + scenario,
+                    "synthetic-person", raw, null);
             U01Result created = tx.execute(status -> start.start(rawStart));
             assertEquals("U02", created.getNextUnit());
             assertEquals(1, cdps.findById(created.getCdpId()).get().getVersion().intValue());
@@ -154,30 +179,21 @@ public class U01U02RealFactCommitMysqlTest {
             CapabilityInvocationGuard riskGuard = mock(CapabilityInvocationGuard.class);
             when(riskGuard.authorize(eq(U03GovernedCandidateGateway.BINDING_ID),
                     eq("C02"), any())).thenReturn(riskBinding);
-            U03GateCClinicalInputPort input = (cmd, accepted) ->
-                    U03GateCClinicalInput.builder().suspectedSepsis("TRUE")
-                            .measurement("respiratory_rate_bpm",
-                                    U03GateCClinicalInput.Measurement.present(21))
-                            .measurement("systolic_bp_mmHg",
-                                    U03GateCClinicalInput.Measurement.present(120))
-                            .measurement("usual_systolic_bp_mmHg",
-                                    U03GateCClinicalInput.Measurement.present(120))
-                            .measurement("heart_rate_bpm",
-                                    U03GateCClinicalInput.Measurement.present(80)).build();
+            U03GateCClinicalInputPort input = (cmd, accepted) -> scenarioInput;
             U03GovernedCandidateGateway governedGateway = new U03GovernedCandidateGateway(
                     riskGuard, new U03ReleaseRegistry(),
                     new U03GateCFrozenRuleEvaluator(input), true);
             U03GovernedCandidateGateway.GovernedResult governed = governedGateway.assess(admitted);
             U03DecisionOutcome riskDecision = new U03DecisionService(
                     new U03GateCFrozenDecisionPort()).decide(admitted, governed);
-            assertEquals("CAUTION", riskDecision.getOutcomeCode());
+            assertEquals(expectedRisk, riskDecision.getOutcomeCode());
             U03StateProposal riskProposal = new U03StateProposalFactory()
                     .createNonProductionValid(admitted, riskDecision, governed);
             com.aidoctor.contracts.v1.StateTypes.CommitResult riskCommit =
                     tx.execute(status -> new U03CommitService(committer).commitNonProduction(admitted, riskProposal));
             assertEquals("COMMITTED", riskCommit.status, "P01 reason=" + riskCommit.reasonCode);
             assertEquals(Integer.valueOf(3), riskCommit.committedVersion);
-            assertEquals("CAUTION", ((Map<?,?>) cdps.findById(created.getCdpId())
+            assertEquals(expectedRisk, ((Map<?,?>) cdps.findById(created.getCdpId())
                     .get().getPatientState().get("current_risk_assessment")).get("outcome_code"));
             java.util.List<U03RuntimeTraceRecord> recorded = new java.util.ArrayList<>();
             U03PostCommitFinalizationOutcome finalized = new U03PostCommitFinalizer(
@@ -191,10 +207,10 @@ public class U01U02RealFactCommitMysqlTest {
             U04ExecutionResult gated = tx.execute(status -> safety.applyU04(riskHandoff,
                     U04ScopeContext.current(true, true), "ci-nonprod-safety"));
             assertEquals(U04ExecutionResult.COMMIT_COMPLETE, gated.getStatus());
-            assertEquals(U04SafetyGateDecision.RESTRICTED, gated.getDecision().getGate());
+            assertEquals(expectedGate, gated.getDecision().getGate());
             assertEquals("COMMITTED", gated.getCommitResult().status);
             assertEquals(Integer.valueOf(4), gated.getCommitResult().committedVersion);
-            assertEquals("RESTRICTED", ((Map<?,?>) cdps.findById(created.getCdpId())
+            assertEquals(expectedGate, ((Map<?,?>) cdps.findById(created.getCdpId())
                     .get().getPatientState().get("safety_gate")).get("safety_gate"));
             assertEquals(4, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
                     created.getCdpId()).size());
