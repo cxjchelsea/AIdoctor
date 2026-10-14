@@ -70,8 +70,21 @@ jobs:
             < diagnosis-service/src/main/resources/db/migration/V2__create_clinical_runtime_foundation.sql
           mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 \
             < diagnosis-service/src/main/resources/db/migration/V3__create_clinical_consultation.sql
-          mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 -e \
-            'ALTER TABLE clinical_consultation ADD COLUMN current_wait_effect_id VARCHAR(128) NULL;'
+          mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 <<'SQL'
+          ALTER TABLE clinical_consultation ADD COLUMN current_wait_effect_id VARCHAR(128) NULL;
+          CREATE TABLE cdp_version (
+            id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            cdp_id VARCHAR(64),
+            version_number INT,
+            cdp_data LONGTEXT,
+            create_time DATETIME,
+            KEY idx_u01_u02_version (cdp_id, version_number)
+          ) ENGINE=InnoDB;
+          SQL
+          mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 \
+            < diagnosis-service/src/main/resources/db/migration/V4__create_capability_governance_foundation.sql
+          mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 \
+            < diagnosis-service/src/main/resources/db/migration/V5__extend_capability_trace.sql
       - name: Execute exact Spring JPA/MySQL8 authoritative identity readback
         run: |
           set -euo pipefail

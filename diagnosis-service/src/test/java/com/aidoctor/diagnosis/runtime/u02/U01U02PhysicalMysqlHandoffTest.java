@@ -1,6 +1,10 @@
 package com.aidoctor.diagnosis.runtime.u02;
 
 import com.aidoctor.diagnosis.entity.CDP;
+import com.aidoctor.diagnosis.entity.CDPVersion;
+import com.aidoctor.diagnosis.repository.CDPVersionRepository;
+import com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRecord;
+import com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRepository;
 import com.aidoctor.diagnosis.repository.CDPRepository;
 import com.aidoctor.diagnosis.runtime.foundation.*;
 import com.aidoctor.diagnosis.runtime.u01.*;
@@ -49,7 +53,8 @@ public class U01U02PhysicalMysqlHandoffTest {
             includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                     classes = {ConsultationRepository.class, RuntimeBindingRepository.class,
                             ClinicalRunRepository.class, CanonicalBusinessEventRepository.class,
-                            CDPRepository.class}))
+                            CDPRepository.class, CDPVersionRepository.class,
+                            CapabilityCallTraceRepository.class}))
     public static class DatabaseConfig {
         @Bean(destroyMethod = "close")
         public HikariDataSource dataSource() {
@@ -72,6 +77,8 @@ public class U01U02PhysicalMysqlHandoffTest {
             emf.setPersistenceUnitPostProcessors(unit -> {
                 unit.getManagedClassNames().clear();
                 unit.getManagedClassNames().add(CDP.class.getName());
+                unit.getManagedClassNames().add(CDPVersion.class.getName());
+                unit.getManagedClassNames().add(CapabilityCallTraceRecord.class.getName());
                 unit.getManagedClassNames().add(ConsultationRecord.class.getName());
                 unit.getManagedClassNames().add(RuntimeBindingRecord.class.getName());
                 unit.getManagedClassNames().add(ClinicalRunRecord.class.getName());
