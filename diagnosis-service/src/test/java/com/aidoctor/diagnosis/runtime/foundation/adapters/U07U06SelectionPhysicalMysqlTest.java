@@ -452,7 +452,7 @@ public class U07U06SelectionPhysicalMysqlTest {
         fact.setRawTextRef("sha256:synthetic-answer-evidence");
         fact.setValueSemantics("NO");
         fact.setSourceType("PATIENT_REPORTED");
-        fact.setLifecycle("CURRENT");
+        fact.setLifecycle("CONFIRMED");
         fact.setConfidenceOrUncertainty(0.95d);
         fact.setProvenance(java.util.Collections.singletonList("synthetic-only"));
         fact.setAmbiguityFlags(java.util.Collections.emptyList());
