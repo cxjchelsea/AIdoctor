@@ -484,6 +484,111 @@ public class U07ClinicalHostServiceMysqlTest {
     }
 
     @Test
+    public void unifiedPhysicalMode2SelectsDurablyWithoutDeliveryAndMode3ReadsCurrentF3() {
+        try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
+            ctx.register(U07WorkpackACdpPhysicalMysqlTest.IsolatedConfig.class,
+                    ScopedTestCommitter.class);
+            ctx.refresh();
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            String id = "u06-mode23-" + UUID.randomUUID().toString();
+            tx.execute(status -> {
+                CDP cdp = CDP.builder().id(id).patientId("synthetic-only")
+                        .sessionId("synthetic-only").version(8).build();
+                Map<String,Object> patient = new LinkedHashMap<String,Object>();
+                patient.put("questions", new LinkedHashMap<String,Object>());
+                Map<String,Object> f3 = new LinkedHashMap<String,Object>();
+                f3.put("f3_canonical_effect_id", "f3-current-effect");
+                patient.put("f3_gap_assessment", f3);
+                cdp.setPatientState(patient);
+                repo.saveAndFlush(cdp);
+                return null;
+            });
+            com.aidoctor.diagnosis.runtime.u06.U06AdmissionService admission =
+                    new com.aidoctor.diagnosis.runtime.u06.U06AdmissionService();
+            com.aidoctor.diagnosis.runtime.u06.U06ProfileBApplicationService unified =
+                    new com.aidoctor.diagnosis.runtime.u06.U06ProfileBApplicationService(
+                            new com.aidoctor.diagnosis.runtime.u06.U06NonProductionPhysicalMode23Service(
+                                    new com.aidoctor.diagnosis.runtime.u06.U06NonProductionPhysicalMode1Service(
+                                            repo, ctx.getBean(StateCommitter.class), admission,
+                                            new com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier()),
+                                    repo, ctx.getBean(StateCommitter.class), admission));
+            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest mode2 =
+                    new com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest(
+                            "mode2-physical", "consult-mode23", id,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.U05_QUESTION_ROUTING,
+                            "source-u05", 8, 8,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
+                            "synthetic-dependency", "f3-policy", "question-policy", "d04-policy",
+                            "canonical-mode2", "business-mode2", "thread-1", "run-1", 0L,
+                            "correlation", "trace", "2026-09-18T00:00:00Z",
+                            com.aidoctor.diagnosis.runtime.u06.U06AdmissionEvidence.syntheticCurrentAllow());
+            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle selected =
+                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle(
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.NOT_DECIDABLE,
+                            "f3-current-effect", null, null, false,
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.CONTINUE,
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.SELECTED,
+                            "question-effect-1", "question-1", "semantic-question-1",
+                            "content-ref-1", "content-fingerprint-1", null, null);
+            com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult selection =
+                    unified.execute(mode2, selected, null);
+            assertEquals(com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult.MODE2_SELECTION_PERSISTED,
+                    selection.getStatus());
+            assertEquals("COMMITTED", selection.getCommitStatus());
+            assertNull(selection.getDeliveryId());
+            assertNull(selection.getWaitEffectId());
+            assertNull(selection.getCheckpointId());
+            CDP persisted = repo.findById(id).get();
+            assertEquals(9, persisted.getVersion().intValue());
+            assertFalse(persisted.getPatientState().containsKey("pending_question"));
+            Map<?,?> selectedQuestion = (Map<?,?>) ((Map<?,?>)
+                    persisted.getPatientState().get("questions")).get("question-1");
+            assertEquals("SELECTED", selectedQuestion.get("status"));
+            assertEquals("question-effect-1", selectedQuestion.get("selection_effect_id"));
+            assertEquals(1, ctx.getBean(com.aidoctor.diagnosis.repository.CDPVersionRepository.class)
+                    .findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertEquals(com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult.ADMISSION_REJECTED,
+                    unified.execute(mode2, selected, null).getStatus());
+            assertEquals(9, repo.findById(id).get().getVersion().intValue());
+
+            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest mode3 =
+                    new com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest(
+                            "mode3-physical", "consult-mode23", id,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.F3_CURRENT_VERSION_REVALIDATION,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.POST_F3_SAFETY_BARRIER_ROUTING,
+                            "source-post-f3", 9, 9,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
+                            "synthetic-dependency", "f3-policy", null, null,
+                            "canonical-mode3", "business-mode3", null, null, 0L,
+                            "correlation", "trace", "2026-09-18T00:00:00Z",
+                            com.aidoctor.diagnosis.runtime.u06.U06AdmissionEvidence.syntheticCurrentAllow());
+            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle current =
+                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle(
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.NOT_DECIDABLE,
+                            "f3-current-effect", null, null, false,
+                            null, null, null, null, null, null, null,
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.REVALIDATED_CURRENT,
+                            "mode3-current-ref");
+            assertEquals(com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult.REVALIDATED_CURRENT,
+                    unified.execute(mode3, current, null).getStatus());
+            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle forged =
+                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle(
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.NOT_DECIDABLE,
+                            "forged-f3-effect", null, null, false,
+                            null, null, null, null, null, null, null,
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.REVALIDATED_CURRENT,
+                            "mode3-forged-ref");
+            assertEquals(com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult.REASSESSMENT_REQUIRED,
+                    unified.execute(mode3, forged, null).getStatus());
+            assertEquals(9, repo.findById(id).get().getVersion().intValue());
+        }
+    }
+
+    @Test
     public void disabledByDefaultProvidesNoClinicalHostServices() {
         try (AnnotationConfigApplicationContext ctx =
                      new AnnotationConfigApplicationContext(U07ClinicalHostServicesConfig.class)) {
