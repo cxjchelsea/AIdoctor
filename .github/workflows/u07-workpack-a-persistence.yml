@@ -195,7 +195,7 @@ jobs:
           clinical=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07ClinicalHostServiceMysqlTest.xml")
           assert len(clinical)==1,clinical
           host=ET.parse(clinical[0]).getroot()
-          assert int(host.get("tests",-1))==7
+          assert int(host.get("tests",-1))==8
           assert all(int(host.get(k,-1))==0 for k in ("failures","errors","skipped"))
           print("U07_WORKPACK_A_REAL_SPRING_JPA_MYSQL8_CDP_AND_HOST_U04=PASS")
           PY
