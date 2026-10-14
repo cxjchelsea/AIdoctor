@@ -283,7 +283,15 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
             CDPRepository repo = ctx.getBean(CDPRepository.class);
             StateRepositoryPort physical = ctx.getBean(StateRepositoryPort.class);
             TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
-            String id = tx.execute(status -> seed(repo));
+            String id = tx.execute(status -> {
+                String seeded = seed(repo);
+                CDP cdp = repo.findById(seeded).get();
+                Map<String,Object> initial = new LinkedHashMap<String,Object>();
+                initial.put("information_gaps", new LinkedHashMap<String,Object>());
+                cdp.setPatientState(initial);
+                repo.saveAndFlush(cdp);
+                return seeded;
+            });
             com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest request =
                     new com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest(
                             "mode1-physical-request", "consult-mode1", id,
