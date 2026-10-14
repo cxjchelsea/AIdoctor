@@ -5,6 +5,8 @@ import com.aidoctor.diagnosis.repository.CDPRepository;
 import com.aidoctor.diagnosis.runtime.foundation.adapters.U07ClinicalHostServicesConfig;
 import com.aidoctor.diagnosis.runtime.foundation.adapters.U07WorkpackACdpPhysicalMysqlTest;
 import com.aidoctor.diagnosis.runtime.u04.*;
+import com.aidoctor.diagnosis.runtime.u05.*;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.ClinicalCdpReadbackAdapter;
 import com.aidoctor.diagnosis.state.committer.StateCommitter;
 import com.aidoctor.diagnosis.state.committer.fakes.*;
 import com.aidoctor.diagnosis.state.committer.ports.*;
@@ -24,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class U07ClinicalHostServiceMysqlTest {
     private static final String ENV = "ci-nonprod-u07-host";
+    private static final String U05_ENV = "ci-nonprod-u05";
+    private static final int VERSION = 12;
 
     @Configuration
     static class ScopedTestCommitter {
@@ -41,6 +45,109 @@ public class U07ClinicalHostServiceMysqlTest {
                     new SyntheticAuditPortFake(clock, order),
                     new RecordingCommitEventEvidenceFake(order),
                     clock);
+        }
+    }
+
+    @Configuration
+    static class ScopedU05TestPorts {
+        @Bean U05AdmissionLedger u05AdmissionLedger() {
+            return new U05InMemoryAdmissionLedger();
+        }
+        @Bean U05RouteLedger u05RouteLedger() {
+            return new U05InMemoryRouteLedger();
+        }
+        @Bean U05RoutingCurrentnessPort u05RoutingCurrentnessPort() {
+            return (input, decision, evidence) -> new U05RoutingCurrentness(
+                    evidence.getCommittedClinicalStateVersion(),
+                    "u07-physical-route-" + evidence.getEffectId(),
+                    true, true, true, true, true,
+                    input.getAcceptedU04GateRef(),
+                    input.getGateValue(), input.getAcceptedRestrictedContextRef());
+        }
+        @Bean U05DownstreamPermissionPort u05DownstreamPermissionPort() {
+            return (input, evidence, currentness, consequence, targetUnit, action) ->
+                    new U05DownstreamPermissionDecision(
+                            "u07-physical-permission-" + targetUnit,
+                            input.getConsultationId(), input.getCdpId(),
+                            currentness.getCurrentU04GateRef(),
+                            input.getAcceptedRestrictedContextRef(),
+                            consequence, action, targetUnit,
+                            U05DownstreamPermissionDecision.PERMITTED,
+                            "u07-isolated-test-permission",
+                            "u07-isolated-permission-policy", "v1", "CURRENT");
+        }
+    }
+
+    @Test
+    public void u05ActualSpringServiceCommitsToMysqlWithExactReadbackAndControlledRoute() {
+        try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
+            Map<String,Object> flags = new HashMap<String,Object>();
+            flags.put("aidoctor.u07.clinical-host.nonproduction-enabled", "true");
+            flags.put("aidoctor.u07.persistence.readback-enabled", "true");
+            ctx.getEnvironment().getPropertySources().addFirst(
+                    new MapPropertySource("u07-physical-u05-test-opt-in", flags));
+            ctx.register(U07WorkpackACdpPhysicalMysqlTest.IsolatedConfig.class,
+                    ScopedTestCommitter.class, ScopedU05TestPorts.class,
+                    ClinicalCdpReadbackAdapter.class,
+                    U07ClinicalHostServicesConfig.class);
+            ctx.refresh();
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            tx.execute(status -> {
+                CDP cdp = CDP.builder().id("cdp-1").patientId("synthetic-only")
+                        .sessionId("synthetic-only").version(VERSION).build();
+                Map<String,Object> initial = new LinkedHashMap<String,Object>();
+                Map<String,Object> gate = new LinkedHashMap<String,Object>();
+                gate.put("safety_gate", U05ConsumerInboundRequest.GATE_ALLOW);
+                gate.put("source_u03_decision_ref", "synthetic-u03");
+                initial.put("safety_gate", gate);
+                cdp.setPatientState(initial);
+                repo.saveAndFlush(cdp);
+                return null;
+            });
+
+            U05NonProductionApplicationService application =
+                    ctx.getBean(U05NonProductionApplicationService.class);
+            String context = U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT;
+            List<U05ReadinessInput> inputs = Arrays.asList(
+                    present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                    present(U05ReadinessInput.F3, U05ReadinessInput.CAN_ASK_MORE, VERSION),
+                    applicability(U05ReadinessInput.F5, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION),
+                    applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION));
+            U05ReadinessInputManifest manifest = manifest(context, VERSION, inputs);
+            U05ConsumerInboundRequest inbound = request(manifest, context,
+                    U05ConsumerInboundRequest.GATE_ALLOW, null, null, U05_ENV);
+            U05AdmissionAuthoritySnapshot authority = authority(context,
+                    U05ConsumerInboundRequest.GATE_ALLOW, null, null, true, U05_ENV, true);
+
+            U05ExecutionResult result = application.execute(inbound, manifest, authority);
+            assertEquals(U05ExecutionResult.ROUTING_COMPLETE, result.getStatus());
+            assertEquals("COMMITTED", result.getCommitResult().status);
+            assertEquals(U05DownstreamRoutingDecision.TO_U06_QUESTION_PATH,
+                    result.getRoutingDecision().getDownstreamConsequence());
+            assertEquals(U05DownstreamRoutingDecision.ELIGIBLE,
+                    result.getRoutingDecision().getRoutingStatus());
+            assertEquals(13, repo.findById("cdp-1").get().getVersion().intValue());
+            Map<String,Object> stored = repo.findById("cdp-1").get().getPatientState();
+            assertTrue(stored.get("clinical_readiness") instanceof Map<?,?>);
+            assertEquals("CAN_ASK_MORE",
+                    ((Map<?,?>)stored.get("clinical_readiness")).get("clinical_readiness"));
+            assertEquals(13, ctx.getBean(U05ClinicalReadinessSnapshotPort.class)
+                    .read("cdp-1", 13).getVersion());
+            assertThrows(IllegalStateException.class, () ->
+                    ctx.getBean(U05ClinicalReadinessSnapshotPort.class).read("cdp-1", 12));
+            assertEquals(1, ctx.getBean(
+                    com.aidoctor.diagnosis.repository.CDPVersionRepository.class)
+                    .findByCdpIdOrderByVersionNumberDesc("cdp-1").size());
+
+            // Exact replay may reattach the original successful decision, but
+            // MUST NOT duplicate persisted CDP or version history.
+            U05ExecutionResult replay = application.execute(inbound, manifest, authority);
+            assertEquals(U05ExecutionResult.ROUTING_COMPLETE, replay.getStatus());
+            assertEquals(13, repo.findById("cdp-1").get().getVersion().intValue());
+            assertEquals(1, ctx.getBean(
+                    com.aidoctor.diagnosis.repository.CDPVersionRepository.class)
+                    .findByCdpIdOrderByVersionNumberDesc("cdp-1").size());
         }
     }
 
@@ -116,4 +223,210 @@ public class U07ClinicalHostServiceMysqlTest {
                     .findByCdpIdOrderByVersionNumberDesc(id).size());
         }
     }
+    private static U05ReadinessInputManifest manifest(
+            String context,
+            int version,
+            List<U05ReadinessInput> inputs) {
+        String setIdentity = U05ReadinessInputManifest.semanticSetIdentity(
+                "consult-1",
+                "cdp-1",
+                version,
+                context,
+                U05ReadinessInputManifest.RDP05_CONTRACT_VERSION,
+                inputs);
+        return new U05ReadinessInputManifest(
+                "manifest-" + context,
+                setIdentity,
+                "consult-1",
+                "cdp-1",
+                version,
+                context,
+                U05ReadinessInputManifest.RDP05_CONTRACT_VERSION,
+                inputs);
+    }
+
+
+    private static U05ReadinessInput present(String domain, String signal, int version) {
+        return new U05ReadinessInput(
+                "input-" + domain + "-" + signal,
+                domain,
+                "owner-" + domain,
+                inputKind(domain),
+                U05ReadinessInput.PRESENT,
+                signal,
+                "consult-1",
+                "cdp-1",
+                version,
+                "decision-" + domain + "-" + signal,
+                "state-" + domain,
+                "app-evidence-" + domain,
+                Collections.singletonList("evidence-" + domain),
+                Collections.singletonList("rule-" + domain),
+                "2026-09-21T08:00:00Z",
+                U05ReadinessInput.CURRENT,
+                null);
+    }
+
+    private static U05ReadinessInput applicability(String domain, String status, int version) {
+        return new U05ReadinessInput(
+                "app-" + domain + "-" + status,
+                domain,
+                "owner-" + domain,
+                inputKind(domain),
+                status,
+                null,
+                "consult-1",
+                "cdp-1",
+                version,
+                "app-decision-" + domain + "-" + status,
+                "state-" + domain,
+                "app-evidence-" + domain + "-" + status,
+                Collections.singletonList("evidence-" + domain),
+                Collections.singletonList("rule-" + domain),
+                "2026-09-21T08:00:00Z",
+                U05ReadinessInput.CURRENT,
+                U05ReadinessInput.STALE.equals(status) ? "invalidation-" + domain : null);
+    }
+
+    private static String inputKind(String domain) {
+        if (U05ReadinessInput.F1.equals(domain)) return "SCOPE_OR_FRAMING";
+        if (U05ReadinessInput.F2_CLARIFICATION.equals(domain)) return "CLARIFICATION_REQUIREMENT";
+        if (U05ReadinessInput.F3.equals(domain)) return "ONLINE_INFORMATION_GAP";
+        if (U05ReadinessInput.F5.equals(domain)) return "DDX_OR_MUST_EXCLUDE";
+        return "OFFLINE_EVIDENCE";
+    }
+
+    private static U05ConsumerInboundRequest request(
+            U05ReadinessInputManifest manifest,
+            String context,
+            String gate,
+            String restrictedContext,
+            String restrictedPermission) {
+        return request(manifest, context, gate, restrictedContext, restrictedPermission, ENV);
+    }
+
+    private static U05ConsumerInboundRequest request(
+            U05ReadinessInputManifest manifest,
+            String context,
+            String gate,
+            String restrictedContext,
+            String restrictedPermission,
+            String environment) {
+        String routeSource = routeSource(context);
+        String routeConsequence;
+        if (U05ConsumerInboundRequest.CLINICAL_CONTINUATION_ROUTING.equals(routeSource)) {
+            routeConsequence = U05ConsumerInboundRequest.TO_U05_CLINICAL_READINESS;
+        } else if (U05ConsumerInboundRequest.U04_A1_POST_BARRIER_ROUTING.equals(routeSource)) {
+            routeConsequence = U05ConsumerInboundRequest.U05_ELIGIBLE;
+        } else {
+            routeConsequence = null;
+        }
+        return new U05ConsumerInboundRequest(
+                "request-1",
+                "consult-1",
+                "cdp-1",
+                VERSION,
+                "clinical-state-cdp-1-v12",
+                context,
+                routeSource,
+                "route-source-" + context,
+                routeConsequence,
+                "u04-gate-1",
+                "u04-gate-commit-1",
+                gate,
+                routeAuthType(context),
+                "route-auth-" + context,
+                "routing-policy-v1",
+                U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT.equals(context) ? "A1" : null,
+                restrictedContext,
+                restrictedPermission,
+                manifest.getManifestRef(),
+                manifest.getSetIdentity(),
+                manifest.authoritativeRecordRefs(),
+                "canonical-event-1",
+                "business-event-1",
+                "corr-1",
+                "trace-1",
+                U05AdmissionService.CONTRACT_VERSION,
+                environment,
+                "2026-09-21T08:00:00Z");
+    }
+
+    private static U05AdmissionAuthoritySnapshot authority(
+            String context,
+            String gate,
+            String restrictedContext,
+            String restrictedPermission,
+            boolean restrictedPermitted) {
+        return authority(context, gate, restrictedContext, restrictedPermission, restrictedPermitted, ENV, true);
+    }
+
+    private static U05AdmissionAuthoritySnapshot authority(
+            String context,
+            String gate,
+            String restrictedContext,
+            String restrictedPermission,
+            boolean restrictedPermitted,
+            String environment,
+            boolean environmentAuthorized) {
+        String routeSource = routeSource(context);
+        String consequence;
+        if (U05ConsumerInboundRequest.CLINICAL_CONTINUATION_ROUTING.equals(routeSource)) {
+            consequence = U05ConsumerInboundRequest.TO_U05_CLINICAL_READINESS;
+        } else if (U05ConsumerInboundRequest.U04_A1_POST_BARRIER_ROUTING.equals(routeSource)) {
+            consequence = U05ConsumerInboundRequest.U05_ELIGIBLE;
+        } else {
+            consequence = null;
+        }
+        boolean a1 = U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT.equals(context);
+        return new U05AdmissionAuthoritySnapshot(
+                "consult-1",
+                "cdp-1",
+                VERSION,
+                "clinical-state-cdp-1-v12",
+                environment,
+                environmentAuthorized,
+                true,
+                true,
+                "u04-gate-1",
+                "u04-gate-commit-1",
+                gate,
+                true,
+                "route-source-" + context,
+                routeAuthType(context),
+                "route-auth-" + context,
+                consequence,
+                "routing-policy-v1",
+                restrictedContext,
+                restrictedPermission,
+                restrictedPermitted,
+                a1 ? "A1" : null,
+                a1,
+                a1,
+                a1,
+                false,
+                null);
+    }
+
+    private static String routeSource(String context) {
+        if (U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT.equals(context)) {
+            return U05ConsumerInboundRequest.U04_A1_POST_BARRIER_ROUTING;
+        }
+        if (U05ConsumerInboundRequest.POST_SAFETY_INITIAL.equals(context)) {
+            return U05ConsumerInboundRequest.U04_ORDINARY_ROUTING;
+        }
+        return U05ConsumerInboundRequest.CLINICAL_CONTINUATION_ROUTING;
+    }
+
+    private static String routeAuthType(String context) {
+        if (U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT.equals(context)) {
+            return "U04_A1_ROUTING_AUTHORIZATION";
+        }
+        if (U05ConsumerInboundRequest.POST_SAFETY_INITIAL.equals(context)) {
+            return "U04_ORDINARY_ROUTING_AUTHORIZATION";
+        }
+        return "CLINICAL_CONTINUATION_ROUTING_DECISION";
+    }
+
+
 }
