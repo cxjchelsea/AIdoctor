@@ -698,6 +698,10 @@ public class U07ClinicalHostServiceMysqlTest {
             assertEquals("checkpoint-1",restarted.recover(receipt).checkpointId);
             assertEquals("checkpoint-1",restarted.recover(receipt).checkpointId);
             assertEquals(2,waitCalls.get());
+            restarted.accept(receipt); // duplicate inbound confirmation after completed wait
+            assertEquals(1,jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_question_delivery_evidence WHERE cdp_id=?",
+                    Integer.class,id).intValue());
             assertEquals(9,repo.findById(id).get().getVersion().intValue());
             assertEquals(1,ctx.getBean(com.aidoctor.diagnosis.repository.CDPVersionRepository.class)
                     .findByCdpIdOrderByVersionNumberDesc(id).size());
