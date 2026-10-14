@@ -524,8 +524,17 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
                     writer.attemptAtomicCommit(clinicalPatch(id, 8,
                             "/patient_state/f3_gap_assessment", "intake-f3",
                             "f3_canonical_effect_id", effect)).status);
+            java.util.concurrent.atomic.AtomicBoolean independentlyApproved =
+                    new java.util.concurrent.atomic.AtomicBoolean(false);
+            U07PersistedF3OwnerBarrierRevalidationEvidence.TrustedEvidenceVerifier trusted =
+                    (consultation, cdp, version, f3, owner, barrier, revalidation, route) ->
+                            independentlyApproved.get()
+                            && "owner-commit-1".equals(owner)
+                            && "barrier-1".equals(barrier)
+                            && "reval-1".equals(revalidation)
+                            && "route-auth-1".equals(route);
             U07PersistedF3OwnerBarrierRevalidationEvidence evidence =
-                    new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc);
+                    new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc, trusted);
             U07DurableNonProductionA1Issuer issuer = new U07DurableNonProductionA1Issuer(
                     repo, jdbc, tx, evidence);
             assertThrows(IllegalStateException.class,
@@ -544,13 +553,17 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
             assertThrows(IllegalStateException.class,
                     () -> issuer.issue("consult-1", id, 9));
             jdbc.update("UPDATE u07_f3_barrier_evidence SET outcome='ALLOWED' WHERE cdp_id=?", id);
+            // DB status mutation alone MUST NOT turn BLOCKED into authorized A1.
+            assertThrows(IllegalStateException.class,
+                    () -> issuer.issue("consult-1", id, 9));
+            independentlyApproved.set(true); // test-only independently injected proof
             assertEquals("reval-1", issuer.issue("consult-1", id, 9).revalidationRef);
             assertEquals(1, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM u07_a1_attestation WHERE cdp_id=?",
                     Integer.class, id).intValue());
             assertEquals("owner-effect-1", new ClinicalCdpF3BoundA1AuthorityPort(
                     repo, new U07DurableNonProductionA1Issuer(repo, jdbc, tx,
-                            new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc)))
+                            new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc, trusted)))
                     .loadCurrent("consult-1", id, 9).f3CommitRef);
 
             assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
