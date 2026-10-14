@@ -26,14 +26,14 @@ def inspect(repo: Path) -> dict:
             "v7_v8_auto_scanned": any(v >= 7 for v in versions),
         }
     source_v1 = (repo / MIGRATION / "V1__create_agent_state_and_audit_trail.sql").read_text(encoding="utf-8")
-    clob = len(re.findall(r"\\bCLOB\\b", source_v1))
+    clob = len(re.findall(r"\bCLOB\b", source_v1))
     expected_candidates = [
         repo / CANDIDATE / vendor / ("V" + str(v) + "__" + suffix + ".sql")
         for vendor in ("mysql8", "oracle")
         for v, suffix in ((7, "u07_recovery_claim"), (8, "u07_outbox_no_dispatch"))
     ]
     config = (repo / "diagnosis-service/src/main/resources/application.yml").read_text(encoding="utf-8")
-    active = re.search(r"(?m)^\\s*active:\\s*(\\S+)", config)
+    active = re.search(r"(?m)^\s*active:\s*(\S+)", config)
     observations = {
         "main_app_default_profile": active.group(1) if active else "UNRESOLVED",
         "flyway": paths,
