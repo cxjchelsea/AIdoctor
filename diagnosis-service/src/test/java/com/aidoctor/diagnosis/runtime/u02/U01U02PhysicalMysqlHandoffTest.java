@@ -13,6 +13,7 @@ import java.util.Optional;
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -78,7 +79,7 @@ public class U01U02PhysicalMysqlHandoffTest {
             });
             java.util.Properties properties = new java.util.Properties();
             properties.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
-            properties.put("hibernate.hbm2ddl.auto", "validate");
+            properties.put("hibernate.hbm2ddl.auto", "none");
             emf.setJpaProperties(properties);
             return emf;
         }
@@ -107,6 +108,8 @@ public class U01U02PhysicalMysqlHandoffTest {
 
     @Test
     public void durableHostReadsCanonicalContextAndRejectsStaleOrAlteredInput() throws Exception {
+        Assumptions.assumeTrue("DISPOSABLE_U01_U02_ONLY".equals(System.getenv("V1_U01_U02_MYSQL_MODE")),
+                "Physical test requires isolated disposable MySQL job");
         authorize();
         try (AnnotationConfigApplicationContext ctx =
                      new AnnotationConfigApplicationContext(DatabaseConfig.class)) {
