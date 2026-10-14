@@ -401,6 +401,88 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
     }
 
     @Test
+    public void durableIndependentA1IssuerWritesOneTransactionalReceiptAndRejectsStaleReplays() {
+        authorize();
+        try (AnnotationConfigApplicationContext ctx =
+                     new AnnotationConfigApplicationContext(IsolatedConfig.class)) {
+            JdbcTemplate jdbc = ctx.getBean(JdbcTemplate.class);
+            jdbc.execute("CREATE TABLE IF NOT EXISTS u07_a1_attestation ("
+                    + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                    + "cdp_version INT NOT NULL, f3_effect_id VARCHAR(128) NOT NULL, "
+                    + "barrier_ref VARCHAR(128) NOT NULL, revalidation_ref VARCHAR(128) NOT NULL, "
+                    + "route_source_ref VARCHAR(128) NOT NULL, "
+                    + "route_authorization_ref VARCHAR(128) NOT NULL, "
+                    + "routing_policy_version VARCHAR(128) NOT NULL, "
+                    + "PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            StateRepositoryPort writer = ctx.getBean(StateRepositoryPort.class);
+            String id = tx.execute(status -> seed(repo));
+            java.util.concurrent.atomic.AtomicBoolean barrier =
+                    new java.util.concurrent.atomic.AtomicBoolean(false);
+            U07DurableNonProductionA1Issuer.VerifiedPostF3EvidencePort verified =
+                    (consultation, cdp, version, effect) ->
+                            new U07DurableNonProductionA1Issuer.VerifiedEvidence(
+                                    effect, "verified-barrier", "verified-revalidation",
+                                    "verified-route-source", "verified-route-authorization",
+                                    "U07_NONPROD_TEST_V1", barrier.get(), true, true);
+            U07DurableNonProductionA1Issuer issuer = new U07DurableNonProductionA1Issuer(
+                    repo, jdbc, tx, verified);
+
+            assertThrows(IllegalStateException.class,
+                    () -> issuer.issue("consult-1", id, 8));
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    writer.attemptAtomicCommit(clinicalPatch(id, 8,
+                            "/patient_state/f3_gap_assessment", "durable-f3",
+                            "f3_canonical_effect_id", "durable-effect")).status);
+            assertThrows(IllegalStateException.class,
+                    () -> issuer.issue("consult-1", id, 9));
+            assertEquals(0, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_a1_attestation WHERE cdp_id=?",
+                    Integer.class, id).intValue());
+
+            barrier.set(true);
+            U04A1U05AuthorityBridge.A1BarrierAuthority original =
+                    issuer.issue("consult-1", id, 9);
+            assertEquals("durable-effect", original.f3CommitRef);
+            assertEquals("verified-barrier", original.barrierRef);
+            assertEquals("durable-effect", issuer.issue("consult-1", id, 9).f3CommitRef);
+            assertEquals(1, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_a1_attestation WHERE cdp_id=?",
+                    Integer.class, id).intValue());
+
+            // Fresh issuer proves a durable DB read, not process-local memory.
+            U07DurableNonProductionA1Issuer restarted = new U07DurableNonProductionA1Issuer(
+                    repo, jdbc, tx, verified);
+            ClinicalCdpF3BoundA1AuthorityPort consumer =
+                    new ClinicalCdpF3BoundA1AuthorityPort(repo, restarted);
+            assertEquals("verified-revalidation",
+                    consumer.loadCurrent("consult-1", id, 9).revalidationRef);
+
+            U07DurableNonProductionA1Issuer changed = new U07DurableNonProductionA1Issuer(
+                    repo, jdbc, tx, (consultation, cdp, version, effect) ->
+                            new U07DurableNonProductionA1Issuer.VerifiedEvidence(
+                                    effect, "different-barrier", "verified-revalidation",
+                                    "verified-route-source", "verified-route-authorization",
+                                    "U07_NONPROD_TEST_V1", true, true, true));
+            assertThrows(IllegalStateException.class,
+                    () -> changed.issue("consult-1", id, 9));
+            assertThrows(IllegalStateException.class,
+                    () -> consumer.loadCurrent("consult-1", id, 8));
+
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    writer.attemptAtomicCommit(clinicalPatch(id, 9,
+                            "/patient_state/another_state", "version-bump",
+                            "reason", "synthetic-unrelated")).status);
+            assertThrows(IllegalStateException.class,
+                    () -> consumer.loadCurrent("consult-1", id, 9));
+            assertEquals(1, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM u07_a1_attestation WHERE cdp_id=?",
+                    Integer.class, id).intValue());
+        }
+    }
+
+    @Test
     public void noPartialCdpWriteOnInvalidSecondOperation() {
         authorize();
         try (AnnotationConfigApplicationContext ctx =
