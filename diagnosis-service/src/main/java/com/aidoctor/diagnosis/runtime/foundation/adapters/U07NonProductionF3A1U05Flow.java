@@ -74,6 +74,19 @@ public final class U07NonProductionF3A1U05Flow {
                 || !handoff.getCdpId().equals(u04.getCommitResult().cdpId))
             throw new IllegalStateException("U07_U04_REAL_COMMIT_REQUIRED");
 
+        // Safety is a PRECONDITION to any F3 mutation, not a post-write check.
+        // BLOCKED / UNAVAILABLE must never invoke an F3 owner or issue an A1 receipt.
+        if (u04.getDecision() == null || u04.getRoutingEligibility() == null
+                || !u04.getRoutingEligibility().isU05Eligible()
+                || (!"ALLOW".equals(u04.getDecision().getGate())
+                    && !"RESTRICTED".equals(u04.getDecision().getGate()))
+                || !handoff.getDecisionId().equals(
+                        u04.getDecision().getSourceU03DecisionRef())
+                || u04.getCommitResult().committedVersion.intValue()
+                        != u04.getDecision().getClinicalStateVersion() + 1) {
+            throw new IllegalStateException("U07_U04_SAFETY_PRE_F3_NOT_ELIGIBLE");
+        }
+
         F3Committed f3 = owner.executeAndReadback(handoff.getConsultationId(), handoff.getCdpId());
         if (f3 == null || !f3.committedAndReadback || blank(f3.effectId)
                 || f3.persistedVersion <= u04.getCommitResult().committedVersion.intValue()
