@@ -113,6 +113,14 @@ public final class U07DurableNonProductionA1Issuer
             if (row == null) return null;
             if (!effect.equals(row.f3CommitRef))
                 throw new IllegalStateException("U07_A1_DURABLE_F3_CHANGED");
+            // A durable receipt is historical evidence, not perpetual authority.
+            // Re-check the independent safety/revalidation provider on every read.
+            VerifiedEvidence current = verifier.evaluate(
+                    consultationId, cdpId, expectedVersion, effect);
+            if (current == null || !current.barrierAllowed
+                    || !current.revalidatedCurrent || !current.routeCurrent
+                    || !same(row, current))
+                throw new IllegalStateException("U07_A1_CURRENT_AUTHORITY_REVOKED");
             return row;
         });
     }
