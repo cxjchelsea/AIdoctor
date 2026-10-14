@@ -276,6 +276,59 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
     }
 
     @Test
+    public void u06AdmittedMode1BusinessDecisionCommitsAssessmentAndGapAtomically() {
+        authorize();
+        try (AnnotationConfigApplicationContext ctx =
+                     new AnnotationConfigApplicationContext(IsolatedConfig.class)) {
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            StateRepositoryPort physical = ctx.getBean(StateRepositoryPort.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            String id = tx.execute(status -> seed(repo));
+            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest request =
+                    new com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest(
+                            "mode1-physical-request", "consult-mode1", id,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.A1_PRE_READINESS_ROUTING,
+                            "source-u04", 8, 8,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
+                            "synthetic-dependency", "f3-policy", null, null,
+                            "canonical-event", "business-event", null, null, 0L,
+                            "correlation", "trace", "2026-09-18T00:00:00Z",
+                            com.aidoctor.diagnosis.runtime.u06.U06AdmissionEvidence.syntheticCurrentAllow());
+            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle decision =
+                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle(
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,
+                            "u06-physical-mode1-effect", "u06-gap-1",
+                            "DECISION_MATERIAL", true, null, null, null, null, null, null,
+                            null, null, null);
+            U07NonProductionPhysicalF3Owner owner = new U07NonProductionPhysicalF3Owner(
+                    new TestF3CommitPort(physical), repo,
+                    new com.aidoctor.diagnosis.runtime.u06.U06NonProductionPhysicalF3DecisionProvider(
+                            request, decision, new com.aidoctor.diagnosis.runtime.u06.U06AdmissionService()));
+            U07NonProductionF3A1U05Flow.F3Committed committed =
+                    owner.executeAndReadback("consult-mode1", id);
+            assertTrue(committed.committedAndReadback);
+            assertEquals(9, committed.persistedVersion);
+            Map<String,Object> state = repo.findById(id).get().getPatientState();
+            assertEquals("u06-physical-mode1-effect",
+                    ((Map<?,?>) state.get("f3_gap_assessment")).get("f3_canonical_effect_id"));
+            assertEquals("GAP_BASIS_ESTABLISHED",
+                    ((Map<?,?>) state.get("f3_gap_assessment")).get("owner_decision"));
+            Map<?,?> gaps = (Map<?,?>) state.get("information_gaps");
+            assertEquals("QUESTIONABLE_ONLINE",
+                    ((Map<?,?>) gaps.get("u06-gap-1")).get("status"));
+            assertEquals(1, ctx.getBean(CDPVersionRepository.class)
+                    .findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertThrows(IllegalStateException.class,
+                    () -> owner.executeAndReadback("consult-mode1", id));
+            assertThrows(IllegalStateException.class,
+                    () -> owner.executeAndReadback("wrong-consult", id));
+            assertEquals(9, repo.findById(id).get().getVersion().intValue());
+        }
+    }
+
+    @Test
     public void nonproductionF3OwnerPhysicallyCommitsAndReadsBackCanonicalEffect() {
         authorize();
         try (AnnotationConfigApplicationContext ctx =
