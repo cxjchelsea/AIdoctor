@@ -447,6 +447,39 @@ public class U07ClinicalHostServiceMysqlTest {
                             new com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier.Evidence(
                                     "ALLOWED", "nonprod-evidence")).getStatus());
             assertEquals(9, repo.findById(id).get().getVersion().intValue());
+
+            String allowedId = "u06-unified-allowed-" + UUID.randomUUID().toString();
+            tx.execute(status -> {
+                CDP cdp = CDP.builder().id(allowedId).patientId("synthetic-only")
+                        .sessionId("synthetic-only").version(8).build();
+                Map<String,Object> initial = new LinkedHashMap<String,Object>();
+                initial.put("information_gaps", new LinkedHashMap<String,Object>());
+                cdp.setPatientState(initial);
+                repo.saveAndFlush(cdp);
+                return null;
+            });
+            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest allowRequest =
+                    new com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest(
+                            "u06-unified-allowed", "consult-unified", allowedId,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.A1_PRE_READINESS_ROUTING,
+                            "source-u04", 8, 8,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                            com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
+                            "synthetic-dependency", "f3-policy", null, null,
+                            "canonical-event-allow", "business-event-allow", null, null, 0L,
+                            "correlation", "trace", "2026-09-18T00:00:00Z",
+                            com.aidoctor.diagnosis.runtime.u06.U06AdmissionEvidence.syntheticCurrentAllow());
+            com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult allowed = service.execute(
+                    allowRequest, decision, null,
+                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticPostF3SafetyBarrier.Evidence(
+                            "ALLOWED", "nonprod-allowed-evidence"));
+            assertEquals(com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult.MODE1_COMMITTED,
+                    allowed.getStatus());
+            assertEquals("COMMITTED", allowed.getCommitStatus());
+            assertEquals(9, repo.findById(allowedId).get().getVersion().intValue());
+            assertEquals(1, ctx.getBean(com.aidoctor.diagnosis.repository.CDPVersionRepository.class)
+                    .findByCdpIdOrderByVersionNumberDesc(allowedId).size());
         }
     }
 
