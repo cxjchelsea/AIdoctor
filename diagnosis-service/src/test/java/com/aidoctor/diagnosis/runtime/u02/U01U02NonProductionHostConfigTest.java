@@ -31,7 +31,7 @@ class U01U02NonProductionHostConfigTest {
                 () -> new U02ClinicalFactApplicationService(
                         mock(C01U02CapabilityGateway.class), mock(U02ClinicalFactBusinessOwner.class),
                         mock(U02ClinicalFactProposalFactory.class), mock(U02ClinicalFactCommitService.class),
-                        mock(U02DependencyInvalidationHook.class), mock(CapabilityTraceService.class)));
+                        new U02DependencyInvalidationHook(), mock(CapabilityTraceService.class)));
         if (trusted) {
             ctx.registerBean(U01U02NonProductionHandoffService.TrustedTraceAuthority.class,
                     () -> mock(U01U02NonProductionHandoffService.TrustedTraceAuthority.class));
