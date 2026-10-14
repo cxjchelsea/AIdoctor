@@ -49,7 +49,8 @@ public class U01U02PhysicalMysqlHandoffTest {
     @EnableJpaRepositories(
             basePackages = {"com.aidoctor.diagnosis.runtime.u01",
                     "com.aidoctor.diagnosis.runtime.foundation",
-                    "com.aidoctor.diagnosis.repository"},
+                    "com.aidoctor.diagnosis.repository",
+                    "com.aidoctor.diagnosis.runtime.governance"},
             includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                     classes = {ConsultationRepository.class, RuntimeBindingRepository.class,
                             ClinicalRunRepository.class, CanonicalBusinessEventRepository.class,
