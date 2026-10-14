@@ -1,6 +1,38 @@
 package com.aidoctor.diagnosis.runtime.u05;
 
 import com.aidoctor.contracts.v1.StateTypes;
+import com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest;
+import com.aidoctor.diagnosis.runtime.u01.ConsultationRecord;
+import com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRecord;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRecord;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRecord;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
+import com.aidoctor.diagnosis.runtime.u06.U05QuestionRouteAdmissionAdapter;
+import com.aidoctor.diagnosis.runtime.u06.U06AdmissionEvidence;
+import com.aidoctor.diagnosis.runtime.u06.U06AdmissionService;
+import com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult;
+import com.aidoctor.diagnosis.runtime.u06.U06ProfileBApplicationService;
+import com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionEngine;
+import com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionInput;
+import com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle;
+import com.aidoctor.diagnosis.runtime.u06.delivery.U06SyntheticDeliveryService;
+import com.aidoctor.diagnosis.runtime.u06.delivery.U06DeliveryStore;
+import com.aidoctor.diagnosis.runtime.u06.trace.U06GovernedExecutionTraceStore;
+import com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitTransitionService;
+import com.aidoctor.diagnosis.runtime.u06.wait.U06WaitCoordinator;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadWaitTransitionService;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointService;
+import com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRepository;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRepository;
+import com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRepository;
+import com.aidoctor.diagnosis.runtime.u01.ConsultationRepository;
+import static org.mockito.Mockito.mock;
+import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01Runtime;
+import com.aidoctor.diagnosis.runtime.u06.state.U06SyntheticP01TestFactory;
 import com.aidoctor.diagnosis.runtime.effects.CanonicalEffectLedger;
 import com.aidoctor.diagnosis.runtime.effects.CanonicalEffectLedgerDecision;
 import com.aidoctor.diagnosis.runtime.effects.NonProductionFileCanonicalEffectLedger;
@@ -71,6 +103,249 @@ class U05NonProductionClinicalReadinessTest {
         assertEquals(U05ExecutionResult.ROUTING_COMPLETE, admitted.getStatus());
         assertEquals("COMMITTED", admitted.getCommitResult().status);
         assertEquals(1, fixture.repository.mutationCount());
+    }
+
+    @Test
+    void committedA1ReadinessQuestionRouteEntersRealU06AdmissionOnlyWithIndependentEvidence() {
+        String context = U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT;
+        List<U05ReadinessInput> inputs = Arrays.asList(
+                present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                present(U05ReadinessInput.F3, U05ReadinessInput.CAN_ASK_MORE, VERSION),
+                applicability(U05ReadinessInput.F5, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION),
+                applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION));
+        U05ReadinessInputManifest manifest = manifest(context, VERSION, inputs);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+        U05ExecutionResult readiness = fixture.application.execute(
+                request(manifest, context, U05ConsumerInboundRequest.GATE_ALLOW, null, null),
+                manifest,
+                authority(context, U05ConsumerInboundRequest.GATE_ALLOW, null, null, true));
+
+        assertEquals(U05ExecutionResult.ROUTING_COMPLETE, readiness.getStatus());
+        assertEquals("COMMITTED", readiness.getCommitResult().status);
+        assertEquals(U05DownstreamRoutingDecision.TO_U06_QUESTION_PATH,
+                readiness.getRoutingDecision().getDownstreamConsequence());
+        assertEquals(U05DownstreamRoutingDecision.ELIGIBLE,
+                readiness.getRoutingDecision().getRoutingStatus());
+
+        U05QuestionRouteAdmissionAdapter bridge =
+                new U05QuestionRouteAdmissionAdapter(new U06AdmissionService());
+        assertThrows(IllegalStateException.class, () -> bridge.admit(readiness, null, VERSION + 1,
+                "question-policy", "d04-policy", "synthetic-dependency", "thread-1", "run-1", 0));
+        U06AdmissionEvidence blocked = new U06AdmissionEvidence(
+                true, true, true, U06AdmissionEvidence.GATE_STALE,
+                U06AdmissionEvidence.PERMISSION_NOT_REQUIRED, true,
+                U06AdmissionEvidence.DEPENDENCY_ACTIVE_SYNTHETIC, false, true);
+        assertThrows(IllegalStateException.class,
+                () -> bridge.admit(readiness, blocked, VERSION + 1, "question-policy", "d04-policy",
+                        "synthetic-dependency", "thread-1", "run-1", 0));
+
+        // This is the actual U06 test runtime, not the U05 state repository.
+        // Its state starts at v0, so a U05 v13 route must NOT execute against
+        // it merely because an adapter caller can repeat "13".
+        U06SyntheticP01Runtime independentU06State = U06SyntheticP01TestFactory.create(
+                "separate-u06-store", "consult-1", "cdp-1", CLOCK);
+        assertEquals(0, independentU06State.readCurrent().getVersion());
+        assertThrows(IllegalStateException.class,
+                () -> bridge.admit(readiness, U06AdmissionEvidence.syntheticCurrentAllow(),
+                        independentU06State.readCurrent().getVersion(),
+                        "question-policy", "d04-policy",
+                        "synthetic-dependency", "thread-1", "run-1", 0));
+        assertEquals(0, independentU06State.getMutationCount());
+
+        U06AdmissionService.Admission admitted = bridge.admit(
+                readiness, U06AdmissionEvidence.syntheticCurrentAllow(), VERSION + 1,
+                "question-policy", "d04-policy", "synthetic-dependency", "thread-1", "run-1", 0);
+        assertEquals(U06AdmissionService.ADMITTED, admitted.getStatus());
+        assertEquals(readiness.getRoutingDecision().getDownstreamRouteAuthorizationId(),
+                admitted.getRequest().getSourceAuthorityRef());
+        assertEquals(readiness.getCommitResult().committedVersion.intValue(),
+                admitted.getRequest().getAuthoritativeClinicalStateVersion());
+        U06AdmissionService.Admission replay = bridge.admit(
+                readiness, U06AdmissionEvidence.syntheticCurrentAllow(), VERSION + 1,
+                "question-policy", "d04-policy", "synthetic-dependency", "thread-1", "run-1", 0);
+        assertTrue(replay.isReplay());
+        assertEquals(admitted.getAdmissionId(), replay.getAdmissionId());
+        assertEquals(1, fixture.repository.mutationCount());
+    }
+
+    @Test
+    void u05QuestionRoutePolicyStopLeavesSharedStateUnchanged() {
+        String context = U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT;
+        List<U05ReadinessInput> inputs = Arrays.asList(
+                present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                present(U05ReadinessInput.F3, U05ReadinessInput.CAN_ASK_MORE, VERSION),
+                applicability(U05ReadinessInput.F5, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION),
+                applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION));
+        U05ReadinessInputManifest manifest = manifest(context, VERSION, inputs);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+        U05ExecutionResult readiness = fixture.application.execute(
+                request(manifest, context, U05ConsumerInboundRequest.GATE_ALLOW, null, null),
+                manifest,
+                authority(context, U05ConsumerInboundRequest.GATE_ALLOW, null, null, true));
+        assertEquals(U05DownstreamRoutingDecision.TO_U06_QUESTION_PATH,
+                readiness.getRoutingDecision().getDownstreamConsequence());
+
+        U06SyntheticP01Runtime state = U06SyntheticP01TestFactory.fromSharedSyntheticRepository(
+                "u05-u06-shared-store", "consult-1", "cdp-1", CLOCK, fixture.repository);
+        assertEquals(VERSION + 1, state.readCurrent().getVersion());
+        U06AdmissionService admission = new U06AdmissionService();
+        U05QuestionRouteAdmissionAdapter adapter = new U05QuestionRouteAdmissionAdapter(admission);
+        U06AdmissionService.Admission admitted = adapter.admit(
+                readiness, U06AdmissionEvidence.syntheticCurrentAllow(),
+                state.readCurrent().getVersion(), "question-policy", "d04-policy",
+                "synthetic-dependency", "thread-1", "run-1", 0);
+        assertTrue(admitted.isAdmitted());
+
+        U06ProfileBApplicationService application = new U06ProfileBApplicationService(
+                admission, state,
+                new U06SyntheticDeliveryService(mock(U06DeliveryStore.class)),
+                new ConsultationWaitTransitionService(
+                        mock(ConsultationRepository.class), mock(ConsultationWaitEffectRepository.class)),
+                new U06WaitCoordinator(
+                        new RuntimeWaitCheckpointService(
+                                mock(RuntimeThreadStateRepository.class),
+                                mock(RuntimeWaitCheckpointRepository.class)),
+                        new RuntimeThreadWaitTransitionService(
+                                mock(RuntimeThreadStateRepository.class),
+                                mock(RuntimeWaitCheckpointRepository.class))),
+                new U06GovernedExecutionTraceStore() {
+                    public void start(String a,String b,String c,String d,String e,String f,String g) {}
+                    public void complete(String a,String b,String c,String d) {}
+                });
+        U06SyntheticDecisionBundle decision = new U06SyntheticDecisionEngine().decide(
+                admitted.getRequest(),
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS, false, false,
+                        "gap-1", "DECISION_MATERIAL", true,
+                        U06SyntheticDecisionInput.POLICY_STOP,
+                        Collections.<U06SyntheticDecisionInput.Candidate>emptyList()),
+                state.readCurrent());
+        U06ExecutionResult result = application.execute(admitted.getRequest(), decision, null);
+        assertEquals(U06ExecutionResult.MODE2_NO_SELECTION, result.getStatus());
+        assertEquals(VERSION + 1, state.readCurrent().getVersion());
+        assertEquals(1, fixture.repository.mutationCount());
+    }
+
+    @Test
+    void u05QuestionRouteRunsRealU06DecisionWithSameAuthoritativeSyntheticStore() {
+        String context = U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT;
+        List<U05ReadinessInput> inputs = Arrays.asList(
+                present(U05ReadinessInput.F1, U05ReadinessInput.FRAMED_IN_SCOPE, VERSION),
+                present(U05ReadinessInput.F3, U05ReadinessInput.CAN_ASK_MORE, VERSION),
+                applicability(U05ReadinessInput.F5, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION),
+                applicability(U05ReadinessInput.F6, U05ReadinessInput.NOT_YET_APPLICABLE, VERSION));
+        U05ReadinessInputManifest manifest = manifest(context, VERSION, inputs);
+        Fixture fixture = new Fixture(VERSION, U05DownstreamPermissionDecision.PERMITTED);
+        U05ExecutionResult readiness = fixture.application.execute(
+                request(manifest, context, U05ConsumerInboundRequest.GATE_ALLOW, null, null),
+                manifest,
+                authority(context, U05ConsumerInboundRequest.GATE_ALLOW, null, null, true));
+        assertEquals(U05DownstreamRoutingDecision.TO_U06_QUESTION_PATH,
+                readiness.getRoutingDecision().getDownstreamConsequence());
+
+        U06SyntheticP01Runtime state = U06SyntheticP01TestFactory.fromSharedSyntheticRepository(
+                "u05-u06-shared-store", "consult-1", "cdp-1", CLOCK, fixture.repository);
+        assertEquals(VERSION + 1, state.readCurrent().getVersion());
+        U06AdmissionService admission = new U06AdmissionService();
+        U05QuestionRouteAdmissionAdapter adapter = new U05QuestionRouteAdmissionAdapter(admission);
+        U06AdmissionService.Admission admitted = adapter.admit(
+                readiness, U06AdmissionEvidence.syntheticCurrentAllow(),
+                state.readCurrent().getVersion(), "question-policy", "d04-policy",
+                "synthetic-dependency", "thread-1", "run-1", 0);
+        assertTrue(admitted.isAdmitted());
+
+        final AtomicInteger syntheticSends = new AtomicInteger();
+        U06DeliveryStore deliveryStore = new U06DeliveryStore() {
+            private final Map<String, Snapshot> confirmations = new LinkedHashMap<String, Snapshot>();
+            public synchronized Snapshot reconcileConfirmed(Command command) {
+                Snapshot existing = confirmations.get(command.deliveryEffectId);
+                if (existing != null) return new Snapshot(
+                        existing.deliveryEffectId, existing.deliveryId, existing.confirmationStatus, true);
+                syntheticSends.incrementAndGet();
+                Snapshot confirmed = new Snapshot(command.deliveryEffectId, command.deliveryId, "CONFIRMED", false);
+                confirmations.put(command.deliveryEffectId, confirmed);
+                return confirmed;
+            }
+        };
+        U06SyntheticDeliveryService delivery=new U06SyntheticDeliveryService(deliveryStore);
+        ConsultationRepository consultations=mock(ConsultationRepository.class);
+        ConsultationWaitEffectRepository waitEffects=mock(ConsultationWaitEffectRepository.class);
+        ConsultationRecord consultation=mock(ConsultationRecord.class);
+        AtomicReference<String> consultationLifecycle=new AtomicReference<String>(ConsultationRecord.ACTIVE);
+        AtomicReference<String> consultationWaitEffect=new AtomicReference<String>();
+        AtomicReference<Long> consultationVersion=new AtomicReference<Long>(Long.valueOf(0));
+        AtomicReference<ConsultationWaitEffectRecord> waitEffectRecord=new AtomicReference<ConsultationWaitEffectRecord>();
+        when(consultations.findByIdForUpdate("consult-1")).thenReturn(Optional.of(consultation));
+        when(consultation.getLifecycleStatus()).thenAnswer(i->consultationLifecycle.get());
+        when(consultation.getCurrentWaitEffectId()).thenAnswer(i->consultationWaitEffect.get());
+        when(consultation.getRowVersion()).thenAnswer(i->consultationVersion.get());
+        doAnswer(i->{consultationLifecycle.set(ConsultationRecord.WAITING_USER);consultationWaitEffect.set(i.getArgument(0));consultationVersion.set(Long.valueOf(1));return null;})
+                .when(consultation).enterWaitingUser(anyString());
+        when(consultations.saveAndFlush(consultation)).thenReturn(consultation);
+        when(waitEffects.findById(anyString())).thenAnswer(i->{
+            ConsultationWaitEffectRecord x=waitEffectRecord.get();
+            return x!=null&&x.getWaitEffectId().equals(i.getArgument(0))?Optional.of(x):Optional.empty();
+        });
+        when(waitEffects.findByIdempotencyKey(anyString())).thenAnswer(i->{
+            ConsultationWaitEffectRecord x=waitEffectRecord.get();
+            return x!=null&&x.getIdempotencyKey().equals(i.getArgument(0))?Optional.of(x):Optional.empty();
+        });
+        when(waitEffects.saveAndFlush(any(ConsultationWaitEffectRecord.class))).thenAnswer(i->{ConsultationWaitEffectRecord x=i.getArgument(0);waitEffectRecord.set(x);return x;});
+        ConsultationWaitTransitionService consultationWait=new ConsultationWaitTransitionService(consultations,waitEffects);
+
+        RuntimeThreadStateRepository threadRepo=mock(RuntimeThreadStateRepository.class);
+        RuntimeWaitCheckpointRepository checkpointRepo=mock(RuntimeWaitCheckpointRepository.class);
+        AtomicReference<RuntimeThreadStateRecord> thread=new AtomicReference<RuntimeThreadStateRecord>();
+        AtomicReference<RuntimeWaitCheckpointRecord> checkpoint=new AtomicReference<RuntimeWaitCheckpointRecord>();
+        when(threadRepo.findById(anyString())).thenAnswer(i->Optional.ofNullable(thread.get()));
+        when(threadRepo.findByThreadIdForUpdate(anyString())).thenAnswer(i->Optional.ofNullable(thread.get()));
+        when(threadRepo.saveAndFlush(any(RuntimeThreadStateRecord.class))).thenAnswer(i->{RuntimeThreadStateRecord x=i.getArgument(0);thread.set(x);return x;});
+        when(checkpointRepo.findById(anyString())).thenAnswer(i->Optional.ofNullable(checkpoint.get()));
+        when(checkpointRepo.saveAndFlush(any(RuntimeWaitCheckpointRecord.class))).thenAnswer(i->{RuntimeWaitCheckpointRecord x=i.getArgument(0);checkpoint.set(x);return x;});
+        RuntimeWaitCheckpointService cps=new RuntimeWaitCheckpointService(threadRepo,checkpointRepo);
+        RuntimeThreadWaitTransitionService transitions=new RuntimeThreadWaitTransitionService(threadRepo,checkpointRepo);
+        U06WaitCoordinator waitCoordinator=new U06WaitCoordinator(cps,transitions);
+
+        U06GovernedExecutionTraceStore traces=new U06GovernedExecutionTraceStore(){
+            public void start(String a,String b,String c,String d,String e,String f,String g){}
+            public void complete(String a,String b,String c,String d){}
+        };
+        U06ProfileBApplicationService app=new U06ProfileBApplicationService(admission,state,delivery,consultationWait,waitCoordinator,traces);
+
+        U06SyntheticDecisionBundle selected = new U06SyntheticDecisionEngine().decide(
+                admitted.getRequest(),
+                new U06SyntheticDecisionInput(
+                        U06SyntheticDecisionInput.SUCCESS, false, false,
+                        "gap-1", "DECISION_MATERIAL", true,
+                        U06SyntheticDecisionInput.POLICY_ALLOW_CONTINUE,
+                        Collections.singletonList(new U06SyntheticDecisionInput.Candidate(
+                                "candidate-1", "question-1", "semantic-1",
+                                "synthetic-content-ref-1", "content-fingerprint-1", 10, true))),
+                state.readCurrent());
+        U06SyntheticDeliveryService.ScopeAuthorization scope =
+                new U06SyntheticDeliveryService.ScopeAuthorization(
+                        "scope-auth-1", "fixture-authorization-1",
+                        U06SyntheticDeliveryService.ScopeAuthorization.CURRENT,
+                        "consult-1", U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
+                        "fixture-scope-1", "fixture-review-1", "u05-u06-shared-store",
+                        "ci-nonprod-u06", "synthetic-endpoint-1", null,
+                        false, false, false);
+        U06ExecutionResult first = app.execute(admitted.getRequest(), selected, scope);
+        assertEquals(U06ExecutionResult.WAIT_ESTABLISHED, first.getStatus());
+        assertEquals(VERSION + 3, state.readCurrent().getVersion());
+        assertEquals(3, fixture.repository.mutationCount());
+        assertEquals(1, syntheticSends.get());
+        assertEquals(RuntimeThreadStateRecord.AWAITING_USER, thread.get().getRuntimeStatus());
+        assertTrue(state.readCurrent().exists("/patient_state/pending_question"));
+        U06ExecutionResult replay = app.execute(admitted.getRequest(), selected, scope);
+        assertEquals(U06ExecutionResult.WAIT_ESTABLISHED, replay.getStatus());
+        assertEquals(first.getDeliveryId(), replay.getDeliveryId());
+        assertEquals(first.getWaitEffectId(), replay.getWaitEffectId());
+        assertEquals(first.getCheckpointId(), replay.getCheckpointId());
+        assertEquals(first.getU07ResumeEligibilityId(), replay.getU07ResumeEligibilityId());
+        assertEquals(3, fixture.repository.mutationCount());
+        assertEquals(1, syntheticSends.get());
+        verify(consultation, times(1)).enterWaitingUser(anyString());
     }
 
     @Test
@@ -1799,7 +2074,10 @@ class U05NonProductionClinicalReadinessTest {
 
         Fixture(int currentVersion, final String downstreamPermissionStatus) {
             Map<String, Object> state = new LinkedHashMap<String, Object>();
-            state.put("patient_state", new LinkedHashMap<String, Object>());
+            Map<String, Object> patientState = new LinkedHashMap<String, Object>();
+            patientState.put("questions", new LinkedHashMap<String, Object>());
+            patientState.put("information_gaps", new LinkedHashMap<String, Object>());
+            state.put("patient_state", patientState);
             Map<String, SyntheticStateSnapshot> initial =
                     new LinkedHashMap<String, SyntheticStateSnapshot>();
             initial.put("cdp-1", new SyntheticStateSnapshot(currentVersion, state));

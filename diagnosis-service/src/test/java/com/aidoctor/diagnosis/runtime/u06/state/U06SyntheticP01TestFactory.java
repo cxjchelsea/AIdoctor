@@ -21,6 +21,17 @@ public final class U06SyntheticP01TestFactory {
         Map<String,SyntheticStateSnapshot> states=new HashMap<String,SyntheticStateSnapshot>();
         states.put(cdpId,new SyntheticStateSnapshot(0,root));
         final SyntheticVersionedStateRepository repository=new SyntheticVersionedStateRepository(states);
+        return fromSharedSyntheticRepository(storeRef,consultationId,cdpId,clock,repository);
+    }
+
+    /**
+     * Test-only sharing with an upstream U05 repository. No synthetic version
+     * rebasing: U06 reads and commits the exact same versioned CDP state.
+     */
+    public static U06SyntheticP01Runtime fromSharedSyntheticRepository(
+            String storeRef,String consultationId,String cdpId,Clock clock,
+            final SyntheticVersionedStateRepository repository) {
+        if (repository == null) throw new IllegalArgumentException("repository required");
         U06SyntheticP01Runtime.Backend backend=new U06SyntheticP01Runtime.Backend(){
             public StateRepositoryPort repositoryPort(){return repository;}
             public U06SyntheticP01Runtime.StateView readCurrent(String id){
