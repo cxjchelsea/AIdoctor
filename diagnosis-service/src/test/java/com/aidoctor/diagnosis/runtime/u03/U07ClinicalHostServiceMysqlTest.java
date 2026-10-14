@@ -533,6 +533,17 @@ public class U07ClinicalHostServiceMysqlTest {
                             com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.SELECTED,
                             "question-effect-1", "question-1", "semantic-question-1",
                             "content-ref-1", "content-fingerprint-1", null, null);
+            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle forgedSelection =
+                    new com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle(
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.NOT_DECIDABLE,
+                            "forged-f3-effect", null, null, false,
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.CONTINUE,
+                            com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle.SELECTED,
+                            "question-effect-1", "question-1", "semantic-question-1",
+                            "content-ref-1", "content-fingerprint-1", null, null);
+            assertThrows(IllegalStateException.class,
+                    () -> unified.execute(mode2, forgedSelection, null));
+            assertEquals(8, repo.findById(id).get().getVersion().intValue());
             com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult selection =
                     unified.execute(mode2, selected, null);
             assertEquals(com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult.MODE2_SELECTION_PERSISTED,
