@@ -1,6 +1,12 @@
 package com.aidoctor.diagnosis.runtime.u02;
 
 import com.aidoctor.diagnosis.runtime.foundation.adapters.U01U02NonProductionHostConfig;
+import com.aidoctor.diagnosis.runtime.foundation.*;
+import com.aidoctor.diagnosis.runtime.u01.ConsultationRepository;
+import com.aidoctor.diagnosis.repository.CDPRepository;
+import com.aidoctor.diagnosis.runtime.u02.capability.C01U02CapabilityGateway;
+import com.aidoctor.diagnosis.runtime.u02.d05.U02DependencyInvalidationHook;
+import com.aidoctor.diagnosis.runtime.governance.CapabilityTraceService;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.env.MapPropertySource;
@@ -17,9 +23,15 @@ class U01U02NonProductionHostConfigTest {
                     "aidoctor.v1.clinical-e2e.u01-u02-handoff-enabled", "true")));
         }
         ctx.registerBean(U01U02TrustedStartContext.class,
-                () -> mock(U01U02TrustedStartContext.class));
+                () -> new U01U02TrustedStartContext(
+                        mock(ConsultationRepository.class), mock(RuntimeBindingService.class),
+                        mock(ClinicalRunRepository.class), mock(CanonicalBusinessEventRepository.class),
+                        mock(CDPRepository.class)));
         ctx.registerBean(U02ClinicalFactApplicationService.class,
-                () -> mock(U02ClinicalFactApplicationService.class));
+                () -> new U02ClinicalFactApplicationService(
+                        mock(C01U02CapabilityGateway.class), mock(U02ClinicalFactBusinessOwner.class),
+                        mock(U02ClinicalFactProposalFactory.class), mock(U02ClinicalFactCommitService.class),
+                        mock(U02DependencyInvalidationHook.class), mock(CapabilityTraceService.class)));
         if (trusted) {
             ctx.registerBean(U01U02NonProductionHandoffService.TrustedTraceAuthority.class,
                     () -> mock(U01U02NonProductionHandoffService.TrustedTraceAuthority.class));
