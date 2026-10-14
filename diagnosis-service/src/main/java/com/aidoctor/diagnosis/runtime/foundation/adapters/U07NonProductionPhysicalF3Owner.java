@@ -3,7 +3,6 @@ package com.aidoctor.diagnosis.runtime.foundation.adapters;
 import com.aidoctor.contracts.v1.StateTypes;
 import com.aidoctor.diagnosis.entity.CDP;
 import com.aidoctor.diagnosis.repository.CDPRepository;
-import com.aidoctor.diagnosis.state.committer.ports.StateRepositoryPort;
 import java.util.Map;
 
 /**
@@ -33,15 +32,21 @@ public final class U07NonProductionPhysicalF3Owner
         }
     }
 
-    private final StateRepositoryPort state;
+    /** Host-governed commit boundary; no direct mechanical repository access. */
+    public interface F3CommitPort {
+        int currentVersion(String cdpId);
+        int commitAuthorized(String cdpId, int expectedVersion, PreparedF3 decision);
+    }
+
+    private final F3CommitPort commits;
     private final CDPRepository cdp;
     private final F3DecisionProvider decisions;
 
-    public U07NonProductionPhysicalF3Owner(StateRepositoryPort state, CDPRepository cdp,
+    public U07NonProductionPhysicalF3Owner(F3CommitPort commits, CDPRepository cdp,
             F3DecisionProvider decisions) {
-        if (state == null || cdp == null || decisions == null)
+        if (commits == null || cdp == null || decisions == null)
             throw new IllegalArgumentException("U07_F3_PHYSICAL_DEPENDENCY_MISSING");
-        this.state = state;
+        this.commits = commits;
         this.cdp = cdp;
         this.decisions = decisions;
     }
@@ -51,7 +56,7 @@ public final class U07NonProductionPhysicalF3Owner
             String consultationId, String cdpId) {
         if (blank(consultationId) || blank(cdpId))
             throw new IllegalArgumentException("U07_F3_IDENTITY_REQUIRED");
-        int version = state.readCurrentVersion(cdpId);
+        int version = commits.currentVersion(cdpId);
         PreparedF3 decision = decisions.prepare(consultationId, cdpId, version);
         if (decision == null || decision.patch.operations == null
                 || decision.patch.operations.isEmpty())
@@ -68,12 +73,8 @@ public final class U07NonProductionPhysicalF3Owner
                         ((Map<?, ?>) payload).get("f3_canonical_effect_id")))
             throw new IllegalStateException("U07_F3_PATCH_EFFECT_MISMATCH");
 
-        StateRepositoryPort.AtomicCommitOutcome committed = state.attemptAtomicCommit(
-                new StateRepositoryPort.AtomicCommitCommand(cdpId, version,
-                        decision.patchId, decision.idempotencyKey, decision.patch));
-        if (committed == null
-                || committed.status != StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED
-                || committed.committedVersion != version + 1)
+        int committedVersion = commits.commitAuthorized(cdpId, version, decision);
+        if (committedVersion != version + 1)
             throw new IllegalStateException("U07_F3_PHYSICAL_COMMIT_NOT_COMPLETE");
 
         CDP current = cdp.findById(cdpId)
@@ -83,11 +84,11 @@ public final class U07NonProductionPhysicalF3Owner
         Object persistedEffect = assessment instanceof Map<?, ?>
                 ? ((Map<?, ?>) assessment).get("f3_canonical_effect_id") : null;
         if (current.getVersion() == null
-                || current.getVersion() != committed.committedVersion
+                || current.getVersion() != committedVersion
                 || !decision.effectId.equals(persistedEffect))
             throw new IllegalStateException("U07_F3_PHYSICAL_READBACK_MISMATCH");
         return new U07NonProductionF3A1U05Flow.F3Committed(
-                consultationId, cdpId, decision.effectId, committed.committedVersion, true);
+                consultationId, cdpId, decision.effectId, committedVersion, true);
     }
 
     private static boolean blank(String value) {
