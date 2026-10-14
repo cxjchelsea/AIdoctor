@@ -13,6 +13,7 @@ import com.aidoctor.diagnosis.runtime.u02.capability.C01U02CapabilityGateway;
 import com.aidoctor.diagnosis.runtime.u02.d05.U02DependencyInvalidationHook;
 import com.aidoctor.diagnosis.runtime.u03.*;
 import com.aidoctor.diagnosis.runtime.u04.*;
+import com.aidoctor.diagnosis.runtime.u05.U04A1U05AuthorityBridge;
 import com.aidoctor.diagnosis.service.cdp.*;
 import com.aidoctor.diagnosis.state.committer.*;
 import com.aidoctor.diagnosis.state.committer.fakes.*;
@@ -257,6 +258,32 @@ public class U01U02RealFactCommitMysqlTest {
             assertEquals(Integer.valueOf(4), gated.getCommitResult().committedVersion);
             assertEquals(expectedGate, ((Map<?,?>) cdps.findById(created.getCdpId())
                     .get().getPatientState().get("safety_gate")).get("safety_gate"));
+            // Real U04 MySQL readback alone never mints the required A1/F3
+            // post-barrier authority for U05 (or downstream U06 question delivery).
+            U04A1U05AuthorityBridge continuation = new U04A1U05AuthorityBridge(
+                    cdpId -> {
+                        CDP currentCdp = cdps.findById(cdpId).orElseThrow(
+                                IllegalStateException::new);
+                        Map<?,?> gate = (Map<?,?>)currentCdp.getPatientState().get("safety_gate");
+                        return new U04A1U05AuthorityBridge.GateReadback(
+                                currentCdp.getVersion().intValue(),
+                                (String)gate.get("safety_gate"),
+                                (String)gate.get("source_u03_decision_ref"),
+                                (String)gate.get("u04_policy_ref"));
+                    },
+                    (consultation, cdpId, version) -> null);
+            if (U04SafetyGateDecision.ALLOW.equals(expectedGate)
+                    || U04SafetyGateDecision.RESTRICTED.equals(expectedGate)) {
+                assertTrue(assertThrows(IllegalStateException.class, () ->
+                        continuation.load(riskHandoff, gated, "ci-nonprod-safety",
+                                "cdp-version-4"))
+                        .getMessage().contains("A1_F3_BARRIER_AUTHORITY_NOT_CURRENT"));
+            } else {
+                assertTrue(assertThrows(IllegalStateException.class, () ->
+                        continuation.load(riskHandoff, gated, "ci-nonprod-safety",
+                                "cdp-version-4"))
+                        .getMessage().contains("U04_COMMITTED_ELIGIBLE_GATE_REQUIRED"));
+            }
             assertEquals(4, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
                     created.getCdpId()).size());
             U04ExecutionResult staleGate = safety.applyU04(riskHandoff,
