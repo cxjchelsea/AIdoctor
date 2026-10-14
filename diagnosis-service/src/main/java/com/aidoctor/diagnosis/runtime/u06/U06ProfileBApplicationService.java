@@ -12,16 +12,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class U06ProfileBApplicationService {
-    /** Explicit host-selected physical Mode-1 path; never enabled by default. */
-    public interface PhysicalMode1Port {
+    /** Explicit host-selected physical path; never enabled by default. */
+    public interface PhysicalExecutionPort {
         U06ExecutionResult execute(U06ProfileBRequest request,
                 U06SyntheticDecisionBundle decision,
                 U06SyntheticPostF3SafetyBarrier.Evidence safetyEvidence);
     }
 
-    private final PhysicalMode1Port physicalMode1;
+    /** Compatibility with existing Mode-1 hosts. */
+    public interface PhysicalMode1Port extends PhysicalExecutionPort {
+        U06ExecutionResult execute(U06ProfileBRequest request,
+                U06SyntheticDecisionBundle decision,
+                U06SyntheticPostF3SafetyBarrier.Evidence safetyEvidence);
+    }
 
-    public U06ProfileBApplicationService(PhysicalMode1Port physicalMode1) {
+    private final PhysicalExecutionPort physicalMode1;
+
+    public U06ProfileBApplicationService(PhysicalExecutionPort physicalMode1) {
         if (physicalMode1 == null)
             throw new IllegalArgumentException("U06_PHYSICAL_MODE1_PORT_REQUIRED");
         this.physicalMode1 = physicalMode1;
@@ -70,8 +77,7 @@ public final class U06ProfileBApplicationService {
                                       U06SyntheticDeliveryService.ScopeAuthorization scope,
                                       U06SyntheticPostF3SafetyBarrier.Evidence safetyEvidence) {
         if (physicalMode1 != null) {
-            if (r == null || !U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT.equals(r.getMode()))
-                throw new IllegalStateException("U06_PHYSICAL_ENTRY_MODE1_ONLY");
+            if (r == null) throw new IllegalArgumentException("U06_PHYSICAL_REQUEST_REQUIRED");
             return physicalMode1.execute(r, d, safetyEvidence);
         }
         U06SyntheticP01Runtime.StateView current=state.readCurrent();
