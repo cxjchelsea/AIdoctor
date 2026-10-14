@@ -4,6 +4,9 @@ import com.aidoctor.diagnosis.runtime.u04.*;
 import com.aidoctor.diagnosis.runtime.u05.*;
 import com.aidoctor.diagnosis.state.committer.StateCommitter;
 import com.aidoctor.diagnosis.repository.CDPRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.context.annotation.Profile;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +24,26 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(prefix = "aidoctor.u07.clinical-host",
         name = "nonproduction-enabled", havingValue = "true", matchIfMissing = false)
 public class U07ClinicalHostServicesConfig {
+    /**
+     * Non-production-only durable record source. An independent, owner-approved
+     * evidence verifier is REQUIRED; no permissive default is provided.
+     * The separate table is not a promoted production schema.
+     */
+    @Bean
+    @Profile("!prod & !production")
+    @ConditionalOnProperty(prefix = "aidoctor.u07.clinical-host",
+            name = "durable-a1-nonproduction-enabled", havingValue = "true",
+            matchIfMissing = false)
+    @ConditionalOnBean({
+        CDPRepository.class, JdbcTemplate.class, TransactionTemplate.class,
+        U07DurableNonProductionA1Issuer.VerifiedPostF3EvidencePort.class
+    })
+    public U07DurableNonProductionA1Issuer u07DurableNonProductionA1Issuer(
+            CDPRepository repository, JdbcTemplate jdbc, TransactionTemplate transactions,
+            U07DurableNonProductionA1Issuer.VerifiedPostF3EvidencePort verifier) {
+        return new U07DurableNonProductionA1Issuer(repository, jdbc, transactions, verifier);
+    }
+
     /**
      * Explicitly opt-in only with an independently authenticated A1 source.
      * No default source, no synthetic issuer and no production traffic switch.
