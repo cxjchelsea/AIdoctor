@@ -25,6 +25,22 @@ import org.springframework.context.annotation.Configuration;
         name = "nonproduction-enabled", havingValue = "true", matchIfMissing = false)
 public class U07ClinicalHostServicesConfig {
     /**
+     * Read-only durable F3 owner/barrier/revalidation intake. Never becomes a
+     * default source: the host must opt in with a separately verified
+     * non-production database and non-production A1 issuance.
+     */
+    @Bean
+    @Profile("!prod & !production")
+    @ConditionalOnProperty(prefix = "aidoctor.u07.clinical-host",
+            name = "persisted-f3-evidence-nonproduction-enabled",
+            havingValue = "true", matchIfMissing = false)
+    @ConditionalOnBean(JdbcTemplate.class)
+    public U07DurableNonProductionA1Issuer.VerifiedPostF3EvidencePort
+            u07PersistedF3Evidence(JdbcTemplate jdbc) {
+        return new U07PersistedF3OwnerBarrierRevalidationEvidence(jdbc);
+    }
+
+    /**
      * Non-production-only durable record source. An independent, owner-approved
      * evidence verifier is REQUIRED; no permissive default is provided.
      * The separate table is not a promoted production schema.
