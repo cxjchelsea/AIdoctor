@@ -102,11 +102,16 @@ public final class U06NonProductionPhysicalMode23Service
         op.sensitivity = "PHI";
         StateTypes.StatePatch patch = patch(r, "u06selection",
                 d.getQuestionSelectionEffectId(), Collections.singletonList(op));
+        // Freeze the pre-commit CAS basis: a managed JPA entity may reflect
+        // the new version after StateCommitter commits in the same transaction.
+        final int preCommitVersion = cdp.getVersion().intValue();
         StateTypes.CommitResult committed = committer.commit(patch);
         if (committed == null || !"COMMITTED".equals(committed.status)
                 || committed.committedVersion == null
-                || committed.committedVersion.intValue() != cdp.getVersion().intValue() + 1)
-            throw new IllegalStateException("U06_PHYSICAL_SELECTION_COMMIT_REJECTED");
+                || committed.committedVersion.intValue() != preCommitVersion + 1)
+            throw new IllegalStateException("U06_PHYSICAL_SELECTION_COMMIT_REJECTED:"
+                    + (committed == null ? "NO_COMMIT_RESULT" : committed.status + ":"
+                            + committed.reasonCode));
 
         CDP readback = repository.findById(r.getCdpId())
                 .orElseThrow(() -> new IllegalStateException("U06_PHYSICAL_SELECTION_READBACK_MISSING"));
