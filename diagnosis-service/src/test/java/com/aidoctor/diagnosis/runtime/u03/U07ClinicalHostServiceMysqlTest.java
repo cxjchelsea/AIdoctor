@@ -107,7 +107,9 @@ public class U07ClinicalHostServiceMysqlTest {
 
             U04ExecutionResult replayStale =
                     u04.execute(handoff, 8, U04ScopeContext.current(true,true), ENV);
-            assertFalse(U04ExecutionResult.COMMIT_COMPLETE.equals(replayStale.getStatus()));
+            // A replay of the identical governed effect returns the recorded
+            // COMMITTED result; the physical CDP must not advance twice.
+            assertEquals(U04ExecutionResult.COMMIT_COMPLETE, replayStale.getStatus());
             assertEquals(9, repo.findById(id).get().getVersion().intValue());
             assertEquals(1, ctx.getBean(
                     com.aidoctor.diagnosis.repository.CDPVersionRepository.class)
