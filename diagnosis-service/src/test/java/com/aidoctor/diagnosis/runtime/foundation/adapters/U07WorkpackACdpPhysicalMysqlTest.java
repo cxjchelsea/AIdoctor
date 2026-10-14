@@ -359,6 +359,48 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
     }
 
     @Test
+    public void independentA1AttestationRequiresExactPhysicallyCommittedF3EffectAndVersion() {
+        authorize();
+        try (AnnotationConfigApplicationContext ctx =
+                     new AnnotationConfigApplicationContext(IsolatedConfig.class)) {
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            StateRepositoryPort writer = ctx.getBean(StateRepositoryPort.class);
+            String id = tx.execute(status -> seed(repo));
+            java.util.concurrent.atomic.AtomicReference<String> attestedEffect =
+                    new java.util.concurrent.atomic.AtomicReference<String>("f3-effect");
+            ClinicalCdpF3BoundA1AuthorityPort port = new ClinicalCdpF3BoundA1AuthorityPort(
+                    repo, (consultation, cdp, version) ->
+                            new U04A1U05AuthorityBridge.A1BarrierAuthority(
+                                    consultation, cdp, version, attestedEffect.get(),
+                                    "independent-barrier", "independent-revalidation",
+                                    "independent-route-source", "independent-route-auth",
+                                    "independent-routing-policy", null, null, true, false));
+
+            assertThrows(IllegalStateException.class,
+                    () -> port.loadCurrent("consult-1", id, 8));
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    writer.attemptAtomicCommit(clinicalPatch(id, 8,
+                            "/patient_state/f3_gap_assessment", "f3-effect",
+                            "f3_canonical_effect_id", "f3-effect")).status);
+            assertEquals(9, repo.findById(id).get().getVersion().intValue());
+            assertThrows(IllegalStateException.class,
+                    () -> port.loadCurrent("consult-1", id, 8));
+            assertEquals("f3-effect",
+                    port.loadCurrent("consult-1", id, 9).f3CommitRef);
+            attestedEffect.set("different-effect");
+            assertThrows(IllegalStateException.class,
+                    () -> port.loadCurrent("consult-1", id, 9));
+            attestedEffect.set("f3-effect");
+            assertThrows(IllegalStateException.class,
+                    () -> new ClinicalCdpF3BoundA1AuthorityPort(repo,
+                            (consultation, cdp, version) -> null)
+                            .loadCurrent("consult-1", id, 9));
+            assertEquals(9, repo.findById(id).get().getVersion().intValue());
+        }
+    }
+
+    @Test
     public void noPartialCdpWriteOnInvalidSecondOperation() {
         authorize();
         try (AnnotationConfigApplicationContext ctx =
