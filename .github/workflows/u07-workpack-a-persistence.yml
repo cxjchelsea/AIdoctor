@@ -1,0 +1,60 @@
+name: U07 Workpack A - Database Baseline and CDP Commit Safety
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/u07-workpack-a-persistence.yml'
+      - 'tools/u07_d5_o2_tx_topology/production_candidate/production_persistence_preflight.py'
+      - 'tools/u07_d5_o2_tx_topology/production_candidate/test_production_persistence_preflight.py'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapterTest.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapter.java'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  baseline-and-adapter-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+      - name: Verify read-only historical migration boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tools/u07_d5_o2_tx_topology/production_candidate -p 'test_production_persistence_preflight.py' -v
+          python3 tools/u07_d5_o2_tx_topology/production_candidate/production_persistence_preflight.py > "$RUNNER_TEMP/u07-workpack-a-inventory.json"
+          python3 - "$RUNNER_TEMP/u07-workpack-a-inventory.json" <<'PY'
+          import json, sys
+          x = json.load(open(sys.argv[1], encoding='utf-8'))
+          assert x['structural_invariants'] == 'PASS'
+          assert x['production_migration_decision'] == 'BLOCK'
+          assert x['production_clinical_state_activation'] == 'BLOCK'
+          assert x['observations']['original_mysql_v1_clob_tokens'] == 9
+          assert not x['observations']['database_history_evidence_supplied']
+          print('U07_WORKPACK_A_OFFLINE_RELEASE_BOUNDARY=PASS_BLOCK_PRODUCTION')
+          PY
+      - name: Install shared Java8 contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Execute focused CDP adapter state-commit safety regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=ClinicalCdpStateRepositoryAdapterTest test
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          paths = glob.glob('diagnosis-service/target/surefire-reports/TEST-*ClinicalCdpStateRepositoryAdapterTest.xml')
+          assert len(paths) == 1, paths
+          report = ET.parse(paths[0]).getroot()
+          assert int(report.get('tests', -1)) >= 7
+          assert all(int(report.get(x,-1)) == 0 for x in ('failures','errors','skipped'))
+          print('U07_WORKPACK_A_CDP_ADAPTER_SAFETY=PASS')
+          PY
