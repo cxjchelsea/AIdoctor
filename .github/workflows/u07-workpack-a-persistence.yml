@@ -10,6 +10,7 @@ on:
       - 'tools/u07_d5_o2_tx_topology/production_candidate/U07_PRODUCTION_RELEASE_DECISION.md'
       - 'tools/u07_d5_o2_tx_topology/production_candidate/test_production_persistence_preflight.py'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapterTest.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpU05ReadinessSnapshotAdapter.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapter.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpReadbackAdapter.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07ClinicalHostServicesConfig.java'

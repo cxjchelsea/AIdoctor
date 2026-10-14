@@ -208,6 +208,13 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
                             "clinical_readiness", "CAN_ASK_MORE")).status);
 
             assertEquals(11, repo.findById(id).get().getVersion().intValue());
+            // U05's authoritative readback must come from the same physically
+            // committed CDP row, never from a synthetic post-commit claim.
+            ClinicalCdpU05ReadinessSnapshotAdapter readinessReadback =
+                    new ClinicalCdpU05ReadinessSnapshotAdapter(repo);
+            assertEquals("CAN_ASK_MORE", readinessReadback.read(id, 11)
+                    .getReadinessPayload().get("clinical_readiness"));
+            assertThrows(IllegalStateException.class, () -> readinessReadback.read(id, 10));
             Map<String,Object> current = repo.findById(id).get().getPatientState();
             assertEquals("synthetic-u03", ((Map<?,?>)current.get("safety_gate"))
                     .get("source_u03_decision_ref"));
