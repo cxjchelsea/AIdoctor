@@ -697,6 +697,7 @@ public class U07ClinicalHostServiceMysqlTest {
                             r -> trusted.get(),waits);
             assertEquals("checkpoint-1",restarted.recover(receipt).checkpointId);
             assertEquals("checkpoint-1",restarted.recover(receipt).checkpointId);
+            assertEquals(2,waitCalls.get());
             assertEquals(9,repo.findById(id).get().getVersion().intValue());
             assertEquals(1,ctx.getBean(com.aidoctor.diagnosis.repository.CDPVersionRepository.class)
                     .findByCdpIdOrderByVersionNumberDesc(id).size());
