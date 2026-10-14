@@ -91,20 +91,7 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
             String environmentId, String authoritativeStateRef) {
         U07NonProductionF3A1U05Flow.requireEligiblePreF3(handoff, u04);
         // Durable identity must be admitted BEFORE the F3 owner writes state.
-        RuntimeBindingRecord binding = bindings.requireBinding(handoff.getConsultationId());
-        ClinicalRunRecord activeRun = runs.findById(handoff.getRunId())
-                .orElseThrow(() -> blocked("RUN_NOT_FOUND"));
-        if (!RuntimeBindingRecord.CLINICAL_RUNTIME_V1.equals(binding.getRuntimeAuthority())
-                || !Objects.equals(handoff.getCdpId(), binding.getCdpId())
-                || !Objects.equals(handoff.getConsultationId(), activeRun.getConsultationId())
-                || !Objects.equals(handoff.getThreadId(), binding.getThreadId())
-                || !Objects.equals(binding.getThreadId(), activeRun.getThreadId())
-                || !Objects.equals(handoff.getEventId(), activeRun.getEventId())
-                || !Objects.equals(host.threadId(), binding.getThreadId())
-                || !Objects.equals(host.runId(), activeRun.getRunId())
-                || !ClinicalRunRecord.OPEN.equals(activeRun.getStatus()))
-            throw blocked("DURABLE_THREAD_RUN_AUTHORITY_MISMATCH");
-
+        requireDurableRuntimePreF3(handoff, bindings, runs, host.threadId(), host.runId());
         U05ExecutionResult readiness = f3A1U05.execute(
                 handoff, u04, environmentId, authoritativeStateRef);
         if (readiness == null
@@ -178,6 +165,31 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
             throw blocked("CONFIRMED_RECEIPT_SELECTION_MISMATCH");
         recovery.accept(receipt);
         return recovery.recover(receipt);
+    }
+
+    /**
+     * Independently check persisted consultation/Thread/Run before mutating F3.
+     * Exposed for physical acceptance checks; it issues no authority.
+     */
+    public static void requireDurableRuntimePreF3(U03OutboundHandoff handoff,
+            RuntimeBindingService bindings, ClinicalRunRepository runs,
+            String threadId, String runId) {
+        if (handoff == null || bindings == null || runs == null)
+            throw blocked("DURABLE_RUNTIME_AUTHORITY_MISSING");
+        RuntimeBindingRecord binding = bindings.requireBinding(handoff.getConsultationId());
+        ClinicalRunRecord activeRun = runs.findById(handoff.getRunId())
+                .orElseThrow(() -> blocked("RUN_NOT_FOUND"));
+        if (!RuntimeBindingRecord.CLINICAL_RUNTIME_V1.equals(binding.getRuntimeAuthority())
+                || !Objects.equals(handoff.getCdpId(), binding.getCdpId())
+                || !Objects.equals(handoff.getConsultationId(), activeRun.getConsultationId())
+                || !Objects.equals(handoff.getThreadId(), binding.getThreadId())
+                || !Objects.equals(binding.getThreadId(), activeRun.getThreadId())
+                || !Objects.equals(handoff.getEventId(), activeRun.getEventId())
+                || !Objects.equals(threadId, binding.getThreadId())
+                || !Objects.equals(runId, activeRun.getRunId())
+                || !ClinicalRunRecord.OPEN.equals(activeRun.getStatus()))
+            throw blocked("DURABLE_THREAD_RUN_AUTHORITY_MISMATCH");
+
     }
 
     private int currentVersion(String cdpId) {
