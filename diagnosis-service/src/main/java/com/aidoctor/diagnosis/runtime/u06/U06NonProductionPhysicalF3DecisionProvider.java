@@ -1,6 +1,8 @@
 package com.aidoctor.diagnosis.runtime.u06;
 
 import com.aidoctor.contracts.v1.StateTypes;
+import com.aidoctor.contracts.v1.FoundationTypes;
+import com.aidoctor.contracts.v1.ContractVersion;
 import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalF3Owner;
 import com.aidoctor.diagnosis.runtime.u06.state.U06StateValues;
 import java.util.ArrayList;
@@ -64,12 +66,33 @@ public final class U06NonProductionPhysicalF3DecisionProvider
             operations.add(add("/patient_state/information_gaps/" + decision.getGapId(),
                     U06StateValues.gap(request, decision, "QUESTIONABLE_ONLINE")));
 
+        String patchId = U06Ids.hash("u06proposal", effect);
+        String idempotency = U06Ids.hash(
+                "u06f3physicalidem", consultationId, cdpId, effect, fingerprint);
+        FoundationTypes.ContractEnvelope envelope = new FoundationTypes.ContractEnvelope();
+        envelope.contractName = "StatePatch";
+        envelope.contractVersion = ContractVersion.CONTRACT_VERSION;
+        envelope.messageId = patchId;
+        envelope.correlationId = request.getCorrelationId();
+        envelope.traceId = request.getTraceId();
+        envelope.createdAt = request.getCreatedAt();
+        envelope.producer = "diagnosis-service";
+        envelope.capabilityId = "P01";
+        envelope.capabilityVersion = "1.0.0";
         StateTypes.StatePatch patch = new StateTypes.StatePatch();
+        patch.contractVersion = ContractVersion.CONTRACT_VERSION;
+        patch.envelope = envelope;
+        patch.cdpId = cdpId;
+        patch.baseVersion = Integer.valueOf(currentVersion);
+        patch.patchId = patchId;
+        patch.idempotencyKey = idempotency;
         patch.operations = operations;
+        patch.reasonCode = "U06_MODE1_F3_CURRENT_GAP";
+        patch.evidenceRefs = java.util.Collections.singletonList(request.getSourceAuthorityRef());
+        patch.producer = "diagnosis-service";
+        patch.createdAt = request.getCreatedAt();
         return new U07NonProductionPhysicalF3Owner.PreparedF3(
-                effect, U06Ids.hash("u06proposal", effect),
-                U06Ids.hash("u06f3physicalidem", consultationId, cdpId, effect, fingerprint),
-                patch);
+                effect, patchId, idempotency, patch);
     }
 
     private static StateTypes.StatePatchOperation add(String path, Object value) {

@@ -12,6 +12,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class U06ProfileBApplicationService {
+    /** Explicit host-selected physical Mode-1 path; never enabled by default. */
+    public interface PhysicalMode1Port {
+        U06ExecutionResult execute(U06ProfileBRequest request,
+                U06SyntheticDecisionBundle decision,
+                U06SyntheticPostF3SafetyBarrier.Evidence safetyEvidence);
+    }
+
+    private final PhysicalMode1Port physicalMode1;
+
+    public U06ProfileBApplicationService(PhysicalMode1Port physicalMode1) {
+        if (physicalMode1 == null)
+            throw new IllegalArgumentException("U06_PHYSICAL_MODE1_PORT_REQUIRED");
+        this.physicalMode1 = physicalMode1;
+        admission = null;
+        state = null;
+        delivery = null;
+        consultationWait = null;
+        runtimeWait = null;
+        trace = null;
+        safetyBarrier = null;
+        revalidation = null;
+    }
+
     private final U06AdmissionService admission;
     private final U06SyntheticP01Runtime state;
     private final U06SyntheticDeliveryService delivery;
@@ -33,6 +56,7 @@ public final class U06ProfileBApplicationService {
             U06SyntheticRevalidationAuthority revalidation) {
         if(a==null||s==null||d==null||c==null||r==null||t==null||safety==null||revalidation==null)
             throw new IllegalArgumentException("all services required");
+        physicalMode1=null;
         admission=a;state=s;delivery=d;consultationWait=c;runtimeWait=r;trace=t;
         safetyBarrier=safety;this.revalidation=revalidation;
     }
@@ -45,6 +69,11 @@ public final class U06ProfileBApplicationService {
     public U06ExecutionResult execute(U06ProfileBRequest r,U06SyntheticDecisionBundle d,
                                       U06SyntheticDeliveryService.ScopeAuthorization scope,
                                       U06SyntheticPostF3SafetyBarrier.Evidence safetyEvidence) {
+        if (physicalMode1 != null) {
+            if (r == null || !U06ProfileBRequest.PRE_READINESS_GAP_ASSESSMENT.equals(r.getMode()))
+                throw new IllegalStateException("U06_PHYSICAL_ENTRY_MODE1_ONLY");
+            return physicalMode1.execute(r, d, safetyEvidence);
+        }
         U06SyntheticP01Runtime.StateView current=state.readCurrent();
         boolean exactReplay=exactAuthoritativeReplayEvidence(r,d,current);
         U06AdmissionService.Admission a=admission.admit(r,current.getVersion(),exactReplay);
