@@ -319,9 +319,20 @@ public class U07ClinicalHostServiceMysqlTest {
             safetyAllowed.set(true);
             com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow resumed =
                     new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow(
-                    (consultation, cdp) ->
-                            new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow.F3Committed(
-                                    consultation, cdp, "physical-e2e-f3", 12, true),
+                    (consultation, cdp) -> {
+                        CDP persisted = repo.findById(cdp)
+                                .orElseThrow(() -> new IllegalStateException("U07_E2E_F3_READBACK_MISSING"));
+                        Object assessment = persisted.getPatientState().get("f3_gap_assessment");
+                        if (persisted.getVersion() == null
+                                || persisted.getVersion() != 12
+                                || !(assessment instanceof Map<?, ?>)
+                                || !"physical-e2e-f3".equals(
+                                        ((Map<?, ?>) assessment).get("f3_canonical_effect_id")))
+                            throw new IllegalStateException("U07_E2E_F3_READBACK_STALE");
+                        return new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow.F3Committed(
+                                consultation, cdp, "physical-e2e-f3",
+                                persisted.getVersion(), true);
+                    },
                     issuer, bridge, new com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow.U05InputProvider() {
                         @Override public U05ReadinessInputManifest manifest(U05AdmissionAuthoritySnapshot a) {
                             return U07ClinicalHostServiceMysqlTest.manifest(
