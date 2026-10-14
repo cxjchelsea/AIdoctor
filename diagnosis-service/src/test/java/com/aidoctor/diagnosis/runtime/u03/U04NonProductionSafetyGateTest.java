@@ -13,6 +13,12 @@ import com.aidoctor.diagnosis.runtime.u04.U04SafetyGatePolicy;
 import com.aidoctor.diagnosis.runtime.u04.U04ScopeContext;
 import com.aidoctor.diagnosis.runtime.u04.U04StateProposal;
 import com.aidoctor.diagnosis.runtime.u04.U04StateProposalFactory;
+import com.aidoctor.diagnosis.runtime.u05.U04A1U05AuthorityBridge;
+import com.aidoctor.diagnosis.runtime.u05.U05AdmissionAuthoritySnapshot;
+import com.aidoctor.diagnosis.state.committer.SyntheticStateSnapshot;
+import com.aidoctor.diagnosis.state.committer.SyntheticVersionedStateRepository;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import com.aidoctor.diagnosis.state.committer.StateCommitter;
 import com.aidoctor.diagnosis.state.committer.fakes.InMemoryIdempotencyFake;
 import com.aidoctor.diagnosis.state.committer.fakes.MechanicalVersionRepositoryFake;
@@ -42,6 +48,78 @@ class U04NonProductionSafetyGateTest {
     private static final Clock CLOCK =
             Clock.fixed(Instant.parse("2026-09-18T00:00:00Z"), ZoneOffset.UTC);
     private static final String ENV = "ci-nonprod-u04";
+
+    @Test
+    void actualU04CommitReadbackRequiresIndependentA1BeforeU05Authority() {
+        Map<String, Object> root = new LinkedHashMap<String, Object>();
+        root.put("patient_state", new LinkedHashMap<String, Object>());
+        Map<String, SyntheticStateSnapshot> initial =
+                new LinkedHashMap<String, SyntheticStateSnapshot>();
+        initial.put("cdp-1", new SyntheticStateSnapshot(8, root));
+        SyntheticVersionedStateRepository repository =
+                new SyntheticVersionedStateRepository(initial);
+        List<String> order = new ArrayList<String>();
+        StateCommitter committer = new StateCommitter(
+                repository,
+                (id, version) -> CapabilityPolicyPort.CapabilityDecision.authorized(),
+                (path, id) -> FieldPermissionPort.FieldPermissionDecision.authorized(),
+                (cdp, id) -> ConsentPolicyPort.ConsentDecision.authorized(),
+                source -> SourceValidationPort.SourceDecision.authorized(),
+                new InMemoryIdempotencyFake(order),
+                new SyntheticAuditPortFake(CLOCK, order),
+                new RecordingCommitEventEvidenceFake(order), CLOCK);
+        U04NonProductionApplicationService application =
+                new U04NonProductionApplicationService(
+                        new U04AdmissionService(), new U04SafetyGatePolicy(),
+                        new U04StateProposalFactory(), new U04CommitService(committer));
+        U03OutboundHandoff handoff = validHandoff("NO_HIGH_RISK_SIGNAL");
+        U04ExecutionResult committed =
+                application.execute(handoff, 8, U04ScopeContext.current(true, true), ENV);
+        assertEquals(U04ExecutionResult.COMMIT_COMPLETE, committed.getStatus());
+        assertEquals(9, repository.snapshot("cdp-1").version());
+
+        U04A1U05AuthorityBridge.GateReadbackPort readback = cdp -> {
+            SyntheticStateSnapshot snapshot = repository.snapshot(cdp);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> patient = (Map<String, Object>) snapshot.state().get("patient_state");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> gate = (Map<String, Object>) patient.get("safety_gate");
+            return new U04A1U05AuthorityBridge.GateReadback(
+                    snapshot.version(), (String) gate.get("safety_gate"),
+                    (String) gate.get("source_u03_decision_ref"),
+                    (String) gate.get("u04_policy_ref"));
+        };
+        U04A1U05AuthorityBridge noA1 =
+                new U04A1U05AuthorityBridge(readback, (consultation, cdp, version) -> null);
+        assertThrows(IllegalStateException.class,
+                () -> noA1.load(handoff, committed, ENV, "clinical-state-cdp-1-v9"));
+        assertEquals(1, repository.mutationCount());
+
+        U04A1U05AuthorityBridge staleReadback = new U04A1U05AuthorityBridge(
+                cdp -> new U04A1U05AuthorityBridge.GateReadback(
+                        8, "ALLOW", handoff.getDecisionId(), U04ScopeContext.FROZEN_POLICY_REF),
+                (consultation, cdp, version) -> null);
+        assertThrows(IllegalStateException.class,
+                () -> staleReadback.load(handoff, committed, ENV, "clinical-state-cdp-1-v9"));
+
+        // Explicitly synthetic A1 host attestation, not a production F3 issuer.
+        U04A1U05AuthorityBridge.A1BarrierAuthorityPort syntheticA1 =
+                (consultation, cdp, version) -> new U04A1U05AuthorityBridge.A1BarrierAuthority(
+                        consultation, cdp, version, "synthetic-f3-commit",
+                        "synthetic-post-f3-barrier", "synthetic-f3-revalidated",
+                        "synthetic-a1-route-source", "synthetic-a1-route-auth",
+                        "synthetic-a1-routing-policy", null, null, true, false);
+        U04A1U05AuthorityBridge bridge = new U04A1U05AuthorityBridge(readback, syntheticA1);
+        U05AdmissionAuthoritySnapshot authority =
+                bridge.load(handoff, committed, ENV, "clinical-state-cdp-1-v9");
+        assertEquals(9, authority.getCurrentClinicalStateVersion());
+        assertEquals("ALLOW", authority.getGateValue());
+        assertEquals(committed.getDecision().getDecisionId(), authority.getGateRef());
+        assertEquals(committed.getCommitResult().auditRef.auditId, authority.getGateCommitRef());
+        assertTrue(authority.isA1CanonicalF3Complete());
+        assertTrue(authority.isPostF3SafetyBarrierComplete());
+        assertEquals(1, repository.mutationCount());
+    }
 
     @Test
     void noHighRiskSignalCommitsAllowAndExposesOnlyU05Eligibility() {
