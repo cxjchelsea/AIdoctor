@@ -6,6 +6,8 @@ public final class U06ExecutionResult {
     public static final String MODE1_NO_MUTATION="MODE1_NO_MUTATION";
     public static final String MODE1_SAFETY_BLOCKED="MODE1_SAFETY_BLOCKED";
     public static final String MODE2_NO_SELECTION="MODE2_NO_SELECTION";
+    /** Durable selection only: not delivered, and no WAIT checkpoint. */
+    public static final String MODE2_SELECTION_PERSISTED="MODE2_SELECTION_PERSISTED";
     public static final String WAIT_ESTABLISHED="WAIT_ESTABLISHED";
     public static final String RECONCILIATION_REQUIRED="RECONCILIATION_REQUIRED";
     public static final String FAILURE_REQUIRED="FAILURE_REQUIRED";
