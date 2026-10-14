@@ -150,6 +150,23 @@ public final class U07NonProductionDeliveryWaitRecovery {
             return check.getVersion().intValue();
         });
 
+        // An exact durable replay never calls an external wait authority twice.
+        WaitReceipt previous = transactions.execute(status -> {
+            locked(receipt.request.getCdpId());
+            List<String[]> existing = jdbc.query(
+                    "SELECT wait_effect_ref, checkpoint_ref, eligibility_ref "
+                    + "FROM u07_question_wait_evidence WHERE consultation_id=? AND cdp_id=? "
+                    + "AND question_id=?",
+                    (rs,n) -> new String[]{rs.getString(1),rs.getString(2),rs.getString(3)},
+                    receipt.request.getConsultationId(),receipt.request.getCdpId(),
+                    receipt.decision.getQuestionId());
+            if (existing.size() > 1)
+                throw new IllegalStateException("U07_DELIVERY_WAIT_DUPLICATE");
+            return existing.isEmpty() ? null : new WaitReceipt(
+                    existing.get(0)[0],existing.get(0)[1],existing.get(0)[2]);
+        });
+        if (previous != null) return previous;
+
         // Real durable wait services execute outside the CDP transaction.
         // Failed wait establishment does not erase evidence or claim success.
         WaitReceipt host = waitAuthority.establish(receipt, version);
