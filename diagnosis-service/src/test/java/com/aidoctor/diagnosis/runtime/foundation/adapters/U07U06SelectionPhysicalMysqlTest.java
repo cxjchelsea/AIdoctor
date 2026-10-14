@@ -410,6 +410,137 @@ public class U07U06SelectionPhysicalMysqlTest {
             assertEquals(Integer.valueOf(10), persistedTrace.getClinicalStateVersionBefore());
             assertEquals(Integer.valueOf(11), persistedTrace.getClinicalStateVersionAfter());
 
+            // The independent test attestation accepts ONLY the exact
+            // persisted respiratory red-flag fact at v11; it does not fabricate
+            // missing negative findings or a clinical clearance.
+            com.aidoctor.diagnosis.runtime.u03.U03CdpAcceptedEvidenceAuthority clinicalEvidence =
+                    new com.aidoctor.diagnosis.runtime.u03.U03CdpAcceptedEvidenceAuthority(
+                            cdps, (consultation, cdp, version, call, evidence, sources, provenance) -> {
+                                assertEquals(request.getConsultationId(), consultation);
+                                assertEquals(id, cdp);
+                                assertEquals(11, version);
+                                assertEquals(updated.capabilityCallId, call);
+                                assertEquals(java.util.Collections.singletonList("EV-RF-RESP-001"), evidence);
+                                assertEquals(java.util.Collections.singletonList(
+                                        "sha256:synthetic-answer-evidence"), sources);
+                                assertEquals(1, provenance.size());
+                                return "test-only-independent-v11-evidence-acceptance";
+                            });
+            com.aidoctor.diagnosis.runtime.u04.U04NonProductionApplicationService u04 =
+                    new com.aidoctor.diagnosis.runtime.u04.U04NonProductionApplicationService(
+                            new com.aidoctor.diagnosis.runtime.u04.U04AdmissionService(),
+                            new com.aidoctor.diagnosis.runtime.u04.U04SafetyGatePolicy(),
+                            new com.aidoctor.diagnosis.runtime.u04.U04StateProposalFactory(),
+                            new com.aidoctor.diagnosis.runtime.u04.U04CommitService(committer));
+            com.aidoctor.diagnosis.runtime.u03.U02U03GovernedSafetyBridge safety =
+                    new com.aidoctor.diagnosis.runtime.u03.U02U03GovernedSafetyBridge(
+                            cdps, ctx.getBean(
+                                    com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRepository.class),
+                            clinicalEvidence,
+                            new com.aidoctor.diagnosis.runtime.u03.U03NonProductionAdmissionService(), u04);
+            com.aidoctor.diagnosis.runtime.u03.U03ExecutionCommand riskCommand =
+                    new com.aidoctor.diagnosis.runtime.u03.U03ExecutionCommand(
+                            resumed.consultationId, resumed.threadId, freshRun,
+                            resumed.eventId, id, 11, resumed.correlationId, resumed.traceId);
+            com.aidoctor.diagnosis.runtime.u03.U03NonProductionExecutionContext admitted =
+                    safety.requireU03Admission(updated, riskCommand,
+                            com.aidoctor.diagnosis.runtime.u03.U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
+                            "ci-nonprod-resumed-risk");
+            assertEquals(11, admitted.requireAcceptedEvidenceBinding().getClinicalStateVersion());
+            assertThrows(IllegalStateException.class, () ->
+                    safety.requireU03Admission(updated,
+                            new com.aidoctor.diagnosis.runtime.u03.U03ExecutionCommand(
+                                    resumed.consultationId, resumed.threadId, freshRun,
+                                    resumed.eventId, id, 10, resumed.correlationId, resumed.traceId),
+                            com.aidoctor.diagnosis.runtime.u03.U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
+                            "ci-nonprod-resumed-risk"));
+            com.aidoctor.diagnosis.runtime.governance.CapabilityBindingRecord riskBinding =
+                    new com.aidoctor.diagnosis.runtime.governance.CapabilityBindingRecord(
+                            com.aidoctor.diagnosis.runtime.u03.U03GovernedCandidateGateway.BINDING_ID,
+                            "C02", "1.0.0", "synthetic-risk-capset",
+                            "aidoctor-v1-scope", "contracts-v1", "*", "*", "*", "*",
+                            com.aidoctor.diagnosis.runtime.governance.CapabilityBindingRecord.ACTIVE,
+                            java.time.LocalDateTime.of(2026,1,1,0,0), null,
+                            java.time.LocalDateTime.of(2026,1,1,0,0));
+            com.aidoctor.diagnosis.runtime.governance.CapabilityInvocationGuard riskGuard =
+                    org.mockito.Mockito.mock(
+                            com.aidoctor.diagnosis.runtime.governance.CapabilityInvocationGuard.class);
+            org.mockito.Mockito.when(riskGuard.authorize(
+                    org.mockito.ArgumentMatchers.eq(
+                            com.aidoctor.diagnosis.runtime.u03.U03GovernedCandidateGateway.BINDING_ID),
+                    org.mockito.ArgumentMatchers.eq("C02"),
+                    org.mockito.ArgumentMatchers.any())).thenReturn(riskBinding);
+            com.aidoctor.diagnosis.runtime.u03.U03CdpGateCClinicalInputPort input =
+                    new com.aidoctor.diagnosis.runtime.u03.U03CdpGateCClinicalInputPort(
+                            cdps, (cmd, accepted) -> {
+                                assertEquals(11, cmd.clinicalStateVersion);
+                                assertEquals("test-only-independent-v11-evidence-acceptance",
+                                        accepted.getAcceptanceRef());
+                                // Test fixture scope, not inferred patient demographics.
+                                return com.aidoctor.diagnosis.runtime.u03.U03GateCClinicalInput.builder();
+                            });
+            assertEquals("PRESENT",
+                    input.load(riskCommand, admitted.requireAcceptedEvidenceBinding())
+                            .evidenceState("EV-RF-RESP-001"));
+            assertEquals("UNKNOWN",
+                    input.load(riskCommand, admitted.requireAcceptedEvidenceBinding())
+                            .evidenceState("EV-MNM-CARD-001"));
+            com.aidoctor.diagnosis.runtime.u03.U03GovernedCandidateGateway gateway =
+                    new com.aidoctor.diagnosis.runtime.u03.U03GovernedCandidateGateway(
+                            riskGuard, new com.aidoctor.diagnosis.runtime.u03.U03ReleaseRegistry(),
+                            new com.aidoctor.diagnosis.runtime.u03.U03GateCFrozenRuleEvaluator(input),
+                            true);
+            com.aidoctor.diagnosis.runtime.u03.U03GovernedCandidateGateway.GovernedResult governed =
+                    gateway.assess(admitted);
+            com.aidoctor.diagnosis.runtime.u03.U03DecisionOutcome riskDecision =
+                    new com.aidoctor.diagnosis.runtime.u03.U03DecisionService(
+                            new com.aidoctor.diagnosis.runtime.u03.U03GateCFrozenDecisionPort())
+                            .decide(admitted, governed);
+            assertEquals("HIGH_RISK", riskDecision.getOutcomeCode());
+            com.aidoctor.diagnosis.runtime.u03.U03StateProposal proposal =
+                    new com.aidoctor.diagnosis.runtime.u03.U03StateProposalFactory()
+                            .createNonProductionValid(admitted, riskDecision, governed);
+            com.aidoctor.contracts.v1.StateTypes.CommitResult riskCommit =
+                    tx.execute(status -> new com.aidoctor.diagnosis.runtime.u03.U03CommitService(
+                            committer).commitNonProduction(admitted, proposal));
+            assertEquals("COMMITTED", riskCommit.status);
+            assertEquals(Integer.valueOf(12), riskCommit.committedVersion);
+            assertEquals("HIGH_RISK", ((Map<?,?>) cdps.findById(id).get()
+                    .getPatientState().get("current_risk_assessment")).get("outcome_code"));
+            java.util.List<com.aidoctor.diagnosis.runtime.u03.U03RuntimeTraceRecord> u03Traces =
+                    new java.util.ArrayList<>();
+            com.aidoctor.diagnosis.runtime.u03.U03PostCommitFinalizationOutcome finalized =
+                    new com.aidoctor.diagnosis.runtime.u03.U03PostCommitFinalizer(
+                            new com.aidoctor.diagnosis.runtime.u03.U03RuntimeTraceService(
+                                    u03Traces::add),
+                            new com.aidoctor.diagnosis.runtime.u03.U03OutboundProducer())
+                            .finalizeCommittedExecution(admitted, governed, riskDecision,
+                                    proposal, riskCommit);
+            assertEquals("DELIVERABLE", finalized.getStatus());
+            com.aidoctor.diagnosis.runtime.u03.U03OutboundHandoff handoff =
+                    finalized.getOutboundHandoff();
+            assertEquals(Integer.valueOf(12), handoff.getCommittedClinicalStateVersion());
+            assertEquals(freshRun, handoff.getRunId());
+            com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult gated =
+                    tx.execute(status -> safety.applyU04(handoff,
+                            com.aidoctor.diagnosis.runtime.u04.U04ScopeContext.current(true,true),
+                            "ci-nonprod-resumed-risk"));
+            assertEquals(com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult.COMMIT_COMPLETE,
+                    gated.getStatus());
+            assertEquals(com.aidoctor.diagnosis.runtime.u04.U04SafetyGateDecision.BLOCKED,
+                    gated.getDecision().getGate());
+            assertEquals(Integer.valueOf(13), gated.getCommitResult().committedVersion);
+            assertEquals("BLOCKED", ((Map<?,?>) cdps.findById(id).get()
+                    .getPatientState().get("safety_gate")).get("safety_gate"));
+            assertEquals(13, cdps.findById(id).get().getVersion().intValue());
+            assertThrows(IllegalStateException.class, () ->
+                    U07NonProductionF3A1U05Flow.requireEligiblePreF3(handoff, gated));
+            assertEquals(com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult.ADMISSION_FAILED,
+                    safety.applyU04(handoff,
+                            com.aidoctor.diagnosis.runtime.u04.U04ScopeContext.current(true,true),
+                            "ci-nonprod-resumed-risk").getStatus());
+
+
             assertThrows(IllegalStateException.class, () ->
                     trustedAnswer.requireAuthorizedNewRun(
                             answer, persistedWait.checkpointId, answer.runId));
@@ -425,8 +556,8 @@ public class U07U06SelectionPhysicalMysqlTest {
                     answer, persistedWait.checkpointId, "synthetic-answer-idem",
                     "sha256:DIFFERENT"));
             assertEquals(1L, runs.count());
-            assertEquals(11, cdps.findById(id).get().getVersion().intValue());
-            assertEquals(3, history.findByCdpIdOrderByVersionNumberDesc(id).size());
+            assertEquals(13, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(5, history.findByCdpIdOrderByVersionNumberDesc(id).size());
         }
     }
 
