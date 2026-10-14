@@ -349,6 +349,22 @@ public class U07U06SelectionPhysicalMysqlTest {
 
             assertTrue(consume.consumedFor(answer.consultationId, answer.runId,
                     persistedWait.checkpointId, freshRun, answer.eventId));
+
+            U07NonProductionTrustedAnswerU02Bridge trustedAnswer =
+                    new U07NonProductionTrustedAnswerU02Bridge(runs, events, consume);
+            com.aidoctor.diagnosis.runtime.u02.U02ExecutionCommand resumed =
+                    trustedAnswer.requireAuthorizedNewRun(
+                            answer, persistedWait.checkpointId, freshRun);
+            assertEquals(freshRun, resumed.runId);
+            assertNotEquals(answer.runId, resumed.runId);
+            assertEquals(answer.eventId, resumed.eventId);
+            assertEquals(10, resumed.baseClinicalStateVersion);
+            assertEquals("PATIENT_ANSWER", resumed.sourceType);
+            assertEquals("I have no fever", resumed.rawClinicalText);
+            assertThrows(IllegalStateException.class, () ->
+                    trustedAnswer.requireAuthorizedNewRun(
+                            answer, persistedWait.checkpointId, answer.runId));
+
             assertEquals(freshRun, consume.consume(answer, persistedWait.checkpointId,
                     "synthetic-answer-idem", "sha256:synthetic-answer-digest"));
             assertEquals(1L, events.count());
