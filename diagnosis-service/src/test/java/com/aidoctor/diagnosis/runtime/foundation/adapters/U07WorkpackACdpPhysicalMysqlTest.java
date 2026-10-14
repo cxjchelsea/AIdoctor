@@ -138,8 +138,8 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
             CDPRepository repo = ctx.getBean(CDPRepository.class);
             CDPVersionRepository histories = ctx.getBean(CDPVersionRepository.class);
             TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
-            ClinicalCdpStateRepositoryAdapter adapter =
-                    ctx.getBean(ClinicalCdpStateRepositoryAdapter.class);
+            StateRepositoryPort adapter =
+                    ctx.getBean(StateRepositoryPort.class);
             JdbcTemplate jdbc = ctx.getBean(JdbcTemplate.class);
             assertEquals("u07_workpack_a_cdp", jdbc.queryForObject("SELECT DATABASE()", String.class));
             String id = tx.execute(status -> seed(repo));
@@ -178,7 +178,7 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
             CDPRepository repo = ctx.getBean(CDPRepository.class);
             CDPVersionRepository histories = ctx.getBean(CDPVersionRepository.class);
             TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
-            ClinicalCdpStateRepositoryAdapter adapter = ctx.getBean(ClinicalCdpStateRepositoryAdapter.class);
+            StateRepositoryPort adapter = ctx.getBean(StateRepositoryPort.class);
             String id = tx.execute(status -> seed(repo));
             StateTypes.StatePatchOperation valid = new StateTypes.StatePatchOperation();
             valid.op = "ADD"; valid.path = "/patient_state/first";
