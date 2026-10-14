@@ -12,6 +12,7 @@ import com.aidoctor.diagnosis.runtime.u05.U05DownstreamRoutingDecision;
 import com.aidoctor.diagnosis.runtime.u05.U05ExecutionResult;
 import com.aidoctor.diagnosis.runtime.u06.*;
 import java.util.Objects;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Explicit NON-PRODUCTION physical continuation across EXISTING owners:
@@ -55,6 +56,7 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
     private final U07NonProductionDeliveryWaitRecovery recovery;
     private final CDPRepository cdps;
     private final AuthorizedQuestionHost host;
+    private final TransactionTemplate selectionTransactions;
     private final RuntimeBindingService bindings;
     private final ClinicalRunRepository runs;
 
@@ -64,10 +66,11 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
             U06NonProductionPhysicalMode23Service u06,
             U07NonProductionDeliveryWaitRecovery recovery,
             CDPRepository cdps, RuntimeBindingService bindings,
-            ClinicalRunRepository runs, AuthorizedQuestionHost host) {
+            ClinicalRunRepository runs, TransactionTemplate selectionTransactions,
+            AuthorizedQuestionHost host) {
         if (f3A1U05 == null || u05U06 == null || u06 == null
                 || recovery == null || cdps == null || bindings == null
-                || runs == null || host == null)
+                || runs == null || selectionTransactions == null || host == null)
             throw new IllegalArgumentException("U07_PHYSICAL_FOLLOWUP_DEPENDENCIES_REQUIRED");
         this.f3A1U05 = f3A1U05;
         this.u05U06 = u05U06;
@@ -77,6 +80,7 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
         this.host = host;
         this.bindings = bindings;
         this.runs = runs;
+        this.selectionTransactions = selectionTransactions;
     }
 
     /**
@@ -133,7 +137,8 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
             throw blocked("GOVERNED_QUESTION_DECISION_NOT_SELECTED");
         // The physical Mode-2 owner checks the CDP F3 effect, D04 and version
         // again, commits P01 and performs exact readback.
-        U06ExecutionResult selected = u06.execute(request, decision, null);
+        U06ExecutionResult selected = selectionTransactions.execute(
+                status -> u06.execute(request, decision, null));
         if (selected == null || !U06ExecutionResult.MODE2_SELECTION_PERSISTED.equals(
                 selected.getStatus())
                 || !Objects.equals(decision.getQuestionSelectionEffectId(),

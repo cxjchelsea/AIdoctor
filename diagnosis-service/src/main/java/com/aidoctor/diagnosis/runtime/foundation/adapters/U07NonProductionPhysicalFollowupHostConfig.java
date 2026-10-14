@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * No default activation. Requires independently wired clinical A1/F3, U05,
@@ -29,6 +30,7 @@ public class U07NonProductionPhysicalFollowupHostConfig {
             U06NonProductionPhysicalMode23Service.class,
             U07NonProductionDeliveryWaitRecovery.class,
             CDPRepository.class, RuntimeBindingService.class, ClinicalRunRepository.class,
+            TransactionTemplate.class,
             U07NonProductionPhysicalFollowupCoordinator.AuthorizedQuestionHost.class
     })
     public U07NonProductionPhysicalFollowupCoordinator physicalFollowupCoordinator(
@@ -37,10 +39,10 @@ public class U07NonProductionPhysicalFollowupHostConfig {
             U06NonProductionPhysicalMode23Service physicalSelection,
             U07NonProductionDeliveryWaitRecovery deliveryWait,
             CDPRepository cdps, RuntimeBindingService binding,
-            ClinicalRunRepository runs,
+            ClinicalRunRepository runs, TransactionTemplate selectionTransactions,
             U07NonProductionPhysicalFollowupCoordinator.AuthorizedQuestionHost host) {
         return new U07NonProductionPhysicalFollowupCoordinator(
                 f3A1U05, routedAdmission, physicalSelection, deliveryWait,
-                cdps, binding, runs, host);
+                cdps, binding, runs, selectionTransactions, host);
     }
 }
