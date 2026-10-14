@@ -41,7 +41,7 @@ jobs:
           controlled=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1NonProductionClinicalIngressTest.xml")
           assert len(controlled)==1,controlled
           guarded=ET.parse(controlled[0]).getroot()
-          assert int(guarded.get("tests",-1))==3
+          assert int(guarded.get("tests",-1))==4
           assert all(int(guarded.get(key,-1))==0 for key in ("errors","failures","skipped"))
           result=ET.parse(paths[0]).getroot()
           assert int(result.get("tests",-1))==3

@@ -73,6 +73,23 @@ class V1NonProductionClinicalIngressTest {
     }
 
     @Test
+    void explicitlyEnabledNonproductionHostRegistersRealU01ControllerBean() {
+        try (AnnotationConfigApplicationContext enabled = new AnnotationConfigApplicationContext()) {
+            enabled.getEnvironment().setActiveProfiles("clinical-e2e-test");
+            enabled.getEnvironment().getPropertySources().addFirst(
+                    new MapPropertySource("u01-enabled",
+                            Collections.<String,Object>singletonMap(
+                                    "aidoctor.v1.clinical-e2e.nonproduction-entry-enabled", "true")));
+            U01NaturalLanguageStartService u01 = mock(U01NaturalLanguageStartService.class);
+            enabled.registerBean(U01NaturalLanguageStartService.class, () -> u01);
+            enabled.register(V1NonProductionClinicalIngressController.class);
+            enabled.refresh();
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    1, enabled.getBeansOfType(V1NonProductionClinicalIngressController.class).size());
+        }
+    }
+
+    @Test
     void springProductionOrUnconfiguredHostNeverRegistersEndpoint() {
         try (AnnotationConfigApplicationContext disabled = new AnnotationConfigApplicationContext()) {
             disabled.register(V1NonProductionClinicalIngressController.class);
