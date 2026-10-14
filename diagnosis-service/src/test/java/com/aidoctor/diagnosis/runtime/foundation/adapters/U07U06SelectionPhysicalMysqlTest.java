@@ -485,6 +485,13 @@ public class U07U06SelectionPhysicalMysqlTest {
             assertEquals("UNKNOWN",
                     input.load(riskCommand, admitted.requireAcceptedEvidenceBinding())
                             .evidenceState("EV-MNM-CARD-001"));
+            // A re-evaluation must never project accepted v11 evidence onto
+            // the pre-answer v10 state, even when the patient identity matches.
+            assertThrows(IllegalStateException.class, () -> input.load(
+                    new com.aidoctor.diagnosis.runtime.u03.U03ExecutionCommand(
+                            resumed.consultationId, resumed.threadId, freshRun,
+                            resumed.eventId, id, 10, resumed.correlationId, resumed.traceId),
+                    admitted.requireAcceptedEvidenceBinding()));
             com.aidoctor.diagnosis.runtime.u03.U03GovernedCandidateGateway gateway =
                     new com.aidoctor.diagnosis.runtime.u03.U03GovernedCandidateGateway(
                             riskGuard, new com.aidoctor.diagnosis.runtime.u03.U03ReleaseRegistry(),
@@ -539,6 +546,9 @@ public class U07U06SelectionPhysicalMysqlTest {
                     safety.applyU04(handoff,
                             com.aidoctor.diagnosis.runtime.u04.U04ScopeContext.current(true,true),
                             "ci-nonprod-resumed-risk").getStatus());
+            // Replaying the pre-gate S14 must not mutate the committed v13 CDP.
+            assertEquals(13, cdps.findById(id).get().getVersion().intValue());
+            assertEquals(5, history.findByCdpIdOrderByVersionNumberDesc(id).size());
 
 
             assertThrows(IllegalStateException.class, () ->
