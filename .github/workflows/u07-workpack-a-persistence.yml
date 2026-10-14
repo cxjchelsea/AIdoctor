@@ -232,6 +232,28 @@ jobs:
             based_on_clinical_state_version INT NOT NULL, status VARCHAR(32) NOT NULL,
             created_at DATETIME NOT NULL
           ) ENGINE=InnoDB;
+          CREATE TABLE clinical_capability_call_trace (
+            capability_call_id VARCHAR(128) NOT NULL PRIMARY KEY,
+            consultation_id VARCHAR(128) NOT NULL,
+            thread_id VARCHAR(128) NOT NULL,
+            run_id VARCHAR(128) NOT NULL,
+            event_id VARCHAR(128) NOT NULL,
+            unit_id VARCHAR(32) NOT NULL,
+            capability_id VARCHAR(64) NOT NULL,
+            binding_id VARCHAR(128) NOT NULL,
+            rule_release_ref VARCHAR(128),
+            knowledge_release_ref VARCHAR(128),
+            capability_result_ref VARCHAR(128),
+            decision_ref VARCHAR(128),
+            proposal_ref VARCHAR(128),
+            commit_ref VARCHAR(128),
+            clinical_state_version_before INT,
+            clinical_state_version_after INT,
+            call_status VARCHAR(32) NOT NULL,
+            reason_code VARCHAR(128),
+            started_at DATETIME NOT NULL,
+            finished_at DATETIME
+          ) ENGINE=InnoDB;
           CREATE TABLE u07_f8_answer_consumption (
             checkpoint_id VARCHAR(128) NOT NULL PRIMARY KEY,
             consultation_id VARCHAR(128) NOT NULL,
