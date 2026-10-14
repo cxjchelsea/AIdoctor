@@ -103,7 +103,7 @@ jobs:
           q=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02RealFactCommitMysqlTest.xml")
           assert len(q)==1,q
           r2=ET.parse(q[0]).getroot()
-          assert int(r2.get("tests",-1))==3
+          assert int(r2.get("tests",-1))==4
           assert all(int(r2.get(k,-1))==0 for k in ("errors","failures","skipped"))
-          print("V1_U01_U02_REAL_MYSQL_SYNTHETIC_C01_P01_COMMIT=PASS; LIVE_PROVIDER_HTTP=NOT_VERIFIED")
+          print("V1_U01_U02_U03_U04_REAL_MYSQL_SYNTHETIC_SAFETY=PASS; LIVE_PROVIDER_HTTP=NOT_VERIFIED")
           PY
