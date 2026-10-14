@@ -20,6 +20,21 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(prefix = "aidoctor.u07.clinical-host",
         name = "nonproduction-enabled", havingValue = "true", matchIfMissing = false)
 public class U07ClinicalHostServicesConfig {
+    /**
+     * An independent host-owned A1 attestation MUST be provided; the CDP gate
+     * alone cannot issue F3/A1 routing permission. No default/fake A1 bean.
+     */
+    @Bean
+    @ConditionalOnBean({
+        U04A1U05AuthorityBridge.GateReadbackPort.class,
+        U04A1U05AuthorityBridge.A1BarrierAuthorityPort.class
+    })
+    public U04A1U05AuthorityBridge u07HostAuthorityBridge(
+            U04A1U05AuthorityBridge.GateReadbackPort gate,
+            U04A1U05AuthorityBridge.A1BarrierAuthorityPort a1) {
+        return new U04A1U05AuthorityBridge(gate, a1);
+    }
+
     @Bean
     @ConditionalOnBean(StateCommitter.class)
     public U04NonProductionApplicationService u07HostU04(StateCommitter committer) {

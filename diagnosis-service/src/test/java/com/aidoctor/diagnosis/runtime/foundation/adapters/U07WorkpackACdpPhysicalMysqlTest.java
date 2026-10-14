@@ -6,6 +6,10 @@ import com.aidoctor.diagnosis.repository.CDPRepository;
 import com.aidoctor.diagnosis.repository.CDPVersionRepository;
 import com.aidoctor.diagnosis.service.cdp.CDPVersionService;
 import com.aidoctor.diagnosis.util.JsonUtil;
+import com.aidoctor.diagnosis.runtime.u04.U04ScopeContext;
+import com.aidoctor.diagnosis.runtime.u05.U04A1U05AuthorityBridge;
+import org.springframework.core.env.MapPropertySource;
+import java.util.Collections;
 import com.aidoctor.diagnosis.runtime.u05.U05ClinicalReadinessSnapshotPort;
 import com.aidoctor.diagnosis.runtime.u05.U05ClinicalReadinessSnapshot;
 import java.util.Collections;
@@ -289,6 +293,68 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
             assertEquals(11, writer.readCurrentVersion(id));
             assertEquals("CAN_ASK_MORE", readback.read(id, 11)
                     .getReadinessPayload().get("clinical_readiness"));
+        }
+    }
+
+    @Test
+    public void gateAuthorityReadbackUsesActualCdpAndDoesNotMintA1() {
+        authorize();
+        try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
+            ctx.getEnvironment().getPropertySources().addFirst(new MapPropertySource(
+                    "u07-authority-readback-opt-in",
+                    Collections.<String,Object>singletonMap(
+                            "aidoctor.u07.persistence.authority-readback-enabled", "true")));
+            ctx.register(IsolatedConfig.class, ClinicalCdpGateReadbackAdapter.class);
+            ctx.refresh();
+            CDPRepository repo = ctx.getBean(CDPRepository.class);
+            TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);
+            StateRepositoryPort writer = ctx.getBean(StateRepositoryPort.class);
+            U04A1U05AuthorityBridge.GateReadbackPort readback =
+                    ctx.getBean(U04A1U05AuthorityBridge.GateReadbackPort.class);
+            String id = tx.execute(status -> seed(repo));
+
+            assertThrows(IllegalStateException.class, () -> readback.loadCurrent(id));
+            assertEquals(StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED,
+                    writer.attemptAtomicCommit(clinicalPatch(id, 8,
+                            "/patient_state/safety_gate", "u04-gate",
+                            "source_u03_decision_ref", "u03-1")).status);
+            // An incomplete synthetic record is not trusted as a gate.
+            assertThrows(IllegalStateException.class, () -> readback.loadCurrent(id));
+
+            tx.execute(status -> {
+                CDP cdp = repo.findByIdWithLock(id).get();
+                Map<String,Object> state =
+                        new LinkedHashMap<String,Object>(cdp.getPatientState());
+                Map<String,Object> gate = new LinkedHashMap<String,Object>(
+                        (Map<String,Object>) state.get("safety_gate"));
+                gate.put("safety_gate", "ALLOW");
+                gate.put("u04_policy_ref", U04ScopeContext.FROZEN_POLICY_REF);
+                state.put("safety_gate", gate);
+                cdp.setPatientState(state);
+                repo.saveAndFlush(cdp);
+                return null;
+            });
+            U04A1U05AuthorityBridge.GateReadback accepted = readback.loadCurrent(id);
+            assertEquals(9, accepted.stateVersion);
+            assertEquals("ALLOW", accepted.gateValue);
+            assertEquals("u03-1", accepted.sourceU03DecisionRef);
+            assertEquals(U04ScopeContext.FROZEN_POLICY_REF, accepted.policyRef);
+
+            tx.execute(status -> {
+                CDP cdp = repo.findByIdWithLock(id).get();
+                Map<String,Object> state =
+                        new LinkedHashMap<String,Object>(cdp.getPatientState());
+                Map<String,Object> gate = new LinkedHashMap<String,Object>(
+                        (Map<String,Object>) state.get("safety_gate"));
+                gate.put("u04_policy_ref", "UNAPPROVED_POLICY");
+                state.put("safety_gate", gate);
+                cdp.setPatientState(state);
+                repo.saveAndFlush(cdp);
+                return null;
+            });
+            assertThrows(IllegalStateException.class, () -> readback.loadCurrent(id));
+            assertTrue(ctx.getBeansOfType(
+                    U04A1U05AuthorityBridge.A1BarrierAuthorityPort.class).isEmpty());
         }
     }
 

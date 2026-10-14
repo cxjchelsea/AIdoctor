@@ -4,7 +4,7 @@
 - Frozen MySQL V1 fails on disposable real MySQL 8 under Flyway 7.
 - In PR #476, only a **temporary copy** replacing nine `CLOB` type tokens with `LONGTEXT` permits V1–V6 migration and validation; **do not alter already-applied V1**.
 - Candidate V7/V8 from #473/#474 are **outside** automatically scanned Flyway locations. Their isolated tests do not establish real historical deployment compatibility.
-- PR #475 is still separate and unmerged. Production recovery/sending disabled.
+- PR #475 was merged on 2026-10-13; its merge does **not** authorize production recovery or external sending. Production recovery/sending remain disabled pending independent physical and deployment authority.
 
 ## Two mutually exclusive release paths
 
@@ -41,3 +41,11 @@ This preflight cannot confirm an exported artifact came from the expected server
 - Tested deploy/rollback/restore and schema permissions
 - Main-HEAD physical CI evidence
 - Separate written approval for production migration, recovery scheduling and any external effects
+
+## U07 Workpack A — current evidence and explicit production blockers (2026-10-14)
+
+- Merged PRs #487–#491 establish **disposable MySQL 8** CDP persistence, exact U05 readback and isolated U04/U05 Spring-host service E2E. These tests use synthetic scopes, policies and A1/F3 fixtures; they are **not** full-stack production authority evidence.
+- Opt-in real-JPA Safety Gate readback and U04→A1→U05 bridge assembly only consume an **independently supplied** A1 authority port. Absence of independently deployed and verified F3 commitment, post-F3 safety barrier, revalidation and route authorization remains a **production BLOCK**.
+- Historical Flyway preflight only assesses exported owner-approved lineage and never changes schemas. No authenticated cohort-by-cohort V1–V6 database-owner history/checksum or physical schema drift evidence was provided during this PR; no migration authorization.
+- Oracle physical migrations and dialect-specific recovery/CAS remain **BLOCK**. A MySQL 8 disposable database is not evidence of Oracle runtime compatibility.
+- **Closure decision: NOT READY FOR PRODUCTION.** Next necessary evidence is independently attested actual deployment DB and A1 issuer/authority integration, then complete production-host rehearsal and explicit authorization; no synthetic fixture may substitute for owner evidence.
