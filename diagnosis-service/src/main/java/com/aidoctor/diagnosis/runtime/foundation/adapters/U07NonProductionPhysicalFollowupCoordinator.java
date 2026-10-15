@@ -130,6 +130,12 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
     public Selected select(U03OutboundHandoff handoff, U04ExecutionResult u04,
             String environmentId, String authoritativeStateRef) {
         U07NonProductionF3A1U05Flow.requireEligiblePreF3(handoff, u04);
+        // A once-valid U04 result is not a durable permit. Re-read the actual
+        // CDP version before entering the F3 side-effect owner, otherwise a
+        // second clinical update could silently reuse the previous gate.
+        if (currentVersion(handoff.getCdpId())
+                != u04.getCommitResult().committedVersion.intValue())
+            throw blocked("U04_SAFETY_GATE_STALE_BEFORE_F3");
         // Durable identity must be admitted BEFORE the F3 owner writes state.
         requireDurableRuntimePreF3(handoff, bindings, runs, host.threadId(), host.runId());
         U05ExecutionResult readiness = f3A1U05.execute(
