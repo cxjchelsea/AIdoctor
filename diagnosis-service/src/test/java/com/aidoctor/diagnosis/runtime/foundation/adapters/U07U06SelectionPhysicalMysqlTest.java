@@ -526,57 +526,49 @@ public class U07U06SelectionPhysicalMysqlTest {
                             riskGuard, new com.aidoctor.diagnosis.runtime.u03.U03ReleaseRegistry(),
                             new com.aidoctor.diagnosis.runtime.u03.U03GateCFrozenRuleEvaluator(input),
                             true);
-            com.aidoctor.diagnosis.runtime.u03.U03GovernedCandidateGateway.GovernedResult governed =
-                    gateway.assess(admitted);
-            com.aidoctor.diagnosis.runtime.u03.U03DecisionOutcome riskDecision =
-                    new com.aidoctor.diagnosis.runtime.u03.U03DecisionService(
-                            new com.aidoctor.diagnosis.runtime.u03.U03GateCFrozenDecisionPort())
-                            .decide(admitted, governed);
+            // The same governed continuation can be used before WAIT and
+            // again after F8, but only with a fresh U02/P05-authorized context.
+            java.util.List<com.aidoctor.diagnosis.runtime.u03.U03RuntimeTraceRecord> u03Traces =
+                    new java.util.ArrayList<>();
+            com.aidoctor.diagnosis.runtime.u03.U03OutboundProducer producer =
+                    new com.aidoctor.diagnosis.runtime.u03.U03OutboundProducer();
+            U07NonProductionGovernedRiskSafetyContinuation continuation =
+                    new U07NonProductionGovernedRiskSafetyContinuation(
+                            gateway,
+                            new com.aidoctor.diagnosis.runtime.u03.U03DecisionService(
+                                    new com.aidoctor.diagnosis.runtime.u03.U03GateCFrozenDecisionPort()),
+                            new com.aidoctor.diagnosis.runtime.u03.U03StateProposalFactory(),
+                            new com.aidoctor.diagnosis.runtime.u03.U03CommitService(committer),
+                            new com.aidoctor.diagnosis.runtime.u03.U03PostCommitFinalizer(
+                                    new com.aidoctor.diagnosis.runtime.u03.U03RuntimeTraceService(
+                                            u03Traces::add), producer),
+                            producer, safety, tx);
+            U07NonProductionGovernedRiskSafetyContinuation.Result round =
+                    continuation.execute(admitted,
+                            com.aidoctor.diagnosis.runtime.u04.U04ScopeContext.current(true,true));
+            com.aidoctor.diagnosis.runtime.u03.U03DecisionOutcome riskDecision = round.risk;
+            com.aidoctor.contracts.v1.StateTypes.CommitResult riskCommit = round.riskCommit;
+            com.aidoctor.diagnosis.runtime.u03.U03OutboundHandoff handoff = round.handoff;
+            com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult gated = round.gate;
             assertEquals(uncertainAnswer ? "INSUFFICIENT_INFORMATION" : "HIGH_RISK",
                     uncertainAnswer ? riskDecision.getReasonCode() : riskDecision.getOutcomeCode());
-            com.aidoctor.diagnosis.runtime.u03.U03StateProposal proposal = uncertainAnswer
-                    ? null : new com.aidoctor.diagnosis.runtime.u03.U03StateProposalFactory()
-                            .createNonProductionValid(admitted, riskDecision, governed);
-            com.aidoctor.contracts.v1.StateTypes.CommitResult riskCommit = uncertainAnswer
-                    ? null : tx.execute(status -> new com.aidoctor.diagnosis.runtime.u03.U03CommitService(
-                            committer).commitNonProduction(admitted, proposal));
-            if (!uncertainAnswer) {
+            if (uncertainAnswer) {
+                assertNull(riskCommit, "No synthetic canonical risk commit on failed D09");
+                assertEquals(com.aidoctor.diagnosis.runtime.u03.U03RiskAssessmentCandidate.FAILED,
+                        riskDecision.getStatus());
+                assertNull(handoff.getCommittedClinicalStateVersion());
+                assertTrue(u03Traces.isEmpty());
+            } else {
+                assertNotNull(riskCommit);
                 assertEquals("COMMITTED", riskCommit.status);
                 assertEquals(Integer.valueOf(12), riskCommit.committedVersion);
                 assertEquals("HIGH_RISK", ((Map<?,?>) cdps.findById(id).get()
                         .getPatientState().get("current_risk_assessment")).get("outcome_code"));
-            } else {
-                assertEquals(com.aidoctor.diagnosis.runtime.u03.U03RiskAssessmentCandidate.FAILED,
-                        riskDecision.getStatus());
-                assertEquals(11, cdps.findById(id).get().getVersion().intValue());
-            }
-            java.util.List<com.aidoctor.diagnosis.runtime.u03.U03RuntimeTraceRecord> u03Traces =
-                    new java.util.ArrayList<>();
-            // Failed D09 is not a canonical U03 commit: S14 must preserve the
-            // failure without fabricating risk disposition, proposal or audit.
-            com.aidoctor.diagnosis.runtime.u03.U03OutboundHandoff handoff;
-            if (uncertainAnswer) {
-                handoff = new com.aidoctor.diagnosis.runtime.u03.U03OutboundProducer()
-                        .produce(admitted, governed, riskDecision, null, null);
-                assertEquals(null, handoff.getCommittedClinicalStateVersion());
-            } else {
-                com.aidoctor.diagnosis.runtime.u03.U03PostCommitFinalizationOutcome finalized =
-                        new com.aidoctor.diagnosis.runtime.u03.U03PostCommitFinalizer(
-                                new com.aidoctor.diagnosis.runtime.u03.U03RuntimeTraceService(
-                                        u03Traces::add),
-                                new com.aidoctor.diagnosis.runtime.u03.U03OutboundProducer())
-                                .finalizeCommittedExecution(admitted, governed, riskDecision,
-                                        proposal, riskCommit);
-                assertEquals("DELIVERABLE", finalized.getStatus());
-                handoff = finalized.getOutboundHandoff();
+                assertEquals(1, u03Traces.size());
             }
             assertEquals(uncertainAnswer ? null : Integer.valueOf(12),
                     handoff.getCommittedClinicalStateVersion());
             assertEquals(freshRun, handoff.getRunId());
-            com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult gated =
-                    tx.execute(status -> safety.applyU04(handoff,
-                            com.aidoctor.diagnosis.runtime.u04.U04ScopeContext.current(true,true),
-                            "ci-nonprod-resumed-risk"));
             assertEquals(com.aidoctor.diagnosis.runtime.u04.U04ExecutionResult.COMMIT_COMPLETE,
                     gated.getStatus());
             assertEquals(uncertainAnswer
