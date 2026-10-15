@@ -148,6 +148,8 @@ public final class U07NonProductionF3A1U05Flow {
                     && !"RESTRICTED".equals(u04.getDecision().getGate()))
                 || !handoff.getDecisionId().equals(
                         u04.getDecision().getSourceU03DecisionRef())
+                || handoff.getCommittedClinicalStateVersion().intValue()
+                        != u04.getDecision().getClinicalStateVersion()
                 || u04.getCommitResult().committedVersion.intValue()
                         != u04.getDecision().getClinicalStateVersion() + 1) {
             throw new IllegalStateException("U07_U04_SAFETY_PRE_F3_NOT_ELIGIBLE");
