@@ -391,8 +391,10 @@ public class U01U02RealFactCommitMysqlTest {
                                     "test-first-round-f3-idem-" + scenario, patch);
                         });
                 com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow
-                        .F3Committed physical = physicalF3.executeAndReadback(
-                        riskHandoff.getConsultationId(), riskHandoff.getCdpId());
+                        .F3Committed physical = tx.execute(status ->
+                                physicalF3.executeAndReadback(
+                                        riskHandoff.getConsultationId(),
+                                        riskHandoff.getCdpId()));
                 assertTrue(physical.committedAndReadback);
                 assertEquals(5, physical.persistedVersion);
                 assertEquals(f3Effect, physical.effectId);
