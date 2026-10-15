@@ -176,8 +176,7 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
             String authoritativeStateRef,
             U07NonProductionGovernedRiskSafetyContinuation continuation,
             ConfirmedDeliveryOwner deliveryOwner) {
-        if (deliveryOwner == null)
-            throw blocked("INDEPENDENT_DELIVERY_OWNER_REQUIRED");
+        requireIndependentDeliveryOwner(deliveryOwner);
         Selected selected = selectFromCommittedU02(fact, command, releases,
                 environmentId, scope, authoritativeStateRef, continuation);
         U07NonProductionDeliveryWaitRecovery.Receipt receipt =
@@ -185,6 +184,12 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
         if (receipt == null)
             throw blocked("CONFIRMED_DELIVERY_RECEIPT_MISSING");
         return confirmedDeliveryToWait(selected, receipt);
+    }
+
+    /** Fail before any U03/P01/F3 side effect when delivery authority is absent. */
+    static void requireIndependentDeliveryOwner(ConfirmedDeliveryOwner deliveryOwner) {
+        if (deliveryOwner == null)
+            throw blocked("INDEPENDENT_DELIVERY_OWNER_REQUIRED");
     }
 
     /**
