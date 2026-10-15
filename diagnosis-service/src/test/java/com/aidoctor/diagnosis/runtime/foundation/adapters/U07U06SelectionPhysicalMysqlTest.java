@@ -48,6 +48,8 @@ public class U07U06SelectionPhysicalMysqlTest {
     }
 
     private void runResumedClinicalSafetyScenario(boolean uncertainAnswer) {
+        // Each scenario owns independent durable SQL identities on the same MySQL DB.
+        final String suffix = uncertainAnswer ? "-unknown" : "-high";
         Assumptions.assumeTrue("DISPOSABLE_CDP_ONLY".equals(
                 System.getenv("U07_WORKPACK_A_MYSQL_MODE")),
                 "requires dedicated disposable MySQL physical job");
@@ -64,7 +66,7 @@ public class U07U06SelectionPhysicalMysqlTest {
                         .version(8).build();
                 Map<String,Object> state = new LinkedHashMap<String,Object>();
                 Map<String,Object> f3 = new LinkedHashMap<String,Object>();
-                f3.put("f3_canonical_effect_id", "synthetic-f3-effect");
+                f3.put("f3_canonical_effect_id", ("synthetic-f3-effect" + suffix));
                 state.put("f3_gap_assessment", f3);
                 state.put("questions", new LinkedHashMap<String,Object>());
                 cdp.setPatientState(state);
@@ -89,35 +91,35 @@ public class U07U06SelectionPhysicalMysqlTest {
                         throw new IllegalStateException("TEST_MODE1_NOT_AUTHORIZED");
                     }, cdps, committer, admission);
             U06ProfileBRequest request = new U06ProfileBRequest(
-                    "physical-u06-select", "synthetic-consult", id,
+                    ("physical-u06-select" + suffix), ("synthetic-consult" + suffix), id,
                     U06ProfileBRequest.QUESTION_SELECTION_DELIVERY,
-                    U06ProfileBRequest.U05_QUESTION_ROUTING, "synthetic-u05-route",
+                    U06ProfileBRequest.U05_QUESTION_ROUTING, ("synthetic-u05-route" + suffix),
                     8, 8, U06ProfileBRequest.SYNTHETIC_STRUCTURAL_NONPROD,
                     U06ProfileBRequest.SYNTHETIC_VERIFICATION_BINDING,
-                    "synthetic-dependency", "synthetic-u05-readiness",
-                    "synthetic-question-policy", "synthetic-d04-policy",
-                    "synthetic-event", "synthetic-business-event",
-                    "synthetic-thread", "synthetic-run", 0L,
-                    "synthetic-correlation", "synthetic-trace",
+                    "synthetic-dependency", ("synthetic-u05-readiness" + suffix),
+                    ("synthetic-question-policy" + suffix), ("synthetic-d04-policy" + suffix),
+                    ("synthetic-event" + suffix), ("synthetic-business-event" + suffix),
+                    ("synthetic-thread" + suffix), ("synthetic-run" + suffix), 0L,
+                    ("synthetic-correlation" + suffix), ("synthetic-trace" + suffix),
                     "2026-10-14T00:00:00Z", U06AdmissionEvidence.syntheticCurrentAllow());
             U06SyntheticDecisionBundle decision = new U06SyntheticDecisionBundle(
                     U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,
-                    "synthetic-f3-effect", "synthetic-gap", "DECISION_MATERIAL",
+                    ("synthetic-f3-effect" + suffix), ("synthetic-gap" + suffix), "DECISION_MATERIAL",
                     true, U06SyntheticDecisionBundle.CONTINUE,
-                    U06SyntheticDecisionBundle.SELECTED, "synthetic-selection-effect",
-                    "synthetic-question-1", "TEST:FOLLOWUP", "synthetic-question-content",
+                    U06SyntheticDecisionBundle.SELECTED, ("synthetic-selection-effect" + suffix),
+                    ("synthetic-question-1" + suffix), "TEST:FOLLOWUP", "synthetic-question-content",
                     "sha256:synthetic-question", null, null);
 
             U06ExecutionResult selected = tx.execute(status ->
                     physical.execute(request, decision, null));
             assertEquals(U06ExecutionResult.MODE2_SELECTION_PERSISTED, selected.getStatus());
-            assertEquals("synthetic-selection-effect", selected.getEffectRef());
+            assertEquals(("synthetic-selection-effect" + suffix), selected.getEffectRef());
             CDP persisted = cdps.findById(id).orElseThrow(IllegalStateException::new);
             assertEquals(9, persisted.getVersion().intValue());
             Map<?,?> questions = (Map<?,?>) persisted.getPatientState().get("questions");
-            Map<?,?> question = (Map<?,?>) questions.get("synthetic-question-1");
+            Map<?,?> question = (Map<?,?>) questions.get(("synthetic-question-1" + suffix));
             assertEquals("SELECTED", question.get("status"));
-            assertEquals("synthetic-selection-effect", question.get("selection_effect_id"));
+            assertEquals(("synthetic-selection-effect" + suffix), question.get("selection_effect_id"));
             assertFalse(persisted.getPatientState().containsKey("pending_question"));
             assertEquals(1, history.findByCdpIdOrderByVersionNumberDesc(id).size());
 
@@ -142,7 +144,7 @@ public class U07U06SelectionPhysicalMysqlTest {
                             });
             U07NonProductionDeliveryWaitRecovery.Receipt unverified =
                     new U07NonProductionDeliveryWaitRecovery.Receipt(
-                            request, decision, "synthetic-delivery", "synthetic-delivery-effect",
+                            request, decision, ("synthetic-delivery" + suffix), ("synthetic-delivery-effect" + suffix),
                             "unverified-confirmation");
             assertThrows(IllegalStateException.class, () -> recovery.accept(unverified));
             assertThrows(IllegalStateException.class, () -> recovery.recover(unverified));
@@ -159,13 +161,13 @@ public class U07U06SelectionPhysicalMysqlTest {
             // not a real independently confirmed external patient delivery.
             U07NonProductionDeliveryWaitRecovery.Receipt fixture =
                     new U07NonProductionDeliveryWaitRecovery.Receipt(
-                            request, decision, "fixture-delivery-id",
-                            "fixture-delivery-effect", "fixture-confirmation");
+                            request, decision, ("fixture-delivery-id" + suffix),
+                            ("fixture-delivery-effect" + suffix), "fixture-confirmation");
             AtomicInteger unavailableWaitCalls = new AtomicInteger();
             U07NonProductionDeliveryWaitRecovery.DeliveryVerifier fixtureVerifier =
                     receipt -> "fixture-confirmation".equals(receipt.confirmationRef)
-                            && "fixture-delivery-id".equals(receipt.deliveryId)
-                            && "fixture-delivery-effect".equals(receipt.deliveryEffectId);
+                            && ("fixture-delivery-id" + suffix).equals(receipt.deliveryId)
+                            && ("fixture-delivery-effect" + suffix).equals(receipt.deliveryEffectId);
             U07NonProductionDeliveryWaitRecovery.WaitAuthority unavailableWait =
                     (receipt, version) -> {
                         unavailableWaitCalls.incrementAndGet();
@@ -181,7 +183,7 @@ public class U07U06SelectionPhysicalMysqlTest {
             Map<?,?> deliveredQuestions = (Map<?,?>) afterDelivery.getPatientState()
                     .get("questions");
             assertEquals("DELIVERED_TO_USER", ((Map<?,?>) deliveredQuestions
-                    .get("synthetic-question-1")).get("status"));
+                    .get(("synthetic-question-1" + suffix))).get("status"));
             assertTrue(afterDelivery.getPatientState().containsKey("pending_question"));
             assertEquals(2, history.findByCdpIdOrderByVersionNumberDesc(id).size());
             assertEquals(1, jdbc.queryForObject(
@@ -295,8 +297,8 @@ public class U07U06SelectionPhysicalMysqlTest {
                     f8Admission.requireWaitingAnswer(
                             request.getConsultationId(), id, request.getThreadId(),
                             request.getRunId(), persistedWait.checkpointId,
-                            "synthetic-question-1", fixture.deliveryId, "synthetic-person",
-                            "synthetic-answer-event", uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing",
+                            ("synthetic-question-1" + suffix), fixture.deliveryId, "synthetic-person",
+                            ("synthetic-answer-event" + suffix), uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing",
                             "synthetic-answer-correlation", "synthetic-answer-trace");
             assertEquals(10, answer.baseClinicalStateVersion);
             assertEquals(uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing", answer.rawClinicalText);
@@ -304,15 +306,15 @@ public class U07U06SelectionPhysicalMysqlTest {
                     f8Admission.requireWaitingAnswer(
                             request.getConsultationId(), id, "wrong-thread",
                             request.getRunId(), persistedWait.checkpointId,
-                            "synthetic-question-1", fixture.deliveryId, "synthetic-person",
-                            "synthetic-answer-event", uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing",
+                            ("synthetic-question-1" + suffix), fixture.deliveryId, "synthetic-person",
+                            ("synthetic-answer-event" + suffix), uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing",
                             "synthetic-answer-correlation", "synthetic-answer-trace"));
             assertThrows(IllegalStateException.class, () ->
                     f8Admission.requireWaitingAnswer(
                             request.getConsultationId(), id, request.getThreadId(),
                             request.getRunId(), persistedWait.checkpointId,
                             "wrong-question", fixture.deliveryId, "synthetic-person",
-                            "synthetic-answer-event", uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing",
+                            ("synthetic-answer-event" + suffix), uncertainAnswer ? "I am not sure" : "I have severe difficulty breathing",
                             "synthetic-answer-correlation", "synthetic-answer-trace"));
 
             assertEquals(10, cdps.findById(id).get().getVersion().intValue());
@@ -341,7 +343,7 @@ public class U07U06SelectionPhysicalMysqlTest {
                     new com.aidoctor.diagnosis.runtime.foundation.ClinicalRunCoordinator(
                             bindingService, events, runs), consultations, threads, checkpoints);
             String freshRun = consume.consume(
-                    answer, persistedWait.checkpointId, "synthetic-answer-idem",
+                    answer, persistedWait.checkpointId, ("synthetic-answer-idem" + suffix),
                     "sha256:synthetic-answer-digest");
             assertNotEquals(answer.runId, freshRun);
             assertEquals("ACTIVE", consultations.findById(
@@ -353,7 +355,7 @@ public class U07U06SelectionPhysicalMysqlTest {
                     f8Admission.requireWaitingAnswer(
                             request.getConsultationId(), id, request.getThreadId(),
                             request.getRunId(), persistedWait.checkpointId,
-                            "synthetic-question-1", fixture.deliveryId, "synthetic-person",
+                            ("synthetic-question-1" + suffix), fixture.deliveryId, "synthetic-person",
                             "new-answer-event", "second answer", "corr", "trace"));
 
             assertTrue(consume.consumedFor(answer.consultationId, answer.runId,
@@ -605,14 +607,14 @@ public class U07U06SelectionPhysicalMysqlTest {
                             answer, persistedWait.checkpointId, answer.runId));
 
             assertEquals(freshRun, consume.consume(answer, persistedWait.checkpointId,
-                    "synthetic-answer-idem", "sha256:synthetic-answer-digest"));
+                    ("synthetic-answer-idem" + suffix), "sha256:synthetic-answer-digest"));
             assertEquals(1L, events.count());
             assertEquals(1L, runs.count());
             assertEquals(1, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM u07_f8_answer_consumption WHERE checkpoint_id=?",
                     Integer.class, persistedWait.checkpointId).intValue());
             assertThrows(IllegalStateException.class, () -> consume.consume(
-                    answer, persistedWait.checkpointId, "synthetic-answer-idem",
+                    answer, persistedWait.checkpointId, ("synthetic-answer-idem" + suffix),
                     "sha256:DIFFERENT"));
             assertEquals(1L, runs.count());
             assertEquals(finalVersion, cdps.findById(id).get().getVersion().intValue());
