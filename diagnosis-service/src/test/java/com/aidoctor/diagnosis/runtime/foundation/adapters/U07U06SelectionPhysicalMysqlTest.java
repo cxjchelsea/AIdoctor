@@ -584,6 +584,23 @@ public class U07U06SelectionPhysicalMysqlTest {
                     ((Map<?,?>) cdps.findById(id).get()
                     .getPatientState().get("safety_gate")).get("safety_gate"));
             assertEquals(finalVersion, cdps.findById(id).get().getVersion().intValue());
+            // Verify that the U04 gate is current against actual MySQL8 readback,
+            // then adversarially simulate a subsequent CDP state update. Neither
+            // a stale nor a foreign-CDP safety receipt can drive F3.
+            U07NonProductionPhysicalFollowupCoordinator.requireCurrentU04Version(
+                    id, gated, cdps);
+            CDPRepository advancedState = org.mockito.Mockito.mock(CDPRepository.class);
+            org.mockito.Mockito.when(advancedState.findById(id)).thenReturn(
+                    java.util.Optional.of(CDP.builder().id(id)
+                            .version(finalVersion + 1).build()));
+            assertTrue(assertThrows(IllegalStateException.class, () ->
+                    U07NonProductionPhysicalFollowupCoordinator.requireCurrentU04Version(
+                            id, gated, advancedState))
+                    .getMessage().contains("U04_SAFETY_GATE_STALE_BEFORE_F3"));
+            assertTrue(assertThrows(IllegalStateException.class, () ->
+                    U07NonProductionPhysicalFollowupCoordinator.requireCurrentU04Version(
+                            "foreign-cdp", gated, cdps))
+                    .getMessage().contains("U04_COMMIT_AUTHORITY_MISSING"));
             // A v11 accepted-evidence execution context becomes stale once U03
             // and U04 have committed. A second governed assessment must reload
             // authoritative CDP rather than replay the prior clinical input.
