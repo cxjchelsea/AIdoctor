@@ -306,7 +306,7 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
     }
 
     /** Independent persisted-currentness guard, exercised by disposable MySQL acceptance. */
-    static void requireCurrentU04Version(String cdpId, U04ExecutionResult gate,
+    public static void requireCurrentU04Version(String cdpId, U04ExecutionResult gate,
             CDPRepository cdps) {
         if (cdpId == null || gate == null || cdps == null
                 || gate.getCommitResult() == null
