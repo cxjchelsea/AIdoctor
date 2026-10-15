@@ -207,6 +207,9 @@ public class U07ClinicalHostServiceMysqlTest {
                     .execute(handoff, 10, U04ScopeContext.current(true, true), ENV);
             assertEquals(U04ExecutionResult.COMMIT_COMPLETE, u04.getStatus());
             assertEquals(11, repo.findById(id).get().getVersion().intValue());
+            // A real persisted U04 gate can authorize F3 only at its exact CDP version.
+            com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalFollowupCoordinator
+                    .requireCurrentU04Version(id, u04, repo);
 
             StateRepositoryPort state = ctx.getBean(StateRepositoryPort.class);
             com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalF3Owner.F3CommitPort
@@ -310,6 +313,13 @@ public class U07ClinicalHostServiceMysqlTest {
             assertThrows(IllegalStateException.class,
                     () -> flow.execute(handoff, u04, ENV, "clinical-state-cdp-1-v12"));
             assertEquals(12, repo.findById(id).get().getVersion().intValue());
+            // The formerly current U04 receipt is now stale after the real F3
+            // P01 commit: recovery may use fresh independent authority, never
+            // replay the old safety gate to start another F3 execution.
+            assertTrue(assertThrows(IllegalStateException.class, () ->
+                    com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalFollowupCoordinator
+                            .requireCurrentU04Version(id, u04, repo))
+                    .getMessage().contains("U04_SAFETY_GATE_STALE_BEFORE_F3"));
             assertEquals(0, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM u07_a1_attestation WHERE cdp_id=?",
                     Integer.class, id).intValue());
