@@ -133,9 +133,7 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
         // A once-valid U04 result is not a durable permit. Re-read the actual
         // CDP version before entering the F3 side-effect owner, otherwise a
         // second clinical update could silently reuse the previous gate.
-        if (currentVersion(handoff.getCdpId())
-                != u04.getCommitResult().committedVersion.intValue())
-            throw blocked("U04_SAFETY_GATE_STALE_BEFORE_F3");
+        requireCurrentU04Version(handoff.getCdpId(), u04, cdps);
         // Durable identity must be admitted BEFORE the F3 owner writes state.
         requireDurableRuntimePreF3(handoff, bindings, runs, host.threadId(), host.runId());
         U05ExecutionResult readiness = f3A1U05.execute(
@@ -236,6 +234,22 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
                 || !ClinicalRunRecord.OPEN.equals(activeRun.getStatus()))
             throw blocked("DURABLE_THREAD_RUN_AUTHORITY_MISMATCH");
 
+    }
+
+    /** Independent persisted-currentness guard, exercised by disposable MySQL acceptance. */
+    static void requireCurrentU04Version(String cdpId, U04ExecutionResult gate,
+            CDPRepository cdps) {
+        if (cdpId == null || gate == null || cdps == null
+                || gate.getCommitResult() == null
+                || !"COMMITTED".equals(gate.getCommitResult().status)
+                || gate.getCommitResult().committedVersion == null
+                || !cdpId.equals(gate.getCommitResult().cdpId))
+            throw blocked("U04_COMMIT_AUTHORITY_MISSING");
+        CDP current = cdps.findById(cdpId)
+                .orElseThrow(() -> blocked("CDP_NOT_FOUND"));
+        if (current.getVersion() == null
+                || !current.getVersion().equals(gate.getCommitResult().committedVersion))
+            throw blocked("U04_SAFETY_GATE_STALE_BEFORE_F3");
     }
 
     private int currentVersion(String cdpId) {
