@@ -134,6 +134,14 @@ public final class U07NonProductionF3A1U05Flow {
         }
         // Safety is a PRECONDITION to any F3 mutation, not a post-write check.
         // BLOCKED / UNAVAILABLE must never invoke an F3 owner or issue an A1 receipt.
+        // S14 is a provenance carrier, not proof of a successful risk commit.
+        // Reject fabricated/uncommitted U03 handoffs before entering F3.
+        if (!"VALID".equals(handoff.getDecisionStatus())
+                || !"COMMITTED".equals(handoff.getCommitStatus())
+                || handoff.getCommittedClinicalStateVersion() == null
+                || handoff.getCommitAuditId() == null
+                || handoff.getCommitAuditId().trim().isEmpty())
+            throw new IllegalStateException("U07_U03_RISK_COMMIT_EVIDENCE_REQUIRED");
         if (u04.getDecision() == null || u04.getRoutingEligibility() == null
                 || !u04.getRoutingEligibility().isU05Eligible()
                 || (!"ALLOW".equals(u04.getDecision().getGate())
