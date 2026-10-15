@@ -403,6 +403,21 @@ public class U01U02RealFactCommitMysqlTest {
                         .get("f3_canonical_effect_id"));
                 assertEquals(5, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
                         created.getCdpId()).size());
+                // F3 physical readback alone cannot mint post-F3 medical safety
+                // or A1 route authority. The independently supplied evidence is
+                // intentionally absent; issuance must fail before any A1 insert.
+                com.aidoctor.diagnosis.runtime.foundation.adapters.U07DurableNonProductionA1Issuer
+                        unapprovedA1 = new com.aidoctor.diagnosis.runtime.foundation.adapters
+                        .U07DurableNonProductionA1Issuer(
+                                cdps, ctx.getBean(org.springframework.jdbc.core.JdbcTemplate.class),
+                                tx, (consultation, cdpId, version, effect) -> null);
+                assertTrue(assertThrows(IllegalStateException.class, () ->
+                        unapprovedA1.issue(created.getConsultationId(),
+                                created.getCdpId(), physical.persistedVersion))
+                        .getMessage().contains("U07_A1_INDEPENDENT_SAFETY_NOT_AUTHORIZED"));
+                assertEquals(5, cdps.findById(created.getCdpId()).get().getVersion().intValue());
+                assertEquals(5, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
+                        created.getCdpId()).size());
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         U07NonProductionPhysicalFollowupCoordinator
                                 .requireCurrentU04Version(created.getCdpId(), gated, cdps))
