@@ -40,6 +40,18 @@ public final class U07NonProductionGovernedRiskSafetyContinuation {
         this.transactions = transactions;
     }
 
+    /**
+     * First-round and resumed-round entry. The U02/P05 trace and canonical
+     * CDP commit are verified by the existing bridge before any Gate-C rule
+     * or P01 risk mutation is permitted.
+     */
+    public Result executeFromCommittedU02(
+            com.aidoctor.diagnosis.runtime.u02.U02ExecutionResult fact,
+            U03ExecutionCommand command, U03ExplicitNonProductionReleaseRefs releases,
+            String environment, U04ScopeContext scope) {
+        return execute(safety.requireU03Admission(fact, command, releases, environment), scope);
+    }
+
     public Result execute(U03NonProductionExecutionContext admitted, U04ScopeContext scope) {
         if (admitted == null || scope == null)
             throw new IllegalArgumentException("Accepted U03 admission and U04 scope required");
