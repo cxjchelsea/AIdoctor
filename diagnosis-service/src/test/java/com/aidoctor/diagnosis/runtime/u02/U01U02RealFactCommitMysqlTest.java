@@ -335,6 +335,77 @@ public class U01U02RealFactCommitMysqlTest {
             assertThrows(IllegalStateException.class, () -> handoff.executeCommittedStart(
                     created.getConsultationId(), created.getRunId(), raw));
             assertEquals(4, cdps.findById(created.getCdpId()).get().getVersion().intValue());
+
+            // POSITIVE physical handoff: the real committed U02/P05 -> U03/P01
+            // -> S14/U04 is the input to an actual F3 CDP CAS commit/readback.
+            // The F3 decision remains a clearly labeled TEST-ONLY candidate;
+            // this verifies wiring, not independent clinical F3 adjudication.
+            if (U04SafetyGateDecision.ALLOW.equals(expectedGate)
+                    || U04SafetyGateDecision.RESTRICTED.equals(expectedGate)) {
+                U07NonProductionPhysicalFollowupCoordinator.requireCurrentU04Version(
+                        created.getCdpId(), gated, cdps);
+                StateRepositoryPort physicalState =
+                        new ClinicalCdpStateRepositoryAdapter(cdps, versions, new ObjectMapper());
+                String f3Effect = "synthetic-first-round-f3-" + scenario;
+                com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalF3Owner
+                        physicalF3 = new com.aidoctor.diagnosis.runtime.foundation.adapters
+                        .U07NonProductionPhysicalF3Owner(
+                        new com.aidoctor.diagnosis.runtime.foundation.adapters
+                                .U07NonProductionPhysicalF3Owner.F3CommitPort() {
+                            @Override public int currentVersion(String cdpId) {
+                                return physicalState.readCurrentVersion(cdpId);
+                            }
+                            @Override public int commitAuthorized(String cdpId, int version,
+                                    com.aidoctor.diagnosis.runtime.foundation.adapters
+                                            .U07NonProductionPhysicalF3Owner.PreparedF3 decision) {
+                                StateRepositoryPort.AtomicCommitOutcome committed =
+                                        physicalState.attemptAtomicCommit(
+                                                new StateRepositoryPort.AtomicCommitCommand(
+                                                        cdpId, version, decision.patchId,
+                                                        decision.idempotencyKey, decision.patch));
+                                if (committed.status
+                                        != StateRepositoryPort.AtomicCommitOutcome.Status.COMMITTED)
+                                    throw new IllegalStateException("TEST_F3_CAS_FAILED");
+                                return committed.committedVersion;
+                            }
+                        }, cdps, (consultation, cdpId, version) -> {
+                            assertEquals(created.getConsultationId(), consultation);
+                            assertEquals(created.getCdpId(), cdpId);
+                            assertEquals(4, version);
+                            com.aidoctor.contracts.v1.StateTypes.StatePatchOperation op =
+                                    new com.aidoctor.contracts.v1.StateTypes.StatePatchOperation();
+                            op.op = "ADD";
+                            op.path = "/patient_state/f3_gap_assessment";
+                            Map<String,Object> payload = new LinkedHashMap<String,Object>();
+                            payload.put("f3_canonical_effect_id", f3Effect);
+                            payload.put("gap_id", "synthetic-first-round-gap-" + scenario);
+                            op.value = payload;
+                            op.source = "PATIENT_FACT";
+                            op.sensitivity = "PHI";
+                            com.aidoctor.contracts.v1.StateTypes.StatePatch patch =
+                                    new com.aidoctor.contracts.v1.StateTypes.StatePatch();
+                            patch.operations = Collections.singletonList(op);
+                            return new com.aidoctor.diagnosis.runtime.foundation.adapters
+                                    .U07NonProductionPhysicalF3Owner.PreparedF3(
+                                    f3Effect, "test-first-round-f3-patch-" + scenario,
+                                    "test-first-round-f3-idem-" + scenario, patch);
+                        });
+                com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow
+                        .F3Committed physical = physicalF3.executeAndReadback(
+                        riskHandoff.getConsultationId(), riskHandoff.getCdpId());
+                assertTrue(physical.committedAndReadback);
+                assertEquals(5, physical.persistedVersion);
+                assertEquals(f3Effect, physical.effectId);
+                assertEquals(f3Effect, ((Map<?, ?>)cdps.findById(created.getCdpId())
+                        .get().getPatientState().get("f3_gap_assessment"))
+                        .get("f3_canonical_effect_id"));
+                assertEquals(5, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
+                        created.getCdpId()).size());
+                assertTrue(assertThrows(IllegalStateException.class, () ->
+                        U07NonProductionPhysicalFollowupCoordinator
+                                .requireCurrentU04Version(created.getCdpId(), gated, cdps))
+                        .getMessage().contains("U04_SAFETY_GATE_STALE_BEFORE_F3"));
+            }
         }
     }
 
