@@ -86,7 +86,7 @@ jobs:
           physical_host=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07NonProductionPhysicalFollowupHostConfigTest.xml")
           assert len(physical_host)==1,physical_host
           physical_host_result=ET.parse(physical_host[0]).getroot()
-          assert int(physical_host_result.get("tests",-1))==3
+          assert int(physical_host_result.get("tests",-1))==4
           assert all(int(physical_host_result.get(k,-1))==0 for k in ("errors","failures","skipped"))
           result=ET.parse(paths[0]).getroot()
           assert int(result.get("tests",-1))==3
