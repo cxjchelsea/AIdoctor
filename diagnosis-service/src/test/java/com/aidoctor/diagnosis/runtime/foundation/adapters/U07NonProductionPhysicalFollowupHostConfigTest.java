@@ -79,41 +79,15 @@ class U07NonProductionPhysicalFollowupHostConfigTest {
     }
 
     @Test void missingIndependentDeliveryOwnerCannotStartFirstRound() {
-        U07NonProductionF3A1U05Flow f3 =
-                org.mockito.Mockito.mock(U07NonProductionF3A1U05Flow.class);
-        com.aidoctor.diagnosis.runtime.u06.U05QuestionRouteAdmissionAdapter admission =
-                org.mockito.Mockito.mock(
-                        com.aidoctor.diagnosis.runtime.u06.U05QuestionRouteAdmissionAdapter.class);
-        com.aidoctor.diagnosis.runtime.u06.U06NonProductionPhysicalMode23Service u06 =
-                org.mockito.Mockito.mock(
-                        com.aidoctor.diagnosis.runtime.u06.U06NonProductionPhysicalMode23Service.class);
-        com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery recovery =
-                org.mockito.Mockito.mock(
-                        com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery.class);
-        com.aidoctor.diagnosis.repository.CDPRepository cdps =
-                org.mockito.Mockito.mock(com.aidoctor.diagnosis.repository.CDPRepository.class);
-        com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingService bindings =
-                org.mockito.Mockito.mock(
-                        com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingService.class);
-        com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRepository runs =
-                org.mockito.Mockito.mock(
-                        com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRepository.class);
-        org.springframework.transaction.support.TransactionTemplate tx =
-                org.mockito.Mockito.mock(
-                        org.springframework.transaction.support.TransactionTemplate.class);
-        U07NonProductionPhysicalFollowupCoordinator.AuthorizedQuestionHost host =
-                org.mockito.Mockito.mock(
-                        U07NonProductionPhysicalFollowupCoordinator.AuthorizedQuestionHost.class);
-        U07NonProductionPhysicalFollowupCoordinator coordinator =
-                new U07NonProductionPhysicalFollowupCoordinator(
-                        f3, admission, u06, recovery, cdps, bindings, runs, tx, host);
         assertTrue(assertThrows(IllegalStateException.class, () ->
-                coordinator.firstRoundToDurableWait(
-                        null, null, null, "ci-nonprod", null, "state",
-                        null, null)).getMessage()
-                .contains("INDEPENDENT_DELIVERY_OWNER_REQUIRED"));
-        org.mockito.Mockito.verifyNoInteractions(
-                f3, admission, u06, recovery, cdps, bindings, runs, tx, host);
+                U07NonProductionPhysicalFollowupCoordinator
+                        .requireIndependentDeliveryOwner(null))
+                .getMessage().contains("INDEPENDENT_DELIVERY_OWNER_REQUIRED"));
+        U07NonProductionPhysicalFollowupCoordinator.ConfirmedDeliveryOwner owner =
+                selected -> { throw new AssertionError("delivery must not be invoked"); };
+        assertDoesNotThrow(() ->
+                U07NonProductionPhysicalFollowupCoordinator
+                        .requireIndependentDeliveryOwner(owner));
     }
 
 }
