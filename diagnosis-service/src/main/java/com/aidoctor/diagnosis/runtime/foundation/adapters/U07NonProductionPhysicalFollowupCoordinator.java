@@ -84,6 +84,34 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
     }
 
     /**
+     * First-round entry for a newly committed U02 clinical observation.
+     * A fresh P05 trace, independent accepted-evidence admission, frozen Gate-C
+     * evaluation and the actual U03/P01/S14/U04 commits are mandatory BEFORE
+     * F3/A1 or a question selection may be attempted. No authority is minted.
+     *
+     * Failed/insufficient or blocked U04 assessments fail closed in select(),
+     * before the F3 owner can mutate clinical state.
+     */
+    public Selected selectFromCommittedU02(
+            com.aidoctor.diagnosis.runtime.u02.U02ExecutionResult fact,
+            com.aidoctor.diagnosis.runtime.u03.U03ExecutionCommand command,
+            com.aidoctor.diagnosis.runtime.u03.U03ExplicitNonProductionReleaseRefs releases,
+            String environmentId,
+            com.aidoctor.diagnosis.runtime.u04.U04ScopeContext scope,
+            String authoritativeStateRef,
+            U07NonProductionGovernedRiskSafetyContinuation continuation) {
+        if (continuation == null)
+            throw blocked("GOVERNED_RISK_CONTINUATION_REQUIRED");
+        U07NonProductionGovernedRiskSafetyContinuation.Result firstRound =
+                continuation.executeFromCommittedU02(
+                        fact, command, releases, environmentId, scope);
+        if (firstRound == null || firstRound.handoff == null || firstRound.gate == null)
+            throw blocked("GOVERNED_RISK_SAFETY_COMMIT_REQUIRED");
+        return select(firstRound.handoff, firstRound.gate,
+                environmentId, authoritativeStateRef);
+    }
+
+    /**
      * Persists exactly one selected question through the existing governed U06
      * P01 owner. No delivery, checkpoint or external side effect occurs here.
      */
