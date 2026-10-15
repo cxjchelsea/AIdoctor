@@ -154,6 +154,40 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
     }
 
     /**
+     * Host-provided, independently confirmed delivery receipt. The adapter
+     * neither sends to a patient nor creates a confirmation.
+     */
+    public interface ConfirmedDeliveryOwner {
+        U07NonProductionDeliveryWaitRecovery.Receipt requireConfirmedDelivery(Selected selected);
+    }
+
+    /**
+     * Nonproduction first-round integration: committed U02 -> governed
+     * U03/P01/S14/U04 -> existing F3/A1/U05/U06 -> confirmed delivery -> WAIT.
+     * No WAIT is attempted unless the independent delivery owner returns a
+     * receipt that matches the exact persisted selection.
+     */
+    public U07NonProductionDeliveryWaitRecovery.WaitReceipt firstRoundToDurableWait(
+            com.aidoctor.diagnosis.runtime.u02.U02ExecutionResult fact,
+            com.aidoctor.diagnosis.runtime.u03.U03ExecutionCommand command,
+            com.aidoctor.diagnosis.runtime.u03.U03ExplicitNonProductionReleaseRefs releases,
+            String environmentId,
+            com.aidoctor.diagnosis.runtime.u04.U04ScopeContext scope,
+            String authoritativeStateRef,
+            U07NonProductionGovernedRiskSafetyContinuation continuation,
+            ConfirmedDeliveryOwner deliveryOwner) {
+        if (deliveryOwner == null)
+            throw blocked("INDEPENDENT_DELIVERY_OWNER_REQUIRED");
+        Selected selected = selectFromCommittedU02(fact, command, releases,
+                environmentId, scope, authoritativeStateRef, continuation);
+        U07NonProductionDeliveryWaitRecovery.Receipt receipt =
+                deliveryOwner.requireConfirmedDelivery(selected);
+        if (receipt == null)
+            throw blocked("CONFIRMED_DELIVERY_RECEIPT_MISSING");
+        return confirmedDeliveryToWait(selected, receipt);
+    }
+
+    /**
      * Persists exactly one selected question through the existing governed U06
      * P01 owner. No delivery, checkpoint or external side effect occurs here.
      */
