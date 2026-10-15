@@ -78,6 +78,20 @@ class U03CdpGateCClinicalInputPortTest {
         verifyNoInteractions(scope);
     }
 
+    @Test void conflictingMultiTurnFactsRequireGovernedSupersession() {
+        Map<String,Object> state = new LinkedHashMap<String,Object>();
+        state.put("clinical_fact_round_one",
+                fact("EV-RF-RESP-001", "NO", "PATIENT_REPORTED"));
+        state.put("clinical_fact_round_two",
+                fact("EV-RF-RESP-001", "YES", "PATIENT_REPORTED"));
+        cdp.setPatientState(state);
+        // Neither a last-write-wins heuristic nor an implicit YES override
+        // is an authorized clinical truth rule. Current mapper fails closed
+        // until supersession and evidence acceptance are explicitly governed.
+        assertTrue(assertThrows(IllegalStateException.class, () -> port.load(command, accepted))
+                .getMessage().contains("DUPLICATE_EVIDENCE"));
+    }
+
     private static Map<String,Object> fact(String ref,String semantic,String source) {
         Map<String,Object> m=new LinkedHashMap<String,Object>();
         m.put("concept_id",ref);m.put("value_semantics",semantic);
