@@ -544,7 +544,9 @@ public class U07U06SelectionPhysicalMysqlTest {
                                             u03Traces::add), producer),
                             producer, safety, tx);
             U07NonProductionGovernedRiskSafetyContinuation.Result round =
-                    continuation.execute(admitted,
+                    continuation.executeFromCommittedU02(updated, riskCommand,
+                            com.aidoctor.diagnosis.runtime.u03.U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
+                            "ci-nonprod-resumed-risk",
                             com.aidoctor.diagnosis.runtime.u04.U04ScopeContext.current(true,true));
             com.aidoctor.diagnosis.runtime.u03.U03DecisionOutcome riskDecision = round.risk;
             com.aidoctor.contracts.v1.StateTypes.CommitResult riskCommit = round.riskCommit;
