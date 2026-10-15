@@ -229,6 +229,8 @@ public class U07U06SelectionPhysicalMysqlTest {
                     ctx.getBean(com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRepository.class);
             com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRepository checkpoints =
                     ctx.getBean(com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRepository.class);
+            final long priorCheckpointCount = checkpoints.count();
+            final long priorWaitEffectCount = waitEffects.count();
             com.aidoctor.diagnosis.runtime.u06.U07ExistingU06WaitAuthority actualWait =
                     new com.aidoctor.diagnosis.runtime.u06.U07ExistingU06WaitAuthority(
                             new com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitTransitionService(
@@ -252,8 +254,8 @@ public class U07U06SelectionPhysicalMysqlTest {
                     request.getConsultationId()).get().getLifecycleStatus());
             assertEquals("AWAITING_USER", threads.findById(
                     request.getThreadId()).get().getRuntimeStatus());
-            assertEquals(1L, checkpoints.count());
-            assertEquals(1L, waitEffects.count());
+            assertEquals(priorCheckpointCount + 1L, checkpoints.count());
+            assertEquals(priorWaitEffectCount + 1L, waitEffects.count());
             assertEquals(0, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM u07_question_wait_evidence WHERE cdp_id=?",
                     Integer.class, id).intValue());
@@ -342,6 +344,8 @@ public class U07U06SelectionPhysicalMysqlTest {
                     new com.aidoctor.diagnosis.runtime.foundation.CanonicalBusinessEventLedger(events),
                     new com.aidoctor.diagnosis.runtime.foundation.ClinicalRunCoordinator(
                             bindingService, events, runs), consultations, threads, checkpoints);
+            final long priorEvents = events.count();
+            final long priorRuns = runs.count();
             String freshRun = consume.consume(
                     answer, persistedWait.checkpointId, ("synthetic-answer-idem" + suffix),
                     "sha256:synthetic-answer-digest");
@@ -608,15 +612,15 @@ public class U07U06SelectionPhysicalMysqlTest {
 
             assertEquals(freshRun, consume.consume(answer, persistedWait.checkpointId,
                     ("synthetic-answer-idem" + suffix), "sha256:synthetic-answer-digest"));
-            assertEquals(1L, events.count());
-            assertEquals(1L, runs.count());
+            assertEquals(priorEvents + 1L, events.count());
+            assertEquals(priorRuns + 1L, runs.count());
             assertEquals(1, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM u07_f8_answer_consumption WHERE checkpoint_id=?",
                     Integer.class, persistedWait.checkpointId).intValue());
             assertThrows(IllegalStateException.class, () -> consume.consume(
                     answer, persistedWait.checkpointId, ("synthetic-answer-idem" + suffix),
                     "sha256:DIFFERENT"));
-            assertEquals(1L, runs.count());
+            assertEquals(priorRuns + 1L, runs.count());
             assertEquals(finalVersion, cdps.findById(id).get().getVersion().intValue());
             assertEquals(historyCount, history.findByCdpIdOrderByVersionNumberDesc(id).size());
         }
