@@ -105,8 +105,20 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
         U07NonProductionGovernedRiskSafetyContinuation.Result firstRound =
                 continuation.executeFromCommittedU02(
                         fact, command, releases, environmentId, scope);
-        if (firstRound == null || firstRound.handoff == null || firstRound.gate == null)
+        if (firstRound == null || firstRound.handoff == null || firstRound.gate == null
+                || command == null)
             throw blocked("GOVERNED_RISK_SAFETY_COMMIT_REQUIRED");
+        // The U03 handoff must belong to this very U02-backed clinical run.
+        // An otherwise valid gate for a different consultation or older run
+        // may never drive F3, question selection, delivery or durable WAIT.
+        if (!Objects.equals(command.consultationId, firstRound.handoff.getConsultationId())
+                || !Objects.equals(command.cdpId, firstRound.handoff.getCdpId())
+                || !Objects.equals(command.threadId, firstRound.handoff.getThreadId())
+                || !Objects.equals(command.runId, firstRound.handoff.getRunId())
+                || !Objects.equals(command.eventId, firstRound.handoff.getEventId()))
+            throw blocked("GOVERNED_FIRST_ROUND_IDENTITY_MISMATCH");
+        U07NonProductionF3A1U05Flow.requireEligiblePreF3(
+                firstRound.handoff, firstRound.gate);
         return select(firstRound.handoff, firstRound.gate,
                 environmentId, authoritativeStateRef);
     }
