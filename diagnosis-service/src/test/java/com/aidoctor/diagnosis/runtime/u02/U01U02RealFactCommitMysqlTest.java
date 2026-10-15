@@ -230,7 +230,7 @@ public class U01U02RealFactCommitMysqlTest {
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         U07NonProductionF3A1U05Flow.requireEligiblePreF3(
                                 failedHandoff, unavailable))
-                        .getMessage().contains("U07_U04_SAFETY_PRE_F3_NOT_ELIGIBLE"));
+                        .getMessage().contains("U07_U03_RISK_COMMIT_EVIDENCE_REQUIRED"));
 
                 assertEquals(Integer.valueOf(3), unavailable.getCommitResult().committedVersion);
                 assertEquals("UNAVAILABLE", ((Map<?,?>) cdps.findById(created.getCdpId())
