@@ -100,8 +100,13 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
             com.aidoctor.diagnosis.runtime.u04.U04ScopeContext scope,
             String authoritativeStateRef,
             U07NonProductionGovernedRiskSafetyContinuation continuation) {
-        if (continuation == null)
+        if (continuation == null || command == null)
             throw blocked("GOVERNED_RISK_CONTINUATION_REQUIRED");
+        // Validate existing durable clinical authority BEFORE U03/P01 can
+        // commit risk or U04 can mutate the safety gate. Checking only after
+        // these commits would allow an invalid Run/Thread to change the CDP.
+        requireDurableRuntimeForCommandPreRisk(command, bindings, runs,
+                host.threadId(), host.runId());
         U07NonProductionGovernedRiskSafetyContinuation.Result firstRound =
                 continuation.executeFromCommittedU02(
                         fact, command, releases, environmentId, scope);
@@ -121,6 +126,31 @@ public final class U07NonProductionPhysicalFollowupCoordinator {
                 firstRound.handoff, firstRound.gate);
         return select(firstRound.handoff, firstRound.gate,
                 environmentId, authoritativeStateRef);
+    }
+
+    /**
+     * Pre-risk equivalent of the pre-F3 durable authority fence. The command
+     * must be bound to a persisted consultation, thread and OPEN clinical Run.
+     */
+    static void requireDurableRuntimeForCommandPreRisk(
+            com.aidoctor.diagnosis.runtime.u03.U03ExecutionCommand command,
+            RuntimeBindingService bindings, ClinicalRunRepository runs,
+            String hostThreadId, String hostRunId) {
+        if (command == null || bindings == null || runs == null)
+            throw blocked("PRE_RISK_DURABLE_AUTHORITY_MISSING");
+        RuntimeBindingRecord binding = bindings.requireBinding(command.consultationId);
+        ClinicalRunRecord run = runs.findById(command.runId)
+                .orElseThrow(() -> blocked("PRE_RISK_RUN_NOT_FOUND"));
+        if (!RuntimeBindingRecord.CLINICAL_RUNTIME_V1.equals(binding.getRuntimeAuthority())
+                || !Objects.equals(command.cdpId, binding.getCdpId())
+                || !Objects.equals(command.threadId, binding.getThreadId())
+                || !Objects.equals(command.threadId, run.getThreadId())
+                || !Objects.equals(command.consultationId, run.getConsultationId())
+                || !Objects.equals(command.eventId, run.getEventId())
+                || !Objects.equals(command.threadId, hostThreadId)
+                || !Objects.equals(command.runId, hostRunId)
+                || !ClinicalRunRecord.OPEN.equals(run.getStatus()))
+            throw blocked("PRE_RISK_DURABLE_AUTHORITY_MISMATCH");
     }
 
     /**
