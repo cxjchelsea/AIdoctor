@@ -317,7 +317,7 @@ jobs:
           mode2=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07U06SelectionPhysicalMysqlTest.xml")
           assert len(mode2)==1,mode2
           selection=ET.parse(mode2[0]).getroot()
-          assert int(selection.get("tests",-1))==1
+          assert int(selection.get("tests",-1))==2
           assert all(int(selection.get(k,-1))==0 for k in ("failures","errors","skipped"))
           print("U07_U06_MYSQL_MODE2_SELECTION=PASS; SYNTHETIC_CONFIRMED_DELIVERY_DURABLE_WAIT=PASS; REAL_DELIVERY_AUTHORITY=BLOCK")
           print("U07_WORKPACK_A_REAL_SPRING_JPA_MYSQL8_CDP_AND_HOST_U04=PASS")
