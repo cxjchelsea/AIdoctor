@@ -874,7 +874,7 @@ public class U01U02RealFactCommitMysqlTest {
                                             new U03OutboundProducer()),
                                     new U03OutboundProducer(), secondSafety, tx);
                     U07NonProductionGovernedRiskSafetyContinuation.Result secondResult =
-                            secondContinuation.executeFromCommittedU02(updatedAnswer,
+                            secondContinuation.executeFromCommittedU02ReplacingExistingRisk(updatedAnswer,
                                     secondRiskCommand,
                                     U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
                                     "ci-nonprod-safety", U04ScopeContext.current(true, true));
