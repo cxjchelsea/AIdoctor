@@ -51,6 +51,8 @@ public final class V1NonProductionFirstRoundWaitController {
         /** Independently verify delivered question belongs to the exact persisted WAIT. */
         DeliveredQuestion requireDeliveredQuestion(String consultationId, String runId,
                 String checkpointId, U07NonProductionDeliveryWaitRecovery.WaitReceipt wait);
+        String requireAuthorizedQuestionText(String consultationId, String runId,
+                DeliveredQuestion delivered);
         String requireCurrentAuthoritativeStateRef(String consultationId, String runId,
                 U02ExecutionResult committedFact);
         U07NonProductionPhysicalFollowupCoordinator.ConfirmedDeliveryOwner
@@ -67,13 +69,13 @@ public final class V1NonProductionFirstRoundWaitController {
 
     public static final class StartResponse {
         public final String consultationId, cdpId, runId, checkpointId, waitEffectId;
-        public final String questionId, questionContentRef;
+        public final String questionId, questionContentRef, questionText;
         public final String entryStatus = "DURABLE_WAIT_ESTABLISHED_NONPRODUCTION";
         public final boolean completeClinicalE2e = false;
         public final boolean patientDeliveryAllowed = false;
 
         StartResponse(U01Result started, U07NonProductionDeliveryWaitRecovery.WaitReceipt wait,
-                DeliveredQuestion question) {
+                DeliveredQuestion question, String questionText) {
             this.consultationId = started.getConsultationId();
             this.cdpId = started.getCdpId();
             this.runId = started.getRunId();
@@ -81,6 +83,7 @@ public final class V1NonProductionFirstRoundWaitController {
             this.waitEffectId = wait.waitEffectId;
             this.questionId = question.questionId;
             this.questionContentRef = question.contentRef;
+            this.questionText = questionText;
         }
     }
 
@@ -147,7 +150,11 @@ public final class V1NonProductionFirstRoundWaitController {
         DeliveredQuestion question = owner.requireDeliveredQuestion(
                 started.getConsultationId(), started.getRunId(), wait.checkpointId, wait);
         if (question == null) throw blocked("DELIVERED_QUESTION_READBACK_REQUIRED");
-        return ResponseEntity.ok(new StartResponse(started, wait, question));
+        String questionText = owner.requireAuthorizedQuestionText(
+                started.getConsultationId(), started.getRunId(), question);
+        if (questionText == null || questionText.trim().isEmpty())
+            throw blocked("AUTHORIZED_QUESTION_CONTENT_REQUIRED");
+        return ResponseEntity.ok(new StartResponse(started, wait, question, questionText));
     }
 
     private static IllegalStateException blocked(String reason) {
