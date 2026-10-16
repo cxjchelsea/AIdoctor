@@ -37,6 +37,8 @@ on:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionFirstRoundOwnerAdapter.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionFirstRoundOwnerAdapterTest.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionFirstRoundOwnerHostConfig.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1SyntheticQuestionContentTestConfig.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1SyntheticQuestionContentTestConfigTest.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionFirstRoundOwnerHostConfigTest.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionDeliveredQuestionReadbackHostConfigTest.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionDeliveredQuestionReadbackTest.java'
@@ -79,7 +81,7 @@ jobs:
       - name: Exercise public start and continue HTTP adapter
         run: |
           set -euo pipefail
-          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=V1ClinicalPublicEntryAcceptanceTest,V1NonProductionClinicalIngressTest,V1NonProductionClinicalStartHandoffTest,V1NonProductionClinicalSafetyHandoffTest,V1NonProductionFirstRoundWaitTest,V1NonProductionClinicalRuntimeReadinessTest,V1NonProductionSafetyBridgeHostConfigTest,V1NonProductionDeliveredQuestionReadbackTest,V1NonProductionDeliveredQuestionReadbackHostConfigTest,V1NonProductionFirstRoundOwnerHostConfigTest,V1NonProductionFirstRoundOwnerAdapterTest,V1NonProductionU02HttpHostConfigTest,U01U02TrustedStartContextTest,U01U02NonProductionHostConfigTest,U02U03GovernedSafetyBridgeTest,U03CdpAcceptedEvidenceAuthorityTest,U03CdpGateCClinicalInputPortTest,U07NonProductionPhysicalFollowupHostConfigTest test
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=V1ClinicalPublicEntryAcceptanceTest,V1NonProductionClinicalIngressTest,V1NonProductionClinicalStartHandoffTest,V1NonProductionClinicalSafetyHandoffTest,V1NonProductionFirstRoundWaitTest,V1NonProductionClinicalRuntimeReadinessTest,V1NonProductionSafetyBridgeHostConfigTest,V1NonProductionDeliveredQuestionReadbackTest,V1NonProductionDeliveredQuestionReadbackHostConfigTest,V1NonProductionFirstRoundOwnerHostConfigTest,V1NonProductionFirstRoundOwnerAdapterTest,V1SyntheticQuestionContentTestConfigTest,V1NonProductionU02HttpHostConfigTest,U01U02TrustedStartContextTest,U01U02NonProductionHostConfigTest,U02U03GovernedSafetyBridgeTest,U03CdpAcceptedEvidenceAuthorityTest,U03CdpGateCClinicalInputPortTest,U07NonProductionPhysicalFollowupHostConfigTest test
           python3 - <<'PY'
           import glob, xml.etree.ElementTree as ET
           paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1ClinicalPublicEntryAcceptanceTest.xml")
