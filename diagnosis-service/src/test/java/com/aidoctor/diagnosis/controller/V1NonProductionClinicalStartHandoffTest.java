@@ -4,7 +4,6 @@ import com.aidoctor.contracts.v1.StateTypes;
 import com.aidoctor.diagnosis.runtime.u01.U01NaturalLanguageStartService;
 import com.aidoctor.diagnosis.runtime.u01.U01RawStartCommand;
 import com.aidoctor.diagnosis.runtime.u01.U01Result;
-import com.aidoctor.diagnosis.runtime.u02.U01U02NonProductionHandoffService;
 import com.aidoctor.diagnosis.runtime.u02.U02ExecutionResult;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -60,7 +59,6 @@ class V1NonProductionClinicalStartHandoffTest {
     @Test
     void unexpectedU01RouteNeverInvokesU02() {
         U01NaturalLanguageStartService u01 = mock(U01NaturalLanguageStartService.class);
-        U01U02NonProductionHandoffService handoff = mock(U01U02NonProductionHandoffService.class);
         U01Result started = mock(U01Result.class);
         when(started.getNextUnit()).thenReturn("U04");
         when(u01.start(any(U01RawStartCommand.class))).thenReturn(started);
