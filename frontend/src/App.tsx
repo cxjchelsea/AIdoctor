@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import { Spin } from 'antd'
 import DiagnosisPage from './pages/DiagnosisPage'
+import V1ClinicalManualTestPage from './pages/V1ClinicalManualTestPage'
 import ClinicalParsingTestPage from './pages/ClinicalParsingTestPage'
 import './App.css'
 
@@ -36,6 +37,7 @@ function App() {
         <Routes>
           <Route path="/" element={<DiagnosisPage />} />
           <Route path="/diagnosis" element={<DiagnosisPage />} />
+          <Route path="/test/v1-clinical" element={<V1ClinicalManualTestPage />} />
           <Route path="/cdp/:cdpId" element={<CDPVisualizationPageWrapper />} />
           <Route path="/test/clinical-parsing" element={<ClinicalParsingTestPage />} />
         </Routes>
