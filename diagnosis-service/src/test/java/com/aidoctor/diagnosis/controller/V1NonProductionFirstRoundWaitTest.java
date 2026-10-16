@@ -19,7 +19,13 @@ class V1NonProductionFirstRoundWaitTest {
                 new com.aidoctor.diagnosis.runtime.u02.U01U02NonProductionHandoffService(
                         mock(com.aidoctor.diagnosis.runtime.u02.U01U02TrustedStartContext.class),
                         mock(com.aidoctor.diagnosis.runtime.u02.U01U02NonProductionHandoffService.TrustedTraceAuthority.class),
-                        mock(com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactApplicationService.class));
+                        new com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactApplicationService(
+                                mock(com.aidoctor.diagnosis.runtime.u02.capability.C01U02CapabilityGateway.class),
+                                mock(com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactBusinessOwner.class),
+                                mock(com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactProposalFactory.class),
+                                mock(com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactCommitService.class),
+                                new com.aidoctor.diagnosis.runtime.u02.d05.U02DependencyInvalidationHook(),
+                                mock(com.aidoctor.diagnosis.runtime.governance.CapabilityTraceService.class)));
         com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionGovernedRiskSafetyContinuation risk =
                 mock(com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionGovernedRiskSafetyContinuation.class);
         com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalFollowupCoordinator followup =
