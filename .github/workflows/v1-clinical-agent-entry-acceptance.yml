@@ -63,7 +63,7 @@ jobs:
           handoff_http=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1NonProductionClinicalStartHandoffTest.xml")
           assert len(handoff_http)==1,handoff_http
           handoff_result=ET.parse(handoff_http[0]).getroot()
-          assert int(handoff_result.get("tests",-1))==2
+          assert int(handoff_result.get("tests",-1))==4
           assert all(int(handoff_result.get(key,-1))==0 for key in ("errors","failures","skipped"))
           trust=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02TrustedStartContextTest.xml")
           assert len(trust)==1,trust
