@@ -409,7 +409,8 @@ public class U01U02RealFactCommitMysqlTest {
                 com.aidoctor.diagnosis.runtime.foundation.adapters.U07DurableNonProductionA1Issuer
                         unapprovedA1 = new com.aidoctor.diagnosis.runtime.foundation.adapters
                         .U07DurableNonProductionA1Issuer(
-                                cdps, ctx.getBean(org.springframework.jdbc.core.JdbcTemplate.class),
+                                cdps, new org.springframework.jdbc.core.JdbcTemplate(
+                                        ctx.getBean(javax.sql.DataSource.class)),
                                 tx, (consultation, cdpId, version, effect) -> null);
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         unapprovedA1.issue(created.getConsultationId(),
