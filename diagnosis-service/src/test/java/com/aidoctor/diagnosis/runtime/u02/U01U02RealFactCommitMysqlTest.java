@@ -500,6 +500,107 @@ public class U01U02RealFactCommitMysqlTest {
                     assertTrue(admittedA1.isPostF3SafetyBarrierComplete());
                     assertTrue(admittedA1.isF3RevalidatedCurrent());
                     assertTrue(admittedA1.isRouteAuthorizationCurrent());
+
+                    // Real U05 application, P01 commit and JDBC-backed CDP
+                    // readback in the SAME consultation after physical F3/A1.
+                    // RDP-05 readiness facts and routing ports remain explicitly
+                    // synthetic NONPRODUCTION host decisions.
+                    java.util.List<com.aidoctor.diagnosis.runtime.u05.U05ReadinessInput>
+                            readinessInputs = new java.util.ArrayList<>();
+                    for (String domain : Arrays.asList("F1", "F3", "F5", "F6")) {
+                        boolean present = "F1".equals(domain) || "F3".equals(domain);
+                        String signal = "F1".equals(domain) ? "FRAMED_IN_SCOPE"
+                                : "F3".equals(domain) ? "CAN_ASK_MORE" : null;
+                        String kind = "F1".equals(domain) ? "SCOPE_OR_FRAMING"
+                                : "F3".equals(domain) ? "ONLINE_INFORMATION_GAP"
+                                : "F5".equals(domain) ? "DDX_OR_MUST_EXCLUDE" : "OFFLINE_EVIDENCE";
+                        readinessInputs.add(new com.aidoctor.diagnosis.runtime.u05.U05ReadinessInput(
+                                "test-u05-input-" + domain, domain, "test-owner-" + domain,
+                                kind, present ? "PRESENT" : "NOT_YET_APPLICABLE", signal,
+                                created.getConsultationId(), created.getCdpId(), 5,
+                                "test-u05-decision-" + domain, "test-u05-state-" + domain,
+                                "test-u05-applicability-" + domain,
+                                Collections.singletonList("test-evidence-" + domain),
+                                Collections.singletonList("test-policy-" + domain),
+                                "2026-10-16T00:00:00Z", "CURRENT", null));
+                    }
+                    String u05Context = com.aidoctor.diagnosis.runtime.u05
+                            .U05ConsumerInboundRequest.A1_POST_BARRIER_CURRENT;
+                    String inputSet = com.aidoctor.diagnosis.runtime.u05
+                            .U05ReadinessInputManifest.semanticSetIdentity(
+                                    created.getConsultationId(), created.getCdpId(), 5,
+                                    u05Context, com.aidoctor.diagnosis.runtime.u05
+                                            .U05ReadinessInputManifest.RDP05_CONTRACT_VERSION,
+                                    readinessInputs);
+                    com.aidoctor.diagnosis.runtime.u05.U05ReadinessInputManifest manifest =
+                            new com.aidoctor.diagnosis.runtime.u05.U05ReadinessInputManifest(
+                                    "test-u05-manifest-" + scenario, inputSet,
+                                    created.getConsultationId(), created.getCdpId(), 5, u05Context,
+                                    com.aidoctor.diagnosis.runtime.u05.U05ReadinessInputManifest
+                                            .RDP05_CONTRACT_VERSION, readinessInputs);
+                    com.aidoctor.diagnosis.runtime.u05.U05ConsumerInboundRequest u05Request =
+                            new com.aidoctor.diagnosis.runtime.u05.U05ConsumerInboundRequest(
+                                    "test-u05-request-" + scenario,
+                                    created.getConsultationId(), created.getCdpId(), 5,
+                                    admittedA1.getAuthoritativeStateRef(), u05Context,
+                                    com.aidoctor.diagnosis.runtime.u05.U05ConsumerInboundRequest
+                                            .U04_A1_POST_BARRIER_ROUTING,
+                                    admittedA1.getRouteSourceRef(),
+                                    com.aidoctor.diagnosis.runtime.u05.U05ConsumerInboundRequest
+                                            .U05_ELIGIBLE,
+                                    admittedA1.getGateRef(), admittedA1.getGateCommitRef(),
+                                    admittedA1.getGateValue(), admittedA1.getRouteAuthorizationType(),
+                                    admittedA1.getRouteAuthorizationRef(),
+                                    admittedA1.getRoutingPolicyVersion(), "A1", null, null,
+                                    manifest.getManifestRef(), manifest.getSetIdentity(),
+                                    manifest.authoritativeRecordRefs(), "test-u05-event",
+                                    "test-u05-business-event", "synthetic-correlation",
+                                    "synthetic-trace",
+                                    com.aidoctor.diagnosis.runtime.u05.U05AdmissionService
+                                            .CONTRACT_VERSION,
+                                    "ci-nonprod-safety", "2026-10-16T00:00:00Z");
+                    com.aidoctor.diagnosis.runtime.u05.U05NonProductionApplicationService realU05 =
+                            new com.aidoctor.diagnosis.runtime.u05.U05NonProductionApplicationService(
+                                    new com.aidoctor.diagnosis.runtime.u05.U05AdmissionService(
+                                            new com.aidoctor.diagnosis.runtime.u05
+                                                    .U05InMemoryAdmissionLedger()),
+                                    new com.aidoctor.diagnosis.runtime.u05.U05ClinicalReadinessPolicy(),
+                                    new com.aidoctor.diagnosis.runtime.u05
+                                            .U05ReadinessStateProposalFactory(),
+                                    new com.aidoctor.diagnosis.runtime.u05.U05CommitService(
+                                            committer,
+                                            new com.aidoctor.diagnosis.runtime.foundation.adapters
+                                                    .ClinicalCdpReadbackAdapter(cdps)),
+                                    (input, decision, evidence) ->
+                                            new com.aidoctor.diagnosis.runtime.u05
+                                                    .U05RoutingCurrentness(
+                                                    evidence.getCommittedClinicalStateVersion(),
+                                                    "test-u05-current-route", true, true, true,
+                                                    true, true, input.getAcceptedU04GateRef(),
+                                                    input.getGateValue(), null),
+                                    new com.aidoctor.diagnosis.runtime.u05.U05RoutingService(
+                                            new com.aidoctor.diagnosis.runtime.u05
+                                                    .U05InMemoryRouteLedger(),
+                                            (input, evidence, currentness, consequence, target, action) ->
+                                                    new com.aidoctor.diagnosis.runtime.u05
+                                                            .U05DownstreamPermissionDecision(
+                                                            "test-u05-permission", input.getConsultationId(),
+                                                            input.getCdpId(),
+                                                            currentness.getCurrentU04GateRef(), null,
+                                                            consequence, action, target,
+                                                            "PERMITTED", "test-route-permission",
+                                                            "test-policy", "v1", "CURRENT")));
+                    com.aidoctor.diagnosis.runtime.u05.U05ExecutionResult u05Result =
+                            tx.execute(status -> realU05.execute(
+                                    u05Request, manifest, admittedA1));
+                    assertEquals(com.aidoctor.diagnosis.runtime.u05.U05ExecutionResult.ROUTING_COMPLETE,
+                            u05Result.getStatus());
+                    assertEquals("COMMITTED", u05Result.getCommitResult().status);
+                    assertEquals(6, cdps.findById(created.getCdpId()).get().getVersion().intValue());
+                    assertTrue(cdps.findById(created.getCdpId()).get().getPatientState()
+                            .get("clinical_readiness") instanceof Map<?, ?>);
+                    assertEquals(6, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
+                            created.getCdpId()).size());
                 } else {
                     // RESTRICTED cannot acquire an unrestricted U05 route merely
                     // from a durable A1 row lacking restricted-action permission.
