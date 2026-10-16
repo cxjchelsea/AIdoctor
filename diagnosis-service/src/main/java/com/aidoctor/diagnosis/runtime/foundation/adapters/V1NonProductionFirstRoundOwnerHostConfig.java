@@ -19,12 +19,14 @@ public class V1NonProductionFirstRoundOwnerHostConfig {
     @ConditionalOnBean({
         V1NonProductionFirstRoundOwnerAdapter.AuthorizedStateOwner.class,
         V1NonProductionFirstRoundOwnerAdapter.DeliveryOwnerAuthority.class,
+        V1NonProductionFirstRoundOwnerAdapter.AuthorizedQuestionContent.class,
         V1NonProductionDeliveredQuestionReadback.class
     })
     public V1NonProductionFirstRoundWaitController.FirstRoundOwner v1FirstRoundOwner(
             V1NonProductionFirstRoundOwnerAdapter.AuthorizedStateOwner state,
             V1NonProductionFirstRoundOwnerAdapter.DeliveryOwnerAuthority delivery,
-            V1NonProductionDeliveredQuestionReadback readback) {
-        return new V1NonProductionFirstRoundOwnerAdapter(state, delivery, readback);
+            V1NonProductionDeliveredQuestionReadback readback,
+            V1NonProductionFirstRoundOwnerAdapter.AuthorizedQuestionContent content) {
+        return new V1NonProductionFirstRoundOwnerAdapter(state, delivery, readback, content);
     }
 }
