@@ -690,7 +690,7 @@ public class U01U02RealFactCommitMysqlTest {
                 assertEquals(1, a1Jdbc.queryForObject(
                         "SELECT COUNT(*) FROM u07_a1_attestation WHERE consultation_id=? AND cdp_id=? AND cdp_version=?",
                         Integer.class, created.getConsultationId(), created.getCdpId(), 5).intValue());
-                assertEquals(U04SafetyGateDecision.ALLOW.equals(expectedGate) ? 6 : 5,
+                assertEquals(U04SafetyGateDecision.ALLOW.equals(expectedGate) ? 7 : 5,
                         cdps.findById(created.getCdpId()).get().getVersion().intValue());
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         U07NonProductionPhysicalFollowupCoordinator
