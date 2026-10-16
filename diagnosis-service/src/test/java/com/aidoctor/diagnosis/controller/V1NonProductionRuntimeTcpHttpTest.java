@@ -49,5 +49,11 @@ class V1NonProductionRuntimeTcpHttpTest {
         Map<?, ?> components = (Map<?, ?>) result.get("components");
         assertEquals(Boolean.FALSE, components.get("independentClinicalHost"));
         assertEquals(Boolean.FALSE, components.get("u01U04HttpEntry"));
+        assertEquals(Boolean.FALSE, components.get("firstRoundHttpEntry"));
+        assertEquals(Boolean.FALSE, components.get("firstRoundOwner"));
+        assertEquals(Boolean.FALSE, components.get("f8AnswerHttpEntry"));
+        assertEquals(Boolean.FALSE, components.get("trustedAnswerHost"));
+        assertEquals(Boolean.FALSE, components.get("resumedRiskHttpEntry"));
+        assertEquals(Boolean.FALSE, components.get("resumedRiskOwner"));
     }
 }
