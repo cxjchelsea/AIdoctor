@@ -26,7 +26,6 @@ class V1NonProductionClinicalStartHandoffTest {
     @Test
     void actualU01ResultMustLeadToCommittedU02WithoutClaimingCompleteCare() throws Exception {
         U01NaturalLanguageStartService u01 = mock(U01NaturalLanguageStartService.class);
-        U01U02NonProductionHandoffService handoff = mock(U01U02NonProductionHandoffService.class);
         U01Result started = mock(U01Result.class);
         when(started.getNextUnit()).thenReturn("U02");
         when(started.getConsultationId()).thenReturn("consult_synthetic");
@@ -37,8 +36,15 @@ class V1NonProductionClinicalStartHandoffTest {
         commit.status = "COMMITTED";
         U02ExecutionResult fact = new U02ExecutionResult("COMMITTED", null, "synthetic-call",
                 null, null, commit, null);
-        when(handoff.executeCommittedStart(eq("consult_synthetic"), eq("run_synthetic"),
-                eq("synthetic headache"))).thenReturn(fact);
+        java.util.concurrent.atomic.AtomicInteger committed = new java.util.concurrent.atomic.AtomicInteger();
+        V1NonProductionClinicalStartHandoffController.TrustedFactCommit handoff =
+                (consultation, run, raw) -> {
+                    assertEquals("consult_synthetic", consultation);
+                    assertEquals("run_synthetic", run);
+                    assertEquals("synthetic headache", raw);
+                    committed.incrementAndGet();
+                    return fact;
+                };
         MockMvc mvc = MockMvcBuilders.standaloneSetup(
                 new V1NonProductionClinicalStartHandoffController(u01, handoff)).build();
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(BODY))
@@ -48,8 +54,7 @@ class V1NonProductionClinicalStartHandoffTest {
                         .value("U02_COMMITTED_DOWNSTREAM_NOT_EXECUTED"))
                 .andExpect(jsonPath("$.completeClinicalE2e").value(false))
                 .andExpect(jsonPath("$.patientDeliveryAllowed").value(false));
-        verify(handoff, times(1)).executeCommittedStart(
-                "consult_synthetic", "run_synthetic", "synthetic headache");
+        assertEquals(1, committed.get());
     }
 
     @Test
@@ -60,7 +65,10 @@ class V1NonProductionClinicalStartHandoffTest {
         when(started.getNextUnit()).thenReturn("U04");
         when(u01.start(any(U01RawStartCommand.class))).thenReturn(started);
         V1NonProductionClinicalStartHandoffController controller =
-                new V1NonProductionClinicalStartHandoffController(u01, handoff);
+                new V1NonProductionClinicalStartHandoffController(u01,
+                        (consultation, run, raw) -> {
+                            throw new AssertionError("U02 must not run on rejected U01 route");
+                        });
         V1NonProductionClinicalStartHandoffController.StartRequest req =
                 new V1NonProductionClinicalStartHandoffController.StartRequest();
         req.eventId = "synthetic-event";
@@ -69,6 +77,5 @@ class V1NonProductionClinicalStartHandoffTest {
         req.rawText = "synthetic headache";
         assertTrue(assertThrows(IllegalStateException.class, () -> controller.start(req))
                 .getMessage().contains("ROUTE_NOT_AUTHORIZED"));
-        verifyNoInteractions(handoff);
     }
 }
