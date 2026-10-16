@@ -96,7 +96,10 @@ public final class U07NonProductionGovernedRiskSafetyContinuation {
         }
 
         U04ExecutionResult gate = transactions.execute(status ->
-                safety.applyU04(handoff, scope, admitted.getEnvironmentId()));
+                replaceExistingRisk
+                        ? safety.applyU04ReplacingExistingGate(
+                                handoff, scope, admitted.getEnvironmentId())
+                        : safety.applyU04(handoff, scope, admitted.getEnvironmentId()));
         if (gate == null || !U04ExecutionResult.COMMIT_COMPLETE.equals(gate.getStatus())
                 || gate.getCommitResult() == null
                 || !"COMMITTED".equals(gate.getCommitResult().status))
