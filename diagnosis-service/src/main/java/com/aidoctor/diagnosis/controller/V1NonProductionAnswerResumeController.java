@@ -89,6 +89,18 @@ public final class V1NonProductionAnswerResumeController {
     }
     @PostMapping("/answer-through-u02")
     public ResponseEntity<AnswerResponse> answer(@Valid @RequestBody AnswerRequest request) {
+        CommittedAnswer completed=commitAnswer(request);
+        return ResponseEntity.ok(new AnswerResponse(completed.authority.consultationId, completed.newRunId));
+    }
+    static final class CommittedAnswer {
+        final AuthorizedAnswer authority;
+        final String newRunId;
+        final U02ExecutionResult clinicalFact;
+        CommittedAnswer(AuthorizedAnswer authority, String newRunId, U02ExecutionResult clinicalFact) {
+            this.authority=authority;this.newRunId=newRunId;this.clinicalFact=clinicalFact;
+        }
+    }
+    CommittedAnswer commitAnswer(AnswerRequest request) {
         AuthorizedAnswer a=host.requireAuthenticatedAnswer(request);
         if(a==null || !request.consultationId.equals(a.consultationId)
                 || !request.checkpointId.equals(a.checkpointId))
@@ -105,6 +117,6 @@ public final class V1NonProductionAnswerResumeController {
                 || committed.commitResult==null
                 || !"COMMITTED".equals(committed.commitResult.status))
             throw new IllegalStateException("V1_ANSWER_U02_COMMIT_REQUIRED");
-        return ResponseEntity.ok(new AnswerResponse(a.consultationId,newRunId));
+        return new CommittedAnswer(a,newRunId,committed);
     }
 }
