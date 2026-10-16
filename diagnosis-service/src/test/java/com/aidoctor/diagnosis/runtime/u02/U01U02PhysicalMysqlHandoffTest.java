@@ -49,13 +49,17 @@ public class U01U02PhysicalMysqlHandoffTest {
     @EnableJpaRepositories(
             basePackages = {"com.aidoctor.diagnosis.runtime.u01",
                     "com.aidoctor.diagnosis.runtime.foundation",
+                    "com.aidoctor.diagnosis.runtime.u06.wait",
                     "com.aidoctor.diagnosis.repository",
                     "com.aidoctor.diagnosis.runtime.governance"},
             includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                     classes = {ConsultationRepository.class, RuntimeBindingRepository.class,
                             ClinicalRunRepository.class, CanonicalBusinessEventRepository.class,
                             CDPRepository.class, CDPVersionRepository.class,
-                            CapabilityCallTraceRepository.class}))
+                            CapabilityCallTraceRepository.class,
+                            com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRepository.class,
+                            com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRepository.class,
+                            com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRepository.class}))
     public static class DatabaseConfig {
         @Bean(destroyMethod = "close")
         public HikariDataSource dataSource() {
@@ -84,6 +88,9 @@ public class U01U02PhysicalMysqlHandoffTest {
                 unit.getManagedClassNames().add(RuntimeBindingRecord.class.getName());
                 unit.getManagedClassNames().add(ClinicalRunRecord.class.getName());
                 unit.getManagedClassNames().add(CanonicalBusinessEventRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRecord.class.getName());
             });
             java.util.Properties properties = new java.util.Properties();
             properties.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
