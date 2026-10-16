@@ -65,10 +65,21 @@ public class V1NonProductionRealTcpMysqlStartTest {
     @SpringBootConfiguration
     @EnableAutoConfiguration(exclude={DataSourceAutoConfiguration.class,
             HibernateJpaAutoConfiguration.class,RedisAutoConfiguration.class})
-    @Import({U01U02PhysicalMysqlHandoffTest.DatabaseConfig.class,
-            V1NonProductionClinicalStartHandoffController.class,
-            V1NonProductionClinicalSafetyHandoffController.class})
+    @Import(U01U02PhysicalMysqlHandoffTest.DatabaseConfig.class)
     static class Host {
+        @Bean V1NonProductionClinicalStartHandoffController tcpU02Entry(
+                U01NaturalLanguageStartService start,
+                U01U02NonProductionHandoffService u02) {
+            return new V1NonProductionClinicalStartHandoffController(start,u02);
+        }
+        @Bean V1NonProductionClinicalSafetyHandoffController tcpU04Entry(
+                U01NaturalLanguageStartService start,
+                U01U02NonProductionHandoffService u02,
+                U07NonProductionGovernedRiskSafetyContinuation continuation,
+                V1NonProductionClinicalSafetyHandoffController.AuthorizedClinicalHost host) {
+            return new V1NonProductionClinicalSafetyHandoffController(
+                    start,u02,continuation,host);
+        }
         @Bean JsonUtil jsonUtil() { return new JsonUtil(); }
         @Bean CDPVersionService versions(CDPVersionRepository repository) {
             CDPVersionService versions=new CDPVersionService();
