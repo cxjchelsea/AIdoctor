@@ -15,6 +15,11 @@ import com.aidoctor.diagnosis.runtime.u03.*;
 import com.aidoctor.diagnosis.runtime.u04.*;
 import com.aidoctor.diagnosis.runtime.u05.U04A1U05AuthorityBridge;
 import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionAnswerResumeAdmission;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionDurableF8Consume;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionTrustedAnswerU02Bridge;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionGovernedRiskSafetyContinuation;
+import org.springframework.jdbc.core.JdbcTemplate;
 import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalFollowupCoordinator;
 import com.aidoctor.diagnosis.service.cdp.*;
 import com.aidoctor.diagnosis.state.committer.*;
@@ -741,6 +746,170 @@ public class U01U02RealFactCommitMysqlTest {
                             confirmedDelivery.recover(confirmed).checkpointId);
                     assertEquals(8, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
                             created.getCdpId()).size());
+
+                    // Full two-turn physical continuation. The durable WAIT belongs
+                    // to the U01-created Consultation/CDP/Thread/first Run above.
+                    U07NonProductionAnswerResumeAdmission answerAdmission =
+                            new U07NonProductionAnswerResumeAdmission(
+                                    ctx.getBean(ConsultationRepository.class),
+                                    ctx.getBean(RuntimeThreadStateRepository.class),
+                                    ctx.getBean(RuntimeWaitCheckpointRepository.class), cdps);
+                    String answerEventId = "real-second-answer-event-" + scenario;
+                    U02ExecutionCommand answerCandidate = answerAdmission.requireWaitingAnswer(
+                            created.getConsultationId(), created.getCdpId(), persistedThread,
+                            created.getRunId(), durableWait.checkpointId,
+                            "test-u06-question-" + scenario, confirmed.deliveryId,
+                            "synthetic-person", answerEventId,
+                            "I have severe difficulty breathing", "synthetic-answer-correlation",
+                            "synthetic-answer-trace");
+                    assertEquals(8, answerCandidate.baseClinicalStateVersion);
+                    assertThrows(IllegalStateException.class, () ->
+                            answerAdmission.requireWaitingAnswer(
+                                    created.getConsultationId(), created.getCdpId(), "wrong-thread",
+                                    created.getRunId(), durableWait.checkpointId,
+                                    "test-u06-question-" + scenario, confirmed.deliveryId,
+                                    "synthetic-person", "forged-answer-event", "forged answer",
+                                    "synthetic-answer-correlation", "synthetic-answer-trace"));
+
+                    JdbcTemplate f8Jdbc = new JdbcTemplate(ctx.getBean(javax.sql.DataSource.class));
+                    U07NonProductionDurableF8Consume f8 = new U07NonProductionDurableF8Consume(
+                            f8Jdbc, tx, new CanonicalBusinessEventLedger(
+                                    ctx.getBean(CanonicalBusinessEventRepository.class)),
+                            new ClinicalRunCoordinator(durableBinding,
+                                    ctx.getBean(CanonicalBusinessEventRepository.class),
+                                    durableRuns),
+                            ctx.getBean(ConsultationRepository.class),
+                            ctx.getBean(RuntimeThreadStateRepository.class),
+                            ctx.getBean(RuntimeWaitCheckpointRepository.class));
+                    long runCountBefore = durableRuns.count();
+                    long eventCountBefore = ctx.getBean(CanonicalBusinessEventRepository.class).count();
+                    String resumedRun = f8.consume(answerCandidate, durableWait.checkpointId,
+                            "real-second-answer-idem-" + scenario,
+                            "sha256:real-second-answer-" + scenario);
+                    assertNotEquals(created.getRunId(), resumedRun);
+                    assertEquals(runCountBefore + 1, durableRuns.count());
+                    assertEquals(eventCountBefore + 1,
+                            ctx.getBean(CanonicalBusinessEventRepository.class).count());
+                    assertEquals("CONSUMED", ctx.getBean(RuntimeWaitCheckpointRepository.class)
+                            .findById(durableWait.checkpointId).get().getCheckpointStatus());
+                    assertEquals("ACTIVE", ctx.getBean(ConsultationRepository.class)
+                            .findById(created.getConsultationId()).get().getLifecycleStatus());
+                    assertEquals("ACTIVE", ctx.getBean(RuntimeThreadStateRepository.class)
+                            .findById(persistedThread).get().getRuntimeStatus());
+                    assertThrows(IllegalStateException.class, () ->
+                            answerAdmission.requireWaitingAnswer(
+                                    created.getConsultationId(), created.getCdpId(), persistedThread,
+                                    created.getRunId(), durableWait.checkpointId,
+                                    "test-u06-question-" + scenario, confirmed.deliveryId,
+                                    "synthetic-person", "duplicate-answer-event", "duplicate",
+                                    "synthetic-answer-correlation", "synthetic-answer-trace"));
+                    U07NonProductionTrustedAnswerU02Bridge authorizedAnswer =
+                            new U07NonProductionTrustedAnswerU02Bridge(
+                                    durableRuns, ctx.getBean(CanonicalBusinessEventRepository.class), f8);
+                    U02ExecutionCommand secondRound =
+                            authorizedAnswer.requireAuthorizedNewRun(
+                                    answerCandidate, durableWait.checkpointId, resumedRun);
+                    assertEquals(created.getConsultationId(), secondRound.consultationId);
+                    assertEquals(created.getCdpId(), secondRound.cdpId);
+                    assertEquals(persistedThread, secondRound.threadId);
+                    assertEquals("PATIENT_REPORTED", secondRound.sourceType);
+
+                    // Nonproduction C01 fixture is deliberately changed only for
+                    // the resumed answer; the real U02/P01/P05 services still run.
+                    when(client.interpret(any())).thenReturn(resumedRespiratoryCandidate());
+                    U02ExecutionResult updatedAnswer =
+                            tx.execute(status -> u02.execute(secondRound));
+                    assertEquals("COMMITTED", updatedAnswer.status);
+                    assertEquals(Integer.valueOf(9),
+                            updatedAnswer.commitResult.committedVersion);
+                    assertEquals(9, cdps.findById(created.getCdpId()).get()
+                            .getVersion().intValue());
+                    assertEquals(9, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
+                            created.getCdpId()).size());
+                    CapabilityCallTraceRecord secondTrace =
+                            traces.require(updatedAnswer.capabilityCallId);
+                    assertEquals(resumedRun, secondTrace.getRunId());
+                    assertEquals(answerEventId, secondTrace.getEventId());
+                    assertEquals(Integer.valueOf(8), secondTrace.getClinicalStateVersionBefore());
+                    assertEquals(Integer.valueOf(9), secondTrace.getClinicalStateVersionAfter());
+
+                    U03CdpAcceptedEvidenceAuthority secondEvidence =
+                            new U03CdpAcceptedEvidenceAuthority(cdps,
+                                    (consultation, cdp, version, call, evidence, sources, provenance) -> {
+                                        assertEquals(created.getConsultationId(), consultation);
+                                        assertEquals(created.getCdpId(), cdp);
+                                        assertEquals(9, version);
+                                        assertEquals(updatedAnswer.capabilityCallId, call);
+                                        assertEquals(Collections.singletonList("EV-RF-RESP-001"), evidence);
+                                        return "test-only-second-round-respiratory-acceptance";
+                                    });
+                    U02U03GovernedSafetyBridge secondSafety =
+                            new U02U03GovernedSafetyBridge(cdps,
+                                    ctx.getBean(CapabilityCallTraceRepository.class),
+                                    secondEvidence, new U03NonProductionAdmissionService(), u04);
+                    U03ExecutionCommand secondRiskCommand = new U03ExecutionCommand(
+                            created.getConsultationId(), persistedThread, resumedRun,
+                            answerEventId, created.getCdpId(), 9,
+                            secondRound.correlationId, secondRound.traceId);
+                    U03NonProductionExecutionContext secondAdmission =
+                            secondSafety.requireU03Admission(updatedAnswer, secondRiskCommand,
+                                    U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
+                                    "ci-nonprod-safety");
+                    U03CdpGateCClinicalInputPort secondInput = new U03CdpGateCClinicalInputPort(
+                            cdps, (cmd, accepted) -> U03GateCClinicalInput.builder());
+                    assertEquals("PRESENT", secondInput.load(secondRiskCommand,
+                            secondAdmission.requireAcceptedEvidenceBinding())
+                            .evidenceState("EV-RF-RESP-001"));
+                    U03GovernedCandidateGateway secondGateway =
+                            new U03GovernedCandidateGateway(riskGuard, new U03ReleaseRegistry(),
+                                    new U03GateCFrozenRuleEvaluator(secondInput), true);
+                    U07NonProductionGovernedRiskSafetyContinuation secondContinuation =
+                            new U07NonProductionGovernedRiskSafetyContinuation(
+                                    secondGateway, new U03DecisionService(
+                                            new U03GateCFrozenDecisionPort()),
+                                    new U03StateProposalFactory(),
+                                    new U03CommitService(committer),
+                                    new U03PostCommitFinalizer(
+                                            new U03RuntimeTraceService(recorded::add),
+                                            new U03OutboundProducer()),
+                                    new U03OutboundProducer(), secondSafety, tx);
+                    U07NonProductionGovernedRiskSafetyContinuation.Result secondResult =
+                            secondContinuation.executeFromCommittedU02(updatedAnswer,
+                                    secondRiskCommand,
+                                    U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
+                                    "ci-nonprod-safety", U04ScopeContext.current(true, true));
+                    assertEquals("HIGH_RISK", secondResult.risk.getOutcomeCode());
+                    assertEquals("COMMITTED", secondResult.riskCommit.status);
+                    assertEquals(Integer.valueOf(10),
+                            secondResult.riskCommit.committedVersion);
+                    assertEquals(U04SafetyGateDecision.BLOCKED,
+                            secondResult.gate.getDecision().getGate());
+                    assertEquals(Integer.valueOf(11),
+                            secondResult.gate.getCommitResult().committedVersion);
+                    assertEquals(11, cdps.findById(created.getCdpId()).get()
+                            .getVersion().intValue());
+                    assertEquals(11, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
+                            created.getCdpId()).size());
+                    assertThrows(IllegalStateException.class, () ->
+                            U07NonProductionF3A1U05Flow.requireEligiblePreF3(
+                                    secondResult.handoff, secondResult.gate));
+                    assertEquals(resumedRun, secondResult.handoff.getRunId());
+                    assertEquals(resumedRun, f8.consume(answerCandidate, durableWait.checkpointId,
+                            "real-second-answer-idem-" + scenario,
+                            "sha256:real-second-answer-" + scenario));
+                    assertThrows(IllegalStateException.class, () ->
+                            f8.consume(answerCandidate, durableWait.checkpointId,
+                                    "real-second-answer-idem-" + scenario,
+                                    "sha256:CONFLICT"));
+                    assertEquals(runCountBefore + 1, durableRuns.count());
+                    assertEquals(eventCountBefore + 1,
+                            ctx.getBean(CanonicalBusinessEventRepository.class).count());
+                    assertEquals(1, f8Jdbc.queryForObject(
+                            "SELECT COUNT(*) FROM u07_f8_answer_consumption WHERE checkpoint_id=?",
+                            Integer.class, durableWait.checkpointId).intValue());
+                    assertEquals(11, cdps.findById(created.getCdpId()).get()
+                            .getVersion().intValue());
+
                 } else {
                     // RESTRICTED cannot acquire an unrestricted U05 route merely
                     // from a durable A1 row lacking restricted-action permission.
@@ -776,6 +945,26 @@ public class U01U02RealFactCommitMysqlTest {
                         .getMessage().contains("U04_SAFETY_GATE_STALE_BEFORE_F3"));
             }
         }
+    }
+
+
+    private static C01U02CapabilityResponse resumedRespiratoryCandidate() {
+        C01U02CapabilityResponse response = u02Candidate();
+        C01U02CapabilityResponse.ObservationCandidate fact =
+                new C01U02CapabilityResponse.ObservationCandidate();
+        fact.setObservationId("second-round-respiratory");
+        fact.setConceptId("EV-RF-RESP-001");
+        fact.setConceptDisplay("synthetic severe respiratory difficulty");
+        fact.setRawTextRef("sha256:real-second-round-respiratory");
+        fact.setValueSemantics("YES");
+        fact.setSourceType("PATIENT_REPORTED");
+        fact.setLifecycle("CONFIRMED");
+        fact.setConfidenceOrUncertainty(0.95d);
+        fact.setProvenance(Collections.singletonList("nonproduction"));
+        fact.setAmbiguityFlags(Collections.emptyList());
+        fact.setContradictionRefs(Collections.emptyList());
+        response.setObservationCandidates(Collections.singletonList(fact));
+        return response;
     }
 
     private static C01U01CapabilityResponse u01Candidate() {
