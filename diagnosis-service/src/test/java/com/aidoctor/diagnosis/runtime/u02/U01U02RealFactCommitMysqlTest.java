@@ -476,6 +476,31 @@ public class U01U02RealFactCommitMysqlTest {
                         "SELECT COUNT(*) FROM u07_a1_attestation WHERE consultation_id=? AND cdp_id=? AND cdp_version=?",
                         Integer.class, created.getConsultationId(), created.getCdpId(), 5).intValue());
                 assertEquals(5, cdps.findById(created.getCdpId()).get().getVersion().intValue());
+                // Consume the durable A1 row through the real U04 -> A1 -> U05
+                // authority bridge rather than constructing a U05 authority claim.
+                U04A1U05AuthorityBridge physicalBridge = new U04A1U05AuthorityBridge(
+                        new com.aidoctor.diagnosis.runtime.foundation.adapters
+                                .ClinicalCdpGateReadbackAdapter(cdps),
+                        new com.aidoctor.diagnosis.runtime.foundation.adapters
+                                .ClinicalCdpF3BoundA1AuthorityPort(cdps, testOnlyA1));
+                if (U04SafetyGateDecision.ALLOW.equals(expectedGate)) {
+                    com.aidoctor.diagnosis.runtime.u05.U05AdmissionAuthoritySnapshot
+                            admittedA1 = physicalBridge.load(
+                                    riskHandoff, gated, "ci-nonprod-safety", "cdp-physical-v5");
+                    assertEquals(5, admittedA1.getCurrentClinicalStateVersion());
+                    assertEquals(f3Effect, attested.f3CommitRef);
+                    assertTrue(admittedA1.isA1CanonicalF3Complete());
+                    assertTrue(admittedA1.isPostF3SafetyBarrierComplete());
+                    assertTrue(admittedA1.isF3RevalidatedCurrent());
+                    assertTrue(admittedA1.isRouteAuthorizationCurrent());
+                } else {
+                    // RESTRICTED cannot acquire an unrestricted U05 route merely
+                    // from a durable A1 row lacking restricted-action permission.
+                    assertTrue(assertThrows(IllegalStateException.class, () ->
+                            physicalBridge.load(riskHandoff, gated,
+                                    "ci-nonprod-safety", "cdp-physical-v5"))
+                            .getMessage().contains("A1_RESTRICTED_PERMISSION_REQUIRED"));
+                }
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         U07NonProductionPhysicalFollowupCoordinator
                                 .requireCurrentU04Version(created.getCdpId(), gated, cdps))
