@@ -36,7 +36,7 @@ public final class V1NonProductionDeliveredQuestionReadback {
         if (!"ACTIVE".equals(cp.getCheckpointStatus())
                 || !Objects.equals(cp.getConsultationId(), consultationId)
                 || !Objects.equals(cp.getRunId(), runId)
-                || !Objects.equals(cp.getQuestionDeliveredWaitEffectId(), wait.waitEffectId)
+                || !Objects.equals(cp.getConsultationWaitEffectId(), wait.waitEffectId)
                 || !Objects.equals(cp.getClinicalStateVersion(), cdp.getVersion()))
             throw blocked("CHECKPOINT_AUTHORITY_MISMATCH");
         Map<String, Object> state = cdp.getPatientState();
