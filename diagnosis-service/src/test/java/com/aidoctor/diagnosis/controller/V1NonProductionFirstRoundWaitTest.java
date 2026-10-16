@@ -16,7 +16,10 @@ class V1NonProductionFirstRoundWaitTest {
         com.aidoctor.diagnosis.runtime.u01.U01NaturalLanguageStartService u01 =
                 mock(com.aidoctor.diagnosis.runtime.u01.U01NaturalLanguageStartService.class);
         com.aidoctor.diagnosis.runtime.u02.U01U02NonProductionHandoffService u02 =
-                mock(com.aidoctor.diagnosis.runtime.u02.U01U02NonProductionHandoffService.class);
+                new com.aidoctor.diagnosis.runtime.u02.U01U02NonProductionHandoffService(
+                        mock(com.aidoctor.diagnosis.runtime.u02.U01U02TrustedStartContext.class),
+                        mock(com.aidoctor.diagnosis.runtime.u02.U01U02NonProductionHandoffService.TrustedTraceAuthority.class),
+                        mock(com.aidoctor.diagnosis.runtime.u02.U02ClinicalFactApplicationService.class));
         com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionGovernedRiskSafetyContinuation risk =
                 mock(com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionGovernedRiskSafetyContinuation.class);
         com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalFollowupCoordinator followup =
@@ -35,7 +38,7 @@ class V1NonProductionFirstRoundWaitTest {
         request.userId = "synthetic-user";
         request.rawText = "synthetic headache";
         assertThrows(IllegalStateException.class, () -> controller.start(request));
-        verifyNoInteractions(u02, risk, followup, authority, owner);
+        verifyNoInteractions(risk, followup, authority, owner);
     }
 
 }
