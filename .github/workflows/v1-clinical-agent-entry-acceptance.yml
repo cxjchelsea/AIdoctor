@@ -18,6 +18,7 @@ on:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalRuntimeReadinessController.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionRiskSafetyHostConfig.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionAcceptedEvidenceHostConfig.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionGateCInputHostConfig.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalSafetyHandoffTest.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalStartHandoffTest.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/**'
