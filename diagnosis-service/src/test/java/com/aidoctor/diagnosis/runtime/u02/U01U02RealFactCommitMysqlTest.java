@@ -135,7 +135,7 @@ public class U01U02RealFactCommitMysqlTest {
                             .andExpect(jsonPath("$.patientDeliveryAllowed").value(false))
                             .andReturn().getResponse().getContentAsString();
                     assertTrue(new ObjectMapper().readTree(response)
-                            .get("consultationId").asText().startsWith("consultation_"));
+                            .get("consultationId").asText().startsWith("consult_"));
                 } catch (Exception e) {
                     throw new IllegalStateException("V1_REAL_U01_HTTP_MYSQL_DISPATCH_FAILED", e);
                 }
