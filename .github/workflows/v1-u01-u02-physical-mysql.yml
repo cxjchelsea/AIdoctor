@@ -109,6 +109,19 @@ jobs:
             created_at DATETIME NOT NULL
           ) ENGINE=InnoDB;
 
+          -- Match the existing nonproduction U07 F8 physical fixture schema.
+          -- Required to exercise actual durable checkpoint consumption.
+          CREATE TABLE u07_f8_answer_consumption (
+            checkpoint_id VARCHAR(128) NOT NULL PRIMARY KEY,
+            consultation_id VARCHAR(128) NOT NULL,
+            waiting_run_id VARCHAR(128) NOT NULL,
+            answer_event_id VARCHAR(128) NOT NULL UNIQUE,
+            answer_digest VARCHAR(128) NOT NULL,
+            new_run_id VARCHAR(128) NOT NULL UNIQUE,
+            CONSTRAINT fk_u07_f8_wait_checkpoint FOREIGN KEY (checkpoint_id)
+              REFERENCES clinical_runtime_wait_checkpoint(checkpoint_id)
+          ) ENGINE=InnoDB;
+
           CREATE TABLE cdp_version (
             id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
             cdp_id VARCHAR(64),
