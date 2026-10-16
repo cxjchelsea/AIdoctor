@@ -571,21 +571,21 @@ public class U01U02RealFactCommitMysqlTest {
                                             committer,
                                             new com.aidoctor.diagnosis.runtime.foundation.adapters
                                                     .ClinicalCdpReadbackAdapter(cdps)),
-                                    (input, decision, evidence) ->
+                                    (readinessInput, decision, evidence) ->
                                             new com.aidoctor.diagnosis.runtime.u05
                                                     .U05RoutingCurrentness(
                                                     evidence.getCommittedClinicalStateVersion(),
                                                     "test-u05-current-route", true, true, true,
-                                                    true, true, input.getAcceptedU04GateRef(),
-                                                    input.getGateValue(), null),
+                                                    true, true, readinessInput.getAcceptedU04GateRef(),
+                                                    readinessInput.getGateValue(), null),
                                     new com.aidoctor.diagnosis.runtime.u05.U05RoutingService(
                                             new com.aidoctor.diagnosis.runtime.u05
                                                     .U05InMemoryRouteLedger(),
-                                            (input, evidence, currentness, consequence, target, action) ->
+                                            (readinessInput, evidence, currentness, consequence, target, action) ->
                                                     new com.aidoctor.diagnosis.runtime.u05
                                                             .U05DownstreamPermissionDecision(
-                                                            "test-u05-permission", input.getConsultationId(),
-                                                            input.getCdpId(),
+                                                            "test-u05-permission", readinessInput.getConsultationId(),
+                                                            readinessInput.getCdpId(),
                                                             currentness.getCurrentU04GateRef(), null,
                                                             consequence, action, target,
                                                             "PERMITTED", "test-route-permission",
