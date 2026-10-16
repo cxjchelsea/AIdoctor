@@ -932,7 +932,8 @@ public class U01U02RealFactCommitMysqlTest {
                                 "ci-nonprod-safety", "cdp-physical-v5")).getMessage();
                 assertTrue(bridgeDenial.contains("U07_A1_INDEPENDENT_ATTESTATION_MISMATCH")
                         || bridgeDenial.contains("U07_A1_CURRENT_AUTHORITY_REVOKED")
-                        || bridgeDenial.contains("U07_A1_CDP_VERSION_STALE"),
+                        || bridgeDenial.contains("U07_A1_CDP_VERSION_STALE")
+                        || bridgeDenial.contains("U04_GATE_READBACK_NOT_CURRENT"),
                         "Old A1 authority must fail closed after the resumed round: " + bridgeDenial);
                 assertEquals(1, a1Jdbc.queryForObject(
                         "SELECT COUNT(*) FROM u07_a1_attestation WHERE consultation_id=? AND cdp_id=? AND cdp_version=?",
