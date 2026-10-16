@@ -36,7 +36,21 @@ import org.springframework.web.bind.annotation.*;
 })
 @RequestMapping("/internal/nonproduction/v1/clinical")
 public final class V1NonProductionFirstRoundWaitController {
+    public static final class DeliveredQuestion {
+        public final String questionId, contentRef;
+        public DeliveredQuestion(String questionId, String contentRef) {
+            if (questionId == null || questionId.trim().isEmpty()
+                    || contentRef == null || contentRef.trim().isEmpty())
+                throw new IllegalArgumentException("V1_DELIVERED_QUESTION_BINDING_REQUIRED");
+            this.questionId = questionId;
+            this.contentRef = contentRef;
+        }
+    }
+
     public interface FirstRoundOwner {
+        /** Independently verify delivered question belongs to the exact persisted WAIT. */
+        DeliveredQuestion requireDeliveredQuestion(String consultationId, String runId,
+                String checkpointId, U07NonProductionDeliveryWaitRecovery.WaitReceipt wait);
         String requireCurrentAuthoritativeStateRef(String consultationId, String runId,
                 U02ExecutionResult committedFact);
         U07NonProductionPhysicalFollowupCoordinator.ConfirmedDeliveryOwner
@@ -53,16 +67,20 @@ public final class V1NonProductionFirstRoundWaitController {
 
     public static final class StartResponse {
         public final String consultationId, cdpId, runId, checkpointId, waitEffectId;
+        public final String questionId, questionContentRef;
         public final String entryStatus = "DURABLE_WAIT_ESTABLISHED_NONPRODUCTION";
         public final boolean completeClinicalE2e = false;
         public final boolean patientDeliveryAllowed = false;
 
-        StartResponse(U01Result started, U07NonProductionDeliveryWaitRecovery.WaitReceipt wait) {
+        StartResponse(U01Result started, U07NonProductionDeliveryWaitRecovery.WaitReceipt wait,
+                DeliveredQuestion question) {
             this.consultationId = started.getConsultationId();
             this.cdpId = started.getCdpId();
             this.runId = started.getRunId();
             this.checkpointId = wait.checkpointId;
             this.waitEffectId = wait.waitEffectId;
+            this.questionId = question.questionId;
+            this.questionContentRef = question.contentRef;
         }
     }
 
@@ -126,7 +144,10 @@ public final class V1NonProductionFirstRoundWaitController {
                         stateRef, continuation, delivery);
         if (wait == null)
             throw blocked("DURABLE_WAIT_NOT_ESTABLISHED");
-        return ResponseEntity.ok(new StartResponse(started, wait));
+        DeliveredQuestion question = owner.requireDeliveredQuestion(
+                started.getConsultationId(), started.getRunId(), wait.checkpointId, wait);
+        if (question == null) throw blocked("DELIVERED_QUESTION_READBACK_REQUIRED");
+        return ResponseEntity.ok(new StartResponse(started, wait, question));
     }
 
     private static IllegalStateException blocked(String reason) {
