@@ -419,6 +419,63 @@ public class U01U02RealFactCommitMysqlTest {
                 assertEquals(5, cdps.findById(created.getCdpId()).get().getVersion().intValue());
                 assertEquals(5, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
                         created.getCdpId()).size());
+
+                // NONPRODUCTION TEST-ONLY A1 positive integration: independently
+                // inspect the actual prior U04 gate and current persisted F3.
+                // This is NOT a real medical safety adjudicator or production authority.
+                org.springframework.jdbc.core.JdbcTemplate a1Jdbc =
+                        new org.springframework.jdbc.core.JdbcTemplate(
+                                ctx.getBean(javax.sql.DataSource.class));
+                a1Jdbc.execute("CREATE TABLE IF NOT EXISTS u07_a1_attestation ("
+                        + "consultation_id VARCHAR(64) NOT NULL, cdp_id VARCHAR(64) NOT NULL, "
+                        + "cdp_version INT NOT NULL, f3_effect_id VARCHAR(128) NOT NULL, "
+                        + "barrier_ref VARCHAR(128) NOT NULL, revalidation_ref VARCHAR(128) NOT NULL, "
+                        + "route_source_ref VARCHAR(128) NOT NULL, "
+                        + "route_authorization_ref VARCHAR(128) NOT NULL, "
+                        + "routing_policy_version VARCHAR(128) NOT NULL, "
+                        + "PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+                com.aidoctor.diagnosis.runtime.foundation.adapters.U07DurableNonProductionA1Issuer
+                        testOnlyA1 = new com.aidoctor.diagnosis.runtime.foundation.adapters
+                        .U07DurableNonProductionA1Issuer(cdps, a1Jdbc, tx,
+                                (consultation, cdpId, version, effect) -> {
+                                    if (!created.getConsultationId().equals(consultation)
+                                            || !created.getCdpId().equals(cdpId)
+                                            || version != 5 || !f3Effect.equals(effect))
+                                        throw new IllegalStateException("TEST_A1_IDENTITY_MISMATCH");
+                                    CDP inspected = cdps.findById(cdpId)
+                                            .orElseThrow(IllegalStateException::new);
+                                    if (inspected.getVersion() != 5
+                                            || !f3Effect.equals(((Map<?, ?>)inspected
+                                            .getPatientState().get("f3_gap_assessment"))
+                                            .get("f3_canonical_effect_id"))
+                                            || !expectedGate.equals(((Map<?, ?>)inspected
+                                            .getPatientState().get("safety_gate"))
+                                            .get("safety_gate")))
+                                        throw new IllegalStateException("TEST_A1_READBACK_MISMATCH");
+                                    return new com.aidoctor.diagnosis.runtime.foundation.adapters
+                                            .U07DurableNonProductionA1Issuer.VerifiedEvidence(
+                                            effect, "test-only-post-f3-barrier-" + scenario,
+                                            "test-only-current-revalidation-" + scenario,
+                                            "test-only-u05-route-source-" + scenario,
+                                            "test-only-u05-route-auth-" + scenario,
+                                            "test-only-routing-policy-v1",
+                                            true, true, true);
+                                });
+                U04A1U05AuthorityBridge.A1BarrierAuthority attested =
+                        testOnlyA1.issue(created.getConsultationId(),
+                                created.getCdpId(), physical.persistedVersion);
+                assertEquals(f3Effect, attested.f3CommitRef);
+                assertEquals(f3Effect, testOnlyA1.loadAttested(created.getConsultationId(),
+                        created.getCdpId(), physical.persistedVersion).f3CommitRef);
+                assertEquals(1, a1Jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM u07_a1_attestation WHERE consultation_id=? AND cdp_id=? AND cdp_version=?",
+                        Integer.class, created.getConsultationId(), created.getCdpId(), 5).intValue());
+                // Replaying the same attestation must not insert another row.
+                testOnlyA1.issue(created.getConsultationId(), created.getCdpId(), 5);
+                assertEquals(1, a1Jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM u07_a1_attestation WHERE consultation_id=? AND cdp_id=? AND cdp_version=?",
+                        Integer.class, created.getConsultationId(), created.getCdpId(), 5).intValue());
+                assertEquals(5, cdps.findById(created.getCdpId()).get().getVersion().intValue());
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         U07NonProductionPhysicalFollowupCoordinator
                                 .requireCurrentU04Version(created.getCdpId(), gated, cdps))
