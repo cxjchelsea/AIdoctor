@@ -8,7 +8,6 @@ import com.aidoctor.diagnosis.repository.CDPRepository;
 import com.aidoctor.diagnosis.runtime.u06.state.U06StateValues;
 import com.aidoctor.diagnosis.state.committer.StateCommitter;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -98,24 +97,27 @@ public final class U06NonProductionPhysicalMode23Service
         if (existingQuestions != null && ((Map<?, ?>) existingQuestions).containsKey(questionId))
             throw new IllegalStateException("U06_PHYSICAL_QUESTION_ALREADY_SELECTED");
 
+        java.util.List<StateTypes.StatePatchOperation> operations = new java.util.ArrayList<>();
+        // First selection creates the missing parent and child within one
+        // governed P01 CAS, preserving the flat-map StatePatch value contract.
+        if (existingQuestions == null) {
+            StateTypes.StatePatchOperation parent = new StateTypes.StatePatchOperation();
+            parent.op = "ADD";
+            parent.path = "/patient_state/questions";
+            parent.value = Collections.emptyMap();
+            parent.source = "RULE_DERIVED";
+            parent.sensitivity = "PHI";
+            operations.add(parent);
+        }
         StateTypes.StatePatchOperation op = new StateTypes.StatePatchOperation();
         op.op = "ADD";
-        // On the first question, establish the parent and selected child in
-        // ONE governed P01 CAS commit. Do not mutate the JPA entity or
-        // perform an unaudited/independent bootstrap write.
-        if (existingQuestions == null) {
-            Map<String, Object> firstQuestion = new LinkedHashMap<>();
-            firstQuestion.put(questionId, U06StateValues.questionSelected(r, d));
-            op.path = "/patient_state/questions";
-            op.value = firstQuestion;
-        } else {
-            op.path = "/patient_state/questions/" + questionId;
-            op.value = U06StateValues.questionSelected(r, d);
-        }
+        op.path = "/patient_state/questions/" + questionId;
+        op.value = U06StateValues.questionSelected(r, d);
         op.source = "RULE_DERIVED";
         op.sensitivity = "PHI";
+        operations.add(op);
         StateTypes.StatePatch patch = patch(r, "u06selection",
-                d.getQuestionSelectionEffectId(), Collections.singletonList(op));
+                d.getQuestionSelectionEffectId(), operations);
         // Freeze the pre-commit CAS basis: a managed JPA entity may reflect
         // the new version after StateCommitter commits in the same transaction.
         final int preCommitVersion = cdp.getVersion().intValue();
