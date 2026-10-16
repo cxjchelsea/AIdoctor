@@ -55,7 +55,10 @@ public final class U03OutboundProducer {
         verifyDecisionIdentity(candidate, decision);
         List<String> governedRefs = expectedGovernedRefs(governed, resolved);
 
-        if (candidate.isFailed()) {
+        // D09 may legitimately FAIL after a VALID C02 rules evaluation
+        // (e.g. INSUFFICIENT_INFORMATION). Such a result is never a committed
+        // normal clinical disposition, and must reach U04 as unavailable.
+        if (U03RiskAssessmentCandidate.FAILED.equals(decision.getStatus())) {
             if (proposal != null || commitResult != null) {
                 throw new IllegalStateException(
                         "FAILED U03 execution must not be mislabeled as a committed outbound state");
@@ -104,16 +107,19 @@ public final class U03OutboundProducer {
     private static void verifyDecisionIdentity(
             U03RiskAssessmentCandidate candidate,
             U03DecisionOutcome decision) {
+        if (U03RiskAssessmentCandidate.FAILED.equals(decision.getStatus())) {
+            if (decision.getOutcomeCode() != null
+                    || (candidate.isFailed()
+                        && !candidate.getFailureReasonCode().equals(decision.getReasonCode()))) {
+                throw new IllegalStateException("FAILED U03 outbound reason/disposition mismatch");
+            }
+            if (!candidate.isFailed() && candidate.getGateCEvaluation() == null) {
+                throw new IllegalStateException("D09 failure requires governed C02 rule evidence");
+            }
+            return;
+        }
         if (!candidate.getStatus().equals(decision.getStatus())) {
             throw new IllegalStateException("S14 outbound C02/D09 status mismatch");
-        }
-        if (candidate.isFailed()) {
-            if (decision.getOutcomeCode() != null) {
-                throw new IllegalStateException("FAILED U03 outbound must not carry a normal disposition");
-            }
-            if (!candidate.getFailureReasonCode().equals(decision.getReasonCode())) {
-                throw new IllegalStateException("FAILED U03 outbound failure reason mismatch");
-            }
         }
     }
 
@@ -216,8 +222,9 @@ public final class U03OutboundProducer {
                 command.traceId,
                 context.getEnvironmentId(),
                 context.getBindingMode(),
-                candidate.getStatus(),
-                candidate.getFailureReasonCode(),
+                decision.getStatus(),
+                U03RiskAssessmentCandidate.FAILED.equals(decision.getStatus())
+                        ? decision.getReasonCode() : candidate.getFailureReasonCode(),
                 candidate.getLimitations(),
                 candidate.getUncertainty(),
                 decision.getDecisionId(),

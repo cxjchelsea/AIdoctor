@@ -1,0 +1,159 @@
+name: V1 U01-U02 Trusted MySQL Physical Readback (Nonproduction)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/v1-u01-u02-physical-mysql.yml'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02PhysicalMysqlHandoffTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02RealFactCommitMysqlTest.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/U01U02TrustedStartContext.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/U01U02NonProductionHandoffService.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U01U02NonProductionHostConfig.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u03/U02U03GovernedSafetyBridge.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U02U03SafetyHostConfig.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionPhysicalFollowupCoordinator.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionF3A1U05Flow.java'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  physical-trusted-readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: synthetic-u01-u02-root
+          MYSQL_DATABASE: v1_u01_u02
+        ports:
+          - 127.0.0.1:33333:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -psynthetic-u01-u02-root"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      V1_U01_U02_MYSQL_MODE: DISPOSABLE_U01_U02_ONLY
+      V1_U01_U02_MYSQL_URL: jdbc:mysql://127.0.0.1:33333/v1_u01_u02?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+      - name: Create disposable JPA-compatible CDP and authoritative U01 identity tables
+        env:
+          MYSQL_PWD: synthetic-u01-u02-root
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$V1_U01_U02_MYSQL_MODE" = DISPOSABLE_U01_U02_ONLY
+          mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 <<'SQL'
+          CREATE TABLE cdp (
+            id VARCHAR(64) NOT NULL PRIMARY KEY,
+            patient_id VARCHAR(64) NOT NULL,
+            session_id VARCHAR(64) NOT NULL,
+            version_no INT NOT NULL,
+            cdp_status VARCHAR(64),
+            health_state_assessment LONGTEXT,
+            wellness_plan LONGTEXT,
+            patient_state LONGTEXT,
+            ddx LONGTEXT,
+            evidence_graph LONGTEXT,
+            workup_plan LONGTEXT,
+            management_plan LONGTEXT,
+            triage LONGTEXT,
+            uncertainty LONGTEXT,
+            audit_info LONGTEXT,
+            execution_trace LONGTEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+          ) ENGINE=InnoDB;
+          SQL
+          mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 \
+            < diagnosis-service/src/main/resources/db/migration/V2__create_clinical_runtime_foundation.sql
+          mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 \
+            < diagnosis-service/src/main/resources/db/migration/V3__create_clinical_consultation.sql
+          mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 <<'SQL'
+          ALTER TABLE clinical_consultation ADD COLUMN current_wait_effect_id VARCHAR(128) NULL;
+          CREATE TABLE clinical_consultation_wait_effect (
+            wait_effect_id VARCHAR(128) PRIMARY KEY,
+            parent_delivered_wait_effect_id VARCHAR(128) NOT NULL UNIQUE,
+            consultation_id VARCHAR(128) NOT NULL, question_id VARCHAR(128) NOT NULL,
+            delivery_id VARCHAR(128) NOT NULL, payload_fingerprint VARCHAR(128) NOT NULL,
+            idempotency_key VARCHAR(128) NOT NULL UNIQUE,
+            expected_prior_lifecycle VARCHAR(32) NOT NULL, expected_prior_row_version BIGINT NOT NULL,
+            committed_lifecycle VARCHAR(32) NOT NULL, committed_row_version BIGINT NOT NULL,
+            effect_status VARCHAR(32) NOT NULL, created_at DATETIME NOT NULL,
+            committed_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE clinical_runtime_thread_state (
+            thread_id VARCHAR(128) PRIMARY KEY, consultation_id VARCHAR(128) NOT NULL UNIQUE,
+            row_version BIGINT NOT NULL, runtime_status VARCHAR(32) NOT NULL,
+            current_run_id VARCHAR(128), current_wait_checkpoint_id VARCHAR(128),
+            current_wait_effect_id VARCHAR(128), updated_at DATETIME NOT NULL,
+            created_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE clinical_runtime_wait_checkpoint (
+            checkpoint_id VARCHAR(128) PRIMARY KEY, consultation_id VARCHAR(128) NOT NULL,
+            thread_id VARCHAR(128) NOT NULL, run_id VARCHAR(128) NOT NULL,
+            question_id VARCHAR(128) NOT NULL, pending_question_ref VARCHAR(256) NOT NULL,
+            question_selection_effect_id VARCHAR(128) NOT NULL,
+            question_delivery_effect_id VARCHAR(128) NOT NULL,
+            question_delivered_wait_effect_id VARCHAR(128) NOT NULL UNIQUE,
+            delivery_id VARCHAR(128) NOT NULL, delivery_confirmation_ref VARCHAR(128) NOT NULL,
+            clinical_state_version INT NOT NULL, consultation_wait_effect_id VARCHAR(128) NOT NULL,
+            dependency_binding_ref VARCHAR(128), question_policy_ref VARCHAR(128),
+            payload_fingerprint VARCHAR(128) NOT NULL, checkpoint_status VARCHAR(32) NOT NULL,
+            created_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+
+          -- Match the existing nonproduction U07 F8 physical fixture schema.
+          -- Required to exercise actual durable checkpoint consumption.
+          CREATE TABLE u07_f8_answer_consumption (
+            checkpoint_id VARCHAR(128) NOT NULL PRIMARY KEY,
+            consultation_id VARCHAR(128) NOT NULL,
+            waiting_run_id VARCHAR(128) NOT NULL,
+            answer_event_id VARCHAR(128) NOT NULL UNIQUE,
+            answer_digest VARCHAR(128) NOT NULL,
+            new_run_id VARCHAR(128) NOT NULL UNIQUE,
+            CONSTRAINT fk_u07_f8_wait_checkpoint FOREIGN KEY (checkpoint_id)
+              REFERENCES clinical_runtime_wait_checkpoint(checkpoint_id)
+          ) ENGINE=InnoDB;
+
+          CREATE TABLE cdp_version (
+            id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            cdp_id VARCHAR(64),
+            version_number INT,
+            cdp_data LONGTEXT,
+            create_time DATETIME,
+            KEY idx_u01_u02_version (cdp_id, version_number)
+          ) ENGINE=InnoDB;
+          SQL
+          mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 \
+            < diagnosis-service/src/main/resources/db/migration/V4__create_capability_governance_foundation.sql
+          mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 \
+            < diagnosis-service/src/main/resources/db/migration/V5__extend_capability_trace.sql
+          # Disposable V9 candidate: nonproduction integration tables only.
+          mysql -h127.0.0.1 -P33333 -uroot v1_u01_u02 \
+            < tools/u07_d5_o2_tx_topology/production_candidate/mysql8/V9__u07_clinical_receipts_no_dispatch.sql
+      - name: Execute exact Spring JPA/MySQL8 authoritative identity readback
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f contracts/v1/bindings/java/pom.xml install -DskipTests
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U01U02PhysicalMysqlHandoffTest,U01U02RealFactCommitMysqlTest test
+          python3 - <<'PY'
+          import glob,xml.etree.ElementTree as ET
+          p=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02PhysicalMysqlHandoffTest.xml")
+          assert len(p)==1,p
+          r=ET.parse(p[0]).getroot()
+          assert int(r.get("tests",-1))==1
+          assert all(int(r.get(k,-1))==0 for k in ("errors","failures","skipped"))
+          q=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02RealFactCommitMysqlTest.xml")
+          assert len(q)==1,q
+          r2=ET.parse(q[0]).getroot()
+          assert int(r2.get("tests",-1))==4
+          assert all(int(r2.get(k,-1))==0 for k in ("errors","failures","skipped"))
+          print("V1_U01_U02_U03_U04_REAL_MYSQL_SYNTHETIC_SAFETY=PASS; LIVE_PROVIDER_HTTP=NOT_VERIFIED")
+          PY

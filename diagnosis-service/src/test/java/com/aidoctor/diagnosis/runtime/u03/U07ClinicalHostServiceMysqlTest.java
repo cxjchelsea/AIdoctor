@@ -206,7 +206,36 @@ public class U07ClinicalHostServiceMysqlTest {
             U04ExecutionResult u04 = ctx.getBean(U04NonProductionApplicationService.class)
                     .execute(handoff, 10, U04ScopeContext.current(true, true), ENV);
             assertEquals(U04ExecutionResult.COMMIT_COMPLETE, u04.getStatus());
+            // A hand-crafted S14 must not become F3 authority merely because
+            // a legitimate U04 receipt exists for the same consultation.
+            U03OutboundHandoff uncommittedHandoff = new U03OutboundHandoff(
+                    "consult-1", id, 9, 10,
+                    "thread-1","run-1","event-1","corr-1","trace-1",ENV,
+                    U03NonProductionExecutionContext.BINDING_MODE,
+                    U03RiskAssessmentCandidate.VALID, null,
+                    Collections.<String>emptyList(), "DETERMINISTIC_FROZEN_RULE_EXECUTION",
+                    "u03-decision-1", U03RiskAssessmentCandidate.VALID,
+                    "NO_HIGH_RISK_SIGNAL", "U03_RULE_DECISION",
+                    U03GovernedCandidateGateway.BINDING_ID, Arrays.asList(
+                            U03GovernedCandidateGateway.BINDING_ID,
+                            U03ExplicitNonProductionReleaseRefs.GATE_C_KNOWLEDGE_RELEASE_REF,
+                            U03ExplicitNonProductionReleaseRefs.GATE_C_RULE_RELEASE_REF,
+                            U03ExplicitNonProductionReleaseRefs.GATE_C_COVERAGE_CONTRACT_REF,
+                            U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_RELEASE_REF,
+                            U03ExplicitNonProductionReleaseRefs.GATE_C_POLICY_PAIR_REF),
+                    "acceptance-1", Collections.singletonList("evidence-1"),
+                    Collections.singletonList("source-1"),
+                    Collections.singletonList("provenance-1"),
+                    "u03-proposal-1",null,null,null);
+            assertTrue(assertThrows(IllegalStateException.class, () ->
+                    com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionF3A1U05Flow
+                            .requireEligiblePreF3(uncommittedHandoff, u04))
+                    .getMessage().contains("U07_U03_RISK_COMMIT_EVIDENCE_REQUIRED"));
             assertEquals(11, repo.findById(id).get().getVersion().intValue());
+            assertEquals(11, repo.findById(id).get().getVersion().intValue());
+            // A real persisted U04 gate can authorize F3 only at its exact CDP version.
+            com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalFollowupCoordinator
+                    .requireCurrentU04Version(id, u04, repo);
 
             StateRepositoryPort state = ctx.getBean(StateRepositoryPort.class);
             com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalF3Owner.F3CommitPort
@@ -310,6 +339,13 @@ public class U07ClinicalHostServiceMysqlTest {
             assertThrows(IllegalStateException.class,
                     () -> flow.execute(handoff, u04, ENV, "clinical-state-cdp-1-v12"));
             assertEquals(12, repo.findById(id).get().getVersion().intValue());
+            // The formerly current U04 receipt is now stale after the real F3
+            // P01 commit: recovery may use fresh independent authority, never
+            // replay the old safety gate to start another F3 execution.
+            assertTrue(assertThrows(IllegalStateException.class, () ->
+                    com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalFollowupCoordinator
+                            .requireCurrentU04Version(id, u04, repo))
+                    .getMessage().contains("U04_SAFETY_GATE_STALE_BEFORE_F3"));
             assertEquals(0, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM u07_a1_attestation WHERE cdp_id=?",
                     Integer.class, id).intValue());

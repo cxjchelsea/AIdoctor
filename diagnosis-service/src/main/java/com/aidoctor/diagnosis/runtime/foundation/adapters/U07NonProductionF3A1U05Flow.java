@@ -74,6 +74,8 @@ public final class U07NonProductionF3A1U05Flow {
                 || !handoff.getCdpId().equals(u04.getCommitResult().cdpId))
             throw new IllegalStateException("U07_U04_REAL_COMMIT_REQUIRED");
 
+        requireEligiblePreF3(handoff, u04);
+
         F3Committed f3 = owner.executeAndReadback(handoff.getConsultationId(), handoff.getCdpId());
         if (f3 == null || !f3.committedAndReadback || blank(f3.effectId)
                 || f3.persistedVersion <= u04.getCommitResult().committedVersion.intValue()
@@ -117,6 +119,42 @@ public final class U07NonProductionF3A1U05Flow {
             throw new IllegalStateException("U07_U05_INPUT_AUTHORITY_MISMATCH");
         // U05 retains its own admission, commit and currentness guards.
         return u05.execute(request, manifest, authority);
+    }
+
+    /** Public read-only preflight to also exercise the exact guard on real CDP E2E fixtures. */
+    public static void requireEligiblePreF3(U03OutboundHandoff handoff,
+            U04ExecutionResult u04) {
+        if (handoff == null || u04 == null
+                || !U04ExecutionResult.COMMIT_COMPLETE.equals(u04.getStatus())
+                || u04.getCommitResult() == null
+                || !"COMMITTED".equals(u04.getCommitResult().status)
+                || u04.getCommitResult().committedVersion == null
+                || !handoff.getCdpId().equals(u04.getCommitResult().cdpId)) {
+            throw new IllegalStateException("U07_U04_REAL_COMMIT_REQUIRED");
+        }
+        // Safety is a PRECONDITION to any F3 mutation, not a post-write check.
+        // BLOCKED / UNAVAILABLE must never invoke an F3 owner or issue an A1 receipt.
+        // S14 is a provenance carrier, not proof of a successful risk commit.
+        // Reject fabricated/uncommitted U03 handoffs before entering F3.
+        if (!"VALID".equals(handoff.getDecisionStatus())
+                || !"COMMITTED".equals(handoff.getCommitStatus())
+                || handoff.getCommittedClinicalStateVersion() == null
+                || handoff.getCommitAuditId() == null
+                || handoff.getCommitAuditId().trim().isEmpty())
+            throw new IllegalStateException("U07_U03_RISK_COMMIT_EVIDENCE_REQUIRED");
+        if (u04.getDecision() == null || u04.getRoutingEligibility() == null
+                || !u04.getRoutingEligibility().isU05Eligible()
+                || (!"ALLOW".equals(u04.getDecision().getGate())
+                    && !"RESTRICTED".equals(u04.getDecision().getGate()))
+                || !handoff.getDecisionId().equals(
+                        u04.getDecision().getSourceU03DecisionRef())
+                || handoff.getCommittedClinicalStateVersion().intValue()
+                        != u04.getDecision().getClinicalStateVersion()
+                || u04.getCommitResult().committedVersion.intValue()
+                        != u04.getDecision().getClinicalStateVersion() + 1) {
+            throw new IllegalStateException("U07_U04_SAFETY_PRE_F3_NOT_ELIGIBLE");
+        }
+
     }
 
     private static boolean blank(String value) {

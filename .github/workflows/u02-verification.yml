@@ -73,5 +73,11 @@ jobs:
           mvn -f diagnosis-service/pom.xml
           -Dtest='C01U02CapabilityGatewayTest,U02ClinicalFactFormationTest,U02ClinicalFactCommitServiceTest,U02ClinicalFactApplicationServiceTest,C01U01CapabilityGatewayTest,U01NaturalLanguageStartServiceTest,FoundationRuntimeBaseTest,Foundation1GovernanceTest,ClinicalCdpStateRepositoryAdapterTest,StateCommitterArchitectureGuardTest,StateCommitterContractBoundaryTest,StateCommitterMechanicalCoreTest,SyntheticVersionedStateRepositoryTest'
           test
-      - name: Run diagnosis-service regression suite
-        run: mvn -f diagnosis-service/pom.xml test
+      # Whole-module `mvn test` invokes U07 disposable-MySQL and isolated D5 runners
+      # without their required environment. Those tests remain in their own
+      # dedicated guarded workflows; do not weaken any test safety guard.
+      - name: Run governed U02 to U03 focused integration regression
+        run: >-
+          mvn -f diagnosis-service/pom.xml
+          -Dtest='U02U03GovernedSafetyBridgeTest,U03CdpAcceptedEvidenceAuthorityTest,U03CdpGateCClinicalInputPortTest'
+          test

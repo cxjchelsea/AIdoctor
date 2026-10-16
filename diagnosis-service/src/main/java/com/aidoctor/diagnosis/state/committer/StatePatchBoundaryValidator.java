@@ -124,7 +124,15 @@ public final class StatePatchBoundaryValidator {
         if ("REMOVE".equals(operation.op) && operation.value != null) {
             return invalid("REMOVE cannot carry a non-null value.");
         }
-        if (!controlledValue(operation.value, 4000, 0) || !controlledValue(operation.expectedCurrentValue, 4000, 0)) {
+        // The first governed U06 selection may create the empty questions
+        // container before adding the selected question in the SAME Patch.
+        // Do not relax nested-map validation for any other state path.
+        boolean initialQuestionsContainer = "ADD".equals(operation.op)
+                && "/patient_state/questions".equals(operation.path)
+                && operation.value instanceof Map<?, ?>
+                && ((Map<?, ?>) operation.value).isEmpty();
+        if ((!initialQuestionsContainer && !controlledValue(operation.value, 4000, 0))
+                || !controlledValue(operation.expectedCurrentValue, 4000, 0)) {
             return invalid("StatePatch operation value is outside the v1 controlled-value boundary.");
         }
         return Validation.valid();

@@ -10,6 +10,7 @@ on:
       - 'tools/u07_d5_o2_tx_topology/production_candidate/U07_PRODUCTION_RELEASE_DECISION.md'
       - 'tools/u07_d5_o2_tx_topology/production_candidate/test_production_persistence_preflight.py'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapterTest.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpU05ReadinessSnapshotAdapter.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpStateRepositoryAdapter.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/ClinicalCdpReadbackAdapter.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07ClinicalHostServicesConfig.java'
@@ -28,12 +29,20 @@ on:
       - 'tools/u07_d5_o2_tx_topology/production_candidate/mysql8/V9__u07_clinical_receipts_no_dispatch.sql'
       - 'tools/u07_d5_o2_tx_topology/production_candidate/oracle/V9__u07_clinical_receipts_no_dispatch.sql'
       - 'tools/u07_d5_o2_tx_topology/production_candidate/U07_V9_HOST_DEPLOYMENT_READINESS.md'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionTrustedAnswerU02Bridge.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionResumedClinicalPipeline.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionDurableF8Consume.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u01/ConsultationRecord.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeThreadStateRecord.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/RuntimeWaitCheckpointRecord.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionTrustedAnswerU02BridgeTest.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06ExecutionResult.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u06/U06NonProductionPhysicalF3DecisionProvider.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionF3A1U05Flow.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07PersistedF3OwnerBarrierRevalidationEvidence.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U07ClinicalHostServiceMysqlTest.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07WorkpackACdpPhysicalMysqlTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07U06SelectionPhysicalMysqlTest.java'
   workflow_dispatch:
 permissions:
   contents: read
@@ -89,6 +98,7 @@ jobs:
         run: |
           set -euo pipefail
           mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=ClinicalCdpStateRepositoryAdapterTest test
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U07NonProductionTrustedAnswerU02BridgeTest test
           python3 - <<'PY'
           import glob, xml.etree.ElementTree as ET
           paths = glob.glob('diagnosis-service/target/surefire-reports/TEST-*ClinicalCdpStateRepositoryAdapterTest.xml')
@@ -164,6 +174,96 @@ jobs:
             create_time DATETIME,
             KEY idx_workpack_a_version (cdp_id, version_number)
           ) ENGINE=InnoDB;
+          CREATE TABLE clinical_consultation (
+            consultation_id VARCHAR(128) PRIMARY KEY, row_version BIGINT NOT NULL,
+            cdp_id VARCHAR(128) NOT NULL UNIQUE, user_id VARCHAR(128) NOT NULL,
+            lifecycle_status VARCHAR(32) NOT NULL, current_wait_effect_id VARCHAR(128),
+            subject_status VARCHAR(32) NOT NULL, subject_type VARCHAR(32),
+            subject_reference_id VARCHAR(128), problem_status VARCHAR(32) NOT NULL,
+            problem_text VARCHAR(2000), scope_decision VARCHAR(32) NOT NULL,
+            clarification_reason VARCHAR(128), early_safety_signal BIT NOT NULL,
+            start_event_id VARCHAR(128) NOT NULL UNIQUE, created_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE clinical_consultation_wait_effect (
+            wait_effect_id VARCHAR(128) PRIMARY KEY,
+            parent_delivered_wait_effect_id VARCHAR(128) NOT NULL UNIQUE,
+            consultation_id VARCHAR(128) NOT NULL, question_id VARCHAR(128) NOT NULL,
+            delivery_id VARCHAR(128) NOT NULL, payload_fingerprint VARCHAR(128) NOT NULL,
+            idempotency_key VARCHAR(128) NOT NULL UNIQUE,
+            expected_prior_lifecycle VARCHAR(32) NOT NULL, expected_prior_row_version BIGINT NOT NULL,
+            committed_lifecycle VARCHAR(32) NOT NULL, committed_row_version BIGINT NOT NULL,
+            effect_status VARCHAR(32) NOT NULL, created_at DATETIME NOT NULL,
+            committed_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE clinical_runtime_thread_state (
+            thread_id VARCHAR(128) PRIMARY KEY, consultation_id VARCHAR(128) NOT NULL UNIQUE,
+            row_version BIGINT NOT NULL, runtime_status VARCHAR(32) NOT NULL,
+            current_run_id VARCHAR(128), current_wait_checkpoint_id VARCHAR(128),
+            current_wait_effect_id VARCHAR(128), updated_at DATETIME NOT NULL,
+            created_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE clinical_runtime_wait_checkpoint (
+            checkpoint_id VARCHAR(128) PRIMARY KEY, consultation_id VARCHAR(128) NOT NULL,
+            thread_id VARCHAR(128) NOT NULL, run_id VARCHAR(128) NOT NULL,
+            question_id VARCHAR(128) NOT NULL, pending_question_ref VARCHAR(256) NOT NULL,
+            question_selection_effect_id VARCHAR(128) NOT NULL,
+            question_delivery_effect_id VARCHAR(128) NOT NULL,
+            question_delivered_wait_effect_id VARCHAR(128) NOT NULL UNIQUE,
+            delivery_id VARCHAR(128) NOT NULL, delivery_confirmation_ref VARCHAR(128) NOT NULL,
+            clinical_state_version INT NOT NULL, consultation_wait_effect_id VARCHAR(128) NOT NULL,
+            dependency_binding_ref VARCHAR(128), question_policy_ref VARCHAR(128),
+            payload_fingerprint VARCHAR(128) NOT NULL, checkpoint_status VARCHAR(32) NOT NULL,
+            created_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE clinical_runtime_binding (
+            consultation_id VARCHAR(128) PRIMARY KEY, cdp_id VARCHAR(128) NOT NULL,
+            runtime_authority VARCHAR(64) NOT NULL, thread_id VARCHAR(128) NOT NULL,
+            scope_version VARCHAR(64) NOT NULL, capability_set_version VARCHAR(64) NOT NULL,
+            contract_version VARCHAR(64) NOT NULL, created_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE canonical_business_event (
+            event_id VARCHAR(128) PRIMARY KEY, consultation_id VARCHAR(128) NOT NULL,
+            event_type VARCHAR(64) NOT NULL, idempotency_key VARCHAR(128) NOT NULL UNIQUE,
+            payload_digest VARCHAR(128) NOT NULL, received_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE clinical_runtime_run (
+            run_id VARCHAR(128) PRIMARY KEY, thread_id VARCHAR(128) NOT NULL,
+            consultation_id VARCHAR(128) NOT NULL, event_id VARCHAR(128) NOT NULL,
+            based_on_clinical_state_version INT NOT NULL, status VARCHAR(32) NOT NULL,
+            created_at DATETIME NOT NULL
+          ) ENGINE=InnoDB;
+          CREATE TABLE clinical_capability_call_trace (
+            capability_call_id VARCHAR(128) NOT NULL PRIMARY KEY,
+            consultation_id VARCHAR(128) NOT NULL,
+            thread_id VARCHAR(128) NOT NULL,
+            run_id VARCHAR(128) NOT NULL,
+            event_id VARCHAR(128) NOT NULL,
+            unit_id VARCHAR(32) NOT NULL,
+            capability_id VARCHAR(64) NOT NULL,
+            binding_id VARCHAR(128) NOT NULL,
+            rule_release_ref VARCHAR(128),
+            knowledge_release_ref VARCHAR(128),
+            capability_result_ref VARCHAR(128),
+            decision_ref VARCHAR(128),
+            proposal_ref VARCHAR(128),
+            commit_ref VARCHAR(128),
+            clinical_state_version_before INT,
+            clinical_state_version_after INT,
+            call_status VARCHAR(32) NOT NULL,
+            reason_code VARCHAR(128),
+            started_at DATETIME NOT NULL,
+            finished_at DATETIME
+          ) ENGINE=InnoDB;
+          CREATE TABLE u07_f8_answer_consumption (
+            checkpoint_id VARCHAR(128) NOT NULL PRIMARY KEY,
+            consultation_id VARCHAR(128) NOT NULL,
+            waiting_run_id VARCHAR(128) NOT NULL,
+            answer_event_id VARCHAR(128) NOT NULL UNIQUE,
+            answer_digest VARCHAR(128) NOT NULL,
+            new_run_id VARCHAR(128) NOT NULL UNIQUE,
+            CONSTRAINT fk_u07_f8_wait_checkpoint FOREIGN KEY (checkpoint_id)
+              REFERENCES clinical_runtime_wait_checkpoint(checkpoint_id)
+          ) ENGINE=InnoDB;
           SQL
       - name: Apply isolated V9 clinical evidence candidate on disposable MySQL8
         shell: bash
@@ -201,7 +301,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U07WorkpackACdpPhysicalMysqlTest,U07ClinicalHostServiceMysqlTest surefire:test
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U07WorkpackACdpPhysicalMysqlTest,U07ClinicalHostServiceMysqlTest,U07U06SelectionPhysicalMysqlTest surefire:test
           python3 - <<'PY'
           import glob,xml.etree.ElementTree as ET
           paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07WorkpackACdpPhysicalMysqlTest.xml")
@@ -214,5 +314,11 @@ jobs:
           host=ET.parse(clinical[0]).getroot()
           assert int(host.get("tests",-1))==8
           assert all(int(host.get(k,-1))==0 for k in ("failures","errors","skipped"))
+          mode2=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07U06SelectionPhysicalMysqlTest.xml")
+          assert len(mode2)==1,mode2
+          selection=ET.parse(mode2[0]).getroot()
+          assert int(selection.get("tests",-1))==2
+          assert all(int(selection.get(k,-1))==0 for k in ("failures","errors","skipped"))
+          print("U07_U06_MYSQL_MODE2_SELECTION=PASS; SYNTHETIC_CONFIRMED_DELIVERY_DURABLE_WAIT=PASS; REAL_DELIVERY_AUTHORITY=BLOCK")
           print("U07_WORKPACK_A_REAL_SPRING_JPA_MYSQL8_CDP_AND_HOST_U04=PASS")
           PY

@@ -1,0 +1,108 @@
+name: V1 Clinical Agent Public Entry Acceptance (Nonproduction)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/v1-clinical-agent-entry-acceptance.yml'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1ClinicalPublicEntryAcceptanceTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalIngressTest.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalIngressController.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/DiagnosisController.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/service/DiagnosisOrchestrationService.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/service/orchestration/DiagnosisWorkflowOrchestrator.java'
+      - 'tools/v1_clinical_e2e/acceptance_gate.py'
+      - 'tools/v1_clinical_e2e/test_acceptance_gate.py'
+      - 'tools/v1_clinical_e2e/scenarios.json'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/**'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U01U02NonProductionHostConfig.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02TrustedStartContextTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02NonProductionHostConfigTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U02U03GovernedSafetyBridgeTest.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u03/U02U03GovernedSafetyBridge.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u03/U03CdpAcceptedEvidenceAuthority.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u03/U03CdpGateCClinicalInputPort.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U03CdpGateCClinicalInputPortTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u03/U03CdpAcceptedEvidenceAuthorityTest.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U02U03SafetyHostConfig.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionPhysicalFollowupCoordinator.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionF3A1U05Flow.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionPhysicalFollowupHostConfig.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U07NonProductionPhysicalFollowupHostConfigTest.java'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-entry-mockmvc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '8'
+      - name: Compile shared Java contracts
+        run: mvn -B -ntp -f contracts/v1/bindings/java/pom.xml install -DskipTests
+      - name: Exercise public start and continue HTTP adapter
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=V1ClinicalPublicEntryAcceptanceTest,V1NonProductionClinicalIngressTest,U01U02TrustedStartContextTest,U01U02NonProductionHostConfigTest,U02U03GovernedSafetyBridgeTest,U03CdpAcceptedEvidenceAuthorityTest,U03CdpGateCClinicalInputPortTest,U07NonProductionPhysicalFollowupHostConfigTest test
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1ClinicalPublicEntryAcceptanceTest.xml")
+          assert len(paths)==1, paths
+          controlled=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1NonProductionClinicalIngressTest.xml")
+          assert len(controlled)==1,controlled
+          guarded=ET.parse(controlled[0]).getroot()
+          assert int(guarded.get("tests",-1))==4
+          assert all(int(guarded.get(key,-1))==0 for key in ("errors","failures","skipped"))
+          trust=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02TrustedStartContextTest.xml")
+          assert len(trust)==1,trust
+          trusted=ET.parse(trust[0]).getroot()
+          assert int(trusted.get("tests",-1))==4
+          assert all(int(trusted.get(key,-1))==0 for key in ("errors","failures","skipped"))
+          host=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02NonProductionHostConfigTest.xml")
+          assert len(host)==1,host
+          host_result=ET.parse(host[0]).getroot()
+          assert int(host_result.get("tests",-1))==4
+          assert all(int(host_result.get(key,-1))==0 for key in ("errors","failures","skipped"))
+          safety=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U02U03GovernedSafetyBridgeTest.xml")
+          assert len(safety)==1,safety
+          safety_result=ET.parse(safety[0]).getroot()
+          assert int(safety_result.get("tests",-1))==6
+          assert all(int(safety_result.get(key,-1))==0 for key in ("errors","failures","skipped"))
+          evidence=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U03CdpAcceptedEvidenceAuthorityTest.xml")
+          assert len(evidence)==1,evidence
+          evidence_result=ET.parse(evidence[0]).getroot()
+          assert int(evidence_result.get("tests",-1))==5
+          assert all(int(evidence_result.get(k,-1))==0 for k in ("errors","failures","skipped"))
+          gatec=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U03CdpGateCClinicalInputPortTest.xml")
+          assert len(gatec)==1,gatec
+          gatec_result=ET.parse(gatec[0]).getroot()
+          assert int(gatec_result.get("tests",-1))==7
+          assert all(int(gatec_result.get(k,-1))==0 for k in ("errors","failures","skipped"))
+          physical_host=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U07NonProductionPhysicalFollowupHostConfigTest.xml")
+          assert len(physical_host)==1,physical_host
+          physical_host_result=ET.parse(physical_host[0]).getroot()
+          assert int(physical_host_result.get("tests",-1))==5
+          assert all(int(physical_host_result.get(k,-1))==0 for k in ("errors","failures","skipped"))
+          result=ET.parse(paths[0]).getroot()
+          assert int(result.get("tests",-1))==3
+          assert all(int(result.get(key,-1))==0 for key in ("errors","failures","skipped"))
+          print("V1_PUBLIC_ENTRY_MOCKMVC_BASELINE=PASS; FULL_CLINICAL_E2E=NOT_ACCEPTED")
+          PY
+      - name: Run full E2E evidence admission gate
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tools/v1_clinical_e2e -p 'test_acceptance_gate.py' -v
+          python3 tools/v1_clinical_e2e/acceptance_gate.py --scenarios tools/v1_clinical_e2e/scenarios.json > "$RUNNER_TEMP/v1-clinical-e2e-result.json"
+          python3 - "$RUNNER_TEMP/v1-clinical-e2e-result.json" <<'PY'
+          import json,sys
+          result=json.load(open(sys.argv[1],encoding="utf-8"))
+          assert result["decision"]=="NOT_ACCEPTED"
+          assert result["actual_full_e2e_cases_passed"]==0
+          assert result["reason"]=="NO_LIVE_HTTP_DB_CLINICAL_EVIDENCE"
+          print("V1_REAL_CLINICAL_E2E_GATE=PASS_BLOCK_UNSUPPORTED_CLAIMS")
+          PY

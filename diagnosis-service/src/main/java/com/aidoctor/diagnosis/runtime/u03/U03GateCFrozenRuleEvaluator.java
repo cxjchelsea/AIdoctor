@@ -77,7 +77,7 @@ public final class U03GateCFrozenRuleEvaluator implements U03AcceptedEvidenceAwa
         List<U03GateCRuleResult> results = preDecisionFailure == null
                 ? evaluateRules(input)
                 : Collections.<U03GateCRuleResult>emptyList();
-        requireAcceptedEvidenceCoverage(results, acceptedEvidenceBinding);
+        requireAcceptedEvidenceCoverage(results, acceptedEvidenceBinding, input);
 
         U03GateCRuleEvaluation evaluation = new U03GateCRuleEvaluation(results, preDecisionFailure);
         return U03RiskAssessmentCandidate.validWithGateCEvaluation(
@@ -313,14 +313,22 @@ public final class U03GateCFrozenRuleEvaluator implements U03AcceptedEvidenceAwa
 
     private static void requireAcceptedEvidenceCoverage(
             List<U03GateCRuleResult> results,
-            U03AcceptedEvidenceBinding acceptedEvidenceBinding) {
+            U03AcceptedEvidenceBinding acceptedEvidenceBinding,
+            U03GateCClinicalInput input) {
         Set<String> accepted = new HashSet<String>(acceptedEvidenceBinding.getEvidenceRefs());
         for (U03GateCRuleResult result : results) {
             for (String evidenceRef : result.getEvidenceRefs()) {
-                if (!accepted.contains(evidenceRef)) {
-                    throw new IllegalStateException(
-                            "Gate-C rule execution referenced evidence outside the accepted binding: " + evidenceRef);
-                }
+                if (accepted.contains(evidenceRef)) continue;
+                // An absent CDP observation is explicitly UNKNOWN, never NO.
+                // The frozen rule may report insufficient input or be out of
+                // scope, but no MATCHED/NO_MATCH may use unaccepted evidence.
+                String execution = result.getExecutionState();
+                boolean notEvaluated = "INPUT_INSUFFICIENT".equals(execution)
+                        || "SCOPE_MISMATCH".equals(execution);
+                if (notEvaluated && "UNKNOWN".equals(input.evidenceState(evidenceRef)))
+                    continue;
+                throw new IllegalStateException(
+                        "Gate-C rule execution referenced evidence outside the accepted binding: " + evidenceRef);
             }
         }
     }

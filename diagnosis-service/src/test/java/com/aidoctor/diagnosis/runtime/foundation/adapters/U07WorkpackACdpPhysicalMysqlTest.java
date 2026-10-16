@@ -59,9 +59,21 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
     @Configuration
     @EnableTransactionManagement
     @EnableJpaRepositories(
-            basePackages = "com.aidoctor.diagnosis.repository",
+            basePackages = {"com.aidoctor.diagnosis.repository",
+                    "com.aidoctor.diagnosis.runtime.u01",
+                    "com.aidoctor.diagnosis.runtime.u06.wait",
+                    "com.aidoctor.diagnosis.runtime.foundation",
+                    "com.aidoctor.diagnosis.runtime.governance"},
             includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
-                    classes = {CDPRepository.class, CDPVersionRepository.class}),
+                    classes = {CDPRepository.class, CDPVersionRepository.class,
+                            com.aidoctor.diagnosis.runtime.u01.ConsultationRepository.class,
+                            com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRepository.class,
+                            com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRepository.class,
+                            com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRepository.class,
+                            com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingRepository.class,
+                            com.aidoctor.diagnosis.runtime.foundation.CanonicalBusinessEventRepository.class,
+                            com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRepository.class,
+                            com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRepository.class}),
             entityManagerFactoryRef = "entityManagerFactory",
             transactionManagerRef = "transactionManager")
     public static class IsolatedConfig {
@@ -87,6 +99,14 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
                 unit.getManagedClassNames().clear();
                 unit.getManagedClassNames().add(CDP.class.getName());
                 unit.getManagedClassNames().add(CDPVersion.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.u01.ConsultationRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.u06.wait.ConsultationWaitEffectRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.RuntimeThreadStateRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.RuntimeWaitCheckpointRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.RuntimeBindingRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.CanonicalBusinessEventRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.foundation.ClinicalRunRecord.class.getName());
+                unit.getManagedClassNames().add(com.aidoctor.diagnosis.runtime.governance.CapabilityCallTraceRecord.class.getName());
             });
             java.util.Properties props = new java.util.Properties();
             props.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
@@ -208,6 +228,13 @@ public final class U07WorkpackACdpPhysicalMysqlTest {
                             "clinical_readiness", "CAN_ASK_MORE")).status);
 
             assertEquals(11, repo.findById(id).get().getVersion().intValue());
+            // U05's authoritative readback must come from the same physically
+            // committed CDP row, never from a synthetic post-commit claim.
+            ClinicalCdpU05ReadinessSnapshotAdapter readinessReadback =
+                    new ClinicalCdpU05ReadinessSnapshotAdapter(repo);
+            assertEquals("CAN_ASK_MORE", readinessReadback.read(id, 11)
+                    .getReadinessPayload().get("clinical_readiness"));
+            assertThrows(IllegalStateException.class, () -> readinessReadback.read(id, 10));
             Map<String,Object> current = repo.findById(id).get().getPatientState();
             assertEquals("synthetic-u03", ((Map<?,?>)current.get("safety_gate"))
                     .get("source_u03_decision_ref"));

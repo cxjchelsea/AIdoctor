@@ -85,6 +85,20 @@ public final class U03StateProposalFactory {
                 refs.getPolicyPairRef());
     }
 
+    /**
+     * Explicit subsequent-round risk update. The caller must have a fresh,
+     * persisted U02/P05-bound state version and an already present risk record.
+     * CDP adapter enforces REPLACE target existence and versioned P01 CAS.
+     */
+    public U03StateProposal createNonProductionValidReplacement(
+            U03NonProductionExecutionContext context,
+            U03DecisionOutcome decision,
+            U03GovernedCandidateGateway.GovernedResult governed) {
+        U03StateProposal proposal = createNonProductionValid(context, decision, governed);
+        proposal.getStatePatch().operations.get(0).op = "REPLACE";
+        return proposal;
+    }
+
     public U03StateProposal createFailed(U03ExecutionCommand command, U03DecisionOutcome decision,
             String attemptedBindingId) {
         if (command == null || decision == null) throw new IllegalArgumentException("U03 inputs are required");

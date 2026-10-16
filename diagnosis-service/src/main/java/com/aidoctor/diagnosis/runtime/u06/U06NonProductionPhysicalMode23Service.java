@@ -83,30 +83,51 @@ public final class U06NonProductionPhysicalMode23Service
         if (empty(d.getF3CanonicalEffectId())
                 || !d.getF3CanonicalEffectId().equals(currentF3))
             throw new IllegalStateException("U06_PHYSICAL_SELECTION_F3_NOT_CURRENT");
-        if (patient == null || !(patient.get("questions") instanceof Map<?, ?>))
-            throw new IllegalStateException("U06_PHYSICAL_QUESTIONS_PARENT_REQUIRED");
+        if (patient == null)
+            throw new IllegalStateException("U06_PHYSICAL_PATIENT_STATE_REQUIRED");
+        Object existingQuestions = patient.get("questions");
+        if (existingQuestions != null && !(existingQuestions instanceof Map<?, ?>))
+            throw new IllegalStateException("U06_PHYSICAL_QUESTIONS_PARENT_INVALID");
         if (patient.containsKey("pending_question"))
             throw new IllegalStateException("U06_PHYSICAL_PENDING_QUESTION_CONFLICT");
         String questionId = d.getQuestionId();
         // Avoid untrusted JSON pointer segments and forbidden path splicing.
         if (empty(questionId) || !questionId.matches("[A-Za-z0-9][A-Za-z0-9._:-]*"))
             throw new IllegalStateException("U06_PHYSICAL_QUESTION_ID_INVALID");
-        if (((Map<?, ?>) patient.get("questions")).containsKey(questionId))
+        if (existingQuestions != null && ((Map<?, ?>) existingQuestions).containsKey(questionId))
             throw new IllegalStateException("U06_PHYSICAL_QUESTION_ALREADY_SELECTED");
 
+        java.util.List<StateTypes.StatePatchOperation> operations = new java.util.ArrayList<>();
+        // First selection creates the missing parent and child within one
+        // governed P01 CAS, preserving the flat-map StatePatch value contract.
+        if (existingQuestions == null) {
+            StateTypes.StatePatchOperation parent = new StateTypes.StatePatchOperation();
+            parent.op = "ADD";
+            parent.path = "/patient_state/questions";
+            parent.value = Collections.emptyMap();
+            parent.source = "RULE_DERIVED";
+            parent.sensitivity = "PHI";
+            operations.add(parent);
+        }
         StateTypes.StatePatchOperation op = new StateTypes.StatePatchOperation();
         op.op = "ADD";
         op.path = "/patient_state/questions/" + questionId;
         op.value = U06StateValues.questionSelected(r, d);
         op.source = "RULE_DERIVED";
         op.sensitivity = "PHI";
+        operations.add(op);
         StateTypes.StatePatch patch = patch(r, "u06selection",
-                d.getQuestionSelectionEffectId(), Collections.singletonList(op));
+                d.getQuestionSelectionEffectId(), operations);
+        // Freeze the pre-commit CAS basis: a managed JPA entity may reflect
+        // the new version after StateCommitter commits in the same transaction.
+        final int preCommitVersion = cdp.getVersion().intValue();
         StateTypes.CommitResult committed = committer.commit(patch);
         if (committed == null || !"COMMITTED".equals(committed.status)
                 || committed.committedVersion == null
-                || committed.committedVersion.intValue() != cdp.getVersion().intValue() + 1)
-            throw new IllegalStateException("U06_PHYSICAL_SELECTION_COMMIT_REJECTED");
+                || committed.committedVersion.intValue() != preCommitVersion + 1)
+            throw new IllegalStateException("U06_PHYSICAL_SELECTION_COMMIT_REJECTED:"
+                    + (committed == null ? "NO_COMMIT_RESULT" : committed.status + ":"
+                            + committed.reasonCode));
 
         CDP readback = repository.findById(r.getCdpId())
                 .orElseThrow(() -> new IllegalStateException("U06_PHYSICAL_SELECTION_READBACK_MISSING"));
