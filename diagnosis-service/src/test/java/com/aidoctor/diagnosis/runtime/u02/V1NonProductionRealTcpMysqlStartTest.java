@@ -69,6 +69,7 @@ public class V1NonProductionRealTcpMysqlStartTest {
             V1NonProductionClinicalStartHandoffController.class,
             V1NonProductionClinicalSafetyHandoffController.class})
     static class Host {
+        @Bean JsonUtil jsonUtil() { return new JsonUtil(); }
         @Bean CDPVersionService versions(CDPVersionRepository repository) {
             CDPVersionService versions=new CDPVersionService();
             ReflectionTestUtils.setField(versions,"cdpVersionRepository",repository);
