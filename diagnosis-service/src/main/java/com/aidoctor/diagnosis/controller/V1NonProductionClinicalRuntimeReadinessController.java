@@ -1,6 +1,11 @@
 package com.aidoctor.diagnosis.controller;
 
 import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionGovernedRiskSafetyContinuation;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionPhysicalFollowupCoordinator;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionDurableF8Consume;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionAnswerResumeAdmission;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionTrustedAnswerU02Bridge;
+import com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery;
 import com.aidoctor.diagnosis.runtime.u01.U01NaturalLanguageStartService;
 import com.aidoctor.diagnosis.runtime.u02.U01U02NonProductionHandoffService;
 import com.aidoctor.diagnosis.runtime.u03.U02U03GovernedSafetyBridge;
@@ -52,6 +57,18 @@ public final class V1NonProductionClinicalRuntimeReadinessController {
         dependencies.put("independentClinicalHost", present(
                 V1NonProductionClinicalSafetyHandoffController.AuthorizedClinicalHost.class));
         dependencies.put("u01U04HttpEntry", present(V1NonProductionClinicalSafetyHandoffController.class));
+        dependencies.put("physicalFollowupCoordinator", present(U07NonProductionPhysicalFollowupCoordinator.class));
+        dependencies.put("independentQuestionHost", present(U07NonProductionPhysicalFollowupCoordinator.AuthorizedQuestionHost.class));
+        dependencies.put("confirmedDeliveryWaitRecovery", present(U07NonProductionDeliveryWaitRecovery.class));
+        dependencies.put("firstRoundOwner", present(V1NonProductionFirstRoundWaitController.FirstRoundOwner.class));
+        dependencies.put("firstRoundHttpEntry", present(V1NonProductionFirstRoundWaitController.class));
+        dependencies.put("trustedAnswerHost", present(V1NonProductionAnswerResumeController.TrustedAnswerHost.class));
+        dependencies.put("f8AnswerAdmission", present(U07NonProductionAnswerResumeAdmission.class));
+        dependencies.put("durableF8Consumer", present(U07NonProductionDurableF8Consume.class));
+        dependencies.put("trustedResumedRunBridge", present(U07NonProductionTrustedAnswerU02Bridge.class));
+        dependencies.put("f8AnswerHttpEntry", present(V1NonProductionAnswerResumeController.class));
+        dependencies.put("resumedRiskOwner", present(V1NonProductionAnswerRiskReevaluationController.ResumedRiskOwner.class));
+        dependencies.put("resumedRiskHttpEntry", present(V1NonProductionAnswerRiskReevaluationController.class));
         boolean ready = true;
         for (Boolean value : dependencies.values()) ready &= value.booleanValue();
         Map<String, Object> response = new LinkedHashMap<String, Object>();
