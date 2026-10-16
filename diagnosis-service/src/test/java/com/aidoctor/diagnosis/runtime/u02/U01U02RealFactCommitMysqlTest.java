@@ -601,6 +601,68 @@ public class U01U02RealFactCommitMysqlTest {
                             .get("clinical_readiness") instanceof Map<?, ?>);
                     assertEquals(6, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
                             created.getCdpId()).size());
+
+                    // SAME Consultation/CDP: use the actual U05 committed route
+                    // as the prerequisite for the governed U06 Mode-2 owner.
+                    assertEquals(com.aidoctor.diagnosis.runtime.u05
+                                    .U05DownstreamRoutingDecision.TO_U06_QUESTION_PATH,
+                            u05Result.getRoutingDecision().getDownstreamConsequence());
+                    assertEquals(com.aidoctor.diagnosis.runtime.u05
+                                    .U05DownstreamRoutingDecision.ELIGIBLE,
+                            u05Result.getRoutingDecision().getRoutingStatus());
+                    com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest u06Request =
+                            new com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest(
+                                    "first-round-u06-select-" + scenario,
+                                    created.getConsultationId(), created.getCdpId(),
+                                    com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest
+                                            .QUESTION_SELECTION_DELIVERY,
+                                    com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest
+                                            .U05_QUESTION_ROUTING,
+                                    u05Result.getRoutingDecision().getRoutingDecisionId(),
+                                    6, 6,
+                                    com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest
+                                            .SYNTHETIC_STRUCTURAL_NONPROD,
+                                    com.aidoctor.diagnosis.runtime.u06.U06ProfileBRequest
+                                            .SYNTHETIC_VERIFICATION_BINDING,
+                                    "test-u06-dependency", "test-u05-readiness",
+                                    "test-question-policy", "test-d04-policy",
+                                    "test-u06-event", "test-u06-business-event",
+                                    trace.getThreadId(), created.getRunId(), 0L,
+                                    "synthetic-correlation", "synthetic-trace",
+                                    "2026-10-16T00:00:00Z",
+                                    com.aidoctor.diagnosis.runtime.u06
+                                            .U06AdmissionEvidence.syntheticCurrentAllow());
+                    com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle u06Decision =
+                            new com.aidoctor.diagnosis.runtime.u06.U06SyntheticDecisionBundle(
+                                    com.aidoctor.diagnosis.runtime.u06
+                                            .U06SyntheticDecisionBundle.GAP_BASIS_ESTABLISHED,
+                                    f3Effect, "test-u06-gap-" + scenario,
+                                    "DECISION_MATERIAL", true,
+                                    com.aidoctor.diagnosis.runtime.u06
+                                            .U06SyntheticDecisionBundle.CONTINUE,
+                                    com.aidoctor.diagnosis.runtime.u06
+                                            .U06SyntheticDecisionBundle.SELECTED,
+                                    "test-u06-selection-effect-" + scenario,
+                                    "test-u06-question-" + scenario, "TEST:FOLLOWUP",
+                                    "synthetic follow-up question", "sha256:synthetic-question",
+                                    null, null);
+                    com.aidoctor.diagnosis.runtime.u06.U06NonProductionPhysicalMode23Service
+                            u06Physical = new com.aidoctor.diagnosis.runtime.u06
+                                    .U06NonProductionPhysicalMode23Service(
+                                    (request, decision, safety) -> {
+                                        throw new IllegalStateException("TEST_U06_MODE1_NOT_AUTHORIZED");
+                                    }, cdps, committer,
+                                    new com.aidoctor.diagnosis.runtime.u06.U06AdmissionService());
+                    com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult selected =
+                            tx.execute(status -> u06Physical.execute(u06Request, u06Decision, null));
+                    assertEquals(com.aidoctor.diagnosis.runtime.u06.U06ExecutionResult
+                            .MODE2_SELECTION_PERSISTED, selected.getStatus());
+                    assertEquals(7, cdps.findById(created.getCdpId()).get()
+                            .getVersion().intValue());
+                    assertEquals(7, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
+                            created.getCdpId()).size());
+                    assertFalse(cdps.findById(created.getCdpId()).get()
+                            .getPatientState().containsKey("pending_question"));
                 } else {
                     // RESTRICTED cannot acquire an unrestricted U05 route merely
                     // from a durable A1 row lacking restricted-action permission.
