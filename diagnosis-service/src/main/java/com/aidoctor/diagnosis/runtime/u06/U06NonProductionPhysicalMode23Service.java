@@ -8,6 +8,7 @@ import com.aidoctor.diagnosis.repository.CDPRepository;
 import com.aidoctor.diagnosis.runtime.u06.state.U06StateValues;
 import com.aidoctor.diagnosis.state.committer.StateCommitter;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -83,21 +84,34 @@ public final class U06NonProductionPhysicalMode23Service
         if (empty(d.getF3CanonicalEffectId())
                 || !d.getF3CanonicalEffectId().equals(currentF3))
             throw new IllegalStateException("U06_PHYSICAL_SELECTION_F3_NOT_CURRENT");
-        if (patient == null || !(patient.get("questions") instanceof Map<?, ?>))
-            throw new IllegalStateException("U06_PHYSICAL_QUESTIONS_PARENT_REQUIRED");
+        if (patient == null)
+            throw new IllegalStateException("U06_PHYSICAL_PATIENT_STATE_REQUIRED");
+        Object existingQuestions = patient.get("questions");
+        if (existingQuestions != null && !(existingQuestions instanceof Map<?, ?>))
+            throw new IllegalStateException("U06_PHYSICAL_QUESTIONS_PARENT_INVALID");
         if (patient.containsKey("pending_question"))
             throw new IllegalStateException("U06_PHYSICAL_PENDING_QUESTION_CONFLICT");
         String questionId = d.getQuestionId();
         // Avoid untrusted JSON pointer segments and forbidden path splicing.
         if (empty(questionId) || !questionId.matches("[A-Za-z0-9][A-Za-z0-9._:-]*"))
             throw new IllegalStateException("U06_PHYSICAL_QUESTION_ID_INVALID");
-        if (((Map<?, ?>) patient.get("questions")).containsKey(questionId))
+        if (existingQuestions != null && ((Map<?, ?>) existingQuestions).containsKey(questionId))
             throw new IllegalStateException("U06_PHYSICAL_QUESTION_ALREADY_SELECTED");
 
         StateTypes.StatePatchOperation op = new StateTypes.StatePatchOperation();
         op.op = "ADD";
-        op.path = "/patient_state/questions/" + questionId;
-        op.value = U06StateValues.questionSelected(r, d);
+        // On the first question, establish the parent and selected child in
+        // ONE governed P01 CAS commit. Do not mutate the JPA entity or
+        // perform an unaudited/independent bootstrap write.
+        if (existingQuestions == null) {
+            Map<String, Object> firstQuestion = new LinkedHashMap<>();
+            firstQuestion.put(questionId, U06StateValues.questionSelected(r, d));
+            op.path = "/patient_state/questions";
+            op.value = firstQuestion;
+        } else {
+            op.path = "/patient_state/questions/" + questionId;
+            op.value = U06StateValues.questionSelected(r, d);
+        }
         op.source = "RULE_DERIVED";
         op.sensitivity = "PHI";
         StateTypes.StatePatch patch = patch(r, "u06selection",
