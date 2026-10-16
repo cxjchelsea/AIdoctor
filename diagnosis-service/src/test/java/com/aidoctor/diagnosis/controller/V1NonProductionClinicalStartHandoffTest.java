@@ -76,4 +76,35 @@ class V1NonProductionClinicalStartHandoffTest {
         assertTrue(assertThrows(IllegalStateException.class, () -> controller.start(req))
                 .getMessage().contains("ROUTE_NOT_AUTHORIZED"));
     }
+    @Test
+    void missingU02CommitFailsClosedAndNeverClaimsClinicalSuccess() {
+        U01NaturalLanguageStartService u01 = mock(U01NaturalLanguageStartService.class);
+        U01Result started = mock(U01Result.class);
+        when(started.getNextUnit()).thenReturn("U02");
+        when(started.getConsultationId()).thenReturn("consult_synthetic");
+        when(started.getRunId()).thenReturn("run_synthetic");
+        when(u01.start(any(U01RawStartCommand.class))).thenReturn(started);
+        V1NonProductionClinicalStartHandoffController controller =
+                new V1NonProductionClinicalStartHandoffController(u01,
+                        (consultation, run, raw) -> new U02ExecutionResult(
+                                "BLOCKED", "SYNTHETIC_FAILURE", null,
+                                null, null, null, null));
+        V1NonProductionClinicalStartHandoffController.StartRequest req =
+                new V1NonProductionClinicalStartHandoffController.StartRequest();
+        req.eventId = "synthetic-event";
+        req.idempotencyKey = "synthetic-idem";
+        req.userId = "synthetic-user";
+        req.rawText = "synthetic headache";
+        assertTrue(assertThrows(IllegalStateException.class, () -> controller.start(req))
+                .getMessage().contains("V1_U02_CLINICAL_FACT_NOT_COMMITTED"));
+    }
+
+    @Test
+    void missingTrustedU02HostIsNotSilentlyReplaced() {
+        U01NaturalLanguageStartService u01 = mock(U01NaturalLanguageStartService.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> new V1NonProductionClinicalStartHandoffController(
+                        u01, (V1NonProductionClinicalStartHandoffController.TrustedFactCommit) null));
+    }
+
 }
