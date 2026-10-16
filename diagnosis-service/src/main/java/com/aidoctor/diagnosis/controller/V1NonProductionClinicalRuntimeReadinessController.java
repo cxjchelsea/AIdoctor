@@ -4,6 +4,12 @@ import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionGovern
 import com.aidoctor.diagnosis.runtime.u01.U01NaturalLanguageStartService;
 import com.aidoctor.diagnosis.runtime.u02.U01U02NonProductionHandoffService;
 import com.aidoctor.diagnosis.runtime.u03.U02U03GovernedSafetyBridge;
+import com.aidoctor.diagnosis.runtime.u02.capability.C01U02CapabilityGateway;
+import com.aidoctor.diagnosis.runtime.u03.U03CdpAcceptedEvidenceAuthority;
+import com.aidoctor.diagnosis.runtime.u03.U03CdpGateCClinicalInputPort;
+import com.aidoctor.diagnosis.runtime.u03.U03GateCClinicalInputPort;
+import com.aidoctor.diagnosis.runtime.u03.U03GovernedCandidateGateway;
+import com.aidoctor.diagnosis.state.committer.StateCommitter;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Profile;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -30,6 +36,16 @@ public final class V1NonProductionClinicalRuntimeReadinessController {
     public Map<String, Object> readiness() {
         Map<String, Boolean> dependencies = new LinkedHashMap<String, Boolean>();
         dependencies.put("u01", present(U01NaturalLanguageStartService.class));
+        dependencies.put("trustedTraceAuthority", present(
+                U01U02NonProductionHandoffService.TrustedTraceAuthority.class));
+        dependencies.put("governedC01Gateway", present(C01U02CapabilityGateway.class));
+        dependencies.put("stateCommitter", present(StateCommitter.class));
+        dependencies.put("independentClinicalEvidenceAttestation", present(
+                U03CdpAcceptedEvidenceAuthority.ClinicalEvidenceAttestation.class));
+        dependencies.put("verifiedGateCScopeAuthority", present(
+                U03CdpGateCClinicalInputPort.ScopeAuthority.class));
+        dependencies.put("governedGateCInput", present(U03GateCClinicalInputPort.class));
+        dependencies.put("governedRiskCandidateGateway", present(U03GovernedCandidateGateway.class));
         dependencies.put("u02TrustedHandoff", present(U01U02NonProductionHandoffService.class));
         dependencies.put("u03U04Bridge", present(U02U03GovernedSafetyBridge.class));
         dependencies.put("u03U04Executor", present(U07NonProductionGovernedRiskSafetyContinuation.class));
