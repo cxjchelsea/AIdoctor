@@ -686,6 +686,61 @@ public class U01U02RealFactCommitMysqlTest {
                     assertEquals(0, waitInvocations.get());
                     assertEquals(7, cdps.findById(created.getCdpId()).get()
                             .getVersion().intValue());
+
+                    // Test-only externally confirmed receipt, scoped to this
+                    // U01 consultation and its real U05-backed U06 selection.
+                    com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery.Receipt
+                            confirmed = new com.aidoctor.diagnosis.runtime.u06
+                                    .U07NonProductionDeliveryWaitRecovery.Receipt(
+                                    u06Request, u06Decision, "fixture-delivery-" + scenario,
+                                    "fixture-delivery-effect-" + scenario, "fixture-confirmed");
+                    com.aidoctor.diagnosis.runtime.u06.U07ExistingU06WaitAuthority hostWait =
+                            new com.aidoctor.diagnosis.runtime.u06.U07ExistingU06WaitAuthority(
+                                    new com.aidoctor.diagnosis.runtime.u06.wait
+                                            .ConsultationWaitTransitionService(
+                                            ctx.getBean(ConsultationRepository.class),
+                                            ctx.getBean(com.aidoctor.diagnosis.runtime.u06.wait
+                                                    .ConsultationWaitEffectRepository.class)),
+                                    new com.aidoctor.diagnosis.runtime.u06.wait.U06WaitCoordinator(
+                                            new com.aidoctor.diagnosis.runtime.foundation
+                                                    .RuntimeWaitCheckpointService(
+                                                    ctx.getBean(com.aidoctor.diagnosis.runtime.foundation
+                                                            .RuntimeThreadStateRepository.class),
+                                                    ctx.getBean(com.aidoctor.diagnosis.runtime.foundation
+                                                            .RuntimeWaitCheckpointRepository.class)),
+                                            new com.aidoctor.diagnosis.runtime.foundation
+                                                    .RuntimeThreadWaitTransitionService(
+                                                    ctx.getBean(com.aidoctor.diagnosis.runtime.foundation
+                                                            .RuntimeThreadStateRepository.class),
+                                                    ctx.getBean(com.aidoctor.diagnosis.runtime.foundation
+                                                            .RuntimeWaitCheckpointRepository.class))));
+                    com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery
+                            confirmedDelivery = new com.aidoctor.diagnosis.runtime.u06
+                                    .U07NonProductionDeliveryWaitRecovery(
+                                    cdps, ctx.getBean(org.springframework.jdbc.core.JdbcTemplate.class),
+                                    tx, committer, receipt ->
+                                            "fixture-confirmed".equals(receipt.confirmationRef)
+                                            && confirmed.deliveryId.equals(receipt.deliveryId),
+                                    (receipt, version) ->
+                                            tx.execute(status -> hostWait.establish(receipt, version)));
+                    confirmedDelivery.accept(confirmed);
+                    com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery.WaitReceipt
+                            durableWait = confirmedDelivery.recover(confirmed);
+                    assertNotNull(durableWait);
+                    assertEquals(8, cdps.findById(created.getCdpId()).get()
+                            .getVersion().intValue());
+                    assertEquals("WAITING_USER", ctx.getBean(ConsultationRepository.class)
+                            .findById(created.getConsultationId()).get().getLifecycleStatus());
+                    assertEquals("AWAITING_USER", ctx.getBean(com.aidoctor.diagnosis.runtime.foundation
+                            .RuntimeThreadStateRepository.class)
+                            .findById(persistedThread).get().getRuntimeStatus());
+                    assertTrue(ctx.getBean(com.aidoctor.diagnosis.runtime.foundation
+                            .RuntimeWaitCheckpointRepository.class)
+                            .findById(durableWait.checkpointId).isPresent());
+                    assertEquals(durableWait.checkpointId,
+                            confirmedDelivery.recover(confirmed).checkpointId);
+                    assertEquals(8, versionsRepo.findByCdpIdOrderByVersionNumberDesc(
+                            created.getCdpId()).size());
                 } else {
                     // RESTRICTED cannot acquire an unrestricted U05 route merely
                     // from a durable A1 row lacking restricted-action permission.
@@ -713,7 +768,7 @@ public class U01U02RealFactCommitMysqlTest {
                 assertEquals(1, a1Jdbc.queryForObject(
                         "SELECT COUNT(*) FROM u07_a1_attestation WHERE consultation_id=? AND cdp_id=? AND cdp_version=?",
                         Integer.class, created.getConsultationId(), created.getCdpId(), 5).intValue());
-                assertEquals(U04SafetyGateDecision.ALLOW.equals(expectedGate) ? 7 : 5,
+                assertEquals(U04SafetyGateDecision.ALLOW.equals(expectedGate) ? 8 : 5,
                         cdps.findById(created.getCdpId()).get().getVersion().intValue());
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         U07NonProductionPhysicalFollowupCoordinator
