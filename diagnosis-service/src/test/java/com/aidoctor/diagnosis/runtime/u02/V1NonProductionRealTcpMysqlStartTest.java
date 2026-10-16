@@ -198,11 +198,12 @@ public class V1NonProductionRealTcpMysqlStartTest {
                     new U02DependencyInvalidationHook(),new CapabilityTraceService(traces));
         }
         @Bean U01U02NonProductionHandoffService trustedHandoff(
-                U01U02TrustedStartContext context,U02ClinicalFactApplicationService facts) {
+                U01U02TrustedStartContext context,U02ClinicalFactApplicationService facts,
+                org.springframework.transaction.support.TransactionTemplate tx) {
             return new U01U02NonProductionHandoffService(context,
                     (consultation,run,event)->
                             new U01U02NonProductionHandoffService.TraceIdentity(
-                                    "synthetic-correlation","synthetic-trace"),facts);
+                                    "synthetic-correlation","synthetic-trace"),facts,tx);
         }
     }
     @Autowired TestRestTemplate http;
