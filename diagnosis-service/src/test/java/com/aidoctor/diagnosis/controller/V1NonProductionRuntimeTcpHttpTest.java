@@ -22,7 +22,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestPropertySource(properties = {
         "aidoctor.v1.clinical-e2e.readiness-diagnostics-enabled=true",
         "spring.cloud.discovery.enabled=false",
-        "spring.cloud.nacos.discovery.enabled=false"
+        "spring.cloud.nacos.discovery.enabled=false",
+        "springfox.documentation.enabled=false"
 })
 class V1NonProductionRuntimeTcpHttpTest {
     @SpringBootConfiguration
