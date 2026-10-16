@@ -168,7 +168,7 @@ jobs:
           t=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1NonProductionRealTcpMysqlStartTest.xml")
           assert len(t)==1,t
           rt=ET.parse(t[0]).getroot()
-          assert int(rt.get("tests",-1))==1
+          assert int(rt.get("tests",-1))==2
           assert all(int(rt.get(k,-1))==0 for k in ("errors","failures","skipped"))
           print("V1_U01_U02_REAL_TCP_MYSQL=PASS; U03_U04_WAIT_F8_HTTP=NOT_VERIFIED")
           PY
