@@ -111,6 +111,18 @@ public class U02U03GovernedSafetyBridge {
         return safetyGate.execute(handoff, cdp.getVersion(), policy, environmentId);
     }
 
+    /** Resumed clinical round: retain U04 admission, but replace an existing gate. */
+    public U04ExecutionResult applyU04ReplacingExistingGate(
+            U03OutboundHandoff handoff, U04ScopeContext policy, String environmentId) {
+        requireNonProduction(environmentId);
+        if (handoff == null || policy == null) throw blocked("U03_HANDOFF_REQUIRED");
+        CDP cdp = cdps.findById(handoff.getCdpId())
+                .orElseThrow(() -> blocked("CDP_NOT_FOUND"));
+        if (cdp.getVersion() == null) throw blocked("CDP_VERSION_MISSING");
+        return safetyGate.executeReplacingExistingGate(
+                handoff, cdp.getVersion(), policy, environmentId);
+    }
+
     private static void requireNonProduction(String environment) {
         if (environment == null || environment.trim().isEmpty())
             throw blocked("ENVIRONMENT_REQUIRED");
