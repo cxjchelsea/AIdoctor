@@ -434,6 +434,11 @@ public class U01U02RealFactCommitMysqlTest {
                         + "route_authorization_ref VARCHAR(128) NOT NULL, "
                         + "routing_policy_version VARCHAR(128) NOT NULL, "
                         + "PRIMARY KEY (consultation_id, cdp_id, cdp_version)) ENGINE=InnoDB");
+                // Model independent post-F3 authority being withdrawn after
+                // durable issuance. A historical row must not grant current U05
+                // routing permission once its issuing authority is revoked.
+                java.util.concurrent.atomic.AtomicBoolean testSafetyCurrent =
+                        new java.util.concurrent.atomic.AtomicBoolean(true);
                 com.aidoctor.diagnosis.runtime.foundation.adapters.U07DurableNonProductionA1Issuer
                         testOnlyA1 = new com.aidoctor.diagnosis.runtime.foundation.adapters
                         .U07DurableNonProductionA1Issuer(cdps, a1Jdbc, tx,
@@ -442,6 +447,8 @@ public class U01U02RealFactCommitMysqlTest {
                                             || !created.getCdpId().equals(cdpId)
                                             || version != 5 || !f3Effect.equals(effect))
                                         throw new IllegalStateException("TEST_A1_IDENTITY_MISMATCH");
+                                    if (!testSafetyCurrent.get())
+                                        return null;
                                     CDP inspected = cdps.findById(cdpId)
                                             .orElseThrow(IllegalStateException::new);
                                     if (inspected.getVersion() != 5
@@ -501,6 +508,21 @@ public class U01U02RealFactCommitMysqlTest {
                                     "ci-nonprod-safety", "cdp-physical-v5"))
                             .getMessage().contains("A1_RESTRICTED_PERMISSION_REQUIRED"));
                 }
+                // Revocation after commit: persisted A1 history survives, but
+                // both issuer readback and U05 authority bridge MUST fail closed.
+                testSafetyCurrent.set(false);
+                assertTrue(assertThrows(IllegalStateException.class, () ->
+                        testOnlyA1.loadAttested(created.getConsultationId(),
+                                created.getCdpId(), 5))
+                        .getMessage().contains("U07_A1_CURRENT_AUTHORITY_REVOKED"));
+                assertTrue(assertThrows(IllegalStateException.class, () ->
+                        physicalBridge.load(riskHandoff, gated,
+                                "ci-nonprod-safety", "cdp-physical-v5"))
+                        .getMessage().contains("U07_A1_CURRENT_AUTHORITY_REVOKED"));
+                assertEquals(1, a1Jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM u07_a1_attestation WHERE consultation_id=? AND cdp_id=? AND cdp_version=?",
+                        Integer.class, created.getConsultationId(), created.getCdpId(), 5).intValue());
+                assertEquals(5, cdps.findById(created.getCdpId()).get().getVersion().intValue());
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         U07NonProductionPhysicalFollowupCoordinator
                                 .requireCurrentU04Version(created.getCdpId(), gated, cdps))
