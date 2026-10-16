@@ -12,6 +12,8 @@ on:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/service/orchestration/DiagnosisWorkflowOrchestrator.java'
       - 'tools/v1_clinical_e2e/acceptance_gate.py'
       - 'tools/v1_clinical_e2e/test_acceptance_gate.py'
+      - 'tools/v1_clinical_e2e/runtime_readiness_http.py'
+      - 'tools/v1_clinical_e2e/test_runtime_readiness_http.py'
       - 'tools/v1_clinical_e2e/scenarios.json'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalStartHandoffController.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalSafetyHandoffController.java'
@@ -115,6 +117,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tools/v1_clinical_e2e -p 'test_acceptance_gate.py' -v
+          python3 -m unittest discover -s tools/v1_clinical_e2e -p 'test_runtime_readiness_http.py' -v
           python3 tools/v1_clinical_e2e/acceptance_gate.py --scenarios tools/v1_clinical_e2e/scenarios.json > "$RUNNER_TEMP/v1-clinical-e2e-result.json"
           python3 - "$RUNNER_TEMP/v1-clinical-e2e-result.json" <<'PY'
           import json,sys
