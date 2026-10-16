@@ -11,6 +11,8 @@ import java.util.Collections;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.env.MapPropertySource;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -33,6 +35,8 @@ class V1NonProductionU02HttpHostConfigTest {
                         mock(U02ClinicalFactProposalFactory.class),
                         mock(U02ClinicalFactCommitService.class),
                         new U02DependencyInvalidationHook(), mock(CapabilityTraceService.class)));
+        ctx.registerBean(TransactionTemplate.class,
+                () -> new TransactionTemplate(mock(PlatformTransactionManager.class)));
         if (trusted) ctx.registerBean(U01U02NonProductionHandoffService.TrustedTraceAuthority.class,
                 () -> mock(U01U02NonProductionHandoffService.TrustedTraceAuthority.class));
         ctx.register(V1NonProductionU02HttpHostConfig.class);
@@ -57,6 +61,8 @@ class V1NonProductionU02HttpHostConfigTest {
                         mock(U02ClinicalFactProposalFactory.class),
                         mock(U02ClinicalFactCommitService.class),
                         new U02DependencyInvalidationHook(), mock(CapabilityTraceService.class)));
+        ctx.registerBean(TransactionTemplate.class,
+                () -> new TransactionTemplate(mock(PlatformTransactionManager.class)));
         ctx.registerBean(U01U02NonProductionHandoffService.TrustedTraceAuthority.class,
                 () -> mock(U01U02NonProductionHandoffService.TrustedTraceAuthority.class));
         ctx.register(V1NonProductionU02HttpHostConfig.class);
