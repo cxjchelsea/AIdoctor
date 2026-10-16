@@ -38,6 +38,18 @@ class V1NonProductionRuntimeTcpHttpTest {
     @Autowired TestRestTemplate http;
 
     @Test
+    void actualTcpHttpDoesNotExposeUngovernedFirstRoundOrF8() {
+        org.springframework.http.ResponseEntity<String> first = http.postForEntity(
+                "/internal/nonproduction/v1/clinical/start-through-wait",
+                java.util.Collections.singletonMap("rawText", "synthetic only"), String.class);
+        assertEquals(org.springframework.http.HttpStatus.NOT_FOUND, first.getStatusCode());
+        org.springframework.http.ResponseEntity<String> answer = http.postForEntity(
+                "/internal/nonproduction/v1/clinical/answer-through-u04",
+                java.util.Collections.singletonMap("answerText", "synthetic only"), String.class);
+        assertEquals(org.springframework.http.HttpStatus.NOT_FOUND, answer.getStatusCode());
+    }
+
+    @Test
     void actualTcpHttpFailsClosedWithoutClinicalAuthorities() {
         Map<?, ?> result = http.getForObject(
                 "/internal/nonproduction/v1/clinical/runtime-readiness", Map.class);
