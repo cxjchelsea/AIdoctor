@@ -119,14 +119,7 @@ public final class V1NonProductionClinicalSafetyHandoffController {
 
         AuthorizedExecution authorized = host.requireCurrent(
                 started.getConsultationId(), started.getRunId(), fact);
-        if (authorized == null
-                || !started.getConsultationId().equals(authorized.command.consultationId)
-                || !started.getRunId().equals(authorized.command.runId)
-                || !started.getCdpId().equals(authorized.command.cdpId)
-                || fact.commitResult.committedVersion == null
-                || fact.commitResult.committedVersion.intValue()
-                    != authorized.command.clinicalStateVersion)
-            throw blocked("U03_DURABLE_AUTHORITY_MISMATCH");
+        requireBoundAuthorizedExecution(started, fact, authorized);
 
         requireNonProductionEnvironment(authorized.environmentId);
         U07NonProductionGovernedRiskSafetyContinuation.Result result =
@@ -140,6 +133,19 @@ public final class V1NonProductionClinicalSafetyHandoffController {
                 || !started.getCdpId().equals(gate.getCommitResult().cdpId))
             throw blocked("U04_SAFETY_COMMIT_REQUIRED");
         return ResponseEntity.ok(new StartResponse(started));
+    }
+
+    static void requireBoundAuthorizedExecution(U01Result started,
+            U02ExecutionResult fact, AuthorizedExecution authorized) {
+        if (started == null || fact == null || fact.commitResult == null
+                || authorized == null
+                || !started.getConsultationId().equals(authorized.command.consultationId)
+                || !started.getRunId().equals(authorized.command.runId)
+                || !started.getCdpId().equals(authorized.command.cdpId)
+                || fact.commitResult.committedVersion == null
+                || fact.commitResult.committedVersion.intValue()
+                    != authorized.command.clinicalStateVersion)
+            throw blocked("U03_DURABLE_AUTHORITY_MISMATCH");
     }
 
     static void requireNonProductionEnvironment(String environment) {
