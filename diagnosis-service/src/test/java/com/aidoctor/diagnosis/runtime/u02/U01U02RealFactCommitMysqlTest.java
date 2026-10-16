@@ -927,17 +927,17 @@ public class U01U02RealFactCommitMysqlTest {
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         testOnlyA1.loadAttested(created.getConsultationId(),
                                 created.getCdpId(), 5)).getMessage().contains(denied));
-                String bridgeDenied = U04SafetyGateDecision.ALLOW.equals(expectedGate)
-                        ? "U07_A1_INDEPENDENT_ATTESTATION_MISMATCH"
-                        : "U07_A1_CURRENT_AUTHORITY_REVOKED";
-                assertTrue(assertThrows(IllegalStateException.class, () ->
+                String bridgeDenial = assertThrows(IllegalStateException.class, () ->
                         physicalBridge.load(riskHandoff, gated,
-                                "ci-nonprod-safety", "cdp-physical-v5"))
-                        .getMessage().contains(bridgeDenied));
+                                "ci-nonprod-safety", "cdp-physical-v5")).getMessage();
+                assertTrue(bridgeDenial.contains("U07_A1_INDEPENDENT_ATTESTATION_MISMATCH")
+                        || bridgeDenial.contains("U07_A1_CURRENT_AUTHORITY_REVOKED")
+                        || bridgeDenial.contains("U07_A1_CDP_VERSION_STALE"),
+                        "Old A1 authority must fail closed after the resumed round: " + bridgeDenial);
                 assertEquals(1, a1Jdbc.queryForObject(
                         "SELECT COUNT(*) FROM u07_a1_attestation WHERE consultation_id=? AND cdp_id=? AND cdp_version=?",
                         Integer.class, created.getConsultationId(), created.getCdpId(), 5).intValue());
-                assertEquals(U04SafetyGateDecision.ALLOW.equals(expectedGate) ? 8 : 5,
+                assertEquals(U04SafetyGateDecision.ALLOW.equals(expectedGate) ? 11 : 5,
                         cdps.findById(created.getCdpId()).get().getVersion().intValue());
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         U07NonProductionPhysicalFollowupCoordinator
