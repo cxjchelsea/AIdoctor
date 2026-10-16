@@ -122,6 +122,7 @@ public final class V1NonProductionClinicalSafetyHandoffController {
         requireBoundAuthorizedExecution(started, fact, authorized);
 
         requireNonProductionEnvironment(authorized.environmentId);
+        requireFrozenSafetyRelease(authorized);
         U07NonProductionGovernedRiskSafetyContinuation.Result result =
                 riskSafety.executeFromCommittedU02(fact, authorized.command,
                         authorized.releases, authorized.environmentId, authorized.scope);
@@ -146,6 +147,19 @@ public final class V1NonProductionClinicalSafetyHandoffController {
                 || fact.commitResult.committedVersion.intValue()
                     != authorized.command.clinicalStateVersion)
             throw blocked("U03_DURABLE_AUTHORITY_MISMATCH");
+    }
+
+    static void requireFrozenSafetyRelease(AuthorizedExecution authorized) {
+        if (authorized == null || authorized.releases == null || authorized.scope == null)
+            throw blocked("CLINICAL_RELEASE_SCOPE_REQUIRED");
+        try {
+            authorized.releases.requireGateCFrozenSet();
+            authorized.scope.requireFrozenPolicy();
+        } catch (IllegalStateException ex) {
+            throw blocked("CLINICAL_RELEASE_SCOPE_NOT_AUTHORIZED");
+        }
+        if (!authorized.scope.isEstablished() || !authorized.scope.isApplicable())
+            throw blocked("CLINICAL_SCOPE_NOT_ESTABLISHED");
     }
 
     static void requireNonProductionEnvironment(String environment) {
