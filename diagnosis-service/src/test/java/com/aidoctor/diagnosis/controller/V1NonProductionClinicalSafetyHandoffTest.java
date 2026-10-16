@@ -73,4 +73,40 @@ class V1NonProductionClinicalSafetyHandoffTest {
         }
     }
 
+    @Test
+    void rejectNonFrozenClinicalReleaseOrUnestablishedScopeBeforeRiskExecution() {
+        com.aidoctor.diagnosis.runtime.u03.U03ExecutionCommand command =
+                new com.aidoctor.diagnosis.runtime.u03.U03ExecutionCommand(
+                        "consult-A", "thread-A", "run-A", "event-A",
+                        "cdp-A", 2, "corr-A", "trace-A");
+        com.aidoctor.diagnosis.runtime.u03.U03ExplicitNonProductionReleaseRefs frozen =
+                com.aidoctor.diagnosis.runtime.u03.U03ExplicitNonProductionReleaseRefs.gateCFrozenSet();
+        com.aidoctor.diagnosis.runtime.u04.U04ScopeContext applicable =
+                com.aidoctor.diagnosis.runtime.u04.U04ScopeContext.current(true, true);
+        assertDoesNotThrow(() -> V1NonProductionClinicalSafetyHandoffController
+                .requireFrozenSafetyRelease(
+                        new V1NonProductionClinicalSafetyHandoffController.AuthorizedExecution(
+                                command, frozen, "synthetic-ci", applicable)));
+        com.aidoctor.diagnosis.runtime.u03.U03ExplicitNonProductionReleaseRefs wrong =
+                new com.aidoctor.diagnosis.runtime.u03.U03ExplicitNonProductionReleaseRefs(
+                        "not-approved", frozen.getRuleReleaseRef(),
+                        frozen.getCoverageContractRef(), frozen.getPolicyReleaseRef(),
+                        frozen.getPolicyPairRef());
+        assertThrows(IllegalStateException.class,
+                () -> V1NonProductionClinicalSafetyHandoffController.requireFrozenSafetyRelease(
+                        new V1NonProductionClinicalSafetyHandoffController.AuthorizedExecution(
+                                command, wrong, "synthetic-ci", applicable)));
+        for (com.aidoctor.diagnosis.runtime.u04.U04ScopeContext scope :
+                new com.aidoctor.diagnosis.runtime.u04.U04ScopeContext[] {
+                        com.aidoctor.diagnosis.runtime.u04.U04ScopeContext.current(false, true),
+                        com.aidoctor.diagnosis.runtime.u04.U04ScopeContext.current(true, false),
+                        new com.aidoctor.diagnosis.runtime.u04.U04ScopeContext(
+                                true, true, "not-approved")}) {
+            assertThrows(IllegalStateException.class,
+                    () -> V1NonProductionClinicalSafetyHandoffController.requireFrozenSafetyRelease(
+                            new V1NonProductionClinicalSafetyHandoffController.AuthorizedExecution(
+                                    command, frozen, "synthetic-ci", scope)));
+        }
+    }
+
 }
