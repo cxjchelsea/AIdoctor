@@ -54,7 +54,8 @@ import static org.mockito.Mockito.*;
         "aidoctor.v1.clinical-e2e.u01-u02-http-enabled=true",
         "spring.cloud.discovery.enabled=false",
         "spring.cloud.nacos.discovery.enabled=false",
-        "springfox.documentation.enabled=false"})
+        "springfox.documentation.enabled=false",
+        "spring.flyway.enabled=false"})
 public class V1NonProductionRealTcpMysqlStartTest {
     @SpringBootConfiguration
     @EnableAutoConfiguration(exclude={DataSourceAutoConfiguration.class,
