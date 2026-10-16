@@ -1,6 +1,12 @@
 package com.aidoctor.diagnosis.runtime.u02;
 
 import com.aidoctor.diagnosis.client.C01U02CapabilityClient;
+import com.aidoctor.diagnosis.controller.V1NonProductionClinicalIngressController;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import com.aidoctor.diagnosis.dto.capability.c01.*;
 import com.aidoctor.diagnosis.entity.CDP;
 import com.aidoctor.diagnosis.repository.*;
@@ -108,6 +114,35 @@ public class U01U02RealFactCommitMysqlTest {
             U01RawStartCommand rawStart = new U01RawStartCommand(
                     "real-u01-u02-event-" + scenario, "real-u01-u02-idem-" + scenario,
                     "synthetic-person", raw, null);
+            // Real Spring MVC dispatch to the actual U01 service backed by
+            // the disposable MySQL/JPA host, not a mocked controller service.
+            MockMvc mvc = MockMvcBuilders.standaloneSetup(
+                    new V1NonProductionClinicalIngressController(start)).build();
+            tx.execute(status -> {
+                try {
+                    String response = mvc.perform(post("/internal/nonproduction/v1/clinical/start")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(new ObjectMapper().writeValueAsString(
+                                    new java.util.LinkedHashMap<String, String>() {{
+                                        put("eventId", rawStart.getEventId());
+                                        put("idempotencyKey", rawStart.getIdempotencyKey());
+                                        put("userId", rawStart.getUserId());
+                                        put("rawText", rawStart.getRawText());
+                                    }})))
+                            .andExpect(status().isOk())
+                            .andExpect(jsonPath("$.nextUnit").value("U02"))
+                            .andExpect(jsonPath("$.completeClinicalE2e").value(false))
+                            .andExpect(jsonPath("$.patientDeliveryAllowed").value(false))
+                            .andReturn().getResponse().getContentAsString();
+                    assertTrue(new ObjectMapper().readTree(response)
+                            .get("consultationId").asText().startsWith("consultation_"));
+                } catch (Exception e) {
+                    throw new IllegalStateException("V1_REAL_U01_HTTP_MYSQL_DISPATCH_FAILED", e);
+                }
+                return null;
+            });
+            // Canonical idempotent replay must resolve the exact HTTP-persisted
+            // Consultation/Run without reinterpreting a different encounter.
             U01Result created = tx.execute(status -> start.start(rawStart));
             assertEquals("U02", created.getNextUnit());
             assertEquals(1, cdps.findById(created.getCdpId()).get().getVersion().intValue());
