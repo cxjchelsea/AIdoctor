@@ -2,6 +2,10 @@ package com.aidoctor.diagnosis.runtime.u02;
 
 import com.aidoctor.diagnosis.client.C01U02CapabilityClient;
 import com.aidoctor.diagnosis.controller.V1NonProductionClinicalStartHandoffController;
+import com.aidoctor.diagnosis.controller.V1NonProductionClinicalSafetyHandoffController;
+import com.aidoctor.diagnosis.runtime.u03.*;
+import com.aidoctor.diagnosis.runtime.u04.*;
+import com.aidoctor.diagnosis.runtime.foundation.adapters.U07NonProductionGovernedRiskSafetyContinuation;
 import com.aidoctor.diagnosis.dto.capability.c01.C01U01CapabilityResponse;
 import com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityResponse;
 import com.aidoctor.diagnosis.entity.CDP;
@@ -52,6 +56,7 @@ import static org.mockito.Mockito.*;
 @ActiveProfiles("clinical-e2e-test")
 @TestPropertySource(properties={
         "aidoctor.v1.clinical-e2e.u01-u02-http-enabled=true",
+        "aidoctor.v1.clinical-e2e.u01-u04-http-enabled=true",
         "spring.cloud.discovery.enabled=false",
         "spring.cloud.nacos.discovery.enabled=false",
         "springfox.documentation.enabled=false",
@@ -61,7 +66,8 @@ public class V1NonProductionRealTcpMysqlStartTest {
     @EnableAutoConfiguration(exclude={DataSourceAutoConfiguration.class,
             HibernateJpaAutoConfiguration.class,RedisAutoConfiguration.class})
     @Import({U01U02PhysicalMysqlHandoffTest.DatabaseConfig.class,
-            V1NonProductionClinicalStartHandoffController.class})
+            V1NonProductionClinicalStartHandoffController.class,
+            V1NonProductionClinicalSafetyHandoffController.class})
     static class Host {
         @Bean CDPVersionService versions(CDPVersionRepository repository) {
             CDPVersionService versions=new CDPVersionService();
@@ -86,9 +92,73 @@ public class V1NonProductionRealTcpMysqlStartTest {
                     bindings,new ClinicalRunCoordinator(bindings,events,runs),manager);
             return new U01NaturalLanguageStartService(consultations,gateway,business);
         }
+        @Bean StateCommitter syntheticPhysicalCommitter(
+                CDPRepository cdps,CDPVersionService versions) {
+            Clock clock=Clock.fixed(Instant.parse("2026-10-14T00:00:00Z"),ZoneOffset.UTC);
+            return new StateCommitter(
+                    new ClinicalCdpStateRepositoryAdapter(cdps,versions,new ObjectMapper()),
+                    (id,v)->CapabilityPolicyPort.CapabilityDecision.authorized(),
+                    (path,id)->FieldPermissionPort.FieldPermissionDecision.authorized(),
+                    (id,cap)->ConsentPolicyPort.ConsentDecision.authorized(),
+                    source->SourceValidationPort.SourceDecision.authorized(),
+                    new InMemoryIdempotencyFake(),new SyntheticAuditPortFake(clock),
+                    new RecordingCommitEventEvidenceFake(),clock);
+        }
+        @Bean U07NonProductionGovernedRiskSafetyContinuation syntheticRiskSafety(
+                CDPRepository cdps,CapabilityCallTraceRepository traces,
+                StateCommitter committer,org.springframework.transaction.support.TransactionTemplate tx) {
+            U04NonProductionApplicationService u04=new U04NonProductionApplicationService(
+                    new U04AdmissionService(),new U04SafetyGatePolicy(),
+                    new U04StateProposalFactory(),new U04CommitService(committer));
+            U02U03GovernedSafetyBridge safety=new U02U03GovernedSafetyBridge(
+                    cdps,traces,(consultation,cdp,version,call)->
+                            new U03AcceptedEvidenceBinding(
+                                    "synthetic-acceptance",version,Arrays.asList(
+                                    "EV-RF-RESP-001","EV-MNM-NEURO-001","EV-MNM-NEURO-002",
+                                    "EV-MNM-CARD-001","EV-RF-ALLERGY-001","EV-RF-APPEAR-001",
+                                    "EV-RF-NEURO-001","EV-VS-SEPSIS-001","EV-VS-SEPSIS-002",
+                                    "EV-VS-SEPSIS-003","EV-RF-SEPSIS-001"),
+                                    Collections.singletonList("synthetic-source"),
+                                    Collections.singletonList("synthetic-provenance")),
+                    new U03NonProductionAdmissionService(),u04);
+            CapabilityBindingRecord binding=new CapabilityBindingRecord(
+                    U03GovernedCandidateGateway.BINDING_ID,"C02","1.0.0",
+                    "synthetic-risk-capset","aidoctor-v1-scope","contracts-v1",
+                    "*","*","*","*",CapabilityBindingRecord.ACTIVE,
+                    LocalDateTime.of(2026,1,1,0,0),null,LocalDateTime.of(2026,1,1,0,0));
+            CapabilityInvocationGuard riskGuard=mock(CapabilityInvocationGuard.class);
+            when(riskGuard.authorize(eq(U03GovernedCandidateGateway.BINDING_ID),eq("C02"),any()))
+                    .thenReturn(binding);
+            U03GateCClinicalInputPort input=(cmd,accepted)->U03GateCClinicalInput.builder().build();
+            U03GovernedCandidateGateway gateway=new U03GovernedCandidateGateway(
+                    riskGuard,new U03ReleaseRegistry(),
+                    new U03GateCFrozenRuleEvaluator(input),true);
+            return new U07NonProductionGovernedRiskSafetyContinuation(
+                    gateway,new U03DecisionService(new U03GateCFrozenDecisionPort()),
+                    new U03StateProposalFactory(),new U03CommitService(committer),
+                    new U03PostCommitFinalizer(
+                            new U03RuntimeTraceService(record->{}),new U03OutboundProducer()),
+                    new U03OutboundProducer(),safety,tx);
+        }
+        @Bean V1NonProductionClinicalSafetyHandoffController.AuthorizedClinicalHost
+                syntheticClinicalAuthority(RuntimeBindingService bindings,
+                    ClinicalRunRepository runs) {
+            return (consultationId,runId,fact)->{
+                ClinicalRunRecord run=runs.findById(runId)
+                        .orElseThrow(IllegalStateException::new);
+                U03ExecutionCommand command=new U03ExecutionCommand(
+                        consultationId,bindings.requireBinding(consultationId).getThreadId(),
+                        runId,run.getEventId(),bindings.requireBinding(consultationId).getCdpId(),
+                        fact.commitResult.committedVersion.intValue(),
+                        "synthetic-correlation","synthetic-trace");
+                return new V1NonProductionClinicalSafetyHandoffController.AuthorizedExecution(
+                        command,U03ExplicitNonProductionReleaseRefs.gateCFrozenSet(),
+                        "ci-nonprod-safety",U04ScopeContext.current(true,true));
+            };
+        }
         @Bean U01U02NonProductionHandoffService trustedHandoff(
-                U01U02TrustedStartContext context,CDPRepository cdps,
-                CDPVersionService versions,CapabilityCallTraceRepository traces) {
+                U01U02TrustedStartContext context,CapabilityCallTraceRepository traces,
+                StateCommitter committer) {
             CapabilityBindingRecord authorized=new CapabilityBindingRecord(
                     C01U02CapabilityGateway.BINDING_ID,"C01","fixture-c01-u02-1",
                     "aidoctor-v1-u02","aidoctor-v1-scope","contracts-v1",
@@ -100,15 +170,6 @@ public class V1NonProductionRealTcpMysqlStartTest {
             C01U02CapabilityClient client=mock(C01U02CapabilityClient.class);
             when(client.interpret(any())).thenReturn(factCandidate());
             C01U02CapabilityGateway gateway=new C01U02CapabilityGateway(client,guard,true);
-            Clock clock=Clock.fixed(Instant.parse("2026-10-14T00:00:00Z"),ZoneOffset.UTC);
-            StateCommitter committer=new StateCommitter(
-                    new ClinicalCdpStateRepositoryAdapter(cdps,versions,new ObjectMapper()),
-                    (id,v)->CapabilityPolicyPort.CapabilityDecision.authorized(),
-                    (path,id)->FieldPermissionPort.FieldPermissionDecision.authorized(),
-                    (id,cap)->ConsentPolicyPort.ConsentDecision.authorized(),
-                    source->SourceValidationPort.SourceDecision.authorized(),
-                    new InMemoryIdempotencyFake(),new SyntheticAuditPortFake(clock),
-                    new RecordingCommitEventEvidenceFake(),clock);
             U02ClinicalFactApplicationService facts=new U02ClinicalFactApplicationService(
                     gateway,new U02ClinicalFactBusinessOwner(),new U02ClinicalFactProposalFactory(),
                     new U02ClinicalFactCommitService(committer),
@@ -148,6 +209,31 @@ public class V1NonProductionRealTcpMysqlStartTest {
         assertEquals(2,cdp.getVersion().intValue());
         assertEquals(2,versions.findByCdpIdOrderByVersionNumberDesc(cdpId).size());
         assertTrue(cdp.getPatientState().containsKey("clinical_fact_fixture-obs"));
+    }
+
+    @Test void trueTcpHttpCommitsRiskAndSafetyToMysql() {
+        Assumptions.assumeTrue("DISPOSABLE_U01_U02_ONLY".equals(
+                System.getenv("V1_U01_U02_MYSQL_MODE")));
+        String id=UUID.randomUUID().toString();
+        Map<String,String> request=new LinkedHashMap<>();
+        request.put("eventId","tcp-u04-event-"+id);
+        request.put("idempotencyKey","tcp-u04-idem-"+id);
+        request.put("userId","synthetic-risk-user");
+        request.put("rawText","synthetic headache uncertainty");
+        ResponseEntity<Map> response=http.postForEntity(
+                "/internal/nonproduction/v1/clinical/start-through-u04",request,Map.class);
+        assertEquals(HttpStatus.OK,response.getStatusCode(),
+                String.valueOf(response.getBody()));
+        Map<?,?> body=response.getBody();
+        assertNotNull(body);
+        assertEquals("U04_COMMITTED_DOWNSTREAM_NOT_EXECUTED",body.get("entryStatus"));
+        String cdpId=(String)body.get("cdpId");
+        CDP cdp=cdps.findById(cdpId).orElseThrow(IllegalStateException::new);
+        assertEquals(4,cdp.getVersion().intValue());
+        assertEquals(4,versions.findByCdpIdOrderByVersionNumberDesc(cdpId).size());
+        assertTrue(cdp.getPatientState().containsKey("current_risk_assessment"));
+        assertTrue(cdp.getPatientState().containsKey("safety_gate"));
+        assertEquals(Boolean.FALSE,body.get("patientDeliveryAllowed"));
     }
 
     private static C01U01CapabilityResponse startCandidate() {
