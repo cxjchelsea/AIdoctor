@@ -141,7 +141,14 @@ public class V1NonProductionRealTcpMysqlStartTest {
             CapabilityInvocationGuard riskGuard=mock(CapabilityInvocationGuard.class);
             when(riskGuard.authorize(eq(U03GovernedCandidateGateway.BINDING_ID),eq("C02"),any()))
                     .thenReturn(binding);
-            U03GateCClinicalInputPort input=(cmd,accepted)->U03GateCClinicalInput.builder().build();
+            U03GateCClinicalInputPort input=(cmd,accepted)->{
+                CDP record=cdps.findById(cmd.cdpId).orElseThrow(IllegalStateException::new);
+                if(record.getPatientState()!=null
+                        && record.getPatientState().containsKey("clinical_fact_second-round-respiratory"))
+                    return U03GateCClinicalInput.builder()
+                            .evidence("EV-RF-RESP-001","PRESENT").build();
+                return U03GateCClinicalInput.builder().build();
+            };
             U03GovernedCandidateGateway gateway=new U03GovernedCandidateGateway(
                     riskGuard,new U03ReleaseRegistry(),
                     new U03GateCFrozenRuleEvaluator(input),true);
@@ -168,9 +175,14 @@ public class V1NonProductionRealTcpMysqlStartTest {
                         "ci-nonprod-safety",U04ScopeContext.current(true,true));
             };
         }
-        @Bean U01U02NonProductionHandoffService trustedHandoff(
-                U01U02TrustedStartContext context,CapabilityCallTraceRepository traces,
-                StateCommitter committer) {
+        @Bean C01U02CapabilityClient syntheticC01U02Client() {
+            C01U02CapabilityClient client=mock(C01U02CapabilityClient.class);
+            when(client.interpret(any())).thenReturn(factCandidate());
+            return client;
+        }
+        @Bean U02ClinicalFactApplicationService syntheticClinicalFacts(
+                CapabilityCallTraceRepository traces,StateCommitter committer,
+                C01U02CapabilityClient client) {
             CapabilityBindingRecord authorized=new CapabilityBindingRecord(
                     C01U02CapabilityGateway.BINDING_ID,"C01","fixture-c01-u02-1",
                     "aidoctor-v1-u02","aidoctor-v1-scope","contracts-v1",
@@ -179,13 +191,14 @@ public class V1NonProductionRealTcpMysqlStartTest {
             CapabilityInvocationGuard guard=mock(CapabilityInvocationGuard.class);
             when(guard.authorize(eq(C01U02CapabilityGateway.BINDING_ID),eq("C01"),any()))
                     .thenReturn(authorized);
-            C01U02CapabilityClient client=mock(C01U02CapabilityClient.class);
-            when(client.interpret(any())).thenReturn(factCandidate());
             C01U02CapabilityGateway gateway=new C01U02CapabilityGateway(client,guard,true);
-            U02ClinicalFactApplicationService facts=new U02ClinicalFactApplicationService(
+            return new U02ClinicalFactApplicationService(
                     gateway,new U02ClinicalFactBusinessOwner(),new U02ClinicalFactProposalFactory(),
                     new U02ClinicalFactCommitService(committer),
                     new U02DependencyInvalidationHook(),new CapabilityTraceService(traces));
+        }
+        @Bean U01U02NonProductionHandoffService trustedHandoff(
+                U01U02TrustedStartContext context,U02ClinicalFactApplicationService facts) {
             return new U01U02NonProductionHandoffService(context,
                     (consultation,run,event)->
                             new U01U02NonProductionHandoffService.TraceIdentity(
@@ -246,6 +259,25 @@ public class V1NonProductionRealTcpMysqlStartTest {
         assertTrue(cdp.getPatientState().containsKey("current_risk_assessment"));
         assertTrue(cdp.getPatientState().containsKey("safety_gate"));
         assertEquals(Boolean.FALSE,body.get("patientDeliveryAllowed"));
+    }
+
+    static C01U02CapabilityResponse resumedRespiratoryCandidate() {
+        C01U02CapabilityResponse response=factCandidate();
+        C01U02CapabilityResponse.ObservationCandidate fact=
+                new C01U02CapabilityResponse.ObservationCandidate();
+        fact.setObservationId("second-round-respiratory");
+        fact.setConceptId("EV-RF-RESP-001");
+        fact.setConceptDisplay("synthetic severe respiratory difficulty");
+        fact.setRawTextRef("sha256:real-second-round-respiratory");
+        fact.setValueSemantics("YES");
+        fact.setSourceType("PATIENT_REPORTED");
+        fact.setLifecycle("CONFIRMED");
+        fact.setConfidenceOrUncertainty(0.95d);
+        fact.setProvenance(Collections.singletonList("nonproduction"));
+        fact.setAmbiguityFlags(Collections.emptyList());
+        fact.setContradictionRefs(Collections.emptyList());
+        response.setObservationCandidates(Collections.singletonList(fact));
+        return response;
     }
 
     private static C01U01CapabilityResponse startCandidate() {
