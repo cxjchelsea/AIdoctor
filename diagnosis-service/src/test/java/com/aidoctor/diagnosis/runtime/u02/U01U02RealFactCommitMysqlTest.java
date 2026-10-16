@@ -671,7 +671,7 @@ public class U01U02RealFactCommitMysqlTest {
                     com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery
                             noDelivery = new com.aidoctor.diagnosis.runtime.u06
                                     .U07NonProductionDeliveryWaitRecovery(
-                                    cdps, ctx.getBean(org.springframework.jdbc.core.JdbcTemplate.class),
+                                    cdps, new org.springframework.jdbc.core.JdbcTemplate(ctx.getBean(javax.sql.DataSource.class)),
                                     tx, committer, receipt -> false,
                                     (receipt, version) -> {
                                         waitInvocations.incrementAndGet();
@@ -717,7 +717,7 @@ public class U01U02RealFactCommitMysqlTest {
                     com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery
                             confirmedDelivery = new com.aidoctor.diagnosis.runtime.u06
                                     .U07NonProductionDeliveryWaitRecovery(
-                                    cdps, ctx.getBean(org.springframework.jdbc.core.JdbcTemplate.class),
+                                    cdps, new org.springframework.jdbc.core.JdbcTemplate(ctx.getBean(javax.sql.DataSource.class)),
                                     tx, committer, receipt ->
                                             "fixture-confirmed".equals(receipt.confirmationRef)
                                             && confirmed.deliveryId.equals(receipt.deliveryId),
