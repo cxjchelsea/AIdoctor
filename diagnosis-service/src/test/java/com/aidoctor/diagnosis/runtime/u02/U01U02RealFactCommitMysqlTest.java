@@ -663,6 +663,29 @@ public class U01U02RealFactCommitMysqlTest {
                             created.getCdpId()).size());
                     assertFalse(cdps.findById(created.getCdpId()).get()
                             .getPatientState().containsKey("pending_question"));
+                    // An actual U05-backed U06 selection is NOT delivery.
+                    // A fabricated confirmation must fail before any WAIT owner
+                    // or database delivery effect can be invoked.
+                    java.util.concurrent.atomic.AtomicInteger waitInvocations =
+                            new java.util.concurrent.atomic.AtomicInteger();
+                    com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery
+                            noDelivery = new com.aidoctor.diagnosis.runtime.u06
+                                    .U07NonProductionDeliveryWaitRecovery(
+                                    cdps, ctx.getBean(org.springframework.jdbc.core.JdbcTemplate.class),
+                                    tx, committer, receipt -> false,
+                                    (receipt, version) -> {
+                                        waitInvocations.incrementAndGet();
+                                        throw new AssertionError("UNVERIFIED_DELIVERY_REACHED_WAIT");
+                                    });
+                    com.aidoctor.diagnosis.runtime.u06.U07NonProductionDeliveryWaitRecovery.Receipt
+                            unverified = new com.aidoctor.diagnosis.runtime.u06
+                                    .U07NonProductionDeliveryWaitRecovery.Receipt(
+                                    u06Request, u06Decision, "unverified-delivery-id",
+                                    "unverified-delivery-effect", "not-confirmed");
+                    assertThrows(IllegalStateException.class, () -> noDelivery.accept(unverified));
+                    assertEquals(0, waitInvocations.get());
+                    assertEquals(7, cdps.findById(created.getCdpId()).get()
+                            .getVersion().intValue());
                 } else {
                     // RESTRICTED cannot acquire an unrestricted U05 route merely
                     // from a durable A1 row lacking restricted-action permission.
