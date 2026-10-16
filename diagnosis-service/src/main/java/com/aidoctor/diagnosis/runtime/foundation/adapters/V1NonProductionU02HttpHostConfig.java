@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Allows a nonproduction HTTP V1 host to assemble the canonical U02 chain
@@ -42,11 +43,12 @@ public class V1NonProductionU02HttpHostConfig {
     @ConditionalOnMissingBean(U01U02NonProductionHandoffService.class)
     @ConditionalOnBean({U01U02TrustedStartContext.class,
             U01U02NonProductionHandoffService.TrustedTraceAuthority.class,
-            U02ClinicalFactApplicationService.class})
+            U02ClinicalFactApplicationService.class, TransactionTemplate.class})
     public U01U02NonProductionHandoffService v1HttpTrustedFactHandoff(
             U01U02TrustedStartContext resolver,
             U01U02NonProductionHandoffService.TrustedTraceAuthority traceAuthority,
-            U02ClinicalFactApplicationService application) {
-        return new U01U02NonProductionHandoffService(resolver, traceAuthority, application);
+            U02ClinicalFactApplicationService application,
+            TransactionTemplate transactions) {
+        return new U01U02NonProductionHandoffService(resolver, traceAuthority, application, transactions);
     }
 }
