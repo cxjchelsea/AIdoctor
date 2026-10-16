@@ -13,6 +13,8 @@ on:
       - 'tools/v1_clinical_e2e/acceptance_gate.py'
       - 'tools/v1_clinical_e2e/test_acceptance_gate.py'
       - 'tools/v1_clinical_e2e/scenarios.json'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalStartHandoffController.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalStartHandoffTest.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/**'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U01U02NonProductionHostConfig.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02TrustedStartContextTest.java'
@@ -48,7 +50,7 @@ jobs:
       - name: Exercise public start and continue HTTP adapter
         run: |
           set -euo pipefail
-          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=V1ClinicalPublicEntryAcceptanceTest,V1NonProductionClinicalIngressTest,U01U02TrustedStartContextTest,U01U02NonProductionHostConfigTest,U02U03GovernedSafetyBridgeTest,U03CdpAcceptedEvidenceAuthorityTest,U03CdpGateCClinicalInputPortTest,U07NonProductionPhysicalFollowupHostConfigTest test
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=V1ClinicalPublicEntryAcceptanceTest,V1NonProductionClinicalIngressTest,V1NonProductionClinicalStartHandoffTest,U01U02TrustedStartContextTest,U01U02NonProductionHostConfigTest,U02U03GovernedSafetyBridgeTest,U03CdpAcceptedEvidenceAuthorityTest,U03CdpGateCClinicalInputPortTest,U07NonProductionPhysicalFollowupHostConfigTest test
           python3 - <<'PY'
           import glob, xml.etree.ElementTree as ET
           paths=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1ClinicalPublicEntryAcceptanceTest.xml")
@@ -58,6 +60,11 @@ jobs:
           guarded=ET.parse(controlled[0]).getroot()
           assert int(guarded.get("tests",-1))==4
           assert all(int(guarded.get(key,-1))==0 for key in ("errors","failures","skipped"))
+          handoff_http=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1NonProductionClinicalStartHandoffTest.xml")
+          assert len(handoff_http)==1,handoff_http
+          handoff_result=ET.parse(handoff_http[0]).getroot()
+          assert int(handoff_result.get("tests",-1))==2
+          assert all(int(handoff_result.get(key,-1))==0 for key in ("errors","failures","skipped"))
           trust=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02TrustedStartContextTest.xml")
           assert len(trust)==1,trust
           trusted=ET.parse(trust[0]).getroot()
