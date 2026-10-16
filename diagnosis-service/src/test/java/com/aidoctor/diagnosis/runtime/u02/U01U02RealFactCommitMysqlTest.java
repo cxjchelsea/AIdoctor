@@ -649,7 +649,7 @@ public class U01U02RealFactCommitMysqlTest {
                     com.aidoctor.diagnosis.runtime.u06.U06NonProductionPhysicalMode23Service
                             u06Physical = new com.aidoctor.diagnosis.runtime.u06
                                     .U06NonProductionPhysicalMode23Service(
-                                    (request, decision, safety) -> {
+                                    (request, decision, mode1Safety) -> {
                                         throw new IllegalStateException("TEST_U06_MODE1_NOT_AUTHORIZED");
                                     }, cdps, committer,
                                     new com.aidoctor.diagnosis.runtime.u06.U06AdmissionService());
