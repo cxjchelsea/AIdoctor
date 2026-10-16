@@ -609,21 +609,27 @@ public class U01U02RealFactCommitMysqlTest {
                                     "ci-nonprod-safety", "cdp-physical-v5"))
                             .getMessage().contains("A1_RESTRICTED_PERMISSION_REQUIRED"));
                 }
-                // Revocation after commit: persisted A1 history survives, but
-                // both issuer readback and U05 authority bridge MUST fail closed.
+                // Once U05 commits v6, the v5 attestation is historical only.
+                // Without U05 (RESTRICTED), live revocation is independently
+                // enforced at v5. Both cases deny reusable A1 authority.
                 testSafetyCurrent.set(false);
+                String denied = U04SafetyGateDecision.ALLOW.equals(expectedGate)
+                        ? "U07_A1_CDP_VERSION_STALE" : "U07_A1_CURRENT_AUTHORITY_REVOKED";
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         testOnlyA1.loadAttested(created.getConsultationId(),
-                                created.getCdpId(), 5))
-                        .getMessage().contains("U07_A1_CURRENT_AUTHORITY_REVOKED"));
+                                created.getCdpId(), 5)).getMessage().contains(denied));
+                String bridgeDenied = U04SafetyGateDecision.ALLOW.equals(expectedGate)
+                        ? "A1_F3_BARRIER_AUTHORITY_NOT_CURRENT"
+                        : "U07_A1_CURRENT_AUTHORITY_REVOKED";
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         physicalBridge.load(riskHandoff, gated,
                                 "ci-nonprod-safety", "cdp-physical-v5"))
-                        .getMessage().contains("U07_A1_CURRENT_AUTHORITY_REVOKED"));
+                        .getMessage().contains(bridgeDenied));
                 assertEquals(1, a1Jdbc.queryForObject(
                         "SELECT COUNT(*) FROM u07_a1_attestation WHERE consultation_id=? AND cdp_id=? AND cdp_version=?",
                         Integer.class, created.getConsultationId(), created.getCdpId(), 5).intValue());
-                assertEquals(5, cdps.findById(created.getCdpId()).get().getVersion().intValue());
+                assertEquals(U04SafetyGateDecision.ALLOW.equals(expectedGate) ? 6 : 5,
+                        cdps.findById(created.getCdpId()).get().getVersion().intValue());
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         U07NonProductionPhysicalFollowupCoordinator
                                 .requireCurrentU04Version(created.getCdpId(), gated, cdps))
