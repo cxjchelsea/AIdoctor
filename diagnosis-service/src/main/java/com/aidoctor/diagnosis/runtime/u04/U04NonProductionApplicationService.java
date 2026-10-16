@@ -34,6 +34,21 @@ public final class U04NonProductionApplicationService {
             int currentClinicalStateVersion,
             U04ScopeContext scopeContext,
             String environmentId) {
+        return executeInternal(handoff, currentClinicalStateVersion, scopeContext,
+                environmentId, false);
+    }
+
+    /** Only for a resumed round with an already-persisted safety_gate. */
+    public U04ExecutionResult executeReplacingExistingGate(
+            U03OutboundHandoff handoff, int currentClinicalStateVersion,
+            U04ScopeContext scopeContext, String environmentId) {
+        return executeInternal(handoff, currentClinicalStateVersion, scopeContext,
+                environmentId, true);
+    }
+
+    private U04ExecutionResult executeInternal(
+            U03OutboundHandoff handoff, int currentClinicalStateVersion,
+            U04ScopeContext scopeContext, String environmentId, boolean replaceExisting) {
         U04AdmissionResult admission = admissionService.admit(
                 handoff,
                 currentClinicalStateVersion,
@@ -52,6 +67,7 @@ public final class U04NonProductionApplicationService {
         U04AdmittedInput input = admission.getAdmittedInput();
         U04SafetyGateDecision decision = policy.decide(input);
         U04StateProposal proposal = proposalFactory.create(input, decision);
+        if (replaceExisting) proposal.getStatePatch().operations.get(0).op = "REPLACE";
         StateTypes.CommitResult commit = commitService.commitNonProduction(input, decision, proposal);
 
         if (!"COMMITTED".equals(commit.status)) {
