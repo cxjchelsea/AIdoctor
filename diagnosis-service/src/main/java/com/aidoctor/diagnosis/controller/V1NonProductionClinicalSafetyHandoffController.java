@@ -128,6 +128,7 @@ public final class V1NonProductionClinicalSafetyHandoffController {
                     != authorized.command.clinicalStateVersion)
             throw blocked("U03_DURABLE_AUTHORITY_MISMATCH");
 
+        requireNonProductionEnvironment(authorized.environmentId);
         U07NonProductionGovernedRiskSafetyContinuation.Result result =
                 riskSafety.executeFromCommittedU02(fact, authorized.command,
                         authorized.releases, authorized.environmentId, authorized.scope);
@@ -139,6 +140,15 @@ public final class V1NonProductionClinicalSafetyHandoffController {
                 || !started.getCdpId().equals(gate.getCommitResult().cdpId))
             throw blocked("U04_SAFETY_COMMIT_REQUIRED");
         return ResponseEntity.ok(new StartResponse(started));
+    }
+
+    static void requireNonProductionEnvironment(String environment) {
+        if (environment == null || environment.trim().isEmpty())
+            throw blocked("ENVIRONMENT_REQUIRED");
+        String value = environment.trim().toLowerCase(java.util.Locale.ROOT);
+        if ("prod".equals(value) || "production".equals(value)
+                || value.startsWith("prod-") || value.startsWith("production-"))
+            throw blocked("PRODUCTION_FORBIDDEN");
     }
 
     private static IllegalStateException blocked(String reason) {
