@@ -35,9 +35,7 @@ class V1NonProductionClinicalStartHandoffTest {
         when(u01.start(any(U01RawStartCommand.class))).thenReturn(started);
         StateTypes.CommitResult commit = new StateTypes.CommitResult();
         commit.status = "COMMITTED";
-        U02ExecutionResult fact = mock(U02ExecutionResult.class);
-        // U02ExecutionResult fields are final: use the canonical result contract.
-        fact = new U02ExecutionResult("COMMITTED", null, "synthetic-call",
+        U02ExecutionResult fact = new U02ExecutionResult("COMMITTED", null, "synthetic-call",
                 null, null, commit, null);
         when(handoff.executeCommittedStart(eq("consult_synthetic"), eq("run_synthetic"),
                 eq("synthetic headache"))).thenReturn(fact);
