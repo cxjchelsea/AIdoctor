@@ -619,7 +619,7 @@ public class U01U02RealFactCommitMysqlTest {
                         testOnlyA1.loadAttested(created.getConsultationId(),
                                 created.getCdpId(), 5)).getMessage().contains(denied));
                 String bridgeDenied = U04SafetyGateDecision.ALLOW.equals(expectedGate)
-                        ? "A1_F3_BARRIER_AUTHORITY_NOT_CURRENT"
+                        ? "U07_A1_INDEPENDENT_ATTESTATION_MISMATCH"
                         : "U07_A1_CURRENT_AUTHORITY_REVOKED";
                 assertTrue(assertThrows(IllegalStateException.class, () ->
                         physicalBridge.load(riskHandoff, gated,
