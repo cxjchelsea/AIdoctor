@@ -13,6 +13,10 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
+      '/internal/nonproduction/v1/clinical': {
+        target: 'http://localhost:8084',
+        changeOrigin: true,
+      },
       // 健康状态判定服务（tool_0）- 端口8081
       '/api/v1/health-state-assessment': {
         target: 'http://localhost:8081',

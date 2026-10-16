@@ -2,6 +2,7 @@ package com.aidoctor.diagnosis.runtime.u02;
 
 import com.aidoctor.diagnosis.runtime.u02.d05.U02DependencyInvalidationHook;
 import java.util.Collections;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Host-gated START handoff. Caller supplies only the original raw patient text;
@@ -26,18 +27,34 @@ public final class U01U02NonProductionHandoffService {
     private final U01U02TrustedStartContext resolver;
     private final TrustedTraceAuthority traceAuthority;
     private final U02ClinicalFactApplicationService application;
+    private final TransactionTemplate transactions;
 
     public U01U02NonProductionHandoffService(U01U02TrustedStartContext resolver,
             TrustedTraceAuthority traceAuthority,
             U02ClinicalFactApplicationService application) {
+        this(resolver, traceAuthority, application, null);
+    }
+
+    public U01U02NonProductionHandoffService(U01U02TrustedStartContext resolver,
+            TrustedTraceAuthority traceAuthority, U02ClinicalFactApplicationService application,
+            TransactionTemplate transactions) {
         if (resolver == null || traceAuthority == null || application == null)
             throw new IllegalArgumentException("Trusted U02 host dependencies required");
         this.resolver = resolver;
         this.traceAuthority = traceAuthority;
         this.application = application;
+        this.transactions = transactions;
     }
 
     public U02ExecutionResult executeCommittedStart(
+            String consultationId, String runId, String rawClinicalText) {
+        if (transactions != null)
+            return transactions.execute(status ->
+                    executeTrustedStart(consultationId, runId, rawClinicalText));
+        return executeTrustedStart(consultationId, runId, rawClinicalText);
+    }
+
+    private U02ExecutionResult executeTrustedStart(
             String consultationId, String runId, String rawClinicalText) {
         if (blank(rawClinicalText)) throw new IllegalArgumentException("Patient source text required");
         U01U02TrustedStartContext.VerifiedStart verified = resolver.require(consultationId, runId, rawClinicalText);

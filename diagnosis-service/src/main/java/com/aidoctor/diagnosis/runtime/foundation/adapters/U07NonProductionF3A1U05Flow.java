@@ -8,6 +8,7 @@ import com.aidoctor.diagnosis.runtime.u05.U05ConsumerInboundRequest;
 import com.aidoctor.diagnosis.runtime.u05.U05ExecutionResult;
 import com.aidoctor.diagnosis.runtime.u05.U05NonProductionApplicationService;
 import com.aidoctor.diagnosis.runtime.u05.U05ReadinessInputManifest;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Explicit NON-PRODUCTION business sequence. Does not create clinical decisions,
@@ -49,10 +50,19 @@ public final class U07NonProductionF3A1U05Flow {
     private final U04A1U05AuthorityBridge bridge;
     private final U05InputProvider inputs;
     private final U05NonProductionApplicationService u05;
+    private final TransactionTemplate transactions;
 
     public U07NonProductionF3A1U05Flow(F3Owner owner,
             U07DurableNonProductionA1Issuer issuer, U04A1U05AuthorityBridge bridge,
             U05InputProvider inputs, U05NonProductionApplicationService u05) {
+        this(owner, issuer, bridge, inputs, u05, null);
+    }
+
+    /** Explicit transaction boundary for real nonproduction JDBC/JPA U05 commits. */
+    public U07NonProductionF3A1U05Flow(F3Owner owner,
+            U07DurableNonProductionA1Issuer issuer, U04A1U05AuthorityBridge bridge,
+            U05InputProvider inputs, U05NonProductionApplicationService u05,
+            TransactionTemplate transactions) {
         if (owner == null || issuer == null || bridge == null || inputs == null || u05 == null)
             throw new IllegalArgumentException("U07_F3_A1_U05_DEPENDENCY_MISSING");
         this.owner = owner;
@@ -60,6 +70,7 @@ public final class U07NonProductionF3A1U05Flow {
         this.bridge = bridge;
         this.inputs = inputs;
         this.u05 = u05;
+        this.transactions = transactions;
     }
 
     public U05ExecutionResult execute(U03OutboundHandoff handoff, U04ExecutionResult u04,
@@ -118,6 +129,8 @@ public final class U07NonProductionF3A1U05Flow {
                 || manifest.getClinicalStateVersion() != f3.persistedVersion)
             throw new IllegalStateException("U07_U05_INPUT_AUTHORITY_MISMATCH");
         // U05 retains its own admission, commit and currentness guards.
+        if (transactions != null)
+            return transactions.execute(status -> u05.execute(request, manifest, authority));
         return u05.execute(request, manifest, authority);
     }
 
