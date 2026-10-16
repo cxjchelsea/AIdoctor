@@ -16,6 +16,11 @@ public final class V1NonProductionFirstRoundOwnerAdapter
                 U02ExecutionResult committedFact);
         String requireCurrentCdpId(String consultationId, String runId);
     }
+    public interface AuthorizedQuestionContent {
+        String requireText(String consultationId, String runId,
+                String questionId, String contentRef);
+    }
+
     public interface DeliveryOwnerAuthority {
         U07NonProductionPhysicalFollowupCoordinator.ConfirmedDeliveryOwner
                 requireConfirmedDeliveryOwner(String consultationId, String runId);
@@ -23,13 +28,28 @@ public final class V1NonProductionFirstRoundOwnerAdapter
 
     private final AuthorizedStateOwner state;
     private final DeliveryOwnerAuthority delivery;
+    private final AuthorizedQuestionContent content;
     private final V1NonProductionDeliveredQuestionReadback readback;
 
     public V1NonProductionFirstRoundOwnerAdapter(AuthorizedStateOwner state,
-            DeliveryOwnerAuthority delivery, V1NonProductionDeliveredQuestionReadback readback) {
+            DeliveryOwnerAuthority delivery, V1NonProductionDeliveredQuestionReadback readback,
+            AuthorizedQuestionContent content) {
         this.state=Objects.requireNonNull(state);
         this.delivery=Objects.requireNonNull(delivery);
         this.readback=Objects.requireNonNull(readback);
+        this.content=Objects.requireNonNull(content);
+    }
+
+    @Override
+    public String requireAuthorizedQuestionText(String consultationId, String runId,
+            V1NonProductionFirstRoundWaitController.DeliveredQuestion question) {
+        if (question == null)
+            throw new IllegalStateException("V1_FIRST_ROUND_QUESTION_REQUIRED");
+        String text = content.requireText(consultationId, runId,
+                question.questionId, question.contentRef);
+        if (text == null || text.trim().isEmpty())
+            throw new IllegalStateException("V1_FIRST_ROUND_QUESTION_CONTENT_UNAVAILABLE");
+        return text;
     }
 
     @Override
