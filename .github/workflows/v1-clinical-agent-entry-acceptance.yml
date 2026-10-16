@@ -18,6 +18,7 @@ on:
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalStartHandoffController.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalSafetyHandoffController.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionFirstRoundWaitController.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionAnswerResumeController.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1NonProductionFirstRoundWaitTest.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalRuntimeReadinessController.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalRuntimeReadinessTest.java'
