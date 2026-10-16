@@ -5,7 +5,7 @@ import com.aidoctor.diagnosis.runtime.u03.U03CdpGateCClinicalInputPort;
 import com.aidoctor.diagnosis.runtime.u03.U03GateCClinicalInputPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -17,8 +17,9 @@ import org.springframework.context.annotation.Profile;
  */
 @Configuration
 @Profile("!prod & !production")
-@ConditionalOnProperty(prefix = "aidoctor.v1.clinical-e2e",
-        name = "u01-u04-http-enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnExpression("${aidoctor.v1.clinical-e2e.u01-u04-http-enabled:false} or " +
+        "${aidoctor.v1.clinical-e2e.first-round-wait-http-enabled:false} or " +
+        "${aidoctor.v1.clinical-e2e.answer-risk-http-enabled:false}")
 public class V1NonProductionGateCInputHostConfig {
     @Bean
     @ConditionalOnMissingBean(U03GateCClinicalInputPort.class)
