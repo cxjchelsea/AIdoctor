@@ -22,6 +22,8 @@ class V1NonProductionFirstRoundOwnerHostConfigTest {
         if (owners) {
             ctx.registerBean(V1NonProductionFirstRoundOwnerAdapter.AuthorizedStateOwner.class,
                     () -> mock(V1NonProductionFirstRoundOwnerAdapter.AuthorizedStateOwner.class));
+            ctx.registerBean(V1NonProductionFirstRoundOwnerAdapter.AuthorizedQuestionContent.class,
+                    () -> mock(V1NonProductionFirstRoundOwnerAdapter.AuthorizedQuestionContent.class));
             ctx.registerBean(V1NonProductionFirstRoundOwnerAdapter.DeliveryOwnerAuthority.class,
                     () -> mock(V1NonProductionFirstRoundOwnerAdapter.DeliveryOwnerAuthority.class));
         }
