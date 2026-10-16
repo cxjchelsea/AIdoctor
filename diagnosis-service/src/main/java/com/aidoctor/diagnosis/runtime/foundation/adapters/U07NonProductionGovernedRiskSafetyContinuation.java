@@ -67,7 +67,8 @@ public final class U07NonProductionGovernedRiskSafetyContinuation {
             U03StateProposal proposal = proposals.createNonProductionValid(admitted, decision, governed);
             riskCommit = transactions.execute(status -> riskCommitter.commitNonProduction(admitted, proposal));
             if (riskCommit == null || !"COMMITTED".equals(riskCommit.status))
-                throw new IllegalStateException("V1_U03_RISK_COMMIT_NOT_COMPLETE");
+                throw new IllegalStateException("V1_U03_RISK_COMMIT_NOT_COMPLETE:"
+                        + (riskCommit == null ? "NULL" : riskCommit.reasonCode));
             U03PostCommitFinalizationOutcome finalized =
                     finalizer.finalizeCommittedExecution(admitted, governed, decision, proposal, riskCommit);
             if (!U03PostCommitFinalizationOutcome.DELIVERABLE.equals(finalized.getStatus())
