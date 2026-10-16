@@ -8,6 +8,7 @@ import com.aidoctor.diagnosis.runtime.u02.U02ExecutionResult;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
@@ -30,11 +31,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/internal/nonproduction/v1/clinical")
 public final class V1NonProductionClinicalStartHandoffController {
     private final U01NaturalLanguageStartService u01;
-    private final U01U02NonProductionHandoffService u02;
+    interface TrustedFactCommit {
+        U02ExecutionResult commit(String consultationId, String runId, String rawText);
+    }
 
+    private final TrustedFactCommit u02;
+
+    @Autowired
     public V1NonProductionClinicalStartHandoffController(
             U01NaturalLanguageStartService u01,
             U01U02NonProductionHandoffService u02) {
+        this(u01, u02 == null ? null : u02::executeCommittedStart);
+    }
+
+    V1NonProductionClinicalStartHandoffController(
+            U01NaturalLanguageStartService u01, TrustedFactCommit u02) {
         if (u01 == null || u02 == null)
             throw new IllegalArgumentException("V1_U01_U02_TRUSTED_HOST_REQUIRED");
         this.u01 = u01;
@@ -71,7 +82,7 @@ public final class V1NonProductionClinicalStartHandoffController {
                 request.rawText, request.knownSubjectReferenceId));
         if (result == null || !"U02".equals(result.getNextUnit()))
             throw new IllegalStateException("V1_U01_U02_ROUTE_NOT_AUTHORIZED");
-        U02ExecutionResult fact = u02.executeCommittedStart(
+        U02ExecutionResult fact = u02.commit(
                 result.getConsultationId(), result.getRunId(), request.rawText);
         if (fact == null || !"COMMITTED".equals(fact.status)
                 || fact.commitResult == null
