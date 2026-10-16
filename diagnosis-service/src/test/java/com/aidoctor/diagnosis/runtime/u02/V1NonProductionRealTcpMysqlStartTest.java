@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.*;
 import java.util.*;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -45,6 +46,7 @@ import static org.mockito.Mockito.*;
  * and U02/P01 readback. ALL clinical facts and capability approvals are explicit
  * synthetic fixtures. This proves neither U03/U04 nor question delivery/F8.
  */
+@EnabledIfEnvironmentVariable(named = "V1_U01_U02_MYSQL_MODE", matches = "DISPOSABLE_U01_U02_ONLY")
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,
         classes=V1NonProductionRealTcpMysqlStartTest.Host.class)
 @ActiveProfiles("clinical-e2e-test")
