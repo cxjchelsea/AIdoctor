@@ -6,6 +6,8 @@ type StartResult = {
   runId: string
   checkpointId: string
   waitEffectId: string
+  questionId: string
+  questionContentRef: string
   entryStatus: string
   patientDeliveryAllowed: boolean
 }
@@ -87,7 +89,9 @@ export default function V1ClinicalManualTestPage() {
     <label>首轮合成症状<textarea value={text} onChange={e=>setText(e.target.value)} style={{display:'block',width:'100%',minHeight:70}} /></label>
     <button disabled={busy||!wired||!text.trim()||!userId.trim()} onClick={start}>启动首轮并建立 WAIT</button>
     {started && <section><h2>首轮返回</h2><pre>{JSON.stringify(started,null,2)}</pre>
-      <p>说明：后端目前仅返回 WAIT 凭据，尚未提供患者可见的追问文本。</p>
+      <p><strong>已确认问题 ID：</strong>{started.questionId}</p>
+      <p><strong>内容引用：</strong>{started.questionContentRef}</p>
+      <p>内容引用并非可读的临床问题文本；需要可信内容解析宿主后才能展示正式追问。</p>
       <label>合成回答<textarea value={answer} onChange={e=>setAnswer(e.target.value)} style={{display:'block',width:'100%',minHeight:70}} /></label>
       <button disabled={busy||!wired||!answer.trim()} onClick={continueAnswer}>提交回答并重新评估 U03/U04</button>
     </section>}
