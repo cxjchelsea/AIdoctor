@@ -52,7 +52,21 @@ public final class U07NonProductionGovernedRiskSafetyContinuation {
         return execute(safety.requireU03Admission(fact, command, releases, environment), scope);
     }
 
+    /** Subsequent round only: replace a present risk assessment under P01 CAS. */
+    public Result executeFromCommittedU02ReplacingExistingRisk(
+            com.aidoctor.diagnosis.runtime.u02.U02ExecutionResult fact,
+            U03ExecutionCommand command, U03ExplicitNonProductionReleaseRefs releases,
+            String environment, U04ScopeContext scope) {
+        return execute(safety.requireU03Admission(fact, command, releases, environment),
+                scope, true);
+    }
+
     public Result execute(U03NonProductionExecutionContext admitted, U04ScopeContext scope) {
+        return execute(admitted, scope, false);
+    }
+
+    private Result execute(U03NonProductionExecutionContext admitted, U04ScopeContext scope,
+            boolean replaceExistingRisk) {
         if (admitted == null || scope == null)
             throw new IllegalArgumentException("Accepted U03 admission and U04 scope required");
         admitted.requireAcceptedEvidenceBinding();
@@ -64,7 +78,9 @@ public final class U07NonProductionGovernedRiskSafetyContinuation {
             // Failed assessment is never converted into a successful risk commit.
             handoff = outbound.produce(admitted, governed, decision, null, null);
         } else if (U03RiskAssessmentCandidate.VALID.equals(decision.getStatus())) {
-            U03StateProposal proposal = proposals.createNonProductionValid(admitted, decision, governed);
+            U03StateProposal proposal = replaceExistingRisk
+                    ? proposals.createNonProductionValidReplacement(admitted, decision, governed)
+                    : proposals.createNonProductionValid(admitted, decision, governed);
             riskCommit = transactions.execute(status -> riskCommitter.commitNonProduction(admitted, proposal));
             if (riskCommit == null || !"COMMITTED".equals(riskCommit.status))
                 throw new IllegalStateException("V1_U03_RISK_COMMIT_NOT_COMPLETE:"
