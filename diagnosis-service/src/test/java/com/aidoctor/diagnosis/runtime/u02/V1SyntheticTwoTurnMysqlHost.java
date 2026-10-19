@@ -353,8 +353,9 @@ public class V1SyntheticTwoTurnMysqlHost {
                     .orElseThrow(IllegalStateException::new);
             if(!request.consultationId.equals(cp.getConsultationId())
                     || !"ACTIVE".equals(cp.getCheckpointStatus())
-                    || !consultation.getCdpId().equals(
-                            consultation.getCdpId()))
+                    || consultation.getCdpId()==null
+                    || consultation.getUserId()==null
+                    || !consultation.getUserId().startsWith("synthetic-"))
                 throw new IllegalStateException("SYNTHETIC_ANSWER_AUTHORITY_DENIED");
             String suffix=cp.getCheckpointId();
             return new V1NonProductionAnswerResumeController.AuthorizedAnswer(
