@@ -177,7 +177,11 @@ public class V1NonProductionRealTcpMysqlStartTest {
         }
         @Bean C01U02CapabilityClient syntheticC01U02Client() {
             C01U02CapabilityClient client=mock(C01U02CapabilityClient.class);
-            when(client.interpret(any())).thenReturn(factCandidate());
+            java.util.concurrent.atomic.AtomicInteger calls =
+                    new java.util.concurrent.atomic.AtomicInteger();
+            when(client.interpret(any())).thenAnswer(invocation ->
+                    calls.incrementAndGet() == 1
+                            ? factCandidate() : resumedRespiratoryCandidate());
             return client;
         }
         @Bean U02ClinicalFactApplicationService syntheticClinicalFacts(
