@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("clinical-e2e-test")
 @TestPropertySource(properties={
         "aidoctor.v1.clinical-e2e.first-round-wait-http-enabled=true",
+        "aidoctor.v1.clinical-e2e.synthetic-two-turn-fixture=true",
         "aidoctor.v1.clinical-e2e.answer-resume-http-enabled=true",
         "aidoctor.v1.clinical-e2e.answer-risk-http-enabled=true",
         "aidoctor.v1.clinical-e2e.synthetic-question-content-enabled=true",
