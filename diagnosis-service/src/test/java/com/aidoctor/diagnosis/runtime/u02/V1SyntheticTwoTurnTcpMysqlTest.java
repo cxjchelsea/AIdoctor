@@ -89,5 +89,12 @@ class V1SyntheticTwoTurnTcpMysqlTest {
         assertTrue(resumed.getPatientState().containsKey("current_risk_assessment"));
         assertEquals("CONSUMED",checkpoints.findById(checkpointId)
                 .orElseThrow(IllegalStateException::new).getCheckpointStatus());
+        int committed=resumed.getVersion();
+        ResponseEntity<Map> replay=http.postForEntity(
+                "/internal/nonproduction/v1/clinical/answer-through-u04",answer,Map.class);
+        assertNotEquals(HttpStatus.OK,replay.getStatusCode(),
+                "Consumed checkpoint must reject replay");
+        assertEquals(committed,cdps.findById(cdpId)
+                .orElseThrow(IllegalStateException::new).getVersion().intValue());
     }
 }
