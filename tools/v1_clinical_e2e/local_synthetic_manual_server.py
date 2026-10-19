@@ -8,6 +8,7 @@ No connection to existing DBs and no production credentials are accepted.
 import argparse
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -66,6 +67,9 @@ def main():
         "V1_U01_U02_MYSQL_MODE": "DISPOSABLE_U01_U02_ONLY",
         "V1_U01_U02_MYSQL_URL": JDBC,
     })
+    mvn = shutil.which("mvn")
+    if not mvn:
+        parser.error("Java 8 Maven (mvn.cmd on Windows) must be available in PATH")
     started = False
     try:
         execute(["docker", "run", "--rm", "-d", "--name", NAME,
@@ -97,7 +101,7 @@ def main():
             "tools/u07_d5_o2_tx_topology/production_candidate/mysql8/V9__u07_clinical_receipts_no_dispatch.sql",
         ):
             apply_sql((ROOT / filename).read_text(encoding="utf-8"))
-        execute(["mvn", "-B", "-ntp", "-f", "contracts/v1/bindings/java/pom.xml",
+        execute([mvn, "-B", "-ntp", "-f", "contracts/v1/bindings/java/pom.xml",
                  "install", "-DskipTests"], env=env)
         execute(["mvn", "-B", "-ntp", "-f", "diagnosis-service/pom.xml",
                  "test-compile", "-DskipTests"], env=env)
