@@ -175,12 +175,14 @@ public class V1NonProductionRealTcpMysqlStartTest {
                         "ci-nonprod-safety",U04ScopeContext.current(true,true));
             };
         }
-        @Bean C01U02CapabilityClient syntheticC01U02Client() {
+        @Bean C01U02CapabilityClient syntheticC01U02Client(
+                @org.springframework.beans.factory.annotation.Value(
+                        "${aidoctor.v1.clinical-e2e.synthetic-two-turn-fixture:false}") boolean twoTurn) {
             C01U02CapabilityClient client=mock(C01U02CapabilityClient.class);
             java.util.concurrent.atomic.AtomicInteger calls =
                     new java.util.concurrent.atomic.AtomicInteger();
             when(client.interpret(any())).thenAnswer(invocation ->
-                    calls.incrementAndGet() == 1
+                    !twoTurn || calls.incrementAndGet() == 1
                             ? factCandidate() : resumedRespiratoryCandidate());
             return client;
         }
