@@ -103,12 +103,12 @@ def main():
             apply_sql((ROOT / filename).read_text(encoding="utf-8"))
         execute([mvn, "-B", "-ntp", "-f", "contracts/v1/bindings/java/pom.xml",
                  "install", "-DskipTests"], env=env)
-        execute(["mvn", "-B", "-ntp", "-f", "diagnosis-service/pom.xml",
+        execute([mvn, "-B", "-ntp", "-f", "diagnosis-service/pom.xml",
                  "test-compile", "-DskipTests"], env=env)
         print("Synthetic HTTP service: http://127.0.0.1:8084", flush=True)
         print("Frontend: cd frontend ; npm ci ; npm run dev", flush=True)
         print("Open http://localhost:3000/test/v1-clinical", flush=True)
-        execute(["mvn", "-B", "-ntp", "-f", "diagnosis-service/pom.xml",
+        execute([mvn, "-B", "-ntp", "-f", "diagnosis-service/pom.xml",
                  "org.codehaus.mojo:exec-maven-plugin:3.1.0:java",
                  "-Dexec.mainClass=com.aidoctor.diagnosis.runtime.u02.V1LocalSyntheticManualServer",
                  "-Dexec.classpathScope=test"], env=env)
