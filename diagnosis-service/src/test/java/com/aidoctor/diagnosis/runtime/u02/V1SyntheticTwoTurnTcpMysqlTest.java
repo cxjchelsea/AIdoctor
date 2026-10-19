@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -49,6 +50,7 @@ class V1SyntheticTwoTurnTcpMysqlTest {
     @Autowired TestRestTemplate http;
     @Autowired CDPRepository cdps;
     @Autowired RuntimeWaitCheckpointRepository checkpoints;
+    @Autowired JdbcTemplate jdbc;
 
     @Test void actualTcpHttpWaitAndResumedRiskPersistToMySql() {
         ResponseEntity<Map> ready=http.getForEntity(
@@ -74,6 +76,37 @@ class V1SyntheticTwoTurnTcpMysqlTest {
         CDP waiting=cdps.findById(cdpId).orElseThrow(IllegalStateException::new);
         assertTrue(waiting.getPatientState().containsKey("pending_question"));
         int before=waiting.getVersion();
+        String consultationId=(String)body.get("consultationId");
+        int runsBefore=jdbc.queryForObject(
+                "SELECT COUNT(*) FROM clinical_runtime_run WHERE consultation_id=?",
+                Integer.class,consultationId);
+        int eventsBefore=jdbc.queryForObject(
+                "SELECT COUNT(*) FROM canonical_business_event WHERE consultation_id=?",
+                Integer.class,consultationId);
+        Map<String,String> wrongConsultation=new LinkedHashMap<>();
+        wrongConsultation.put("consultationId","missing-consultation-"+id);
+        wrongConsultation.put("checkpointId",checkpointId);
+        wrongConsultation.put("answerText","synthetic invalid answer");
+        assertNotEquals(HttpStatus.OK,http.postForEntity(
+                "/internal/nonproduction/v1/clinical/answer-through-u04",
+                wrongConsultation,Map.class).getStatusCode());
+        Map<String,String> wrongCheckpoint=new LinkedHashMap<>();
+        wrongCheckpoint.put("consultationId",consultationId);
+        wrongCheckpoint.put("checkpointId","missing-checkpoint-"+id);
+        wrongCheckpoint.put("answerText","synthetic invalid answer");
+        assertNotEquals(HttpStatus.OK,http.postForEntity(
+                "/internal/nonproduction/v1/clinical/answer-through-u04",
+                wrongCheckpoint,Map.class).getStatusCode());
+        assertEquals("ACTIVE",checkpoints.findById(checkpointId)
+                .orElseThrow(IllegalStateException::new).getCheckpointStatus());
+        assertEquals(before,cdps.findById(cdpId)
+                .orElseThrow(IllegalStateException::new).getVersion().intValue());
+        assertEquals(runsBefore,jdbc.queryForObject(
+                "SELECT COUNT(*) FROM clinical_runtime_run WHERE consultation_id=?",
+                Integer.class,consultationId).intValue());
+        assertEquals(eventsBefore,jdbc.queryForObject(
+                "SELECT COUNT(*) FROM canonical_business_event WHERE consultation_id=?",
+                Integer.class,consultationId).intValue());
 
         Map<String,String> answer=new LinkedHashMap<>();
         answer.put("consultationId",(String)body.get("consultationId"));
