@@ -4,8 +4,23 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/v1-u01-u02-physical-mysql.yml'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalStartHandoffController.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalSafetyHandoffController.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionU02HttpHostConfig.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionRiskSafetyHostConfig.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionSafetyBridgeHostConfig.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionGateCInputHostConfig.java'
+      - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/V1NonProductionAcceptedEvidenceHostConfig.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1NonProductionClinicalSafetyHandoffTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/controller/V1NonProductionRuntimeTcpHttpTest.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02PhysicalMysqlHandoffTest.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02RealFactCommitMysqlTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/V1NonProductionRealTcpMysqlStartTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/V1SyntheticTwoTurnTcpMysqlTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/V1SyntheticTwoTurnMysqlHost.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/V1LocalSyntheticManualServer.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/V1SyntheticManualReadinessController.java'
+      - 'tools/v1_clinical_e2e/local_synthetic_manual_server.py'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/U01U02TrustedStartContext.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/U01U02NonProductionHandoffService.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U01U02NonProductionHostConfig.java'
@@ -142,7 +157,8 @@ jobs:
         run: |
           set -euo pipefail
           mvn -B -ntp -f contracts/v1/bindings/java/pom.xml install -DskipTests
-          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U01U02PhysicalMysqlHandoffTest,U01U02RealFactCommitMysqlTest test
+          mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U01U02PhysicalMysqlHandoffTest,U01U02RealFactCommitMysqlTest,V1NonProductionRealTcpMysqlStartTest,V1SyntheticTwoTurnTcpMysqlTest test
+          python3 -m py_compile tools/v1_clinical_e2e/local_synthetic_manual_server.py
           python3 - <<'PY'
           import glob,xml.etree.ElementTree as ET
           p=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02PhysicalMysqlHandoffTest.xml")
@@ -155,5 +171,15 @@ jobs:
           r2=ET.parse(q[0]).getroot()
           assert int(r2.get("tests",-1))==4
           assert all(int(r2.get(k,-1))==0 for k in ("errors","failures","skipped"))
-          print("V1_U01_U02_U03_U04_REAL_MYSQL_SYNTHETIC_SAFETY=PASS; LIVE_PROVIDER_HTTP=NOT_VERIFIED")
+          t=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1NonProductionRealTcpMysqlStartTest.xml")
+          assert len(t)==1,t
+          rt=ET.parse(t[0]).getroot()
+          assert int(rt.get("tests",-1))==2
+          assert all(int(rt.get(k,-1))==0 for k in ("errors","failures","skipped"))
+          full=glob.glob("diagnosis-service/target/surefire-reports/TEST-*V1SyntheticTwoTurnTcpMysqlTest.xml")
+          assert len(full)==1,full
+          full_result=ET.parse(full[0]).getroot()
+          assert int(full_result.get("tests",-1))==1
+          assert all(int(full_result.get(k,-1))==0 for k in ("errors","failures","skipped"))
+          print("V1_SYNTHETIC_TWO_TURN_TCP_MYSQL=PASS")
           PY

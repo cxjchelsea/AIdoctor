@@ -38,7 +38,10 @@ import static org.junit.jupiter.api.Assertions.*;
 public class U01U02PhysicalMysqlHandoffTest {
     private static final String URL = "jdbc:mysql://127.0.0.1:33333/v1_u01_u02?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
     private static void authorize() {
-        if (!"true".equals(System.getenv("GITHUB_ACTIONS"))
+        boolean ci="true".equals(System.getenv("GITHUB_ACTIONS"));
+        boolean explicitLocal=!"true".equals(System.getenv("GITHUB_ACTIONS"))
+                && "LOCAL_SYNTHETIC_ONLY".equals(System.getenv("V1_LOCAL_SYNTHETIC_HOST"));
+        if (!(ci || explicitLocal)
                 || !"DISPOSABLE_U01_U02_ONLY".equals(System.getenv("V1_U01_U02_MYSQL_MODE"))
                 || !URL.equals(System.getenv("V1_U01_U02_MYSQL_URL")))
             throw new IllegalStateException("V1_U01_U02_PHYSICAL_NONPRODUCTION_ONLY");
