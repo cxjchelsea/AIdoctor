@@ -42,7 +42,8 @@ class V1SyntheticTwoTurnTcpMysqlTest {
     @SpringBootConfiguration
     @EnableAutoConfiguration(exclude={DataSourceAutoConfiguration.class,
             HibernateJpaAutoConfiguration.class,RedisAutoConfiguration.class})
-    @Import({V1NonProductionRealTcpMysqlStartTest.Host.class,V1SyntheticTwoTurnMysqlHost.class})
+    @Import({V1NonProductionRealTcpMysqlStartTest.Host.class,
+            V1SyntheticTwoTurnMysqlHost.class,V1SyntheticManualReadinessController.class})
     static class Host {}
 
     @Autowired TestRestTemplate http;
@@ -50,6 +51,10 @@ class V1SyntheticTwoTurnTcpMysqlTest {
     @Autowired RuntimeWaitCheckpointRepository checkpoints;
 
     @Test void actualTcpHttpWaitAndResumedRiskPersistToMySql() {
+        ResponseEntity<Map> ready=http.getForEntity(
+                "/internal/nonproduction/v1/clinical/runtime-readiness",Map.class);
+        assertEquals(HttpStatus.OK,ready.getStatusCode());
+        assertEquals("COMPONENTS_PRESENT_NOT_E2E_VERIFIED",ready.getBody().get("status"));
         String id=UUID.randomUUID().toString();
         Map<String,String> start=new LinkedHashMap<>();
         start.put("eventId","test-two-turn-event-"+id);
