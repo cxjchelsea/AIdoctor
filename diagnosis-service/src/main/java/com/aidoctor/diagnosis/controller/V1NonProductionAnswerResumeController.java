@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -80,12 +81,15 @@ public final class V1NonProductionAnswerResumeController {
     private final U07NonProductionTrustedAnswerU02Bridge bridge;
     private final U02ClinicalFactApplicationService facts;
     private final TrustedAnswerHost host;
+    private final TransactionTemplate clinicalCommitTransactions;
     public V1NonProductionAnswerResumeController(U07NonProductionAnswerResumeAdmission admission,
             U07NonProductionDurableF8Consume f8, U07NonProductionTrustedAnswerU02Bridge bridge,
-            U02ClinicalFactApplicationService facts, TrustedAnswerHost host) {
-        if(admission==null || f8==null || bridge==null || facts==null || host==null)
+            U02ClinicalFactApplicationService facts, TrustedAnswerHost host,
+            TransactionTemplate clinicalCommitTransactions) {
+        if(admission==null || f8==null || bridge==null || facts==null || host==null || clinicalCommitTransactions==null)
             throw new IllegalArgumentException("TRUSTED_ANSWER_HOST_REQUIRED");
         this.admission=admission;this.f8=f8;this.bridge=bridge;this.facts=facts;this.host=host;
+        this.clinicalCommitTransactions=clinicalCommitTransactions;
     }
     @PostMapping("/answer-through-u02")
     public ResponseEntity<AnswerResponse> answer(@Valid @RequestBody AnswerRequest request) {
@@ -112,7 +116,8 @@ public final class V1NonProductionAnswerResumeController {
         String newRunId=f8.consume(candidate,a.checkpointId,a.idempotencyKey,a.answerDigest);
         U02ExecutionCommand authorized=bridge.requireAuthorizedNewRun(
                 candidate,a.checkpointId,newRunId);
-        U02ExecutionResult committed=facts.execute(authorized);
+        U02ExecutionResult committed=clinicalCommitTransactions.execute(status ->
+                facts.execute(authorized));
         if(committed==null || !"COMMITTED".equals(committed.status)
                 || committed.commitResult==null
                 || !"COMMITTED".equals(committed.commitResult.status))
