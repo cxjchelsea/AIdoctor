@@ -17,8 +17,6 @@ import time
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 NAME = "aidoctor-v1-synthetic-manual-mysql"
 PASSWORD = "synthetic-u01-u02-root"
-JDBC = ("jdbc:mysql://127.0.0.1:33333/v1_u01_u02?"
-        "useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC")
 
 
 def execute(command, *, input_bytes=None, env=None):
@@ -56,7 +54,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--accept-disposable-db", action="store_true",
                         help="I understand this starts a new synthetic MySQL container")
+    parser.add_argument("--mysql-port", type=int, default=34061,
+                        help="Loopback-only disposable MySQL host port (default: 34061)")
     args = parser.parse_args()
+    if not 1024 <= args.mysql_port <= 65535:
+        parser.error("--mysql-port must be within 1024..65535")
+    jdbc = (f"jdbc:mysql://127.0.0.1:{args.mysql_port}/v1_u01_u02?"
+            "useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC")
     if not args.accept_disposable_db:
         parser.error("Explicit --accept-disposable-db opt-in required")
     if os.environ.get("GITHUB_ACTIONS") == "true":
@@ -65,7 +69,7 @@ def main():
     env.update({
         "V1_LOCAL_SYNTHETIC_HOST": "LOCAL_SYNTHETIC_ONLY",
         "V1_U01_U02_MYSQL_MODE": "DISPOSABLE_U01_U02_ONLY",
-        "V1_U01_U02_MYSQL_URL": JDBC,
+        "V1_U01_U02_MYSQL_URL": jdbc,
     })
     mvn = shutil.which("mvn")
     if not mvn:
@@ -75,7 +79,7 @@ def main():
         execute(["docker", "run", "--rm", "-d", "--name", NAME,
                  "-e", "MYSQL_ROOT_PASSWORD=" + PASSWORD,
                  "-e", "MYSQL_DATABASE=v1_u01_u02",
-                 "-p", "127.0.0.1:33333:3306", "mysql:8.0"])
+                 "-p", f"127.0.0.1:{args.mysql_port}:3306", "mysql:8.0"])
         started = True
         for _ in range(60):
             ready = subprocess.run(
