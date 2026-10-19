@@ -14,7 +14,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/internal/nonproduction/v1/clinical': {
-        target: 'http://localhost:8084',
+        target: `http://127.0.0.1:${process.env.V1_CLINICAL_HTTP_PORT || '18084'}`,
         changeOrigin: true,
       },
       // 健康状态判定服务（tool_0）- 端口8081
