@@ -16,6 +16,11 @@ on:
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02PhysicalMysqlHandoffTest.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/U01U02RealFactCommitMysqlTest.java'
       - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/V1NonProductionRealTcpMysqlStartTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/V1SyntheticTwoTurnTcpMysqlTest.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/V1SyntheticTwoTurnMysqlHost.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/V1LocalSyntheticManualServer.java'
+      - 'diagnosis-service/src/test/java/com/aidoctor/diagnosis/runtime/u02/V1SyntheticManualReadinessController.java'
+      - 'tools/v1_clinical_e2e/local_synthetic_manual_server.py'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/U01U02TrustedStartContext.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/u02/U01U02NonProductionHandoffService.java'
       - 'diagnosis-service/src/main/java/com/aidoctor/diagnosis/runtime/foundation/adapters/U01U02NonProductionHostConfig.java'
@@ -153,6 +158,7 @@ jobs:
           set -euo pipefail
           mvn -B -ntp -f contracts/v1/bindings/java/pom.xml install -DskipTests
           mvn -B -ntp -f diagnosis-service/pom.xml -Dtest=U01U02PhysicalMysqlHandoffTest,U01U02RealFactCommitMysqlTest,V1NonProductionRealTcpMysqlStartTest,V1SyntheticTwoTurnTcpMysqlTest test
+          python3 -m py_compile tools/v1_clinical_e2e/local_synthetic_manual_server.py
           python3 - <<'PY'
           import glob,xml.etree.ElementTree as ET
           p=glob.glob("diagnosis-service/target/surefire-reports/TEST-*U01U02PhysicalMysqlHandoffTest.xml")
