@@ -179,11 +179,13 @@ public class V1NonProductionRealTcpMysqlStartTest {
                 @org.springframework.beans.factory.annotation.Value(
                         "${aidoctor.v1.clinical-e2e.synthetic-two-turn-fixture:false}") boolean twoTurn) {
             C01U02CapabilityClient client=mock(C01U02CapabilityClient.class);
-            java.util.concurrent.atomic.AtomicInteger calls =
-                    new java.util.concurrent.atomic.AtomicInteger();
-            when(client.interpret(any())).thenAnswer(invocation ->
-                    !twoTurn || calls.incrementAndGet() == 1
-                            ? factCandidate() : resumedRespiratoryCandidate());
+            when(client.interpret(any())).thenAnswer(invocation -> {
+                com.aidoctor.diagnosis.dto.capability.c01.C01U02CapabilityRequest request =
+                        invocation.getArgument(0);
+                return twoTurn && request.getEventId() != null
+                        && request.getEventId().startsWith("test-answer-event-")
+                        ? resumedRespiratoryCandidate() : factCandidate();
+            });
             return client;
         }
         @Bean U02ClinicalFactApplicationService syntheticClinicalFacts(
