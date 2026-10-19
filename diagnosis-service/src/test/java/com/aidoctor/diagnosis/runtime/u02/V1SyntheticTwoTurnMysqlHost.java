@@ -372,8 +372,9 @@ public class V1SyntheticTwoTurnMysqlHost {
             U07NonProductionDurableF8Consume f8,
             U07NonProductionTrustedAnswerU02Bridge bridge,
             U02ClinicalFactApplicationService facts,
-            V1NonProductionAnswerResumeController.TrustedAnswerHost host) {
-        return new V1NonProductionAnswerResumeController(admission,f8,bridge,facts,host);
+            V1NonProductionAnswerResumeController.TrustedAnswerHost host,
+            TransactionTemplate tx) {
+        return new V1NonProductionAnswerResumeController(admission,f8,bridge,facts,host,tx);
     }
 
     @Bean V1NonProductionAnswerRiskReevaluationController.ResumedRiskOwner
