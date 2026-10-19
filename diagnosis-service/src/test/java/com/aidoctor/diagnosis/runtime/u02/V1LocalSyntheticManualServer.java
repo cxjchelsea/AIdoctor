@@ -23,7 +23,6 @@ public final class V1LocalSyntheticManualServer {
         Map<String,Object> props=new HashMap<>();
         props.put("server.address","127.0.0.1");
         props.put("server.port","8084");
-        props.put("spring.profiles.active","clinical-e2e-test");
         props.put("spring.cloud.discovery.enabled","false");
         props.put("spring.cloud.nacos.discovery.enabled","false");
         props.put("springfox.documentation.enabled","false");
@@ -35,6 +34,6 @@ public final class V1LocalSyntheticManualServer {
         props.put("aidoctor.v1.clinical-e2e.synthetic-two-turn-fixture","true");
         props.put("aidoctor.v1.clinical-e2e.readiness-diagnostics-enabled","true");
         app.setDefaultProperties(props);
-        app.run(args);
+        app.run("--spring.profiles.active=clinical-e2e-test");
     }
 }
