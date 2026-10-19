@@ -2,7 +2,7 @@
 """Run the isolated, nonproduction V1 two-turn HTTP host on Windows/Linux.
 
 Creates its OWN disposable MySQL container, reproduces CI fixture schema,
-then launches the TEST-classpath synthetic Spring host on 127.0.0.1:8084.
+then launches the TEST-classpath synthetic Spring host on 127.0.0.1 (configurable port).
 No connection to existing DBs and no production credentials are accepted.
 """
 import argparse
@@ -56,7 +56,11 @@ def main():
                         help="I understand this starts a new synthetic MySQL container")
     parser.add_argument("--mysql-port", type=int, default=34061,
                         help="Loopback-only disposable MySQL host port (default: 34061)")
+    parser.add_argument("--http-port", type=int, default=18084,
+                        help="Loopback-only HTTP port (default: 18084)")
     args = parser.parse_args()
+    if not 1024 <= args.http_port <= 65535:
+        parser.error("--http-port must be within 1024..65535")
     if not 1024 <= args.mysql_port <= 65535:
         parser.error("--mysql-port must be within 1024..65535")
     jdbc = (f"jdbc:mysql://127.0.0.1:{args.mysql_port}/v1_u01_u02?"
@@ -70,6 +74,7 @@ def main():
         "V1_LOCAL_SYNTHETIC_HOST": "LOCAL_SYNTHETIC_ONLY",
         "V1_U01_U02_MYSQL_MODE": "DISPOSABLE_U01_U02_ONLY",
         "V1_U01_U02_MYSQL_URL": jdbc,
+        "V1_LOCAL_SYNTHETIC_HTTP_PORT": str(args.http_port),
     })
     mvn = shutil.which("mvn")
     if not mvn:
@@ -109,8 +114,8 @@ def main():
                  "install", "-DskipTests"], env=env)
         execute([mvn, "-B", "-ntp", "-f", "diagnosis-service/pom.xml",
                  "test-compile", "-DskipTests"], env=env)
-        print("Synthetic HTTP service: http://127.0.0.1:8084", flush=True)
-        print("Frontend: cd frontend ; npm ci ; npm run dev", flush=True)
+        print(f"Synthetic HTTP service: http://127.0.0.1:{args.http_port}", flush=True)
+        print(f"Frontend: cd frontend ; $env:V1_CLINICAL_HTTP_PORT={args.http_port} ; npm ci ; npm run dev", flush=True)
         print("Open http://localhost:3000/test/v1-clinical", flush=True)
         execute([mvn, "-B", "-ntp", "-f", "diagnosis-service/pom.xml",
                  "org.codehaus.mojo:exec-maven-plugin:3.1.0:java",
