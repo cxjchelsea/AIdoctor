@@ -36,15 +36,36 @@ import static org.junit.jupiter.api.Assertions.*;
  * This is NOT a C01, P01 clinical commit, HTTP, or complete clinical E2E.
  */
 public class U01U02PhysicalMysqlHandoffTest {
-    private static final String URL = "jdbc:mysql://127.0.0.1:33333/v1_u01_u02?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
-    private static void authorize() {
-        boolean ci="true".equals(System.getenv("GITHUB_ACTIONS"));
-        boolean explicitLocal=!"true".equals(System.getenv("GITHUB_ACTIONS"))
+    private static final String CI_URL = "jdbc:mysql://127.0.0.1:33333/v1_u01_u02?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+    private static final String LOCAL_PREFIX = "jdbc:mysql://127.0.0.1:";
+    private static final String LOCAL_SUFFIX = "/v1_u01_u02?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+    private static String authorizedUrl() {
+        String supplied = System.getenv("V1_U01_U02_MYSQL_URL");
+        boolean ci = "true".equals(System.getenv("GITHUB_ACTIONS"));
+        boolean explicitLocal = !ci
                 && "LOCAL_SYNTHETIC_ONLY".equals(System.getenv("V1_LOCAL_SYNTHETIC_HOST"));
-        if (!(ci || explicitLocal)
-                || !"DISPOSABLE_U01_U02_ONLY".equals(System.getenv("V1_U01_U02_MYSQL_MODE"))
-                || !URL.equals(System.getenv("V1_U01_U02_MYSQL_URL")))
+        if (!"DISPOSABLE_U01_U02_ONLY".equals(System.getenv("V1_U01_U02_MYSQL_MODE"))
+                || supplied == null || !(ci || explicitLocal))
             throw new IllegalStateException("V1_U01_U02_PHYSICAL_NONPRODUCTION_ONLY");
+        if (ci) {
+            if (!CI_URL.equals(supplied))
+                throw new IllegalStateException("V1_U01_U02_PHYSICAL_NONPRODUCTION_ONLY");
+            return CI_URL;
+        }
+        if (!supplied.startsWith(LOCAL_PREFIX) || !supplied.endsWith(LOCAL_SUFFIX))
+            throw new IllegalStateException("V1_U01_U02_PHYSICAL_NONPRODUCTION_ONLY");
+        String portText = supplied.substring(LOCAL_PREFIX.length(),
+                supplied.length() - LOCAL_SUFFIX.length());
+        try {
+            int port = Integer.parseInt(portText);
+            if (port < 1024 || port > 65535 || !String.valueOf(port).equals(portText))
+                throw new IllegalArgumentException("invalid port");
+        } catch (NumberFormatException ex) {
+            throw new IllegalStateException("V1_U01_U02_PHYSICAL_NONPRODUCTION_ONLY", ex);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException("V1_U01_U02_PHYSICAL_NONPRODUCTION_ONLY", ex);
+        }
+        return supplied;
     }
 
     @Configuration
@@ -66,9 +87,9 @@ public class U01U02PhysicalMysqlHandoffTest {
     public static class DatabaseConfig {
         @Bean(destroyMethod = "close")
         public HikariDataSource dataSource() {
-            authorize();
+            String url = authorizedUrl();
             HikariConfig cfg = new HikariConfig();
-            cfg.setJdbcUrl(URL);
+            cfg.setJdbcUrl(url);
             cfg.setUsername("root");
             cfg.setPassword("synthetic-u01-u02-root");
             cfg.setMaximumPoolSize(4);
@@ -128,7 +149,7 @@ public class U01U02PhysicalMysqlHandoffTest {
     public void durableHostReadsCanonicalContextAndRejectsStaleOrAlteredInput() throws Exception {
         Assumptions.assumeTrue("DISPOSABLE_U01_U02_ONLY".equals(System.getenv("V1_U01_U02_MYSQL_MODE")),
                 "Physical test requires isolated disposable MySQL job");
-        authorize();
+        authorizedUrl();
         try (AnnotationConfigApplicationContext ctx =
                      new AnnotationConfigApplicationContext(DatabaseConfig.class)) {
             TransactionTemplate tx = ctx.getBean(TransactionTemplate.class);

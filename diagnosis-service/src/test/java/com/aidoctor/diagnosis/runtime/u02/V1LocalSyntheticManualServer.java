@@ -22,8 +22,15 @@ public final class V1LocalSyntheticManualServer {
         SpringApplication app=new SpringApplication(V1SyntheticTwoTurnTcpMysqlTest.Host.class);
         Map<String,Object> props=new HashMap<>();
         props.put("server.address","127.0.0.1");
-        props.put("server.port","8084");
-        props.put("spring.profiles.active","clinical-e2e-test");
+        String portText=System.getenv("V1_LOCAL_SYNTHETIC_HTTP_PORT");
+        int port=8084;
+        if(portText!=null) {
+            try { port=Integer.parseInt(portText); }
+            catch(NumberFormatException ex) { throw new IllegalArgumentException("V1_INVALID_SYNTHETIC_HTTP_PORT",ex); }
+            if(port<1024 || port>65535 || !String.valueOf(port).equals(portText))
+                throw new IllegalArgumentException("V1_INVALID_SYNTHETIC_HTTP_PORT");
+        }
+        props.put("server.port",port);
         props.put("spring.cloud.discovery.enabled","false");
         props.put("spring.cloud.nacos.discovery.enabled","false");
         props.put("springfox.documentation.enabled","false");
@@ -35,6 +42,6 @@ public final class V1LocalSyntheticManualServer {
         props.put("aidoctor.v1.clinical-e2e.synthetic-two-turn-fixture","true");
         props.put("aidoctor.v1.clinical-e2e.readiness-diagnostics-enabled","true");
         app.setDefaultProperties(props);
-        app.run(args);
+        app.run("--spring.profiles.active=clinical-e2e-test");
     }
 }

@@ -1,6 +1,6 @@
 # V1 Clinical Agent — Nonproduction Manual Acceptance
 
-> Status: AUTOMATED BASELINE GREEN; FULL HTTP/MYSQL TWO-TURN E2E NOT ACCEPTED.
+> Status (2026-10-19): LOCAL SYNTHETIC TWO-TURN MANUAL FUNCTIONAL ACCEPTANCE REPORTED PASS; AUTOMATED/CI CLOSURE AND FULL SIDE-EFFECT AUDIT PENDING.
 > Scope: PR #507, synthetic inputs only. Not a patient-facing release.
 
 ## What is implemented
@@ -51,3 +51,68 @@ Do not implement these as production defaults or by accepting caller-provided au
 - A patient-visible question payload, if the intended acceptance is natural-language back-and-forth rather than diagnostic-only checkpoint testing.
 
 No merge to main is authorized by this document. Production use remains prohibited.
+
+## 2026-10-19 Windows local manual evidence (PR #508 closure)
+
+Scope: disposable synthetic MySQL 8, Java 8, Spring Boot test-classpath host,
+nonproduction `clinical-e2e-test` profile, HTTP loopback port 18084 and DB
+loopback port 34061. User performed these tests on their Windows machine.
+These are **user-provided manual observations**, not an independent CI run
+and not real-patient clinical evaluation.
+
+Observed:
+- Maven shared contracts and diagnosis-service test compilation completed; Tomcat,
+  Hikari and JPA initialized; Spring declared `clinical-e2e-test` active.
+- `GET /internal/nonproduction/v1/clinical/runtime-readiness` returned status
+  `COMPONENTS_PRESENT_NOT_E2E_VERIFIED`, all four components true,
+  `fullClinicalE2eVerified=false`, `patientDeliveryAllowed=false`,
+  `syntheticFixturesOnly=true`.
+- Browser `/test/v1-clinical` received first-round
+  `DURABLE_WAIT_ESTABLISHED_NONPRODUCTION`, a synthetic question and durable
+  checkpoint, then second-round
+  `F8_U02_U03_U04_COMMITTED_NEXT_QUESTION_NOT_DELIVERED`.
+- Independent MySQL readback found a single consultation, two associated runs,
+  first-round checkpoint `CONSUMED`, and CDP version 11 with
+  `current_risk_assessment.outcome_code=HIGH_RISK`. This is a **synthetic
+  rule outcome**, not a clinical safety judgment.
+- Replay of the consumed checkpoint was denied with HTTP 500 and server error
+  `SYNTHETIC_ANSWER_AUTHORITY_DENIED`; observed CDP version remained 11 and
+  checkpoint remained `CONSUMED`.
+- New synthetic consultation remained on `ACTIVE` WAIT after wrong consultation
+  and wrong checkpoint submissions (both HTTP 500). User subsequently reported
+  a successful valid answer and consumed WAIT.
+
+Important limitations and follow-ups:
+1. The last identity-binding negative-run counts, events/effects and version-before/
+   version-after were not independently captured. Therefore **strict zero-side-effect
+   proof remains pending**, even though WAIT state remained ACTIVE.
+2. Synthetic `TrustedAnswerHost` rejects a non-ACTIVE checkpoint before
+   deeper F8 consume logic; observed HTTP 500 does **not** independently prove
+   internal F8 concurrency/atomic replay protection.
+3. Denied user requests currently surface as unhandled HTTP 500; introduce scoped
+   stable error codes/4xx mapping with tests before calling the HTTP contract clean.
+4. No actual third question was selected/delivered after resumed U04; real model
+   understanding/planning and production delivery have not been accepted.
+5. The PR branch itself still requires relevant CI/workflow and exact-HEAD review.
+   A successful local manual run does not imply this PR is merged or production-ready.
+
+Repeatable Windows startup, in two terminals (ensure ports are available):
+
+```powershell
+cd D:\project\AIdoctor
+python tools/v1_clinical_e2e/local_synthetic_manual_server.py --accept-disposable-db --mysql-port 34061 --http-port 18084
+
+# Separate PowerShell while backend stays alive:
+cd D:\project\AIdoctor\frontend
+$env:V1_CLINICAL_HTTP_PORT = '18084'
+npm ci
+npm run dev
+```
+
+Frontend: `http://localhost:3000/test/v1-clinical`.
+Diagnostic URL:
+`http://127.0.0.1:18084/internal/nonproduction/v1/clinical/runtime-readiness`.
+
+The launcher creates and removes **its own** disposable container; do not
+stop the backend during physical SQL readback. Do not point these scripts to
+production data. No merge is authorized by this manual evidence.
