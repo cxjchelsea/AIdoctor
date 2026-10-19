@@ -116,7 +116,11 @@ public final class V1NonProductionAnswerResumeController {
         if(committed==null || !"COMMITTED".equals(committed.status)
                 || committed.commitResult==null
                 || !"COMMITTED".equals(committed.commitResult.status))
-            throw new IllegalStateException("V1_ANSWER_U02_COMMIT_REQUIRED");
+            throw new IllegalStateException("V1_ANSWER_U02_COMMIT_REQUIRED:" +
+                    (committed == null ? "RESULT_MISSING" :
+                    committed.status + ":" + committed.reasonCode + ":" +
+                    (committed.commitResult == null ? "NO_P01_RESULT" :
+                    committed.commitResult.status + ":" + committed.commitResult.reasonCode)));
         return new CommittedAnswer(a,newRunId,committed);
     }
 }
